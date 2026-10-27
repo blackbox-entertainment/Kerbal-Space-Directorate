@@ -621,7 +621,7 @@ Each milestone is playable on its own. Jira epics KSA-1 to KSA-8.
 8. **Community-sourced** template library?
 9. Default OpenRouter models for design vs. post-mortem (benchmark in M4)
 10. Cloud city buoyancy: **Airships vs. Hooligan Labs**?
-11. GitHub owner: **Blackbox Entertainment vs. jaqknife**?
+11. ~~GitHub owner~~ Decided: Blackbox Entertainment organization (2026-10-26)
 
 ---
 
