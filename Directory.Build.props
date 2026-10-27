@@ -1,0 +1,17 @@
+<Project>
+  <!-- Shared settings for every project in KSA.sln. -->
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <!-- KSP 1.12 runs Unity 2019.4, which supports C# 7.3. -->
+    <LangVersion>7.3</LangVersion>
+    <Version>0.1.0</Version>
+    <Product>KSA</Product>
+    <Deterministic>true</Deterministic>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <AssemblyName>$(MSBuildProjectName)</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Provides .NET Framework 4.7.2 reference assemblies without a targeting pack or Visual Studio. -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

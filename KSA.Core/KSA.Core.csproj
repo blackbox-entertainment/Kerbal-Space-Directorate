@@ -1,0 +1,3 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Portable agency logic. NO references to KSP or Unity. Ever. -->
+</Project>

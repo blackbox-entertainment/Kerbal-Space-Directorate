@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Thin adapter between KSA.Core and Kerbal Space Program. -->
+
+  <PropertyGroup>
+    <!-- All game assemblies come from the dev install pointed to by the KSPDIR environment variable. -->
+    <KspManaged>$(KSPDIR)\KSP_x64_Data\Managed</KspManaged>
+    <KspGameData>$(KSPDIR)\GameData</KspGameData>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\KSA.Core\KSA.Core.csproj" />
+  </ItemGroup>
+
+  <!-- Game references. Private=false so they are never copied to output or into GameData. -->
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(KspManaged)\Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp-firstpass">
+      <HintPath>$(KspManaged)\Assembly-CSharp-firstpass.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>$(KspManaged)\UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(KspManaged)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Fail early with a clear message if KSPDIR is missing or wrong. -->
+  <Target Name="KsaCheckKspDir" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="'$(KSPDIR)' == ''"
+           Text="KSPDIR environment variable is not set. Set it to your KSP dev install, e.g. E:\KSP_dev, then restart the terminal." />
+    <Error Condition="'$(KSPDIR)' != '' And !Exists('$(KspManaged)\Assembly-CSharp.dll')"
+           Text="Assembly-CSharp.dll not found under $(KspManaged). Check that KSPDIR points at a KSP install." />
+  </Target>
+
+  <!-- Post-build: deploy plugin DLLs and Configs into the dev install. -->
+  <Target Name="KsaDeploy" AfterTargets="Build" Condition="'$(KSPDIR)' != ''">
+    <ItemGroup>
+      <KsaPluginFiles Include="$(OutDir)KSA.Core.dll;$(OutDir)KSA.KSP.dll" />
+      <KsaConfigFiles Include="$(MSBuildThisFileDirectory)..\GameData\KSA\Configs\**\*" Exclude="$(MSBuildThisFileDirectory)..\GameData\KSA\Configs\**\.gitkeep" />
+    </ItemGroup>
+    <MakeDir Directories="$(KspGameData)\KSA\Plugins;$(KspGameData)\KSA\Configs" />
+    <Copy SourceFiles="@(KsaPluginFiles)" DestinationFolder="$(KspGameData)\KSA\Plugins" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(KsaConfigFiles)" DestinationFiles="@(KsaConfigFiles->'$(KspGameData)\KSA\Configs\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="[KSA] Deployed KSA.Core.dll and KSA.KSP.dll to $(KspGameData)\KSA\Plugins" />
+  </Target>
+</Project>
