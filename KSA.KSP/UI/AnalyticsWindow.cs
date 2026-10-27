@@ -73,6 +73,7 @@ namespace KSA.KSP.UI
         public void Close()
         {
             if (_dialog == null) return;
+            ReleaseTextures();
             PopupDialog d = _dialog;
             _dialog = null;
             d.Dismiss();
@@ -80,6 +81,7 @@ namespace KSA.KSP.UI
 
         private void Spawn()
         {
+            ReleaseTextures();
             float textWidth = Width - 60f;
             var items = new List<DialogGUIBase>();
 
@@ -110,6 +112,9 @@ namespace KSA.KSP.UI
             items.Add(new DialogGUISpace(4f));
             Line(items, Trend(years), textWidth);
 
+            // --- Charts ---
+            AddCharts(items, years, textWidth);
+
             // --- Space race ---
             Section(items, "Space race", textWidth);
             if (!_agency.Settings.RivalsEnabled)
@@ -133,6 +138,7 @@ namespace KSA.KSP.UI
                         Cell(r.Successes + "/" + r.Missions, ColLMissions), Cell(r.Deaths > 0 ? Color(r.Deaths.ToString(), Red) : r.Deaths.ToString(), ColLDeaths),
                         Cell(string.IsNullOrEmpty(r.LatestMilestone) ? "none yet" : r.LatestMilestone, ColLatest)));
                 }
+                AddLeagueChart(items, league, textWidth);
                 items.Add(new DialogGUISpace(4f));
                 foreach (RivalAgency rival in _agency.Rivals)
                 {
@@ -174,6 +180,7 @@ namespace KSA.KSP.UI
 
         private void OnCloseClicked()
         {
+            ReleaseTextures();
             _dialog = null;
             if (_onClosed != null) _onClosed();
         }
@@ -230,6 +237,93 @@ namespace KSA.KSP.UI
             if (string.Equals(claimedBy, Agency.PlayerId, StringComparison.OrdinalIgnoreCase)) return Color(_agency.AgencyName, Green);
             RivalDefinition def = _agency.RivalDefinition(claimedBy);
             return def != null ? def.Name : claimedBy;
+        }
+
+        // ------------------------------------------------------------------ charts
+
+        private const int ChartWidth = 640;
+        private const int ChartHeight = 170;
+        private readonly List<Texture2D> _textures = new List<Texture2D>();
+
+        private void AddCharts(List<DialogGUIBase> items, List<YearSummary> years, float textWidth)
+        {
+            if (years.Count == 0) return;
+            Section(items, "Charts", textWidth);
+            var closing = new double[years.Count];
+            var net = new double[years.Count];
+            var prestige = new double[years.Count];
+            for (int i = 0; i < years.Count; i++) { closing[i] = years[i].ClosingBalance; net[i] = years[i].Net; prestige[i] = years[i].Prestige; }
+            string axis = years.Count == 1 ? "Year " + years[0].Year : "Years " + years[0].Year + " to " + years[years.Count - 1].Year + ", left to right";
+
+            double lo, hi;
+            var money = new List<ChartTexture.Series>
+            {
+                new ChartTexture.Series("Closing balance", ChartTexture.Palette[0], closing),
+                new ChartTexture.Series("Net for the year", ChartTexture.Palette[1], net)
+            };
+            AddChart(items, "Money", ChartTexture.Lines(ChartWidth, ChartHeight, money, out lo, out hi, true), money, Cash(lo), Cash(hi), axis, textWidth);
+
+            var race = new List<ChartTexture.Series> { new ChartTexture.Series(_agency.AgencyName, ChartTexture.Palette[0], prestige) };
+            if (_agency.Settings.RivalsEnabled)
+            {
+                int ci = 1;
+                foreach (RivalAgency rival in _agency.Rivals)
+                {
+                    RivalDefinition def = _agency.RivalDefinition(rival.Id);
+                    var vals = new double[years.Count];
+                    for (int i = 0; i < years.Count; i++)
+                    {
+                        vals[i] = double.NaN;
+                        foreach (RivalYear ry in rival.Years) if (ry.Year == years[i].Year) vals[i] = ry.Prestige;
+                        if (double.IsNaN(vals[i]) && !years[i].Closed) vals[i] = rival.Prestige;
+                    }
+                    race.Add(new ChartTexture.Series(def != null ? def.Name : rival.Id, ChartTexture.Palette[ci++ % ChartTexture.Palette.Length], vals));
+                }
+            }
+            AddChart(items, "Prestige race", ChartTexture.Lines(ChartWidth, ChartHeight, race, out lo, out hi, true), race, ((int)Math.Round(lo)).ToString(), ((int)Math.Round(hi)).ToString(), axis, textWidth);
+            if (years.Count == 1) Line(items, Color("One point per year: the lines grow as fiscal years close.", Grey), textWidth);
+        }
+
+        private void AddLeagueChart(List<DialogGUIBase> items, List<LeagueRow> league, float textWidth)
+        {
+            if (league.Count == 0) return;
+            var values = new List<double>();
+            var colors = new List<Color>();
+            var legend = new List<ChartTexture.Series>();
+            for (int i = 0; i < league.Count; i++)
+            {
+                values.Add(Math.Max(0, league[i].Score));
+                Color c = league[i].IsPlayer ? ChartTexture.Palette[0] : ChartTexture.Palette[1 + (i % (ChartTexture.Palette.Length - 1))];
+                colors.Add(c);
+                legend.Add(new ChartTexture.Series(league[i].Name + " (" + Math.Round(league[i].Score) + ")", c, null));
+            }
+            double max;
+            Texture2D tex = ChartTexture.Bars(ChartWidth, 30 + 26 * league.Count, values, colors, out max);
+            AddChart(items, "League score (milestones x10, firsts x6, prestige x0.2, successes, deaths x-4)", tex, legend, "0", Math.Round(max).ToString(), "Top of the table first", textWidth);
+        }
+
+        private void AddChart(List<DialogGUIBase> items, string title, Texture2D tex, List<ChartTexture.Series> legend, string lo, string hi, string axis, float textWidth)
+        {
+            _textures.Add(tex);
+            Line(items, "<b>" + title + "</b>", textWidth);
+            var parts = new List<string>();
+            foreach (ChartTexture.Series s in legend) parts.Add(Color("25A0 " + s.Name, ChartTexture.Hex(s.Color)));
+            Line(items, string.Join("   ", parts.ToArray()), textWidth);
+            items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.UpperLeft,
+                new DialogGUISpace(16f),
+                new DialogGUIVerticalLayout(false, false, 2f, new RectOffset(0, 0, 0, 0), TextAnchor.UpperRight,
+                    new DialogGUILabel(Color(hi, Grey), 70f, LineHeight),
+                    new DialogGUISpace(tex.height - 2 * LineHeight - 4f),
+                    new DialogGUILabel(Color(lo, Grey), 70f, LineHeight)),
+                new DialogGUIImage(new Vector2(tex.width, tex.height), Vector2.zero, UnityEngine.Color.white, tex)));
+            Line(items, Color(axis, Grey), textWidth);
+            items.Add(new DialogGUISpace(6f));
+        }
+
+        private void ReleaseTextures()
+        {
+            foreach (Texture2D t in _textures) if (t != null) UnityEngine.Object.Destroy(t);
+            _textures.Clear();
         }
 
         private static string Color(string text, string hex)
