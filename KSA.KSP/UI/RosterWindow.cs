@@ -14,12 +14,12 @@ namespace KSA.KSP.UI
     public sealed class RosterWindow
     {
         private const string DialogName = "KSA_RosterWindow";
-        private const float PortraitSize = 36f;
-        private const float NameWidth = 150f;
-        private const float RankWidth = 140f;
-        private const float RoleWidth = 80f;
+        private const float PortraitSize = 40f;
+        private const float NameWidth = 170f;
+        private const float RankWidth = 160f;
+        private const float RoleWidth = 90f;
         private const float StarsWidth = 60f;
-        private const float StatusWidth = 80f;
+        private const float StatusWidth = 90f;
 
         private readonly IRosterSource _source;
         private readonly Core.ILogger _log;
@@ -93,8 +93,8 @@ namespace KSA.KSP.UI
             }
 
             float width = PortraitSize + KsaIcons.BadgeSize + NameWidth + RankWidth + RoleWidth + StarsWidth + StatusWidth;
-            var list = new DialogGUIScrollList(new Vector2(width + 40f, 260f), false, true,
-                new DialogGUIVerticalLayout(true, true, 2f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft, rows.ToArray()));
+            var list = new DialogGUIScrollList(new Vector2(width + 40f, 380f), false, true,
+                new DialogGUIVerticalLayout(false, false, 4f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft, rows.ToArray()));
 
             var content = new DialogGUIVerticalLayout(true, true, 4f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft,
                 new DialogGUILabel("Click a name to open the Service Record.", true, false),
@@ -104,7 +104,7 @@ namespace KSA.KSP.UI
                     new DialogGUIButton("Close", OnCloseClicked, 80f, 28f, true)));
 
             var dialog = new MultiOptionDialog(DialogName, "", "KSA Roster (" + crew.Count + ")", HighLogic.UISkin,
-                new Rect(0.5f, 0.5f, width + 70f, 370f), content);
+                new Rect(0.5f, 0.5f, width + 70f, 500f), content);
 
             _dialog = PopupDialog.SpawnPopupDialog(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), dialog, false, HighLogic.UISkin, false);
         }

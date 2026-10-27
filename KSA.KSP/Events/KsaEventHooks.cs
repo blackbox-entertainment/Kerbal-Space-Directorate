@@ -62,10 +62,22 @@ namespace KSA.KSP.Events
             {
                 if (pcm == null) continue;
                 Agency.AddAchievements(pcm.name, KspRosterSource.Achievements(pcm));
-                List<string> notices = Agency.EndMission(pcm.name, MissionOutcome.Success);
+                MissionOutcome outcome = HadCrashThisMission(pcm.name) ? MissionOutcome.PartialSuccess : MissionOutcome.Success;
+                List<string> notices = Agency.EndMission(pcm.name, outcome);
                 KsaCore.Log.Info("Recovered " + pcm.name + " from " + pv.vesselName + " (" + notices.Count + " notices)");
             }
             KsaCore.SyncRoster("recovery");
+        }
+
+        private static bool HadCrashThisMission(string crewId)
+        {
+            CrewProfile p = Agency.Crew.Get(crewId);
+            if (p == null) return false;
+            MissionEntry m = p.Record.CurrentMission;
+            if (m == null) return false;
+            foreach (IncidentEntry i in p.Record.Incidents)
+                if (i.Kind == IncidentKind.Crash && i.MissionId == m.MissionId) return true;
+            return false;
         }
 
         // ---------------------------------------------------------------- death

@@ -11,8 +11,13 @@ namespace KSA.KSP.UI
     public sealed class ServiceRecordWindow
     {
         private const string DialogName = "KSA_ServiceRecord";
-        private const float Width = 520f;
+        private const float Width = 680f;
+        private const float WindowHeight = 640f;
+        private const float ListHeight = 540f;
         private const float LabelWidth = 110f;
+        private const float LineHeight = 22f;
+        private const float SectionGap = 12f;
+        private const float PortraitSize = 96f;
 
         private readonly Agency _agency;
         private readonly string _crewId;
@@ -61,76 +66,84 @@ namespace KSA.KSP.UI
                 return;
             }
 
+            float textWidth = Width - 60f;
             var items = new List<DialogGUIBase>();
 
-            // --- Header ---
+            // --- Header: portrait, badge, name ---
             string rankName = _agency.Careers.RankName(p.Track, p.RankId);
+            items.Add(new DialogGUIHorizontalLayout(false, false, 8f, new RectOffset(0, 0, 2, 8), TextAnchor.MiddleLeft,
+                KsaIcons.PortraitImage(p.Id, PortraitSize),
+                new DialogGUIVerticalLayout(false, false, 2f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                    new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                        KsaIcons.Badge(p.Role),
+                        new DialogGUILabel("<size=18><b>" + p.Name + "</b></size>", textWidth - PortraitSize - 40f, 30f)),
+                    new DialogGUILabel(RosterView.RoleText(p.Role) + ", " + rankName, textWidth - PortraitSize - 20f, LineHeight))));
+
+            // --- Facts ---
             int age = p.AgeOn(_agency.CurrentDay, _agency.Clock.DaysPerYear);
-            items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 2, 6), TextAnchor.MiddleLeft,
-                KsaIcons.PortraitImage(p.Id, 96f),
-                KsaIcons.Badge(p.Role),
-                new DialogGUILabel("<size=16><b>" + p.Name + "</b></size>\n" + RosterView.RoleText(p.Role) + ", " + rankName, true, false)));
-            items.Add(Field("Rank", rankName + (p.Track != CareerTrack.None ? " (" + p.Track + " track)" : string.Empty)));
-            items.Add(Field("Role", RosterView.RoleText(p.Role) + ", " + RosterView.StarsText(p.Stars)));
-            items.Add(Field("Status", RosterView.StatusText(p.Status) + (p.Departed ? " (left the agency)" : string.Empty)));
-            items.Add(Field("Age", age + "  |  hired day " + p.HiredDay));
-            items.Add(Field("Morale", p.Morale + " / 100  |  salary " + p.Salary + " / yr"));
+            items.Add(Field("Rank", rankName + (p.Track != CareerTrack.None ? " (" + p.Track + " track)" : string.Empty), textWidth));
+            items.Add(Field("Role", RosterView.RoleText(p.Role) + ", " + RosterView.StarsText(p.Stars), textWidth));
+            items.Add(Field("Status", RosterView.StatusText(p.Status) + (p.Departed ? " (left the agency)" : string.Empty), textWidth));
+            items.Add(Field("Age", age + "  |  hired day " + p.HiredDay, textWidth));
+            items.Add(Field("Morale", p.Morale + " / 100  |  salary " + p.Salary + " / yr", textWidth));
             items.Add(Field("Traits", "courage " + Percent(p.Courage) + ", stupidity " + Percent(p.Stupidity)
-                + (p.PersonalityTags.Count > 0 ? "  |  " + string.Join(", ", p.PersonalityTags.ToArray()) : string.Empty)));
-            items.Add(Field("In space", FormatDays(p.Record.DaysInSpace) + ", " + p.Record.CompletedMissionCount + " missions completed"));
+                + (p.PersonalityTags.Count > 0 ? "  |  " + string.Join(", ", p.PersonalityTags.ToArray()) : string.Empty), textWidth));
+            items.Add(Field("In space", FormatDays(p.Record.DaysInSpace) + ", " + p.Record.CompletedMissionCount + " missions completed", textWidth));
 
             // --- Director action ---
             RankDefinition pending = _agency.Promotions.PendingSelection(p);
             if (pending != null)
             {
-                items.Add(new DialogGUIHorizontalLayout(true, false, 4f, new RectOffset(0, 0, 6, 6), TextAnchor.MiddleLeft,
-                    new DialogGUIButton("Select as " + pending.Name, OnSelectClicked, 220f, 28f, false),
-                    new DialogGUILabel("Director decision: promotes this " + rankName + ".", true, false)));
+                items.Add(new DialogGUISpace(SectionGap));
+                items.Add(new DialogGUIHorizontalLayout(false, false, 8f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                    new DialogGUIButton("Select as " + pending.Name, OnSelectClicked, 230f, 30f, false),
+                    new DialogGUILabel("Director decision: promotes this " + rankName + ".", textWidth - 240f, LineHeight)));
             }
 
             // --- Medals ---
-            items.Add(Section("Medals (" + p.Record.Medals.Count + ")"));
-            if (p.Record.Medals.Count == 0) items.Add(new DialogGUILabel("  None yet.", true, false));
+            Section(items, "Medals (" + p.Record.Medals.Count + ")", textWidth);
+            if (p.Record.Medals.Count == 0) Line(items, "None yet.", textWidth);
             foreach (MedalAward a in p.Record.Medals)
             {
                 string note = string.IsNullOrEmpty(a.Note) ? string.Empty : "  (" + a.Note + ")";
-                items.Add(new DialogGUILabel("  " + _agency.Medals.NameOf(a.MedalId) + ", day " + a.Day + note, true, false));
+                Line(items, _agency.Medals.NameOf(a.MedalId) + ", day " + a.Day + note, textWidth);
             }
 
             // --- Missions ---
-            items.Add(Section("Missions (" + p.Record.Missions.Count + ")"));
-            if (p.Record.Missions.Count == 0) items.Add(new DialogGUILabel("  No missions flown.", true, false));
+            Section(items, "Missions (" + p.Record.Missions.Count + ")", textWidth);
+            if (p.Record.Missions.Count == 0) Line(items, "No missions flown.", textWidth);
             for (int i = p.Record.Missions.Count - 1; i >= 0; i--)
             {
                 MissionEntry m = p.Record.Missions[i];
                 string when = m.EndDay >= 0 ? "days " + m.StartDay + " to " + m.EndDay : "from day " + m.StartDay;
-                items.Add(new DialogGUILabel("  " + m.Name + ": " + OutcomeText(m.Outcome) + " (" + when + ")" + (m.DirectorFlown ? " [Director-flown]" : string.Empty), true, false));
+                Line(items, m.MissionId + "  " + m.Name + ": " + OutcomeText(m.Outcome) + " (" + when + ")" + (m.DirectorFlown ? " [Director-flown]" : string.Empty), textWidth);
             }
 
             // --- Incidents ---
-            items.Add(Section("Incidents (" + p.Record.Incidents.Count + ")"));
-            if (p.Record.Incidents.Count == 0) items.Add(new DialogGUILabel("  Clean record.", true, false));
+            Section(items, "Incidents (" + p.Record.Incidents.Count + ")", textWidth);
+            if (p.Record.Incidents.Count == 0) Line(items, "Clean record.", textWidth);
             foreach (IncidentEntry i in p.Record.Incidents)
-                items.Add(new DialogGUILabel("  " + i.Kind + ", day " + i.Day + ": " + i.Description, true, false));
+                Line(items, i.Kind + ", day " + i.Day + ": " + i.Description, textWidth);
 
             // --- Quotes ---
             if (p.Record.Quotes.Count > 0)
             {
-                items.Add(Section("Quotes"));
-                foreach (string q in p.Record.Quotes) items.Add(new DialogGUILabel("  \"" + q + "\"", true, false));
+                Section(items, "Quotes", textWidth);
+                foreach (string q in p.Record.Quotes) Line(items, "\"" + q + "\"", textWidth);
             }
+            items.Add(new DialogGUISpace(SectionGap));
 
-            var list = new DialogGUIScrollList(new Vector2(Width - 20f, 360f), false, true,
-                new DialogGUIVerticalLayout(true, true, 2f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft, items.ToArray()));
+            var list = new DialogGUIScrollList(new Vector2(Width - 30f, ListHeight), false, true,
+                new DialogGUIVerticalLayout(false, false, 3f, new RectOffset(6, 6, 6, 6), TextAnchor.UpperLeft, items.ToArray()));
 
             var content = new DialogGUIVerticalLayout(true, true, 4f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft,
                 list,
                 new DialogGUIHorizontalLayout(true, false, 4f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleRight,
                     new DialogGUIFlexibleSpace(),
-                    new DialogGUIButton("Close", OnCloseClicked, 80f, 28f, true)));
+                    new DialogGUIButton("Close", OnCloseClicked, 90f, 30f, true)));
 
             var dialog = new MultiOptionDialog(DialogName, "", "Service Record: " + p.Name, HighLogic.UISkin,
-                new Rect(0.5f, 0.5f, Width, 440f), content);
+                new Rect(0.5f, 0.5f, Width, WindowHeight), content);
 
             _dialog = PopupDialog.SpawnPopupDialog(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), dialog, false, HighLogic.UISkin, false);
         }
@@ -148,16 +161,26 @@ namespace KSA.KSP.UI
             if (_onClosed != null) _onClosed();
         }
 
-        private static DialogGUIHorizontalLayout Field(string label, string value)
+        // --- layout helpers: every line has an explicit height so rows never overlap ---
+
+        private static DialogGUIHorizontalLayout Field(string label, string value, float textWidth)
         {
-            return new DialogGUIHorizontalLayout(true, false, 4f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
-                new DialogGUILabel("<b>" + label + "</b>", LabelWidth, 20f),
-                new DialogGUILabel(value, true, false));
+            return new DialogGUIHorizontalLayout(false, false, 4f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                new DialogGUILabel("<b>" + label + "</b>", LabelWidth, LineHeight),
+                new DialogGUILabel(value, textWidth - LabelWidth, LineHeight));
         }
 
-        private static DialogGUILabel Section(string title)
+        private static void Section(List<DialogGUIBase> items, string title, float textWidth)
         {
-            return new DialogGUILabel("\n<b>" + title + "</b>", true, false);
+            items.Add(new DialogGUISpace(SectionGap));
+            items.Add(new DialogGUILabel("<b>" + title + "</b>", textWidth, LineHeight + 2f));
+        }
+
+        private static void Line(List<DialogGUIBase> items, string text, float textWidth)
+        {
+            items.Add(new DialogGUIHorizontalLayout(false, false, 0f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                new DialogGUISpace(16f),
+                new DialogGUILabel(text, textWidth - 16f, LineHeight)));
         }
 
         private static string FormatDays(double days)
