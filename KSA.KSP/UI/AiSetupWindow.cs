@@ -188,9 +188,13 @@ namespace KSA.KSP.UI
                 new DialogGUILabel("Presets:", 60f, LineHeight),
                 new DialogGUIButton("Ollama :11434", () => OnLocalPreset("http://localhost:11434/v1/chat/completions"), 120f, ButtonHeight, false),
                 new DialogGUIButton("llama.cpp :8081", () => OnLocalPreset("http://localhost:8081/v1/chat/completions"), 120f, ButtonHeight, false),
-                new DialogGUIButton("LM Studio :1234", () => OnLocalPreset("http://localhost:1234/v1/chat/completions"), 120f, ButtonHeight, false),
-                new DialogGUIButton(_listing ? "Asking..." : "List models on server", OnListLocalModels, 160f, ButtonHeight, false),
-                new DialogGUIButton(_pulling ? "Pulling..." : "Pull on Ollama", OnPullModel, 120f, ButtonHeight, false)));
+                new DialogGUIButton("LM Studio :1234", () => OnLocalPreset("http://localhost:1234/v1/chat/completions"), 120f, ButtonHeight, false)));
+            items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                new DialogGUISpace(16f),
+                new DialogGUILabel("Models:", 60f, LineHeight),
+                new DialogGUIButton(_listing ? "Asking..." : "List models on server", OnListLocalModels, 170f, ButtonHeight, false),
+                new DialogGUIButton(_pulling ? "Pulling..." : "Pull selected model on Ollama", OnPullModel, 210f, ButtonHeight, false),
+                new DialogGUILabel(_pulling ? "Downloading; keep playing." : "Pull downloads the selected model onto Ollama (GBs).", textWidth - 470f, LineHeight)));
 
             Line(items, "Local model (" + (_settings.LocalModel.Length > 0 ? _settings.LocalModel : "none") + "):", textWidth);
             if (_discovered.Count > 0)
