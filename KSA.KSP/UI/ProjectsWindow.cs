@@ -206,7 +206,7 @@ namespace KSA.KSP.UI
                 Template t = templates[i];
                 string tid = t.Id;
                 bool isSel = selectedTemplate != null && string.Equals(selectedTemplate.Id, tid, StringComparison.OrdinalIgnoreCase);
-                string label = (isSel ? "> " : "") + t.Name + " (" + Percent(t.DesignScore) + ", " + Agency.Money(_agency.ProjectCost(typeForCost, t)) + ")";
+                string label = (isSel ? "> " : "") + t.Name + " (" + (t.Seats > 0 ? t.Seats + (t.Seats == 1 ? " seat, " : " seats, ") : "") + Percent(t.DesignScore) + ", " + Agency.Money(_agency.ProjectCost(typeForCost, t)) + ")";
                 return new DialogGUIButton(label, () => OnSelectTemplate(tid), 220f, ButtonHeight, false);
             });
 

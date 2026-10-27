@@ -16,6 +16,8 @@ namespace KSA.Core.Missions
         public double DesignScore { get; set; }
         public double CostMultiplier { get; set; }
         public bool StockOnly { get; set; }
+        /// <summary>Crew seats on the craft (0 = unknown). Shown in the design picker so "Kerbal 2" is not read as two crew.</summary>
+        public int Seats { get; set; }
         public List<string> RequiredMods { get; } = new List<string>();
 
         public Template()
@@ -103,7 +105,8 @@ namespace KSA.Core.Missions
                     Craft = node.GetValue("craft", string.Empty),
                     DesignScore = Math.Max(0, Math.Min(1, node.GetDouble("designScore", 0.5))),
                     CostMultiplier = Math.Max(0.1, node.GetDouble("costMultiplier", 1.0)),
-                    StockOnly = node.GetBool("stockOnly", true)
+                    StockOnly = node.GetBool("stockOnly", true),
+                    Seats = Math.Max(0, node.GetInt("seats", 0))
                 };
                 t.MissionTypes.AddRange(node.GetList("missionTypes"));
                 t.RequiredMods.AddRange(node.GetList("requiredMods"));
