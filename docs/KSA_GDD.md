@@ -1,6 +1,6 @@
-# Kerbal Space Agency (KSA): Game Design Document
+# Kerbal Space Directorate (KSA): Game Design Document
 
-**Working title:** Kerbal Space Agency (KSA) *(name under review; see 14.1)*
+**Name:** Kerbal Space Directorate (decided 2026-10-26; internal code name KSA; see 14.1)
 **Type:** Kerbal Space Program 1 (v1.12.5) mod
 **Genre:** Space agency management sim / AI-driven autonomous sandbox
 **Author:** T (jaqknife), Blackbox Entertainment
@@ -611,7 +611,7 @@ Each milestone is playable on its own. Jira epics KSA-1 to KSA-8.
 
 ## 14. Open Questions
 
-1. **Final name.** "KSA" collides with RocketWerkz's *Kitten Space Agency*. Keep or rename before release?
+1. ~~Final name~~ Decided 2026-10-26: **Kerbal Space Directorate**. Internal code name stays KSA.
 2. Can the player **override** a design manually, or is hands-off strict?
 3. Can kerbals **quit** (low morale) or **retire** (age/service time)?
 4. Track **kerbal age** and a hall of fame?

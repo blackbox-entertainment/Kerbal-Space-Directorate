@@ -1,8 +1,8 @@
-# CLAUDE.md: Kerbal Space Agency (KSA)
+# CLAUDE.md: Kerbal Space Directorate (KSA)
 
 Instructions and context for Claude when working on this repo. Read this first, every session.
 
-> **Working title:** Kerbal Space Agency (KSA). The name may change: RocketWerkz's *Kitten Space Agency* also uses "KSA."
+> **Name:** **Kerbal Space Directorate** (decided 2026-10-26; replaces "Kerbal Space Agency", which collided with RocketWerkz's *Kitten Space Agency*). The internal code name stays **KSA**: namespaces, `GameData/KSA`, the `[KSA]` log prefix, and the Jira key. Rename the GameData folder to KSD only at release (M7) if desired.
 
 ---
 
@@ -126,7 +126,8 @@ GameData/KSA/
 | Mission modes | Hybrid default: Simulated unless it's a "First" or the player clicks Watch Live |
 | AI providers | OpenRouter for design and kOS scripts; local (Ollama/LM Studio) for narrative |
 | Hardware targets | Minimum 16 GB RAM (AI via API only), Recommended 32 GB (full mod set, optional small local model). T's 64 GB dev machine is **not** a target. |
-| GitHub owner | **Blackbox Entertainment** organization, GitHub slug `blackbox-entertainment` (decided 2026-10-26). Remote: https://github.com/blackbox-entertainment/Kerbal-space-agency |
+| GitHub owner | **Blackbox Entertainment** organization, GitHub slug `blackbox-entertainment` (decided 2026-10-26). Remote: https://github.com/blackbox-entertainment/Kerbal-Space-Directorate |
+| Mod name | **Kerbal Space Directorate** (public name, decided 2026-10-26). Internal code name remains KSA. |
 | Repo location | `G:\KSA` (local), VS Code with C# Dev Kit |
 | Admin staff | Hireable Management-track kerbals replace the stock Administration faces in function (M2). Decided 2026-10-26. |
 | Kerbal stats | Stock stars = competence. One growth stat per track (Leadership / Insight / Design) earned through assignments. Courage = risk tolerance, Stupidity = error chance. Personality tags + morale as modifiers. No more raw stats. |
