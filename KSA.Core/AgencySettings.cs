@@ -48,6 +48,12 @@ namespace KSA.Core
         public KSA.Core.Flight.FlightCrewRules FlightCrew { get; set; } = new KSA.Core.Flight.FlightCrewRules();
         /// <summary>Who makes the crew's judgement calls in flight: Rule (traits only), Local (local model, rule fallback), Any (local or API key), Off.</summary>
         public string CrewDecisions { get; set; } = "Local";
+        /// <summary>Department-head effects (DEPARTMENTS block).</summary>
+        public DepartmentRules Departments { get; set; } = new DepartmentRules();
+        /// <summary>Keep stock Mission Control contracts on offer (default false: KSA goals replace them).</summary>
+        public bool StockContracts { get; set; } = false;
+        /// <summary>Keep the stock Astronaut Complex applicant list (default false: KSA Recruiting is the hiring path).</summary>
+        public bool StockHiring { get; set; } = false;
         /// <summary>Rival agencies run in the background and claim firsts (decision 19).</summary>
         public bool RivalsEnabled { get; set; } = true;
         public List<string> PersonalityTags { get; } = new List<string> { "Cautious", "Reckless", "Perfectionist", "Showboat", "Steady", "Curious" };
@@ -72,6 +78,9 @@ namespace KSA.Core
             s.Drift = KSA.Core.Personnel.TraitDrift.Parse(node.GetChild(KSA.Core.Personnel.TraitDrift.NodeName));
             s.FlightCrew = KSA.Core.Flight.FlightCrewRules.Parse(node.GetChild(KSA.Core.Flight.FlightCrewRules.NodeName));
             s.CrewDecisions = node.GetValue("crewDecisions", s.CrewDecisions);
+            s.Departments = DepartmentRules.Parse(node.GetChild(DepartmentRules.NodeName));
+            s.StockContracts = node.GetBool("stockContracts", s.StockContracts);
+            s.StockHiring = node.GetBool("stockHiring", s.StockHiring);
             s.CrisisLayoffFraction = node.GetDouble("crisisLayoffFraction", s.CrisisLayoffFraction);
             KSA.Core.Missions.DefaultMissionMode mode;
             if (System.Enum.TryParse(node.GetValue("defaultMissionMode", "Hybrid"), true, out mode)) s.DefaultMissionMode = mode;

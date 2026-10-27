@@ -122,6 +122,7 @@ namespace KSA.KSP
         public static void TickAgency(string reason)
         {
             if (Agency == null) return;
+            StockSystems.Enforce(Agency.Settings);
             if (Agency.Ledger.Mirror != null && Agency.Ledger.Mirror.IsActive && Agency.State.Started) Agency.Ledger.SyncFromMirror();
             List<string> notices = Agency.Tick();
             if (notices.Count == 0) return;

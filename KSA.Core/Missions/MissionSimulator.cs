@@ -18,6 +18,8 @@ namespace KSA.Core.Missions
         public double SiteSlope { get; set; }
         /// <summary>0..1 from an approved AI design analysis (M4); null keeps the template's score.</summary>
         public double? DesignOverride { get; set; }
+        /// <summary>Absolute success-chance bonus from the Head of Science (department heads).</summary>
+        public double SuccessBonus { get; set; }
 
         public SimulationInput() { LeadEngineerRung = -1; SiteSlope = -1; }
     }
@@ -68,7 +70,7 @@ namespace KSA.Core.Missions
             o.CrewScore = CrewScore(input);
             double difficulty = input.Type != null ? input.Type.Difficulty : 0.3;
             double baseQuality = 0.5 * o.DesignScore + 0.5 * o.CrewScore;
-            double success = 0.25 + baseQuality * 0.85 - difficulty * 0.35;
+            double success = 0.25 + baseQuality * 0.85 - difficulty * 0.35 + input.SuccessBonus;
 
             o.SlopeFactor = 1.0;
             if (input.Type != null && input.Type.IsLanding)

@@ -16,6 +16,7 @@ namespace KSA.KSP.UI
 
         private ProgramsWindow _programs;
         private AnalyticsWindow _analytics;
+        private DepartmentsWindow _departments;
         private RecruitingWindow _recruiting;
         private RosterWindow _roster;
         private MissionControlWindow _missionControl;
@@ -65,7 +66,8 @@ namespace KSA.KSP.UI
                 case Facility.Administration:
                     if (GUILayout.Button("Programs")) ToggleWindow(ref _programs, () => new ProgramsWindow(KsaCore.Agency, () => { _programs = null; }), wnd => wnd.Open(), wnd => wnd.Close());
                     if (GUILayout.Button("Analytics")) ToggleWindow(ref _analytics, () => new AnalyticsWindow(KsaCore.Agency, () => { _analytics = null; }), wnd => wnd.Open(), wnd => wnd.Close());
-                    GUILayout.Label("Stations, bases, year-over-year figures");
+                    if (GUILayout.Button("Departments")) ToggleWindow(ref _departments, () => new DepartmentsWindow(KsaCore.Agency, () => { _departments = null; }), wnd => wnd.Open(), wnd => wnd.Close());
+                    GUILayout.Label("Stations, bases, figures, department heads");
                     break;
                 case Facility.AstronautComplex:
                     if (GUILayout.Button("Recruiting")) ToggleWindow(ref _recruiting, () => new RecruitingWindow(KsaCore.Agency, () => { _recruiting = null; }), wnd => wnd.Open(), wnd => wnd.Close());
@@ -92,6 +94,7 @@ namespace KSA.KSP.UI
         {
             if (_programs != null) { _programs.Close(); _programs = null; }
             if (_analytics != null) { _analytics.Close(); _analytics = null; }
+            if (_departments != null) { _departments.Close(); _departments = null; }
             if (_recruiting != null) { _recruiting.Close(); _recruiting = null; }
             if (_roster != null) { _roster.Close(); _roster = null; }
             if (_missionControl != null) { _missionControl.Close(); _missionControl = null; }

@@ -51,6 +51,7 @@ namespace KSA.Core
             foreach (KSA.Core.Rivals.RivalAgency rv in agency.Rivals) root.AddChild(rv.ToDataNode());
             foreach (KSA.Core.Analytics.YearSummary ys in agency.YearHistory) root.AddChild(ys.ToDataNode());
             foreach (FirstClaim fc in agency.Firsts) root.AddChild("FIRST").AddValue("achievement", fc.Achievement).AddValue("by", fc.ClaimedBy).AddValue("year", fc.Year);
+            foreach (DepartmentPost dp in agency.Departments) if (dp.Filled) root.AddChild("DEPARTMENT").AddValue("department", dp.Department.ToString()).AddValue("crew", dp.CrewId).AddValue("sinceDay", dp.SinceDay);
 
             foreach (Program g in agency.Programs)
             {
@@ -153,6 +154,14 @@ namespace KSA.Core
             foreach (DataNode ys in root.GetChildren("YEAR_SUMMARY")) agency.YearHistory.Add(KSA.Core.Analytics.YearSummary.FromDataNode(ys));
             agency.Firsts.Clear();
             foreach (DataNode fc in root.GetChildren("FIRST")) agency.Firsts.Add(new FirstClaim { Achievement = fc.GetValue("achievement", string.Empty), ClaimedBy = fc.GetValue("by", string.Empty), Year = fc.GetInt("year", 0) });
+            foreach (DataNode dn in root.GetChildren("DEPARTMENT"))
+            {
+                Department dept;
+                if (!System.Enum.TryParse(dn.GetValue("department", string.Empty), out dept)) continue;
+                DepartmentPost post = agency.Post(dept);
+                post.CrewId = dn.GetValue("crew", string.Empty);
+                post.SinceDay = dn.GetInt("sinceDay", 0);
+            }
 
             foreach (DataNode n in root.GetChildren("PROGRAM"))
             {

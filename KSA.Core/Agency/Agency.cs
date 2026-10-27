@@ -101,7 +101,7 @@ namespace KSA.Core
             State.CurrentYear = Calendar.YearOf(day);
             if (Ledger.Mirror != null && Ledger.Mirror.IsActive) Ledger.SyncFromMirror();
             else Ledger.SetBalance(Settings.StartingBalance);
-            double grant = Math.Round(Settings.BaseGrant * PrestigeFactor());
+            double grant = Math.Round(Settings.BaseGrant * PrestigeFactor() * GrantFactor());
             Ledger.Deposit(grant, LedgerCategory.Grant, "Government grant, year " + State.CurrentYear, day, State.CurrentYear);
             State.YearStartBalance = Ledger.Balance;
             Push(notices, "Fiscal year " + State.CurrentYear + " opens. Grant: " + Money(grant));
@@ -184,6 +184,8 @@ namespace KSA.Core
             // 3. Salaries.
             double salaries = 0;
             foreach (CrewProfile p in Crew.Active) salaries += p.Salary;
+            double salaryFactor = SalaryFactor();
+            if (salaryFactor < 0.999) { double saved = salaries * (1 - salaryFactor); salaries -= saved; Push(notices, "Head of Finances trimmed the payroll by " + Money(saved)); }
             if (salaries > 0)
             {
                 Ledger.Withdraw(salaries, LedgerCategory.Salary, "Salaries, year " + year, day, year, true);
@@ -192,6 +194,10 @@ namespace KSA.Core
 
             // 4. Apply the verdict.
             State.Prestige = r.PrestigeAfter;
+            if (r.PrestigeAfter > r.PrestigeBefore && PrestigeGainFactor() > 1) { double extra = (r.PrestigeAfter - r.PrestigeBefore) * (PrestigeGainFactor() - 1); State.Prestige = Math.Min(100, State.Prestige + extra); r.PrestigeAfter = State.Prestige; }
+            DepartmentYearNotes(notices);
+            int moraleBonus = YearEndMoraleBonus();
+            if (moraleBonus > 0) foreach (CrewProfile p in Crew.Active) p.Morale = Math.Min(100, p.Morale + moraleBonus);
             State.HiringFreeze = r.HiringFreeze;
             State.Probation = r.ProbationAfter;
             State.PendingLayoffs = r.Layoffs;
@@ -242,6 +248,7 @@ namespace KSA.Core
             State.DeathsThisYear = 0;
             State.MissionsThisYear = 0;
             ManualAwardsThisYear.Clear();
+            r.NextGrant = Math.Round(r.NextGrant * GrantFactor());
             Ledger.Deposit(r.NextGrant, LedgerCategory.Grant, "Government grant, year " + State.CurrentYear, day + 1, State.CurrentYear);
             State.YearStartBalance = Ledger.Balance;
             Push(notices, "Fiscal year " + State.CurrentYear + " opens. Grant: " + Money(r.NextGrant));
@@ -441,6 +448,7 @@ namespace KSA.Core
             RecordIncident(crewId, IncidentKind.Death, description);
             p.Status = CrewStatus.Dead;
             p.Departed = true;
+            VacatePostsOf(p.Id);
             p.DepartureReason = DepartureReason.Died;
             p.DepartedDay = CurrentDay;
             MissionEntry m = p.Record.CurrentMission;
@@ -523,6 +531,7 @@ namespace KSA.Core
 
         private void Depart(CrewProfile p, DepartureReason reason, int day, List<string> notices)
         {
+            VacatePostsOf(p.Id);
             p.Departed = true;
             p.DepartureReason = reason;
             p.DepartedDay = day;

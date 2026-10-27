@@ -50,7 +50,7 @@ namespace KSA.Core
             var list = new List<CrewProfile>();
             foreach (CrewProfile p in Crew.Active)
             {
-                if (p.Status == CrewStatus.Dead || p.IsFlying || p.ProjectId.Length > 0) continue;
+                if (p.Status == CrewStatus.Dead || p.IsFlying || p.ProjectId.Length > 0 || IsDepartmentHead(p.Id)) continue;
                 if (role != CrewRole.Unknown && p.Role != role) continue;
                 list.Add(p);
             }
@@ -190,6 +190,7 @@ namespace KSA.Core
             int rung = RankRung(Crew.Get(project.LeadEngineer));
             if (rung > 0) days *= 1 - Math.Min(0.4, 0.1 * rung);
             if (project.ProgramManager.Length > 0) days *= 0.9;
+            days *= BuildTimeFactor();
             return Math.Max(1, (int)Math.Round(days));
         }
 
@@ -197,6 +198,7 @@ namespace KSA.Core
         {
             double days = Settings.BuildBaseDays + cost / 10000.0;
             if (project.ProgramManager.Length > 0) days *= 0.9;
+            days *= BuildTimeFactor();
             return Math.Max(1, (int)Math.Round(days));
         }
 
@@ -346,6 +348,7 @@ namespace KSA.Core
             input.DesignOverride = DesignOverride(p);
             Program program = p.ProgramId.Length > 0 ? GetProgram(p.ProgramId) : null;
             if (program != null && type.IsLanding) input.SiteSlope = program.SiteSlope;
+            input.SuccessBonus = SuccessBonus();
 
             MissionReport r = MissionSimulator.Resolve(p, input, day, Rng);
             r.MissionId = p.MissionId;

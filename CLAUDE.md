@@ -151,6 +151,8 @@ GameData/KSA/
 | Rival agencies | Three rivals from rivals.cfg simulated each fiscal year; firsts, league table and year-over-year figures in the Analytics window. On by default (agency.cfg rivals). Decided 2026-10-27. |
 | Flight director | KSA's own, built 2026-10-27: ascent, transfers/capture (KSA-51), landing + EVA + ascent (KSA-52), rendezvous/docking (KSA-53). Legs per mission profile (KSA.KSP/Flight), portable math in KSA.Core/Flight/Orbital.cs. Eve surface stays simulated. MechJeb optional, never copied (GPL). |
 | Crew competence in flight | The kerbals fly: pilot stars/courage/stupidity/morale set precision, margins, mistakes (agency.cfg FLIGHT_CREW). Judgement calls by trait rule or a local/API model in character (crewDecisions). Decided 2026-10-27. |
+| Department heads | Built 2026-10-27: Management-track kerbals hold Finances / Science / PR / Operations (Departments window); rank-scaled bonuses from agency.cfg DEPARTMENTS. Stock strategies untouched. |
+| Stock contracts and hiring | Off by default in KSA games (agency.cfg stockContracts, stockHiring): offered contracts withdrawn, stock applicant list emptied. Decided 2026-10-27. |
 
 **Candidate supported mod set (not final):** ReStock/ReStock+, Near Future series, SSPXr (inflatables), KPBS (surface bases), Outer Planets Mod, Hooligan Labs Airships (Eve cloud city), Extraplanetary Launchpads. Required: ModuleManager. Optional: MechJeb2 (future bridge for missions beyond Kerbin orbit), kOS.
 
