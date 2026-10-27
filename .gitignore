@@ -1,0 +1,13 @@
+# Build output
+bin/
+obj/
+
+# IDE
+.vs/
+*.user
+*.suo
+
+# User-local settings (contains API keys; never commit)
+ksa_settings.cfg
+GameData/KSA/PluginData/ksa_settings.cfg
+GameData/KSA/PluginData/logs/
