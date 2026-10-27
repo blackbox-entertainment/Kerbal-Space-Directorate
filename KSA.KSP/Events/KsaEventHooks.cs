@@ -32,6 +32,7 @@ namespace KSA.KSP.Events
             GameEvents.onCrewOnEva.Add(OnCrewOnEva);
             GameEvents.onCrash.Add(OnCrash);
             GameEvents.onKerbalAdded.Add(OnRosterChanged);
+            GameEvents.OnCrewmemberHired.Add(OnStockHire);
             GameEvents.onKerbalRemoved.Add(OnRosterChanged);
             GameEvents.onKerbalTypeChange.Add(OnKerbalTypeChange);
             GameEvents.OnTechnologyResearched.Add(OnTechChanged);
@@ -46,6 +47,7 @@ namespace KSA.KSP.Events
             GameEvents.onCrewOnEva.Remove(OnCrewOnEva);
             GameEvents.onCrash.Remove(OnCrash);
             GameEvents.onKerbalAdded.Remove(OnRosterChanged);
+            GameEvents.OnCrewmemberHired.Remove(OnStockHire);
             GameEvents.onKerbalRemoved.Remove(OnRosterChanged);
             GameEvents.onKerbalTypeChange.Remove(OnKerbalTypeChange);
             GameEvents.OnTechnologyResearched.Remove(OnTechChanged);
@@ -67,6 +69,19 @@ namespace KSA.KSP.Events
             if (ids.Count == 0) return;
             string missionId = Agency.BeginMission(ids, v.vesselName);
             KsaCore.Log.Info("Launch: " + v.vesselName + " with " + ids.Count + " crew, mission " + missionId);
+        }
+
+        // ---------------------------------------------------------------- stock hiring
+
+        /// <summary>A hire made in the stock Astronaut Complex list: KSP already charged its own price. The roster sync
+        /// gives them a KSA profile; we just say so, since KSA Recruiting (drives, interviews) is the intended path.</summary>
+        private void OnStockHire(ProtoCrewMember pcm, int cost)
+        {
+            if (Agency == null || pcm == null) return;
+            KsaCore.SyncRoster("stock hire");
+            string msg = pcm.name + " hired through the stock Astronaut Complex list for " + cost.ToString("N0") + " funds (no interview, no drive). KSA Recruiting offers interviews and cheaper walk-ins.";
+            ScreenMessages.PostScreenMessage("[KSA] " + msg, 8f, ScreenMessageStyle.UPPER_CENTER);
+            KsaCore.Log.Info(msg);
         }
 
         // ---------------------------------------------------------------- recovery

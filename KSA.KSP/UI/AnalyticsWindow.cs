@@ -307,7 +307,7 @@ namespace KSA.KSP.UI
             _textures.Add(tex);
             Line(items, "<b>" + title + "</b>", textWidth);
             var parts = new List<string>();
-            foreach (ChartTexture.Series s in legend) parts.Add(Color("■ " + s.Name, ChartTexture.Hex(s.Color)));
+            foreach (ChartTexture.Series s in legend) parts.Add(Color("<b>" + s.Name + "</b>", ChartTexture.Hex(s.Color)));
             Line(items, string.Join("   ", parts.ToArray()), textWidth);
             items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.UpperLeft,
                 new DialogGUISpace(16f),

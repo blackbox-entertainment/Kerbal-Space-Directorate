@@ -189,7 +189,8 @@ namespace KSA.KSP.UI
                 new DialogGUIButton("Ollama :11434", () => OnLocalPreset("http://localhost:11434/v1/chat/completions"), 120f, ButtonHeight, false),
                 new DialogGUIButton("llama.cpp :8081", () => OnLocalPreset("http://localhost:8081/v1/chat/completions"), 120f, ButtonHeight, false),
                 new DialogGUIButton("LM Studio :1234", () => OnLocalPreset("http://localhost:1234/v1/chat/completions"), 120f, ButtonHeight, false),
-                new DialogGUIButton(_listing ? "Asking..." : "List models on server", OnListLocalModels, 160f, ButtonHeight, false)));
+                new DialogGUIButton(_listing ? "Asking..." : "List models on server", OnListLocalModels, 160f, ButtonHeight, false),
+                new DialogGUIButton(_pulling ? "Pulling..." : "Pull on Ollama", OnPullModel, 120f, ButtonHeight, false)));
 
             Line(items, "Local model (" + (_settings.LocalModel.Length > 0 ? _settings.LocalModel : "none") + "):", textWidth);
             if (_discovered.Count > 0)
@@ -223,6 +224,32 @@ namespace KSA.KSP.UI
 
         private readonly List<string> _discovered = new List<string>();
         private bool _listing;
+        private bool _pulling;
+
+        /// <summary>Ollama only: POST /api/pull downloads the selected model onto the server (several GB; the game keeps running).</summary>
+        private void OnPullModel()
+        {
+            if (_pulling) return;
+            string model = (_settings.LocalModel ?? string.Empty).Trim();
+            if (model.Length == 0) { _status = "<color=#ffd27f>Pick or type a local model first.</color>"; Refresh(); return; }
+            string url = _settings.LocalEndpoint ?? string.Empty;
+            int cut = url.IndexOf("/v1/", StringComparison.OrdinalIgnoreCase);
+            if (cut < 0) { _status = "<color=#ffd27f>Pull works with Ollama endpoints (http://localhost:11434/v1/...). For llama.cpp, start llama-server with a .gguf instead.</color>"; Refresh(); return; }
+            string pullUrl = url.Substring(0, cut) + "/api/pull";
+            _pulling = true;
+            _status = "Pulling " + model + " through " + pullUrl + "... this downloads the model (often 2 to 6 GB); keep playing, the status updates when it is done.";
+            Refresh();
+            var req = new LlmRequest { Url = pullUrl, Body = "{\"name\": \"" + model.Replace("\"", "") + "\", \"stream\": false}", TimeoutSeconds = 3600 };
+            req.Headers["Content-Type"] = "application/json";
+            Ai.UnityWebTransport.Instance.Send(req, resp =>
+            {
+                _pulling = false;
+                if (resp != null && resp.Ok) { _status = "<color=#8be28b>Pulled " + model + ".</color> Press Test connection, then Save."; _discovered.Clear(); }
+                else _status = "<color=#ff8080>Pull failed: " + (resp != null ? (resp.Error ?? ("HTTP " + resp.Status)) : "no reply") + "</color> (is this an Ollama endpoint? Run 'ollama pull " + model + "' in PowerShell as a fallback).";
+                KsaCore.Log.Info("AI Setup: pull " + model + " " + (resp != null && resp.Ok ? "ok" : "failed"));
+                if (_dialog != null) Refresh();
+            });
+        }
 
         private void OnLocalPreset(string url)
         {
@@ -382,7 +409,12 @@ namespace KSA.KSP.UI
             else
             {
                 string err = result != null ? result.Error : "no result";
-                _status = "<color=#ff8080>Connection failed: " + err + "</color>";
+                string hint = string.Empty;
+                if (err != null && err.IndexOf("not found", StringComparison.OrdinalIgnoreCase) >= 0 && err.IndexOf("model", StringComparison.OrdinalIgnoreCase) >= 0)
+                    hint = " The server is up but that model is not on it: press 'Pull on Ollama' below, or press 'List models on server' and pick one it has.";
+                else if (err != null && (err.IndexOf("connect", StringComparison.OrdinalIgnoreCase) >= 0 || err.IndexOf("refused", StringComparison.OrdinalIgnoreCase) >= 0))
+                    hint = " Nothing is listening at the endpoint: start Ollama / llama-server, or tick 'Start server with the game'.";
+                _status = "<color=#ff8080>Connection failed: " + err + "</color>" + hint;
                 KsaCore.Log.Warn("AI Setup: connection test failed: " + err);
             }
             if (_dialog != null) Refresh();
