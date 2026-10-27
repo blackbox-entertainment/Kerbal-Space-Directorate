@@ -36,6 +36,7 @@ namespace KSA.KSP
             // OnLoad runs before the roster is guaranteed complete; sync once the scene is up.
             if (!_loaded) KsaCore.CreateAgency();
             KsaCore.SyncRoster("scene start");
+            KsaCore.TickAgency("scene start");
         }
 
         public void OnDestroy()

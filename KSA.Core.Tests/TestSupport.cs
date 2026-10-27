@@ -3,8 +3,10 @@ using System.IO;
 using KSA.Core;
 using KSA.Core.Careers;
 using KSA.Core.Data;
+using KSA.Core.Goals;
 using KSA.Core.Medals;
 using KSA.Core.Personnel;
+using KSA.Core.Recruiting;
 
 namespace KSA.Core.Tests
 {
@@ -33,6 +35,12 @@ namespace KSA.Core.Tests
         public void SaveState(DataNode state) { Stored = state; }
     }
 
+    public sealed class FakeNames : INameSource
+    {
+        private int _n;
+        public string NextName() { _n++; return "Applicant " + _n; }
+    }
+
     /// <summary>Loads the real config files shipped in GameData so tests exercise what players get.</summary>
     public static class ShippedConfigs
     {
@@ -58,6 +66,30 @@ namespace KSA.Core.Tests
 
         public static CareerCatalog Careers(List<string> warnings = null) { return CareerCatalog.Parse(Load("careers.cfg"), warnings); }
         public static MedalCatalog Medals(List<string> warnings = null) { return MedalCatalog.Parse(Load("medals.cfg"), warnings); }
+        public static GoalCatalog Goals(List<string> warnings = null) { return GoalCatalog.Parse(Load("goals.cfg"), warnings); }
+        public static RecruitCatalog Recruiting(List<string> warnings = null) { return RecruitCatalog.Parse(Load("recruiting.cfg"), warnings); }
+        public static MoraleRules Morale(List<string> warnings = null) { return MoraleRules.Parse(Load("morale.cfg"), warnings); }
+
+        public static AgencySettings Settings()
+        {
+            List<DataNode> nodes = Load("agency.cfg");
+            DataNode node = nodes.Find(n => n.Name == AgencySettings.NodeName);
+            return AgencySettings.Parse(node);
+        }
+
+        /// <summary>Every shipped catalog, as the game would load them.</summary>
+        public static AgencyCatalogs All()
+        {
+            return new AgencyCatalogs
+            {
+                Careers = Careers(),
+                Medals = Medals(),
+                Goals = Goals(),
+                Recruiting = Recruiting(),
+                Morale = Morale(),
+                Settings = Settings()
+            };
+        }
     }
 
     public static class Make
@@ -65,6 +97,13 @@ namespace KSA.Core.Tests
         public static CrewSnapshot Snapshot(string name, CrewRole role, int stars = 0, CrewStatus status = CrewStatus.Available, params string[] achievements)
         {
             return new CrewSnapshot(name, role, stars, status, 0.5f, 0.5f, achievements);
+        }
+
+        public static Agency Agency(FakeClock clock, ListLogger log)
+        {
+            var a = new Agency(ShippedConfigs.All(), clock, log) { Names = new FakeNames() };
+            a.Rng = new System.Random(12345);
+            return a;
         }
     }
 }

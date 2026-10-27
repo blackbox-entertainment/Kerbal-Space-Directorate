@@ -28,12 +28,14 @@ namespace KSA.Core.Tests
         }
 
         [Test]
-        public void ShippedMedalsConfig_ParsesAllSix()
+        public void ShippedMedalsConfig_ParsesAllSeven()
         {
             var warnings = new List<string>();
             MedalCatalog c = ShippedConfigs.Medals(warnings);
             Assert.That(warnings, Is.Empty);
-            Assert.That(c.Count, Is.EqualTo(6));
+            Assert.That(c.Count, Is.EqualTo(7));
+            Assert.That(c.Get("ChiefsCommendation").Trigger, Is.EqualTo(MedalTrigger.Manual));
+            Assert.That(c.Get("ChiefsCommendation").PerYearLimit, Is.EqualTo(2));
             Assert.That(c.Get("MemorialStar").Posthumous, Is.True);
             Assert.That(c.Get("OrbitalPioneer").FirstInAgency, Is.True);
         }

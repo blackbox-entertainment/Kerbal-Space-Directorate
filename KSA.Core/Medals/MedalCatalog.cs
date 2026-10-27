@@ -76,7 +76,8 @@ namespace KSA.Core.Medals
                     IncidentKind = kind,
                     FirstInAgency = node.GetBool("firstInAgency", false),
                     Posthumous = node.GetBool("posthumous", false),
-                    RequiresAlive = node.GetBool("requiresAlive", false)
+                    RequiresAlive = node.GetBool("requiresAlive", false),
+                    PerYearLimit = node.GetInt("perYearLimit", 0)
                 };
                 medal.Achievements.AddRange(node.GetValues("achievement"));
 

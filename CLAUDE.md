@@ -51,7 +51,7 @@ KSA.sln
 - Simulated mission resolution
 - Interfaces for anything platform-specific (`ILlmTransport`, `IClock`, `IPersistence`, `IPartCatalog`, `ILogger`)
 - `DataNode`: the platform-neutral config/save tree. Core parses careers, medals, and save state from it; KSA.KSP converts ConfigNode to and from it. Tests load the real `GameData/KSA/Configs/*.cfg` through `DataNodeText`.
-- `Agency`: the orchestrator. The host feeds it roster snapshots, mission events, a clock, and persistence; it applies promotion and medal rules and raises `Notice` strings.
+- `Agency`: the orchestrator. The host feeds it roster snapshots, mission events, a clock, names, and persistence; it owns the ledger, fiscal calendar, goals, reviews, applicant pool, and crew, and raises `Notice`, `CrewDeparted`, `ApplicantHired`, `YearEnded` for the host to act on. `Agency.Tick()` must be called regularly (KSA.KSP does it every 5 s and on scene start).
 
 **KSA.KSP** (KSP-only)
 - `ScenarioModule` save/load
@@ -94,7 +94,7 @@ KSA.sln
 ```
 GameData/KSA/
 ├── Plugins/          KSA.Core.dll, KSA.KSP.dll
-├── Configs/          ModuleManager data: medals, goals, careers, recruiting sources
+├── Configs/          ModuleManager data: careers, medals, goals, recruiting, morale, agency settings
 ├── Templates/        offline fallback .craft designs
 ├── Textures/         toolbar icon and other UI art (PNG, loaded via GameDatabase)
 └── PluginData/       ksa_settings.cfg (user-local), logs/

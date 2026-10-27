@@ -7,9 +7,9 @@ using UnityEngine;
 namespace KSA.KSP.UI
 {
     /// <summary>
-    /// Read-only roster window (Jira KSA-14), built with KSP's PopupDialog / DialogGUI.
-    /// Rebuilds itself whenever the game reports a crew change, so a hire at the
-    /// Astronaut Complex shows up without reopening. Clicking a name opens the Service Record (KSA-23).
+    /// Roster window (Jira KSA-14, KSA-32), built with KSP's PopupDialog / DialogGUI. Rebuilds itself whenever
+    /// the game reports a crew change. Clicking a name opens the Service Record (KSA-23). The Director can dismiss
+    /// crew here with a two-click confirmation.
     /// </summary>
     public sealed class RosterWindow
     {
@@ -19,7 +19,10 @@ namespace KSA.KSP.UI
         private const float RankWidth = 160f;
         private const float RoleWidth = 90f;
         private const float StarsWidth = 60f;
+        private const float MoraleWidth = 60f;
         private const float StatusWidth = 90f;
+        private const float ActionWidth = 90f;
+        private const float RowHeight = 22f;
 
         private readonly IRosterSource _source;
         private readonly Core.ILogger _log;
@@ -27,6 +30,8 @@ namespace KSA.KSP.UI
         private PopupDialog _dialog;
         private ServiceRecordWindow _record;
         private bool _subscribed;
+        private string _confirmDismiss;
+        private string _status = string.Empty;
 
         public bool IsOpen { get { return _dialog != null; } }
 
@@ -76,35 +81,45 @@ namespace KSA.KSP.UI
             rows.Add(HeaderRow());
             if (crew.Count == 0)
             {
-                rows.Add(new DialogGUILabel("No crew hired yet. Hire kerbals at the Astronaut Complex.", true, false));
+                rows.Add(new DialogGUILabel("No crew hired yet. Use Recruiting, or the Astronaut Complex.", 500f, RowHeight));
             }
             else
             {
                 foreach (CrewRecord c in crew)
                 {
                     string rank = "-";
+                    string morale = "-";
+                    bool canDismiss = false;
                     if (agency != null)
                     {
                         CrewProfile p = agency.Crew.Get(c.Name);
-                        if (p != null) rank = agency.Careers.RankName(p.Track, p.RankId);
+                        if (p != null)
+                        {
+                            rank = agency.Careers.RankName(p.Track, p.RankId);
+                            morale = p.Morale.ToString();
+                            canDismiss = !p.Departed && !p.IsFlying && p.Status != CrewStatus.Dead && p.Status != CrewStatus.Assigned;
+                        }
                     }
-                    rows.Add(CrewRow(c, rank));
+                    rows.Add(CrewRow(c, rank, morale, canDismiss));
                 }
             }
 
-            float width = PortraitSize + KsaIcons.BadgeSize + NameWidth + RankWidth + RoleWidth + StarsWidth + StatusWidth;
+            float width = PortraitSize + KsaIcons.BadgeSize + NameWidth + RankWidth + RoleWidth + StarsWidth + MoraleWidth + StatusWidth + ActionWidth + 40f;
             var list = new DialogGUIScrollList(new Vector2(width + 40f, 380f), false, true,
                 new DialogGUIVerticalLayout(false, false, 4f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft, rows.ToArray()));
 
+            string hint = "Click a name to open the Service Record.";
+            if (agency != null && agency.State.PendingLayoffs > 0) hint += "  Layoffs required: " + agency.State.PendingLayoffs + ".";
             var content = new DialogGUIVerticalLayout(true, true, 4f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft,
-                new DialogGUILabel("Click a name to open the Service Record.", true, false),
+                new DialogGUILabel(hint, width, RowHeight),
+                new DialogGUILabel(_status.Length > 0 ? "<color=#ffd27f>" + _status + "</color>" : " ", width, RowHeight),
                 list,
                 new DialogGUIHorizontalLayout(true, false, 4f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleRight,
                     new DialogGUIFlexibleSpace(),
                     new DialogGUIButton("Close", OnCloseClicked, 80f, 28f, true)));
 
             var dialog = new MultiOptionDialog(DialogName, "", "KSA Roster (" + crew.Count + ")", HighLogic.UISkin,
-                new Rect(0.5f, 0.5f, width + 70f, 500f), content);
+                new Rect(0.5f, 0.5f, width + 70f, 540f), content);
 
             _dialog = PopupDialog.SpawnPopupDialog(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), dialog, false, HighLogic.UISkin, false);
         }
@@ -114,24 +129,54 @@ namespace KSA.KSP.UI
             return new DialogGUIHorizontalLayout(false, false, 4f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
                 new DialogGUISpace(PortraitSize),
                 new DialogGUISpace(KsaIcons.BadgeSize),
-                new DialogGUILabel("<b>Name</b>", NameWidth, 20f),
-                new DialogGUILabel("<b>Rank</b>", RankWidth, 20f),
-                new DialogGUILabel("<b>Role</b>", RoleWidth, 20f),
-                new DialogGUILabel("<b>Stars</b>", StarsWidth, 20f),
-                new DialogGUILabel("<b>Status</b>", StatusWidth, 20f));
+                new DialogGUILabel("<b>Name</b>", NameWidth, RowHeight),
+                new DialogGUILabel("<b>Rank</b>", RankWidth, RowHeight),
+                new DialogGUILabel("<b>Role</b>", RoleWidth, RowHeight),
+                new DialogGUILabel("<b>Stars</b>", StarsWidth, RowHeight),
+                new DialogGUILabel("<b>Morale</b>", MoraleWidth, RowHeight),
+                new DialogGUILabel("<b>Status</b>", StatusWidth, RowHeight),
+                new DialogGUISpace(ActionWidth));
         }
 
-        private DialogGUIHorizontalLayout CrewRow(CrewRecord c, string rank)
+        private DialogGUIHorizontalLayout CrewRow(CrewRecord c, string rank, string morale, bool canDismiss)
         {
             string id = c.Name;
+            DialogGUIBase action;
+            if (!canDismiss) action = new DialogGUISpace(ActionWidth);
+            else if (string.Equals(_confirmDismiss, id, StringComparison.OrdinalIgnoreCase))
+                action = new DialogGUIButton("Confirm", () => ConfirmDismiss(id), ActionWidth, RowHeight, false);
+            else
+                action = new DialogGUIButton("Dismiss", () => AskDismiss(id), ActionWidth, RowHeight, false);
+
             return new DialogGUIHorizontalLayout(false, false, 4f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
                 KsaIcons.PortraitImage(c.Name, PortraitSize),
                 KsaIcons.Badge(c.Role),
-                new DialogGUIButton(c.Name, () => OpenRecord(id), NameWidth, 22f, false),
-                new DialogGUILabel(rank, RankWidth, 20f),
-                new DialogGUILabel(RosterView.RoleText(c.Role), RoleWidth, 20f),
-                new DialogGUILabel(RosterView.StarsText(c.Stars), StarsWidth, 20f),
-                new DialogGUILabel(RosterView.StatusText(c.Status), StatusWidth, 20f));
+                new DialogGUIButton(c.Name, () => OpenRecord(id), NameWidth, RowHeight, false),
+                new DialogGUILabel(rank, RankWidth, RowHeight),
+                new DialogGUILabel(RosterView.RoleText(c.Role), RoleWidth, RowHeight),
+                new DialogGUILabel(RosterView.StarsText(c.Stars), StarsWidth, RowHeight),
+                new DialogGUILabel(morale, MoraleWidth, RowHeight),
+                new DialogGUILabel(RosterView.StatusText(c.Status), StatusWidth, RowHeight),
+                action);
+        }
+
+        private void AskDismiss(string crewId)
+        {
+            _confirmDismiss = crewId;
+            _status = "Dismiss " + crewId + "? Click Confirm. Colleagues will lose a little morale.";
+            Refresh();
+        }
+
+        private void ConfirmDismiss(string crewId)
+        {
+            _confirmDismiss = null;
+            Agency agency = KsaCore.Agency;
+            if (agency == null) return;
+            string msg;
+            agency.Fire(crewId, out msg);
+            _status = msg;
+            _log.Info("Roster: " + msg);
+            Refresh();
         }
 
         private void OpenRecord(string crewId)
@@ -158,7 +203,7 @@ namespace KSA.KSP.UI
         private void OnRecordClosed()
         {
             _record = null;
-            Refresh(); // a Director selection may have changed a rank
+            Refresh(); // a Director selection or award may have changed a rank or morale
         }
 
         private void OnCloseClicked()

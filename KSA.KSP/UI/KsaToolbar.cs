@@ -6,7 +6,7 @@ namespace KSA.KSP.UI
 {
     /// <summary>
     /// Adds the KSA button to the stock AppLauncher toolbar at the Space Center (Jira KSA-13)
-    /// and toggles the roster window. Flight and Editor scenes come later.
+    /// and toggles the Director's Office. Flight and Editor scenes come later.
     /// </summary>
     [KSPAddon(KSPAddon.Startup.SpaceCentre, false)]
     public class KsaToolbar : MonoBehaviour
@@ -18,7 +18,7 @@ namespace KSA.KSP.UI
 
         private readonly Core.ILogger _log = new KspLogger();
         private ApplicationLauncherButton _button;
-        private RosterWindow _window;
+        private DirectorOfficeWindow _window;
 
         private void Awake()
         {
@@ -65,7 +65,13 @@ namespace KSA.KSP.UI
 
         private void OnButtonOn()
         {
-            if (_window == null) _window = new RosterWindow(new KspRosterSource(), _log, OnWindowClosedByUser);
+            if (KsaCore.Agency == null)
+            {
+                _log.Warn("Toolbar: no agency loaded yet");
+                if (_button != null) _button.SetFalse(false);
+                return;
+            }
+            if (_window == null) _window = new DirectorOfficeWindow(KsaCore.Agency, OnWindowClosedByUser);
             _window.Open();
         }
 

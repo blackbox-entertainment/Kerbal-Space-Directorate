@@ -31,6 +31,8 @@ namespace KSA.Core.Medals
         public bool Posthumous { get; set; }
         /// <summary>Awarded only while the crew member is alive; Survivor-style medals.</summary>
         public bool RequiresAlive { get; set; }
+        /// <summary>For Manual medals: how many the Director may award per fiscal year (0 = unlimited).</summary>
+        public int PerYearLimit { get; set; }
 
         public MedalDefinition()
         {

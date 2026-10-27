@@ -23,6 +23,7 @@ namespace KSA.KSP.UI
         private readonly string _crewId;
         private readonly Action _onClosed;
         private PopupDialog _dialog;
+        private string _status = string.Empty;
 
         public ServiceRecordWindow(Agency agency, string crewId, Action onClosed)
         {
@@ -100,6 +101,23 @@ namespace KSA.KSP.UI
                     new DialogGUILabel("Director decision: promotes this " + rankName + ".", textWidth - 240f, LineHeight)));
             }
 
+            // --- Director-awarded medals ---
+            foreach (KSA.Core.Medals.MedalDefinition md in _agency.Medals.Medals)
+            {
+                if (md.Trigger != KSA.Core.Medals.MedalTrigger.Manual || p.Departed || p.Record.HasMedal(md.Id)) continue;
+                int remaining = _agency.ManualAwardsRemaining(md.Id);
+                string quota = remaining < 0 ? "no yearly limit" : remaining + " left this year";
+                items.Add(new DialogGUISpace(SectionGap));
+                string medalId = md.Id;
+                items.Add(new DialogGUIHorizontalLayout(false, false, 8f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                    new DialogGUIButton("Award " + md.Name, () => OnAwardClicked(medalId), 260f, 30f, false),
+                    new DialogGUILabel(remaining == 0 ? "No awards left this year." : quota + ". " + md.Description, textWidth - 270f, LineHeight)));
+            }
+            if (_status.Length > 0)
+            {
+                items.Add(new DialogGUILabel("<color=#ffd27f>" + _status + "</color>", textWidth, LineHeight));
+            }
+
             // --- Medals ---
             Section(items, "Medals (" + p.Record.Medals.Count + ")", textWidth);
             if (p.Record.Medals.Count == 0) Line(items, "None yet.", textWidth);
@@ -152,6 +170,15 @@ namespace KSA.KSP.UI
         {
             RankDefinition granted = _agency.SelectForRank(_crewId);
             if (granted != null) KsaCore.Log.Info("Director selected " + _crewId + " as " + granted.Name);
+            Refresh();
+        }
+
+        private void OnAwardClicked(string medalId)
+        {
+            string msg;
+            _agency.AwardManual(_crewId, medalId, "Awarded by the Director", out msg);
+            _status = msg;
+            KsaCore.Log.Info("Service Record: " + msg);
             Refresh();
         }
 

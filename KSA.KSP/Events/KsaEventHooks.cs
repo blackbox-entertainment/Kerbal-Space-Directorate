@@ -13,6 +13,17 @@ namespace KSA.KSP.Events
     [KSPAddon(KSPAddon.Startup.EveryScene, false)]
     public class KsaEventHooks : MonoBehaviour
     {
+        private const float TickIntervalSeconds = 5f;
+        private float _nextTick;
+
+        private void Update()
+        {
+            if (KsaCore.Agency == null || !HighLogic.LoadedSceneIsGame) return;
+            if (Time.realtimeSinceStartup < _nextTick) return;
+            _nextTick = Time.realtimeSinceStartup + TickIntervalSeconds;
+            KsaCore.TickAgency("timer");
+        }
+
         private void Awake()
         {
             GameEvents.onLaunch.Add(OnLaunch);

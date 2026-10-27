@@ -40,6 +40,13 @@ namespace KSA.Core.Personnel
         public double InFlightSinceUT { get; set; }
         /// <summary>Set once the crew member has left the agency (quit, retired, died); kept for the hall of fame.</summary>
         public bool Departed { get; set; }
+        public DepartureReason DepartureReason { get; set; }
+        /// <summary>Day the crew member left, or -1.</summary>
+        public int DepartedDay { get; set; }
+        /// <summary>Consecutive year-ends with morale under the quit threshold.</summary>
+        public int LowMoraleYears { get; set; }
+        /// <summary>Fiscal year of the last completed mission (0 = never).</summary>
+        public int LastMissionYear { get; set; }
 
         public ServiceRecord Record { get; } = new ServiceRecord();
 
@@ -51,6 +58,7 @@ namespace KSA.Core.Personnel
             RankId = string.Empty;
             Morale = DefaultMorale;
             InFlightSinceUT = -1;
+            DepartedDay = -1;
         }
 
         public bool IsFlying { get { return InFlightSinceUT >= 0; } }

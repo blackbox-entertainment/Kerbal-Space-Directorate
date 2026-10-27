@@ -17,7 +17,7 @@ namespace KSA.Core.Tests
         {
             _clock = new FakeClock();
             _log = new ListLogger();
-            _agency = new Agency(ShippedConfigs.Careers(), ShippedConfigs.Medals(), _clock, _log);
+            _agency = new Agency(ShippedConfigs.All(), _clock, _log);
         }
 
         private SyncResult SyncStarters()
@@ -132,7 +132,7 @@ namespace KSA.Core.Tests
             _agency.Save(store);
             string text = DataNodeText.Write(store.Stored);
 
-            var reloaded = new Agency(ShippedConfigs.Careers(), ShippedConfigs.Medals(), _clock, _log);
+            var reloaded = new Agency(ShippedConfigs.All(), _clock, _log);
             Assert.That(reloaded.Load(new MemoryPersistence { Stored = DataNodeText.ParseAll(text)[0] }), Is.True);
 
             Assert.That(reloaded.Crew.Count, Is.EqualTo(4));
