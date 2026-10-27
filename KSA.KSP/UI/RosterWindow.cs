@@ -91,7 +91,7 @@ namespace KSA.KSP.UI
                 }
             }
 
-            float width = NameWidth + RankWidth + RoleWidth + StarsWidth + StatusWidth;
+            float width = KsaIcons.BadgeSize + NameWidth + RankWidth + RoleWidth + StarsWidth + StatusWidth;
             var list = new DialogGUIScrollList(new Vector2(width + 40f, 260f), false, true,
                 new DialogGUIVerticalLayout(true, true, 2f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft, rows.ToArray()));
 
@@ -111,6 +111,7 @@ namespace KSA.KSP.UI
         private static DialogGUIHorizontalLayout HeaderRow()
         {
             return new DialogGUIHorizontalLayout(true, false, 4f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                new DialogGUISpace(KsaIcons.BadgeSize),
                 new DialogGUILabel("<b>Name</b>", NameWidth, 20f),
                 new DialogGUILabel("<b>Rank</b>", RankWidth, 20f),
                 new DialogGUILabel("<b>Role</b>", RoleWidth, 20f),
@@ -122,6 +123,7 @@ namespace KSA.KSP.UI
         {
             string id = c.Name;
             return new DialogGUIHorizontalLayout(true, false, 4f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                KsaIcons.Badge(c.Role),
                 new DialogGUIButton(c.Name, () => OpenRecord(id), NameWidth, 22f, false),
                 new DialogGUILabel(rank, RankWidth, 20f),
                 new DialogGUILabel(RosterView.RoleText(c.Role), RoleWidth, 20f),
