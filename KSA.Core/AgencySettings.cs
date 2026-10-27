@@ -38,6 +38,16 @@ namespace KSA.Core
         public bool ManualOverride { get; set; } = false;
         /// <summary>Target orbit for live Kerbin flights, metres.</summary>
         public double LiveOrbitAltitude { get; set; } = 85000;
+        /// <summary>Orbit altitude above other bodies for capture and ascent, metres (liveTargetOrbitAltitude).</summary>
+        public double LiveTargetOrbitAltitude { get; set; } = 50000;
+        /// <summary>Kerbin periapsis aimed for on the way home, metres (liveReentryPeriapsis).</summary>
+        public double LiveReentryPeriapsis { get; set; } = 35000;
+        /// <summary>Which profiles the built-in flight director may fly live: Kerbin, Moons, All (liveFlightScope).</summary>
+        public string LiveFlightScope { get; set; } = "All";
+        /// <summary>How crew competence shapes live flights (FLIGHT_CREW block).</summary>
+        public KSA.Core.Flight.FlightCrewRules FlightCrew { get; set; } = new KSA.Core.Flight.FlightCrewRules();
+        /// <summary>Who makes the crew's judgement calls in flight: Rule (traits only), Local (local model, rule fallback), Any (local or API key), Off.</summary>
+        public string CrewDecisions { get; set; } = "Local";
         /// <summary>Rival agencies run in the background and claim firsts (decision 19).</summary>
         public bool RivalsEnabled { get; set; } = true;
         public List<string> PersonalityTags { get; } = new List<string> { "Cautious", "Reckless", "Perfectionist", "Showboat", "Steady", "Curious" };
@@ -60,6 +70,8 @@ namespace KSA.Core
             s.InterviewCostStep = node.GetDouble("interviewCostStep", s.InterviewCostStep);
             s.InterviewFeeFraction = node.GetDouble("interviewFeeFraction", s.InterviewFeeFraction);
             s.Drift = KSA.Core.Personnel.TraitDrift.Parse(node.GetChild(KSA.Core.Personnel.TraitDrift.NodeName));
+            s.FlightCrew = KSA.Core.Flight.FlightCrewRules.Parse(node.GetChild(KSA.Core.Flight.FlightCrewRules.NodeName));
+            s.CrewDecisions = node.GetValue("crewDecisions", s.CrewDecisions);
             s.CrisisLayoffFraction = node.GetDouble("crisisLayoffFraction", s.CrisisLayoffFraction);
             KSA.Core.Missions.DefaultMissionMode mode;
             if (System.Enum.TryParse(node.GetValue("defaultMissionMode", "Hybrid"), true, out mode)) s.DefaultMissionMode = mode;
@@ -70,6 +82,9 @@ namespace KSA.Core
             s.AgencyName = node.GetValue("agencyName", s.AgencyName);
             s.ManualOverride = node.GetBool("manualOverride", s.ManualOverride);
             s.LiveOrbitAltitude = node.GetDouble("liveOrbitAltitude", s.LiveOrbitAltitude);
+            s.LiveTargetOrbitAltitude = node.GetDouble("liveTargetOrbitAltitude", s.LiveTargetOrbitAltitude);
+            s.LiveReentryPeriapsis = node.GetDouble("liveReentryPeriapsis", s.LiveReentryPeriapsis);
+            s.LiveFlightScope = node.GetValue("liveFlightScope", s.LiveFlightScope);
             s.RivalsEnabled = node.GetBool("rivals", s.RivalsEnabled);
             List<string> tags = node.GetList("personalityTags");
             if (tags.Count > 0)

@@ -15,13 +15,15 @@ namespace KSA.KSP.Flight
         /// <summary>The launch the flight director should adopt when the Flight scene starts.</summary>
         public static LaunchSpec Pending { get; private set; }
 
-        /// <summary>Profiles the built-in flight director can fly without MechJeb.</summary>
+        /// <summary>Profiles the built-in flight director can fly (KSA-51/52/53). Eve surface and cloud missions stay simulated.</summary>
         public static string Check(MissionType type)
         {
             if (type == null) return "Unknown mission.";
-            bool home = string.Equals(type.Body, "Kerbin", StringComparison.OrdinalIgnoreCase);
-            if (home && (type.Profile == MissionProfile.Suborbital || type.Profile == MissionProfile.Orbit)) return null;
-            return "The flight director can fly Kerbin suborbital and orbital missions live for now; " + type.Name + " is simulated.";
+            bool eve = string.Equals(type.Body, "Eve", StringComparison.OrdinalIgnoreCase);
+            if (eve && (type.Profile == MissionProfile.Land || type.Profile == MissionProfile.Base)) return "The flight director has no Eve descent or ascent program; " + type.Name + " is simulated.";
+            bool baseBody = string.Equals(type.Body, "Mun", StringComparison.OrdinalIgnoreCase) || string.Equals(type.Body, "Minmus", StringComparison.OrdinalIgnoreCase) || string.Equals(type.Body, "Duna", StringComparison.OrdinalIgnoreCase);
+            if (type.Profile == MissionProfile.Base && !baseBody) return "Base modules fly live only to Mun, Minmus and Duna; " + type.Name + " is simulated.";
+            return null;
         }
 
         public static void OnLaunchRequested(LaunchSpec spec)
@@ -94,6 +96,7 @@ namespace KSA.KSP.Flight
                     ProtoCrewMember kerbal = roster[names[next]];
                     next++;
                     if (kerbal == null) { KsaCore.Log.Warn("Crew member " + names[next - 1] + " not in the roster"); continue; }
+                    if (kerbal.rosterStatus != ProtoCrewMember.RosterStatus.Available) { KsaCore.Log.Warn("Crew member " + kerbal.name + " is " + kerbal.rosterStatus + " (still aboard a station?); not seated"); i--; continue; }
                     pcm.AddCrewToSeat(kerbal, i);
                     seated++;
                 }

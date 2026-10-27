@@ -42,7 +42,7 @@ Needs an OpenRouter key (or Ollama running locally with a model pulled).
 
 ## C. M5: Live flight
 
-No MechJeb needed. The built-in flight director only flies **Kerbin Suborbital Hop and Kerbin Orbit** live; everything else simulates (by design, until a MechJeb bridge exists).
+No MechJeb needed. The built-in flight director flies every mission type live except Eve surface/cloud missions (see C2 below for what to expect beyond Kerbin). `liveFlightScope` in agency.cfg can narrow it to Kerbin or Kerbin+moons while you test.
 
 1. Create a **Suborbital Hop** with mode **Watch Live**. Warp until Ready. Mission Control → "Pad and flights" → **Launch live**. The game switches to the launch pad with your pilot aboard the craft (AI craft if one was built, else the stock Kerbal 1).
 2. A small "KSA Flight Director" HUD appears. The rocket should ignite, climb, tilt east, stage on burnout, coast, come back down retrograde and pop chutes. Watch the HUD phase line and the log (`[KSA] Flight ...` lines).
@@ -52,7 +52,21 @@ No MechJeb needed. The built-in flight director only flies **Kerbin Suborbital H
 6. **Post-mortem.** With API mode on, after a live mission a "Post-mortem filed" message arrives a few seconds later; Mission Control shows it under the report and the Press Room gets a "Post-mortem filed" dispatch.
 7. **Abandon.** Start a live flight, quit to the space centre without recovering, open Mission Control → "Resolve as simulated" (two clicks). The project closes with a simulated outcome.
 
-Known limitations to expect, not bugs: boosters attach without radial decouplers if the catalog has none researched; the ascent is simple and can fail on odd rockets (that is a real mission failure, it goes in the record); missions beyond Kerbin orbit are simulated.
+**Check B4 closely for boosters:** the craft-template work found that stock files rotate Z-oriented radial parts (SRBs, solar panels, batteries) the opposite way from X-oriented ones (RCS, radial decouplers); CraftWriter uses one rule for all, so an AI design with boosters may show them clipped inside the core tank in the VAB. If so, send me a screenshot and I will fix `KSA.KSP/Build/CraftWriter.cs` SurfaceAttach.
+
+Known limitations to expect, not bugs: boosters attach without radial decouplers if the catalog has none researched; the ascent is simple and can fail on odd rockets (that is a real mission failure, it goes in the record).
+
+## C2. M5: Beyond Kerbin orbit (added 2026-10-27, KSA-51/52/53)
+
+The flight director runs a list of legs (shown on the HUD as "Leg: name (n/total)"); the full plan is printed to KSP.log as `[KSA] Flight plan for ...`. Each leg logs its burns and decisions to the flight log. New stock templates live in `GameDataKSATemplates` (Mun lander, interplanetary stack, Duna lander, station core, station module); they have never been flown, so check them in the VAB first (load them from the mod folder by copying into ShipsVAB if you want to look).
+
+1. **Mun flyby, Watch Live.** Expect: ascent to 85 km, a transfer burn (a maneuver node appears, the craft warps to it and burns), "encounter predicted" in the log, a small correction burn, warp to the Mun SOI, "Entered the sphere of influence of Mun" and a Flyby achievement, past periapsis, back into Kerbin SOI, a correction to 35 km periapsis, reentry, chutes, recovery. Outcome Success with Flyby:Mun.
+2. **Mun orbit.** As above, plus a capture burn at Mun periapsis ("Captured into X x Y km orbit"), ten minutes in orbit, a return burn found by searching the next orbit, reentry.
+3. **Mun landing.** Needs the Mun lander template or an AI craft. After capture: deorbit, warp down, "Site survey: flattest cell ..." in the log, braking burn, gear down, touchdown under 3 m/s with the slope logged, one crew member EVAs for 45 s and boards again (EVA:Mun achievement), liftoff, orbit, return, reentry. If the EVA fails to board, the log says so clearly and the flight continues; tell me.
+4. **Station core, then a module.** Create a Kerbin Station program; set the core module project to Watch Live before it is Ready. The core launches, circularises, "Station core delivered; the crew stays aboard" closes the mission and the vessel stays in orbit. Then set the next module to Watch Live: it launches 15 km lower, matches planes, plans an intercept, matches velocity under 2.5 km, and docks with RCS ("Hard dock with ..."). The module craft needs RCS and a docking port (the stock station module template has both). If the core was simulated, the module says so and simulates.
+5. **Duna flyby (long).** The ejection waits for the next window (the HUD shows the date); warping through a year or more is expected. Interplanetary legs are the least tested; send me the flight log whatever happens.
+6. **Halted program.** If any leg fails (no propellant, no trajectory found), the HUD says "Flight program halted", the crew holds, and the HUD offers "Retry program". With manualOverride on you can Take control instead; Mission Control can also resolve the flight as simulated.
+7. **The kerbals fly.** The flight log opens with the pilot's profile ("Jeb Kerman at the controls (3 stars): precision 68%, bold margins, mistake chance 9% per leg"). A low-star, high-stupidity pilot will sometimes log "slow on the ignition call" and burn late; a brave pilot brakes later on landings. With a local model set up (AI Setup) and `crewDecisions = Local` in agency.cfg, a rough landing site or a halted program makes the pilot answer in character (one radio line in the log, "Source AI" in KSP.log); without a model the trait rule answers the same way. Set `crewDecisions = Rule` to compare.
 
 ## D. M6: Narrative
 

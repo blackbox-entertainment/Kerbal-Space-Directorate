@@ -9,9 +9,10 @@ using UnityEngine;
 namespace KSA.KSP.Flight
 {
     /// <summary>
-    /// Runs a live project's flight (M5): binds the vessel, flies the built-in ascent/reentry program for Kerbin
-    /// missions, logs the timeline and achievements to the agency, shows a small HUD, and offers Take Control
-    /// when the agency setting allows it. Resolution happens through the recovery / destruction hooks.
+    /// Runs a live project's flight (M5, KSA-51/52/53): binds the vessel, builds the mission's leg list through
+    /// <see cref="MissionPlanner"/>, flies it, logs the timeline and achievements to the agency, shows a small HUD,
+    /// and offers Take Control when the agency setting allows it. Resolution happens through the recovery and
+    /// destruction hooks, or when a leg delivers the vessel on station.
     /// </summary>
     [KSPAddon(KSPAddon.Startup.Flight, false)]
     public sealed class KsaFlightDirector : MonoBehaviour
@@ -33,37 +34,73 @@ namespace KSA.KSP.Flight
             public bool DirectorFlown;
             public bool AutopilotOn = true;
             public double TargetOrbit = 85000;
+            public double BodyOrbit = 50000;
+            public double ReentryPe = 35000;
+            public double MaxSlope = 0.3;
             public bool ManualAllowed;
-            public bool WantsOrbit;
+            public string TargetBody = "Kerbin";
+            public string DockTargetVesselId = string.Empty;
+            public string ProgramId = string.Empty;
             public HashSet<string> Logged = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }
 
-        private AscentProgram _program;
-        private Rect _hud = new Rect(Screen.width - 330, 120, 320, 190);
+        private MissionProgram _program;
+        private FlightContext _ctx;
+        private Rect _hud = new Rect(Screen.width - 350, 120, 340, 210);
         private string _status = "Standing by.";
         private Vessel _vessel;
         private double _nextSample;
+        private bool _haltNoted;
+
+        private bool _adopted;
 
         private void Start()
         {
             Instance = this;
+            TryAdopt();
+        }
+
+        private void Update()
+        {
+            // The active vessel may not exist yet in Start right after a launch; keep trying until the flight is ready.
+            if (!_adopted && FlightGlobals.ready && FlightGlobals.ActiveVessel != null) TryAdopt();
+        }
+
+        private void TryAdopt()
+        {
             Agency agency = KsaCore.Agency;
-            if (agency == null) return;
+            if (agency == null) { _adopted = true; return; }
             Vessel v = FlightGlobals.ActiveVessel;
             if (v == null) return;
+            _adopted = true;
 
             LaunchSpec pending = LiveFlightLauncher.Pending;
+            Project project = null;
+            if (pending == null && Live != null && Live.VesselId != v.persistentId && FindVessel(Live.VesselId) == null)
+            {
+                // Reverted or reloaded past the live vessel: it no longer exists, so the flight is lost to the record.
+                KsaCore.Log.Warn("Live vessel " + Live.VesselId + " no longer exists; resolving " + Live.ProjectId + " as simulated");
+                string why;
+                agency.SimulateInstead(Live.ProjectId, out why);
+                Live = null;
+            }
             if (pending != null)
             {
                 LiveFlightLauncher.ClearPending();
+                project = pending.Project;
                 Live = new LiveFlightState
                 {
                     ProjectId = pending.Project.Id,
                     VesselId = v.persistentId,
                     LaunchUT = Planetarium.GetUniversalTime(),
                     TargetOrbit = pending.TargetOrbitAltitude,
+                    BodyOrbit = pending.BodyOrbitAltitude > 0 ? pending.BodyOrbitAltitude : agency.Settings.LiveTargetOrbitAltitude,
+                    ReentryPe = pending.ReentryPeriapsis > 0 ? pending.ReentryPeriapsis : agency.Settings.LiveReentryPeriapsis,
+                    MaxSlope = pending.MaxSiteSlope,
                     ManualAllowed = pending.ManualOverrideAllowed,
-                    WantsOrbit = pending.Mission != null && pending.Mission.Profile != MissionProfile.Suborbital
+                    TargetBody = pending.Mission != null ? pending.Mission.Body : "Kerbin",
+                    DockTargetVesselId = pending.DockTargetVesselId ?? string.Empty,
+                    ProgramId = pending.ProgramId ?? string.Empty
                 };
                 agency.BindVessel(pending.Project.Id, v.persistentId.ToString());
                 agency.LogFlightEvent(pending.Project.Id, "On the pad: " + v.vesselName + " with " + v.GetCrewCount() + " crew.");
@@ -74,35 +111,78 @@ namespace KSA.KSP.Flight
                 // Resuming after a scene change or reload: is this vessel a live project?
                 Project p = agency.ProjectForVessel(v.persistentId.ToString());
                 if (p == null) return;
+                project = p;
+                MissionType t = agency.Catalogs.Missions.Get(p.MissionTypeId);
+                Program g = p.ProgramId.Length > 0 ? agency.GetProgram(p.ProgramId) : null;
                 Live = new LiveFlightState
                 {
                     ProjectId = p.Id,
                     VesselId = v.persistentId,
                     LaunchUT = p.LaunchUT >= 0 ? p.LaunchUT : Planetarium.GetUniversalTime(),
                     TargetOrbit = agency.Settings.LiveOrbitAltitude,
+                    BodyOrbit = agency.Settings.LiveTargetOrbitAltitude,
+                    ReentryPe = agency.Settings.LiveReentryPeriapsis,
                     ManualAllowed = agency.Settings.ManualOverride,
                     DirectorFlown = p.DirectorFlown,
-                    WantsOrbit = IsOrbitMission(agency, p)
+                    TargetBody = t != null ? t.Body : "Kerbin",
+                    DockTargetVesselId = g != null ? g.VesselId : string.Empty,
+                    ProgramId = p.ProgramId
                 };
                 foreach (string a in p.FlightAchievements) Live.Logged.Add(a);
                 Live.AutopilotOn = !p.DirectorFlown;
                 KsaCore.Log.Info("Flight director resumed " + v.vesselName + " for " + p.Name);
             }
-            if (Live == null || Live.VesselId != v.persistentId) return;
+            else project = agency.GetProject(Live.ProjectId);
+            if (Live == null || Live.VesselId != v.persistentId || project == null) return;
             _vessel = v;
-            _program = new AscentProgram(v, Live.TargetOrbit, Live.WantsOrbit, Log);
-            if (Live.AutopilotOn) _program.Engage();
+            BuildProgram(agency, project, pending == null);
+            if (Live.AutopilotOn && _program != null) _program.Engage();
             GameEvents.onVesselSOIChanged.Add(OnSoiChanged);
             GameEvents.onVesselSituationChange.Add(OnSituationChange);
             GameEvents.onVesselWillDestroy.Add(OnVesselWillDestroy);
             GameEvents.onCrewKilled.Add(OnCrewKilled);
             GameEvents.onVesselChange.Add(OnVesselChange);
+            GameEvents.onCrewOnEva.Add(OnCrewOnEva);
+            GameEvents.onPartCouple.Add(OnPartCouple);
         }
 
-        private static bool IsOrbitMission(Agency agency, Project p)
+        private void BuildProgram(Agency agency, Project project, bool resuming)
         {
-            MissionType t = agency.Catalogs.Missions.Get(p.MissionTypeId);
-            return t == null || t.Profile != MissionProfile.Suborbital;
+            MissionType type = agency.Catalogs.Missions.Get(project.MissionTypeId);
+            CelestialBody home = FlightGlobals.GetHomeBody();
+            CelestialBody target = MissionPlanner.Body(Live.TargetBody) ?? home;
+            _ctx = new FlightContext
+            {
+                Vessel = _vessel,
+                Control = new VesselControl(_vessel),
+                Log = Log,
+                Home = home,
+                Target = target,
+                Profile = type != null ? type.Profile : MissionProfile.Suborbital,
+                ParkingAltitude = Live.TargetOrbit,
+                TargetOrbitAltitude = Live.BodyOrbit,
+                ReentryPeriapsis = Live.ReentryPe,
+                MaxSiteSlope = Live.MaxSlope,
+                Crew = agency.FlightProfileFor(project.Id) ?? KSA.Core.Flight.CrewFlightProfile.Neutral(),
+                Rng = new System.Random((int)(Live.LaunchUT * 7919) ^ (int)Live.VesselId)
+            };
+            string pid = project.Id;
+            _ctx.AskCrew = (req, cb) => agency.AskCrew(pid, req, cb);
+            if (!resuming) Log(_ctx.Crew.Describe(), null);
+            uint dockId;
+            if (uint.TryParse(Live.DockTargetVesselId, out dockId)) _ctx.DockTargetId = dockId;
+            _program = MissionPlanner.Build(_ctx, type);
+            if (resuming) MissionPlanner.Resume(_program, _ctx, key => Live.Logged.Contains(key));
+            var names = new List<string>();
+            foreach (IFlightLeg l in _program.Legs) names.Add(l.Name);
+            KsaCore.Log.Info("Flight plan for " + project.Name + ": " + string.Join(" > ", names.ToArray()) + (resuming ? " (resuming at leg " + _program.NextLegNumber + ")" : string.Empty));
+        }
+
+        private static Vessel FindVessel(uint persistentId)
+        {
+            if (FlightGlobals.Vessels == null) return null;
+            foreach (Vessel v in FlightGlobals.Vessels) if (v != null && v.persistentId == persistentId) return v;
+            return null;
         }
 
         private void OnDestroy()
@@ -113,13 +193,15 @@ namespace KSA.KSP.Flight
             GameEvents.onVesselWillDestroy.Remove(OnVesselWillDestroy);
             GameEvents.onCrewKilled.Remove(OnCrewKilled);
             GameEvents.onVesselChange.Remove(OnVesselChange);
+            GameEvents.onCrewOnEva.Remove(OnCrewOnEva);
+            GameEvents.onPartCouple.Remove(OnPartCouple);
             if (Instance == this) Instance = null;
         }
 
         public bool IsLive(Vessel v) { return Live != null && v != null && v.persistentId == Live.VesselId; }
         public static bool IsLiveVessel(uint persistentId) { return Live != null && Live.VesselId == persistentId; }
 
-        private void Log(string text, string achievement = null)
+        private void Log(string text, string achievement)
         {
             if (Live == null || KsaCore.Agency == null) return;
             if (achievement != null)
@@ -140,7 +222,10 @@ namespace KSA.KSP.Flight
 
         private void FixedUpdate()
         {
-            if (Live == null || _vessel == null || _vessel != FlightGlobals.ActiveVessel) return;
+            if (Live == null || _vessel == null) return;
+            Vessel active = FlightGlobals.ActiveVessel;
+            bool ours = active == _vessel || (active != null && active.isEVA);
+            if (!ours) return;
             double alt = _vessel.altitude;
             double speed = _vessel.srfSpeed;
             if (alt > Live.MaxAltitude) Live.MaxAltitude = alt;
@@ -148,8 +233,27 @@ namespace KSA.KSP.Flight
             if (Live.AutopilotOn && _program != null)
             {
                 string line = _program.Step();
-                if (line != null) Log(line);
+                if (line != null) Log(line, null);
                 _status = _program.Status;
+                if (_program.Finished && !_program.Failed && _ctx.Delivered) { CheckOrbit(); Resolve(false, true); return; }
+                if (_program.Failed && !_haltNoted)
+                {
+                    _haltNoted = true;
+                    string why = _program.Status;
+                    Log("Flight program halted: " + why, null);
+                    ScreenMessages.PostScreenMessage("[KSA] Flight program halted: " + why, 10f, ScreenMessageStyle.UPPER_CENTER);
+                    // The crew's call: re-run the numbers once, or hold for Mission Control.
+                    if (_ctx.AskCrew != null && !_retriedOnce)
+                    {
+                        _ctx.AskCrew(new KSA.Core.Flight.DecisionRequest { Kind = KSA.Core.Flight.DecisionKind.ProgramHalt, Situation = "Flight program halted: " + why, Risk = 0.5 }, d =>
+                        {
+                            if (Live == null || _program == null || !_program.Failed) return;
+                            if (d.Choice == KSA.Core.Flight.DecisionChoice.Proceed) { _retriedOnce = true; RetryProgram(); }
+                            else Log("The crew is holding. Take control, retry from the HUD, or resolve the flight from Mission Control.", null);
+                        });
+                    }
+                    else Log("The crew is holding. Take control, retry from the HUD, or resolve the flight from Mission Control.", null);
+                }
             }
             if (Planetarium.GetUniversalTime() > _nextSample)
             {
@@ -162,7 +266,7 @@ namespace KSA.KSP.Flight
         {
             if (_vessel == null || _vessel.orbit == null || _vessel.mainBody == null) return;
             if (_vessel.situation == Vessel.Situations.ORBITING && _vessel.orbit.PeA > _vessel.mainBody.atmosphereDepth)
-                Log("Orbit achieved: " + LiveFlightResolver.FormatKm(_vessel.orbit.ApA) + " x " + LiveFlightResolver.FormatKm(_vessel.orbit.PeA) + ".", "Orbit:" + _vessel.mainBody.bodyName);
+                Log("Orbit achieved: " + LiveFlightResolver.FormatKm(_vessel.orbit.ApA) + " x " + LiveFlightResolver.FormatKm(_vessel.orbit.PeA) + " around " + _vessel.mainBody.bodyName + ".", "Orbit:" + _vessel.mainBody.bodyName);
         }
 
         // ------------------------------------------------------------------ events
@@ -174,10 +278,11 @@ namespace KSA.KSP.Flight
             switch (data.to)
             {
                 case Vessel.Situations.FLYING:
-                    if (data.from == Vessel.Situations.PRELAUNCH || data.from == Vessel.Situations.LANDED) Log("Liftoff.", "Flight:" + body);
+                    if (data.from == Vessel.Situations.PRELAUNCH || data.from == Vessel.Situations.LANDED) Log("Liftoff from " + body + ".", "Flight:" + body);
                     break;
                 case Vessel.Situations.SUB_ORBITAL:
-                    Log("Suborbital: above the atmosphere.", "Suborbit:" + body);
+                    if (data.from == Vessel.Situations.LANDED || data.from == Vessel.Situations.PRELAUNCH) Log("Liftoff from " + body + ".", "Flight:" + body);
+                    else Log("Suborbital above " + body + ".", "Suborbit:" + body);
                     break;
                 case Vessel.Situations.ORBITING:
                     CheckOrbit();
@@ -186,18 +291,43 @@ namespace KSA.KSP.Flight
                     Log("Escape trajectory from " + body + ".", "Escape:" + body);
                     break;
                 case Vessel.Situations.LANDED:
-                    if (data.from != Vessel.Situations.PRELAUNCH) Log("Landed on " + body + " at " + Math.Round(data.host.srfSpeed, 1) + " m/s.", "Land:" + body);
+                    if (data.from != Vessel.Situations.PRELAUNCH) Log("Landed on " + body + " at " + Math.Round(data.host.srfSpeed, 1) + " m/s.", AtHome(data.host) ? null : "Land:" + body);
                     break;
                 case Vessel.Situations.SPLASHED:
-                    Log("Splashdown on " + body + " at " + Math.Round(data.host.srfSpeed, 1) + " m/s.", "Land:" + body);
+                    Log("Splashdown on " + body + " at " + Math.Round(data.host.srfSpeed, 1) + " m/s.", AtHome(data.host) ? null : "Land:" + body);
                     break;
             }
         }
 
+        private static bool AtHome(Vessel v) { return v != null && v.mainBody == FlightGlobals.GetHomeBody(); }
+
         private void OnSoiChanged(GameEvents.HostedFromToAction<Vessel, CelestialBody> data)
         {
             if (!IsLive(data.host) || data.to == null) return;
-            Log("Entered the sphere of influence of " + data.to.bodyName + ".", "Flyby:" + data.to.bodyName);
+            // Coming home or crossing into the star's SOI is not a flyby of anything.
+            bool flyby = data.to != FlightGlobals.GetHomeBody() && data.to.referenceBody != null && data.to.referenceBody != data.to;
+            Log("Entered the sphere of influence of " + data.to.bodyName + ".", flyby ? "Flyby:" + data.to.bodyName : null);
+        }
+
+        private void OnCrewOnEva(GameEvents.FromToAction<Part, Part> data)
+        {
+            if (Live == null || data.from == null || data.from.vessel == null || data.from.vessel.persistentId != Live.VesselId) return;
+            string body = data.from.vessel.mainBody != null ? data.from.vessel.mainBody.bodyName : "Kerbin";
+            string who = data.to != null && data.to.protoModuleCrew != null && data.to.protoModuleCrew.Count > 0 ? data.to.protoModuleCrew[0].name : "A crew member";
+            Log(who + " on EVA at " + body + (data.from.vessel.Landed ? " (surface)" : "") + ".", "EVA:" + body);
+        }
+
+        private void OnPartCouple(GameEvents.FromToAction<Part, Part> data)
+        {
+            if (Live == null || data.from == null || data.to == null || data.from.vessel == null) return;
+            Vessel v = data.from.vessel;
+            if (v.persistentId != Live.VesselId && (data.to.vessel == null || data.to.vessel.persistentId != Live.VesselId)) return;
+            // Docking merges vessels: whichever id survives, keep following it.
+            Vessel merged = data.to.vessel ?? v;
+            _vessel = merged;
+            if (_ctx != null) { _ctx.Vessel = merged; _ctx.Control.Vessel = merged; }
+            Live.VesselId = merged.persistentId;
+            if (KsaCore.Agency != null) KsaCore.Agency.BindVessel(Live.ProjectId, merged.persistentId.ToString());
         }
 
         private void OnCrewKilled(EventReport report)
@@ -207,13 +337,13 @@ namespace KSA.KSP.Flight
             if (p == null || !p.Crew.Contains(report.sender)) return;
             if (!Live.Deaths.Contains(report.sender)) Live.Deaths.Add(report.sender);
             Live.Crashed = true;
-            Log(report.sender + " was killed" + (string.IsNullOrEmpty(report.msg) ? "." : ": " + report.msg));
+            Log(report.sender + " was killed" + (string.IsNullOrEmpty(report.msg) ? "." : ": " + report.msg), null);
         }
 
         public static void NoteCrash(Vessel v, string detail)
         {
             if (Live == null || v == null || v.persistentId != Live.VesselId) return;
-            if (!Live.Crashed && Instance != null) Instance.Log("Impact: " + detail);
+            if (!Live.Crashed && Instance != null) Instance.Log("Impact: " + detail, null);
             Live.Crashed = true;
         }
 
@@ -225,7 +355,7 @@ namespace KSA.KSP.Flight
             // Destroyed without recovery: crash or lost. Recovery fires its own event before this one and resolves first.
             if (v.state == Vessel.State.DEAD || Live.Crashed || Live.Deaths.Count > 0)
             {
-                Log("Vessel destroyed.");
+                Log("Vessel destroyed.", null);
                 Resolve(false);
             }
         }
@@ -236,13 +366,16 @@ namespace KSA.KSP.Flight
             if (Live != null && v != null && v.persistentId == Live.VesselId) _vessel = v;
         }
 
-        /// <summary>Called by the recovery hook for the live vessel; also by destruction. Clears the live state.</summary>
-        public static void Resolve(bool recovered)
+        /// <summary>Called by the recovery hook for the live vessel; also by destruction and delivery. Clears the live state.</summary>
+        public static void Resolve(bool recovered) { Resolve(recovered, false); }
+
+        public static void Resolve(bool recovered, bool delivered)
         {
             if (Live == null || KsaCore.Agency == null) return;
             var result = new LiveFlightResult
             {
                 Recovered = recovered,
+                Delivered = delivered,
                 Crashed = Live.Crashed,
                 DirectorFlown = Live.DirectorFlown,
                 MaxAltitude = Live.MaxAltitude,
@@ -253,10 +386,22 @@ namespace KSA.KSP.Flight
             foreach (string a in Live.Logged) result.Achievements.Add(a);
             if (recovered) result.Achievements.Add("Recover:-");
             string pid = Live.ProjectId;
+            string programId = Live.ProgramId;
+            uint vesselId = Live.VesselId;
             Live = null;
+            if (delivered && !string.IsNullOrEmpty(programId))
+            {
+                // Stations: after a docking the surviving vessel id may be the module's, so always rebind. Bases keep the first module.
+                Program g = KsaCore.Agency.GetProgram(programId);
+                Project proj = KsaCore.Agency.GetProject(pid);
+                MissionType mt = proj != null ? KsaCore.Agency.Catalogs.Missions.Get(proj.MissionTypeId) : null;
+                bool station = mt != null && mt.Profile == MissionProfile.Station;
+                if (g != null && (station || g.VesselId.Length == 0)) KsaCore.Agency.BindProgramVessel(programId, vesselId.ToString());
+            }
             KSA.Core.Projects.MissionReport r = KsaCore.Agency.ResolveLive(pid, result);
             if (r != null) KsaCore.Log.Info("Live flight resolved: " + r.ProjectName + " " + Agency.OutcomeText(r.Outcome));
             if (Instance != null && Instance._program != null) Instance._program.Disengage();
+            if (delivered) ScreenMessages.PostScreenMessage("[KSA] " + (r != null ? r.ProjectName : "Module") + " delivered; the crew stays aboard.", 8f, ScreenMessageStyle.UPPER_CENTER);
         }
 
         // ------------------------------------------------------------------ controls
@@ -275,8 +420,28 @@ namespace KSA.KSP.Flight
         {
             if (Live == null) return;
             Live.AutopilotOn = true;
-            if (_program != null) _program.Engage();
+            if (_program != null)
+            {
+                // Re-plan from wherever the Director left us.
+                Project p = KsaCore.Agency.GetProject(Live.ProjectId);
+                if (p != null) BuildProgram(KsaCore.Agency, p, true);
+                _haltNoted = false;
+                _program.Engage();
+            }
             KsaCore.Agency.SetDirectorFlown(Live.ProjectId, false);
+        }
+
+        private bool _retriedOnce;
+
+        private void RetryProgram()
+        {
+            if (Live == null || KsaCore.Agency == null) return;
+            Project pr = KsaCore.Agency.GetProject(Live.ProjectId);
+            if (pr == null) return;
+            BuildProgram(KsaCore.Agency, pr, true);
+            _haltNoted = false;
+            _program.Engage();
+            Log("Flight program restarted at " + _program.Phase + ".", null);
         }
 
         private void OnGUI()
@@ -289,10 +454,11 @@ namespace KSA.KSP.Flight
         {
             Project p = KsaCore.Agency.GetProject(Live.ProjectId);
             GUILayout.Label(p != null ? p.Name : Live.ProjectId);
-            GUILayout.Label("Phase: " + (Live.AutopilotOn && _program != null ? _program.Phase.ToString() : "Manual"));
+            string phase = Live.AutopilotOn && _program != null ? _program.Phase + " (" + (_program.Index + 1) + "/" + _program.Legs.Count + ")" : "Manual";
+            GUILayout.Label("Leg: " + phase);
             GUILayout.Label(_status);
             GUILayout.Label("Alt " + LiveFlightResolver.FormatKm(_vessel.altitude) + "   Ap " + LiveFlightResolver.FormatKm(_vessel.orbit != null ? _vessel.orbit.ApA : 0) + "   Pe " + LiveFlightResolver.FormatKm(_vessel.orbit != null ? _vessel.orbit.PeA : 0));
-            GUILayout.Label("Speed " + Math.Round(_vessel.srfSpeed) + " m/s   Stage " + _vessel.currentStage + "   " + Stamp());
+            GUILayout.Label("Speed " + Math.Round(_vessel.srfSpeed) + " m/s   Stage " + _vessel.currentStage + "   " + (_vessel.mainBody != null ? _vessel.mainBody.bodyName : "") + "   " + Stamp());
             GUILayout.BeginHorizontal();
             if (Live.ManualAllowed)
             {
@@ -300,6 +466,7 @@ namespace KSA.KSP.Flight
                 else if (GUILayout.Button("Hand back to crew")) HandBack();
             }
             else GUILayout.Label("Crew flying (manual override off in agency.cfg)");
+            if (_program != null && _program.Failed && Live.AutopilotOn && GUILayout.Button("Retry program")) RetryProgram();
             GUILayout.EndHorizontal();
             GUI.DragWindow();
         }

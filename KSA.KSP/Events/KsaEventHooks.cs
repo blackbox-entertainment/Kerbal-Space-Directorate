@@ -94,6 +94,8 @@ namespace KSA.KSP.Events
             {
                 if (pcm == null) continue;
                 Agency.AddAchievements(pcm.name, KspRosterSource.Achievements(pcm));
+                Core.Personnel.CrewProfile profile = Agency.Crew.Get(pcm.name);
+                if (profile != null && profile.Record.CurrentMission == null) { Agency.ReturnFromStation(pcm.name); KsaCore.Log.Info("Recovered " + pcm.name + " (no open mission: station crew coming home)"); continue; }
                 MissionOutcome outcome = HadCrashThisMission(pcm.name) ? MissionOutcome.PartialSuccess : MissionOutcome.Success;
                 List<string> notices = Agency.EndMission(pcm.name, outcome);
                 Agency.DriftAfterAdHocMission(pcm.name, outcome);
@@ -118,7 +120,7 @@ namespace KSA.KSP.Events
         private void OnCrewKilled(EventReport report)
         {
             if (Agency == null || report == null || string.IsNullOrEmpty(report.sender)) return;
-            if (Flight.KsaFlightDirector.Live != null)
+            if (Flight.KsaFlightDirector.Live != null && Flight.KsaFlightDirector.Instance != null)
             {
                 Core.Projects.Project lp = Agency.GetProject(Flight.KsaFlightDirector.Live.ProjectId);
                 if (lp != null && lp.Crew.Contains(report.sender)) return; // the flight director records it with the mission report

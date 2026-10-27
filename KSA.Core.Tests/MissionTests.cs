@@ -20,7 +20,7 @@ namespace KSA.Core.Tests
 
             Assert.That(warnings, Is.Empty, string.Join(" | ", warnings));
             Assert.That(missions.Count, Is.EqualTo(17));
-            Assert.That(templates.Count, Is.EqualTo(10));
+            Assert.That(templates.Count, Is.EqualTo(12));
             Assert.That(programs.Count, Is.EqualTo(5));
 
             foreach (MissionType t in missions.Types)
@@ -39,7 +39,7 @@ namespace KSA.Core.Tests
         public void Templates_PreferModdedWhenInstalled_StockOtherwise()
         {
             TemplateCatalog templates = ShippedConfigs.Templates();
-            Assert.That(templates.Best("StationModuleKerbin", new string[0]).Id, Is.EqualTo("StockKerbalX"));
+            Assert.That(templates.Best("StationModuleKerbin", new string[0]).Id, Is.EqualTo("StockStationModule"));
             Assert.That(templates.Best("StationModuleKerbin", new[] { "StationPartsExpansionRedux" }).Id, Is.EqualTo("SspxStationModule"));
             Assert.That(templates.Best("MunBaseModule", new[] { "PlanetaryBaseInc" }).Id, Is.EqualTo("KpbsBaseModule"));
         }

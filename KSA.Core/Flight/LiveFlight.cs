@@ -15,6 +15,8 @@ namespace KSA.Core.Flight
         public List<string> Deaths { get; } = new List<string>();
         public bool Crashed { get; set; }
         public bool Recovered { get; set; }
+        /// <summary>The vessel stayed in space on purpose (station core in orbit, module docked, base module down). Counts like a recovery.</summary>
+        public bool Delivered { get; set; }
         public bool DirectorFlown { get; set; }
         public double DaysInSpace { get; set; }
         /// <summary>Timeline lines the host logged during the flight (already stored on the project too).</summary>
@@ -62,7 +64,7 @@ namespace KSA.Core.Flight
                 r.Incidents.Add(IncidentKind.Crash);
                 r.Lesson = "Crew lost on " + r.ProjectName + ". Never again.";
             }
-            else if (!result.Recovered)
+            else if (!result.Recovered && !result.Delivered)
             {
                 r.Outcome = result.Crashed ? MissionOutcome.LossOfVehicle : MissionOutcome.Abort;
                 if (result.Crashed) r.Incidents.Add(IncidentKind.Crash);
@@ -101,7 +103,7 @@ namespace KSA.Core.Flight
         public static List<string> CannedLines(MissionReport r, LiveFlightResult result)
         {
             var lines = new List<string>();
-            lines.Add("Flown live" + (result.DirectorFlown ? " with the Director at the controls" : " by the crew on autopilot") + ".");
+            lines.Add("Flown live" + (result.DirectorFlown ? " with the Director at the controls" : " by the crew on autopilot") + (result.Delivered ? "; the vessel stays on station" : string.Empty) + ".");
             if (result.MaxAltitude > 0) lines.Add("Peak altitude " + FormatKm(result.MaxAltitude) + ", top speed " + Math.Round(result.MaxSpeed) + " m/s.");
             int shown = 0;
             for (int i = 0; i < result.Events.Count && shown < 6; i++, shown++) lines.Add(result.Events[i]);

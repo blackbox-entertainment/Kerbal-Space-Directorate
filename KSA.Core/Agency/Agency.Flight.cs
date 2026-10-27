@@ -19,9 +19,19 @@ namespace KSA.Core
         public string TemplateCraft { get; set; }
         public List<string> CrewNames { get; } = new List<string>();
         public double TargetOrbitAltitude { get; set; }
+        /// <summary>Orbit altitude above the mission body for capture and surface ascent (agency.cfg liveTargetOrbitAltitude).</summary>
+        public double BodyOrbitAltitude { get; set; }
+        public double ReentryPeriapsis { get; set; }
+        /// <summary>Station modules: host vessel id of the station to dock with, else empty.</summary>
+        public string DockTargetVesselId { get; set; }
+        /// <summary>Base and landing missions: accepted site slope (tan).</summary>
+        public double MaxSiteSlope { get; set; }
+        public string ProgramId { get; set; }
         public bool ManualOverrideAllowed { get; set; }
+        /// <summary>The crew reduced to flight numbers: precision, margins, mistake chance (decision 21).</summary>
+        public CrewFlightProfile FlightCrew { get; set; }
 
-        public LaunchSpec() { CraftPath = string.Empty; TemplateCraft = string.Empty; }
+        public LaunchSpec() { CraftPath = string.Empty; TemplateCraft = string.Empty; DockTargetVesselId = string.Empty; ProgramId = string.Empty; MaxSiteSlope = 0.3; }
     }
 
     /// <summary>
@@ -45,9 +55,34 @@ namespace KSA.Core
             if (!LiveFlightAvailable) return "Live flight is not available.";
             MissionType type = Catalogs.Missions.Get(p.MissionTypeId);
             if (type == null) return "Unknown mission type.";
+            if (!ProfileInScope(type)) return "Live flight for " + type.Name + " is outside the scope set in agency.cfg (liveFlightScope = " + Settings.LiveFlightScope + ").";
+            if (type.Profile == MissionProfile.Station && !string.Equals(type.ModuleRole, "core", StringComparison.OrdinalIgnoreCase))
+            {
+                Program g = p.ProgramId.Length > 0 ? GetProgram(p.ProgramId) : null;
+                if (g == null || g.VesselId.Length == 0) return "The station core was not flown live, so there is nothing in orbit to dock with; this module is simulated.";
+            }
             Func<MissionType, string> check = LiveFlightCheck;
             string why = check != null ? check(type) : null;
             return why;
+        }
+
+        private bool ProfileInScope(MissionType type)
+        {
+            string scope = Settings.LiveFlightScope ?? "All";
+            bool home = string.Equals(type.Body, "Kerbin", StringComparison.OrdinalIgnoreCase);
+            bool moon = string.Equals(type.Body, "Mun", StringComparison.OrdinalIgnoreCase) || string.Equals(type.Body, "Minmus", StringComparison.OrdinalIgnoreCase);
+            if (string.Equals(scope, "Kerbin", StringComparison.OrdinalIgnoreCase)) return home && type.Profile != MissionProfile.Station;
+            if (string.Equals(scope, "Moons", StringComparison.OrdinalIgnoreCase)) return home || moon;
+            return true;
+        }
+
+        /// <summary>The host tells us which vessel is the program's station or base, so later modules can dock or land beside it.</summary>
+        public void BindProgramVessel(string programId, string vesselId)
+        {
+            Program g = GetProgram(programId);
+            if (g == null) return;
+            g.VesselId = vesselId ?? string.Empty;
+            g.Notes.Add("Vessel " + g.VesselId + " is on station.");
         }
 
         /// <summary>Starts a live flight for a Ready project: marks it in flight and asks the host to launch.</summary>
@@ -68,9 +103,15 @@ namespace KSA.Core
                 CraftPath = p.Design != null && p.Design.Verdict == Design.DesignVerdict.Approved ? p.Design.CraftPath : string.Empty,
                 TemplateCraft = template != null ? template.Craft : string.Empty,
                 TargetOrbitAltitude = Settings.LiveOrbitAltitude,
+                BodyOrbitAltitude = Settings.LiveTargetOrbitAltitude,
+                ReentryPeriapsis = Settings.LiveReentryPeriapsis,
+                ProgramId = p.ProgramId,
+                FlightCrew = FlightProfileFor(p.Id),
                 ManualOverrideAllowed = Settings.ManualOverride
             };
             foreach (string id in p.Crew) { CrewProfile c = Crew.Get(id); if (c != null) spec.CrewNames.Add(c.Name); }
+            Program program = p.ProgramId.Length > 0 ? GetProgram(p.ProgramId) : null;
+            if (program != null) { spec.DockTargetVesselId = program.VesselId; spec.MaxSiteSlope = Math.Max(0.1, Math.Min(0.6, program.SiteSlope + 0.15)); }
 
             p.Mode = MissionMode.WatchLive;
             var notices = new List<string>();
@@ -83,6 +124,46 @@ namespace KSA.Core
             if (handler != null) handler(spec);
             message = p.Name + " is on the pad. Watch from Mission Control.";
             return true;
+        }
+
+        /// <summary>The flying crew of a project, reduced to the numbers the flight legs use (decision 21).</summary>
+        public CrewFlightProfile FlightProfileFor(string projectId)
+        {
+            Project p = GetProject(projectId);
+            if (p == null) return CrewFlightProfile.Neutral();
+            var crew = new List<CrewProfile>();
+            foreach (string id in p.Crew) { CrewProfile c = Crew.Get(id); if (c != null) crew.Add(c); }
+            return CrewFlightProfile.Build(crew, Settings.FlightCrew);
+        }
+
+        /// <summary>
+        /// A judgement call during a live flight. The trait rule always answers. With crewDecisions = Local (or Any,
+        /// which also allows the API key) and a model configured, the pilot is asked in character first; the rule
+        /// answers after 20 s of silence. The pilot's line goes into the flight log either way.
+        /// </summary>
+        public void AskCrew(string projectId, DecisionRequest request, Action<CrewDecision> done)
+        {
+            Project p = GetProject(projectId);
+            CrewFlightProfile profile = FlightProfileFor(projectId);
+            CrewProfile pilot = p != null && profile.PilotId.Length > 0 ? Crew.Get(profile.PilotId) : null;
+            Action<CrewDecision> record = d =>
+            {
+                if (p != null && d.Line.Length > 0) LogFlightEvent(p.Id, request.Situation + " " + d.Line);
+                done(d);
+            };
+            string mode = Settings.CrewDecisions ?? "Local";
+            if (string.Equals(mode, "Off", StringComparison.OrdinalIgnoreCase)) { record(new CrewDecision { Choice = DecisionChoice.Proceed, Source = "Off" }); return; }
+            LlmEndpoint endpoint = null;
+            if (Ai != null && Transport != null && !string.Equals(mode, "Rule", StringComparison.OrdinalIgnoreCase))
+            {
+                endpoint = Ai.EndpointFor(AiTask.Narrative);
+                if (endpoint != null && !endpoint.IsLocal && !string.Equals(mode, "Any", StringComparison.OrdinalIgnoreCase)) endpoint = null;
+                string why;
+                if (endpoint != null && !endpoint.IsLocal && !Costs.Allows(Ai, false, CurrentDay, out why)) endpoint = null;
+            }
+            if (endpoint == null) { record(CrewDecider.Rule(profile, pilot, request, Rng)); return; }
+            if (!endpoint.IsLocal) Costs.Record(CurrentDay, 0.001);
+            CrewDecider.Ask(new LlmClient(Transport, Log), endpoint, Clock, 20, pilot, profile, AgencyName, request, Rng, record);
         }
 
         /// <summary>The host tells us which vessel flies the project (so recovery and crashes can be matched).</summary>
@@ -140,8 +221,23 @@ namespace KSA.Core
             MissionReport r = LiveFlightResolver.Resolve(p, type, p.Crew, result, CurrentDay, MissionSimulator.DesignScore(input), MissionSimulator.CrewScore(input));
             var notices = new List<string>();
             ApplyReport(p, r, notices);
+            if (result.Delivered)
+            {
+                // The crew stays aboard the station or base: still flying, not assignable, days in space keep accruing.
+                foreach (string id in p.Crew) { CrewProfile c = Crew.Get(id); if (c != null && !c.Departed) { c.InFlightSinceUT = Clock.UniversalTime; c.Status = CrewStatus.Assigned; } }
+            }
             StartPostMortem(p, r, type);
             return r;
+        }
+
+        /// <summary>A crew member who stayed aboard a delivered station or base has come home: book the time, free them, no second mission credit.</summary>
+        public void ReturnFromStation(string crewId)
+        {
+            CrewProfile c = Crew.Get(crewId);
+            if (c == null) return;
+            BookFlightTime(c);
+            if (c.Status == CrewStatus.Assigned) c.Status = CrewStatus.Available;
+            Push(null, c.Name + " has returned from station duty");
         }
 
         /// <summary>The flight never happened (vessel lost to a save reload, player gave up): resolve it as a simulation.</summary>

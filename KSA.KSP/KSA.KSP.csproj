@@ -75,11 +75,13 @@
       <KsaPluginFiles Include="$(OutDir)KSA.Core.dll;$(OutDir)KSA.KSP.dll" />
       <KsaConfigFiles Include="$(RepoGameData)\Configs\**\*" Exclude="$(RepoGameData)\Configs\**\.gitkeep" />
       <KsaTextureFiles Include="$(RepoGameData)\Textures\**\*" Exclude="$(RepoGameData)\Textures\**\.gitkeep" />
+      <KsaTemplateFiles Include="$(RepoGameData)\Templates\**\*.craft" />
     </ItemGroup>
-    <MakeDir Directories="$(KspGameData)\KSA\Plugins;$(KspGameData)\KSA\Configs;$(KspGameData)\KSA\Textures" />
+    <MakeDir Directories="$(KspGameData)\KSA\Plugins;$(KspGameData)\KSA\Configs;$(KspGameData)\KSA\Textures;$(KspGameData)\KSA\Templates" />
     <Copy SourceFiles="@(KsaPluginFiles)" DestinationFolder="$(KspGameData)\KSA\Plugins" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(KsaConfigFiles)" DestinationFiles="@(KsaConfigFiles->'$(KspGameData)\KSA\Configs\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(KsaTextureFiles)" DestinationFiles="@(KsaTextureFiles->'$(KspGameData)\KSA\Textures\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
-    <Message Importance="high" Text="[KSA] Deployed KSA.Core.dll, KSA.KSP.dll, Configs and Textures to $(KspGameData)\KSA" />
+    <Copy SourceFiles="@(KsaTemplateFiles)" DestinationFiles="@(KsaTemplateFiles->'$(KspGameData)\KSA\Templates\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="[KSA] Deployed KSA.Core.dll, KSA.KSP.dll, Configs, Textures and Templates to $(KspGameData)\KSA" />
   </Target>
 </Project>

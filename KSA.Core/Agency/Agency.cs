@@ -116,6 +116,7 @@ namespace KSA.Core
         public List<string> Tick()
         {
             var notices = new List<string>();
+            KSA.Core.Flight.CrewDecider.Tick(Clock.UniversalTime); // overdue crew judgement calls fall back to the trait rule
             notices.AddRange(StartIfNeeded());
             int day = CurrentDay;
             int guard = 0;

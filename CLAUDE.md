@@ -149,7 +149,8 @@ GameData/KSA/
 | Courage/Stupidity drift | Planned: slow drift with missions (stupidity down, courage up on success, down on deaths/idle). Not built yet. |
 | Interviews | Paid: 200 funds first round, +100 each further round (agency.cfg). Senior panel reveals two facts per round. Blind hiring allowed. Decided 2026-10-27. |
 | Rival agencies | Three rivals from rivals.cfg simulated each fiscal year; firsts, league table and year-over-year figures in the Analytics window. On by default (agency.cfg rivals). Decided 2026-10-27. |
-| Flight director | Grow KSA's own (ascent now; transfers KSA-51, landing KSA-52, docking KSA-53). MechJeb optional, never copied (GPL). Decided 2026-10-27. |
+| Flight director | KSA's own, built 2026-10-27: ascent, transfers/capture (KSA-51), landing + EVA + ascent (KSA-52), rendezvous/docking (KSA-53). Legs per mission profile (KSA.KSP/Flight), portable math in KSA.Core/Flight/Orbital.cs. Eve surface stays simulated. MechJeb optional, never copied (GPL). |
+| Crew competence in flight | The kerbals fly: pilot stars/courage/stupidity/morale set precision, margins, mistakes (agency.cfg FLIGHT_CREW). Judgement calls by trait rule or a local/API model in character (crewDecisions). Decided 2026-10-27. |
 
 **Candidate supported mod set (not final):** ReStock/ReStock+, Near Future series, SSPXr (inflatables), KPBS (surface bases), Outer Planets Mod, Hooligan Labs Airships (Eve cloud city), Extraplanetary Launchpads. Required: ModuleManager. Optional: MechJeb2 (future bridge for missions beyond Kerbin orbit), kOS.
 

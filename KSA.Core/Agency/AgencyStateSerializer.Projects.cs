@@ -65,6 +65,7 @@ namespace KSA.Core
                 n.AddValue("nextModuleIndex", g.NextModuleIndex);
                 n.AddValue("site", g.Site);
                 n.AddValue("siteSlope", g.SiteSlope);
+                n.AddValue("vesselId", g.VesselId);
                 foreach (string pid in g.ModuleProjectIds) n.AddValue("module", pid);
                 foreach (string note in g.Notes) n.AddValue("note", note);
             }
@@ -167,6 +168,7 @@ namespace KSA.Core
                     NextModuleIndex = n.GetInt("nextModuleIndex", 0),
                     Site = n.GetValue("site", string.Empty),
                     SiteSlope = n.GetDouble("siteSlope", 0)
+                    , VesselId = n.GetValue("vesselId", string.Empty)
                 };
                 if (g.Id.Length == 0) continue;
                 g.ModuleProjectIds.AddRange(n.GetValues("module"));

@@ -96,11 +96,13 @@ namespace KSA.Core.Projects
         public string Site { get; set; }
         /// <summary>0 (flat) .. 1 (steep). Applied to every module landing.</summary>
         public double SiteSlope { get; set; }
+        /// <summary>Host vessel id of the station core (or first base module) once flown live; empty when the program was simulated.</summary>
+        public string VesselId { get; set; }
         public List<string> Notes { get; } = new List<string>();
 
         public Program()
         {
-            Id = string.Empty; Name = string.Empty; ProgramTypeId = string.Empty; Body = string.Empty; ProgramManager = string.Empty; Site = string.Empty;
+            Id = string.Empty; Name = string.Empty; ProgramTypeId = string.Empty; Body = string.Empty; ProgramManager = string.Empty; Site = string.Empty; VesselId = string.Empty;
         }
 
         public override string ToString() { return Name + " [" + Status + "]"; }
