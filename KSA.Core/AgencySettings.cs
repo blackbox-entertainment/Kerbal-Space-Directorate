@@ -8,6 +8,7 @@ namespace KSA.Core
     {
         public const string NodeName = "KSA_AGENCY_SETTINGS";
 
+        public string AgencyName { get; set; } = "Kerbal Space Directorate";
         public double StartingBalance { get; set; } = 50000;
         public double BaseGrant { get; set; } = 150000;
         public int GoalsPerYear { get; set; } = 3;
@@ -54,6 +55,7 @@ namespace KSA.Core
             s.BuildBaseDays = node.GetInt("buildBaseDays", s.BuildBaseDays);
             s.CancelRefundFraction = node.GetDouble("cancelRefundFraction", s.CancelRefundFraction);
             s.AutoRecover = node.GetBool("autoRecover", s.AutoRecover);
+            s.AgencyName = node.GetValue("agencyName", s.AgencyName);
             s.ManualOverride = node.GetBool("manualOverride", s.ManualOverride);
             s.LiveOrbitAltitude = node.GetDouble("liveOrbitAltitude", s.LiveOrbitAltitude);
             List<string> tags = node.GetList("personalityTags");

@@ -113,7 +113,7 @@ namespace KSA.Core.Tests
             _clock.AdvanceDays(p.DesignDays + p.BuildDays);
             List<string> notices = _agency.Tick();
             Assert.That(p.Mode, Is.EqualTo(MissionMode.Simulate), "no live flight yet, so it simulates");
-            Assert.That(notices, Has.Some.Contains("live flight unavailable"));
+            Assert.That(notices, Has.Some.Contains("not available"));
             Assert.That(p.Status, Is.EqualTo(ProjectStatus.InFlight));
         }
 

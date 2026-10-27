@@ -49,6 +49,11 @@
       <HintPath>$(KspManaged)\UnityEngine.InputLegacyModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <!-- GUILayout for the in-flight HUD and GUIUtility clipboard. -->
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>$(KspManaged)\UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <!-- UnityWebRequest for the LLM transport. -->
     <Reference Include="UnityEngine.UnityWebRequestModule">
       <HintPath>$(KspManaged)\UnityEngine.UnityWebRequestModule.dll</HintPath>

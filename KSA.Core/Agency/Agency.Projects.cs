@@ -158,6 +158,7 @@ namespace KSA.Core
             message = "Project " + project.Name + " started: " + Money(cost) + ", design " + project.DesignDays + " days, build " + project.BuildDays + " days, mode " + project.Mode + ".";
             Push(null, message);
             RaiseProjectChanged(project);
+            PublishProjectStart(project, type);
             StartDesign(project, null);
             return project;
         }
@@ -275,11 +276,20 @@ namespace KSA.Core
                             }
                             break;
                         case ProjectStatus.Ready:
-                            if (p.Mode == MissionMode.WatchLive && !LiveFlightAvailable)
+                            if (p.Mode == MissionMode.WatchLive)
                             {
-                                p.Mode = MissionMode.Simulate;
-                                p.Notes.Add("Watch Live is not available yet; flown as a simulation.");
-                                Push(notices, p.Name + ": live flight unavailable, simulating instead");
+                                string blocker = LiveBlocker(p);
+                                if (blocker != null)
+                                {
+                                    p.Mode = MissionMode.Simulate;
+                                    p.Notes.Add("Live flight not possible: " + blocker + " Flown as a simulation.");
+                                    Push(notices, p.Name + ": " + blocker);
+                                }
+                                else if (!p.Notes.Exists(n => n.StartsWith("Ready on the pad")))
+                                {
+                                    p.Notes.Add("Ready on the pad; waiting for the Director to launch from Mission Control.");
+                                    Push(notices, p.Name + " is ready: launch it live from Mission Control");
+                                }
                             }
                             if (p.Mode == MissionMode.Simulate)
                             {
@@ -316,7 +326,12 @@ namespace KSA.Core
             if (p.Status != ProjectStatus.Ready) { message = p.Name + " is not ready to launch."; return false; }
             MissionType type = Catalogs.Missions.Get(p.MissionTypeId);
             if (type == null) { message = "Unknown mission type."; return false; }
-            if (p.Mode == MissionMode.WatchLive && !LiveFlightAvailable) { p.Mode = MissionMode.Simulate; p.Notes.Add("Watch Live is not available yet; flown as a simulation."); }
+            if (p.Mode == MissionMode.WatchLive)
+            {
+                if (LiveBlocker(p) == null) return LaunchLive(projectId, out message);
+                p.Mode = MissionMode.Simulate;
+                p.Notes.Add("Live flight not possible; flown as a simulation.");
+            }
             var notices = new List<string>();
             Launch(p, type, CurrentDay, notices);
             message = notices.Count > 0 ? notices[0] : p.Name + " launched.";

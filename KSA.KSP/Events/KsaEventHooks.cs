@@ -62,6 +62,8 @@ namespace KSA.KSP.Events
             Vessel v = FlightGlobals.ActiveVessel;
             if (v == null) return;
             List<string> ids = CrewIds(v.GetVesselCrew());
+            // Crew on a project are already booked on its mission (M3/M5); only free-flying kerbals get an ad-hoc one.
+            ids.RemoveAll(id => { CrewProfile c = Agency.Crew.Get(id); return c != null && c.IsFlying; });
             if (ids.Count == 0) return;
             string missionId = Agency.BeginMission(ids, v.vesselName);
             KsaCore.Log.Info("Launch: " + v.vesselName + " with " + ids.Count + " crew, mission " + missionId);
@@ -72,6 +74,21 @@ namespace KSA.KSP.Events
         private void OnVesselRecovered(ProtoVessel pv, bool quick)
         {
             if (Agency == null || pv == null) return;
+            if (Flight.KsaFlightDirector.IsLiveVessel(pv.persistentId))
+            {
+                KsaCore.Log.Info("Recovered live project vessel " + pv.vesselName);
+                Flight.KsaFlightDirector.Resolve(true);
+                KsaCore.SyncRoster("recovery");
+                return;
+            }
+            Core.Projects.Project live = Agency.ProjectForVessel(pv.persistentId.ToString());
+            if (live != null)
+            {
+                // Recovered from the Tracking Station after a reload: resolve from the saved flight log.
+                Agency.ResolveLive(live.Id, new Core.Flight.LiveFlightResult { Recovered = true });
+                KsaCore.SyncRoster("recovery");
+                return;
+            }
             List<ProtoCrewMember> crew = pv.GetVesselCrew();
             foreach (ProtoCrewMember pcm in crew)
             {
@@ -100,6 +117,11 @@ namespace KSA.KSP.Events
         private void OnCrewKilled(EventReport report)
         {
             if (Agency == null || report == null || string.IsNullOrEmpty(report.sender)) return;
+            if (Flight.KsaFlightDirector.Live != null)
+            {
+                Core.Projects.Project lp = Agency.GetProject(Flight.KsaFlightDirector.Live.ProjectId);
+                if (lp != null && lp.Crew.Contains(report.sender)) return; // the flight director records it with the mission report
+            }
             string where = report.origin != null && report.origin.vessel != null ? report.origin.vessel.vesselName : "unknown vessel";
             Agency.RecordDeath(report.sender, "Killed aboard " + where + (string.IsNullOrEmpty(report.msg) ? string.Empty : ": " + report.msg));
             KsaCore.Log.Info("Crew killed: " + report.sender + " (" + where + ")");
@@ -129,6 +151,7 @@ namespace KSA.KSP.Events
         {
             if (Agency == null || report == null || report.origin == null || report.origin.vessel == null) return;
             Vessel v = report.origin.vessel;
+            Flight.KsaFlightDirector.NoteCrash(v, report.msg ?? string.Empty);
             foreach (ProtoCrewMember pcm in v.GetVesselCrew())
             {
                 if (pcm == null) continue;

@@ -72,7 +72,10 @@ namespace KSA.KSP
             var a = new Agency(Catalogs, Clock, Log) { Names = new KspNameSource() };
             a.Ledger.Mirror = new KspFunds();
             foreach (AssemblyLoader.LoadedAssembly la in AssemblyLoader.loadedAssemblies) if (la != null && !string.IsNullOrEmpty(la.name)) a.InstalledMods.Add(la.name);
-            a.LiveFlightAvailable = false; // M5
+            a.LiveFlightAvailable = true; // M5: built-in flight director for Kerbin missions
+            a.LiveFlightCheck = Flight.LiveFlightLauncher.Check;
+            a.LiveLaunchRequested += Flight.LiveFlightLauncher.OnLaunchRequested;
+            a.ReportUpdated += OnReportUpdated;
             WireAi(a);
             a.MissionResolved += OnMissionResolved;
             a.CrewDeparted += OnCrewDeparted;
@@ -87,6 +90,8 @@ namespace KSA.KSP
             if (Agency != null)
             {
                 Agency.BuildRequested -= OnBuildRequested;
+                Agency.LiveLaunchRequested -= Flight.LiveFlightLauncher.OnLaunchRequested;
+                Agency.ReportUpdated -= OnReportUpdated;
                 Agency.CrewDeparted -= OnCrewDeparted;
                 Agency.ApplicantHired -= OnApplicantHired;
                 Agency.YearEnded -= OnYearEnded;
@@ -190,6 +195,11 @@ namespace KSA.KSP
         private static void OnMissionResolved(Core.Projects.MissionReport r)
         {
             ScreenMessages.PostScreenMessage("[KSA] " + r.ProjectName + ": " + Agency.OutcomeText(r.Outcome), 8f, ScreenMessageStyle.UPPER_CENTER);
+        }
+
+        private static void OnReportUpdated(Core.Projects.MissionReport r)
+        {
+            ScreenMessages.PostScreenMessage("[KSA] Post-mortem filed for " + r.ProjectName, 6f, ScreenMessageStyle.UPPER_CENTER);
         }
 
         private static void OnYearEnded(Core.Review.ReviewResult r)

@@ -145,8 +145,11 @@ GameData/KSA/
 | Community templates | Yes, after release: first-party templates ship, submission path opens post-M7. |
 | AI models | Curated per-task list in AI Setup: cheapest-that-works default plus a few flagships, player-selectable; IDs live in a ModuleManager config, benchmarked in M4. |
 | Eve cloud city | HL Airships Core (M3). Angel-125 Airships stays compatible. |
+| Live flight | Built-in flight director flies Kerbin suborbital/orbital missions live (M5); other profiles simulate until a MechJeb bridge exists. MechJeb is optional, not required. Decided 2026-10-26. |
+| Narrative | Local model only (never cloud budget); canned text first, AI rewrite in place. Post-mortems may use the cloud. Decided 2026-10-26. |
+| Courage/Stupidity drift | Planned: slow drift with missions (stupidity down, courage up on success, down on deaths/idle). Not built yet. |
 
-**Candidate supported mod set (not final):** ReStock/ReStock+, Near Future series, SSPXr (inflatables), KPBS (surface bases), Outer Planets Mod, Hooligan Labs Airships (Eve cloud city), Extraplanetary Launchpads. Required: ModuleManager, MechJeb2 (Live mode). Optional: kOS.
+**Candidate supported mod set (not final):** ReStock/ReStock+, Near Future series, SSPXr (inflatables), KPBS (surface bases), Outer Planets Mod, Hooligan Labs Airships (Eve cloud city), Extraplanetary Launchpads. Required: ModuleManager. Optional: MechJeb2 (future bridge for missions beyond Kerbin orbit), kOS.
 
 ---
 
@@ -161,7 +164,7 @@ Each milestone is playable on its own. Don't start a milestone until the previou
 | **M2: The Agency** | Fiscal years, goals, budget review, lean years, recruiting, salaries |
 | **M3: Projects + Simulated Missions** | Projects, Programs, team assignment, template designs, simulated outcomes |
 | **M4: AI Engineering** | LLM client, stage plan schema, VesselBuilder (vertical stacks first; start by tweaking templates), validator loop, Design Review UI |
-| **M5: Live Flight** | MechJeb bridge, Watch Live, telemetry, post-mortems |
+| **M5: Live Flight** | Built-in flight director (Kerbin missions), Watch Live, flight HUD, Take Control, post-mortems; MechJeb bridge later |
 | **M6: Narrative** | Local LLM press releases, dialogue, memos, news ticker |
 | **M7: Polish** | Balance, art, docs, compatibility, SpaceDock/CKAN release |
 

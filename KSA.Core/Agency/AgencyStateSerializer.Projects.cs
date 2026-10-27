@@ -47,6 +47,7 @@ namespace KSA.Core
                 if (p.Design != null) n.AddChild(p.Design.ToDataNode());
             }
             root.AddChild(agency.Costs.ToDataNode());
+            root.AddChild(agency.News.ToDataNode());
 
             foreach (Program g in agency.Programs)
             {
@@ -141,6 +142,7 @@ namespace KSA.Core
                 agency.Projects.Add(p);
             }
             agency.Costs.Load(root.GetChild("COST_GUARD"));
+            agency.News.Load(root.GetChild("NEWSFEED"));
 
             foreach (DataNode n in root.GetChildren("PROGRAM"))
             {

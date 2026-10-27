@@ -641,6 +641,9 @@ Stock kerbals carry only stars (0–5), a trait, and Courage/Stupidity (cosmetic
 12. **Community template library: yes, after release.** Ship with first-party templates; open a submission path (shared .craft plus a KSA metadata file) once the mod has traction. Post-M7.
 13. **AI models: curated, player-selectable.** The AI Setup window offers a short list per task: a cheapest-that-does-the-job default plus two or three flagship options, for design, post-mortem, and narrative separately. Exact model IDs are benchmarked in M4 and kept in a ModuleManager config so they can be updated without a code release.
 14. **Eve cloud city uses HL Airships Core.** Angel-125's Airships stays on the compatibility list. M3.
+15. **Live flight ships with a built-in flight director, MechJeb optional (M5, 2026-10-26).** Kerbin suborbital and orbital missions fly live on KSA's own ascent/reentry program (vertical climb, eastward kick, prograde hold with auto-staging, circularise, deorbit, parachutes). Missions beyond Kerbin orbit fall back to Simulate until a MechJeb bridge lands; MechJeb moves from Required to Optional.
+16. **Narrative is local-only (M6, 2026-10-26).** Press releases, memos, reviews and obituaries are written canned first, then rewritten by the local model when one is configured. Cloud API budget is never spent on flavour text; post-mortems may use the cloud (PostMortem task).
+17. **Courage and Stupidity drift with experience (planned, not yet built).** Stupidity falls a little after every completed mission (more after a survived failure, floor 0.15); Courage rises after successes and survived close calls, falls after a crewmate's death or a long idle stretch (0.1 to 0.95). Small steps (0.02 to 0.05) so veterans show it over a career. Ships as an M3 follow-up story.
 
 ---
 

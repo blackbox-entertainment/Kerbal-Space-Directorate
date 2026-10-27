@@ -82,6 +82,7 @@ namespace KSA.Core
             Applicants = new ApplicantPool();
             Rng = new Random();
             NextMissionNumber = 1;
+            InitNarrative();
         }
 
         public int CurrentDay { get { return Clock.CurrentDay(); } }

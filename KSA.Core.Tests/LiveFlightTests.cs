@@ -107,8 +107,8 @@ namespace KSA.Core.Tests
         {
             var clock = new FakeClock();
             Agency a = Staffed(clock, new ListLogger());
-            a.LiveFlightCheck = t => t.Body == "Kerbin" ? null : "Live flights beyond Kerbin need MechJeb.";
             Project p = ReadyProject(a, clock, "MunFlyby");
+            a.LiveFlightCheck = t => t.Body == "Kerbin" ? null : "Live flights beyond Kerbin need MechJeb.";
             string msg;
             Assert.That(a.LaunchLive(p.Id, out msg), Is.False);
             Assert.That(msg, Does.Contain("MechJeb"));

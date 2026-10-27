@@ -16,7 +16,7 @@ namespace KSA.KSP.UI
     {
         private const string DialogName = "KSA_DirectorOffice";
         private const float Width = 620f;
-        private const float WindowHeight = 600f;
+        private const float WindowHeight = 630f;
         private const float ListHeight = 400f;
         private const float LabelWidth = 130f;
         private const float LineHeight = 22f;
@@ -34,6 +34,7 @@ namespace KSA.KSP.UI
         private ProgramsWindow _programs;
         private MissionControlWindow _missionControl;
         private AiSetupWindow _aiSetup;
+        private NewsWindow _news;
 
         public DirectorOfficeWindow(Agency agency, Action onClosed)
         {
@@ -103,6 +104,13 @@ namespace KSA.KSP.UI
                 else if (pr.IsActive) inWork++;
             }
             items.Add(Field("Projects", inFlight + " in flight, " + ready + " ready, " + inWork + " in design or build, " + _agency.Programs.Count + " programs", textWidth));
+            List<string> ticker = _agency.News.TickerLines(1);
+            if (ticker.Count > 0)
+            {
+                string headline = ticker[0] ?? string.Empty;
+                if (headline.Length > 110) headline = headline.Substring(0, 107) + "...";
+                items.Add(new DialogGUILabel("<color=#aaaaaa>Latest: " + headline + "</color>", textWidth, LineHeight));
+            }
 
             // --- Alerts ---
             var alerts = new List<string>();
@@ -152,7 +160,8 @@ namespace KSA.KSP.UI
                 new DialogGUIButton("Projects", OpenProjects, 95f, 30f, false),
                 new DialogGUIButton("Programs", OpenPrograms, 100f, 30f, false),
                 new DialogGUIButton("Mission Control", OpenMissionControl, 130f, 30f, false),
-                new DialogGUIButton("AI Setup", OpenAiSetup, 95f, 30f, false));
+                new DialogGUIButton("AI Setup", OpenAiSetup, 95f, 30f, false),
+                new DialogGUIButton(_agency.News.Unread > 0 ? "Press Room (" + _agency.News.Unread + " new)" : "Press Room", OpenNews, 150f, 30f, false));
 
             var content = new DialogGUIVerticalLayout(true, true, 4f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft, list, buttons, buttons2);
 
@@ -220,8 +229,17 @@ namespace KSA.KSP.UI
             _aiSetup.Open();
         }
 
+        private void OpenNews()
+        {
+            if (_news != null && _news.IsOpen) return;
+            _news = new NewsWindow(_agency, () => { _news = null; Refresh(); });
+            _news.Open();
+            Refresh(); // the Press Room marks everything read: drop the "(N new)" badge at once
+        }
+
         private void CloseChildren()
         {
+            if (_news != null) { NewsWindow w = _news; _news = null; w.Close(); }
             if (_aiSetup != null) { AiSetupWindow w = _aiSetup; _aiSetup = null; w.Close(); }
             if (_projects != null) { ProjectsWindow w = _projects; _projects = null; w.Close(); }
             if (_programs != null) { ProgramsWindow w = _programs; _programs = null; w.Close(); }
