@@ -632,6 +632,7 @@ Stock kerbals carry only stars (0–5), a trait, and Courage/Stupidity (cosmetic
 3. **Research is a Project type** run on the ground by Science-track kerbals, producing stock Science points over a fiscal year scaled by stars and Insight. It plugs into the stock tech tree unchanged. Arrives in M3.
 4. **Roster opens the Service Record.** Clicking a kerbal row in the roster opens that kerbal's Service Record (missions, medals, rank history, incidents, quotes), read-only. M1 shows the stock class icon per kerbal; live 3D face portraits (as in the Astronaut Complex) are deferred to a custom UI pass in M7.
 5. **Per-mission flight mode.** Every mission has a Simulate / Watch Live selector at launch, pre-filled from an agency-wide default setting (Simulate, Watch Live, or Hybrid; Hybrid ships as default). Watch Live requires MechJeb; without it the mission falls back to Simulate with a notice. Supersedes the fixed "Hybrid only" wording in section 7.
+6. **Landing site selection.** When landing on the Mun or any body with a surface, the crew picks a flat spot. Before descent, KSA samples terrain slope in a grid around the intended target (stock PQS terrain queries) and shifts the target to the flattest nearby cell, with a per-body maximum slope. Live mode feeds that target to MechJeb's landing guidance; Simulated mode uses site slope as a factor in the outcome roll. Programs (bases) choose a site once and reuse it so modules land next to each other. Pilot stars widen the search and lower the accepted slope.
 
 ---
 
