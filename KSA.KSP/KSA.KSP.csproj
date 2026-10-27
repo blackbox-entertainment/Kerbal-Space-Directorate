@@ -14,6 +14,10 @@
 
   <!-- Game references. Private=false so they are never copied to output or into GameData. -->
   <ItemGroup>
+    <Reference Include="System.Security">
+      <HintPath>$(KSPDIR)\KSP_x64_Data\Managed\System.Security.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Assembly-CSharp">
       <HintPath>$(KspManaged)\Assembly-CSharp.dll</HintPath>
       <Private>false</Private>

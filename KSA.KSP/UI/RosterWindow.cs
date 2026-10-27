@@ -14,7 +14,7 @@ namespace KSA.KSP.UI
     public sealed class RosterWindow
     {
         private const string DialogName = "KSA_RosterWindow";
-        private const float PortraitSize = 40f;
+        private const float PortraitSize = 56f;
         private const float NameWidth = 170f;
         private const float RankWidth = 160f;
         private const float RoleWidth = 90f;

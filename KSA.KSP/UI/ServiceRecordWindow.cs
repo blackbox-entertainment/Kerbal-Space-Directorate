@@ -17,7 +17,7 @@ namespace KSA.KSP.UI
         private const float LabelWidth = 110f;
         private const float LineHeight = 22f;
         private const float SectionGap = 12f;
-        private const float PortraitSize = 96f;
+        private const float PortraitSize = 128f;
 
         private readonly Agency _agency;
         private readonly string _crewId;

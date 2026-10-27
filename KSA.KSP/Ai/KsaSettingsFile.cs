@@ -36,6 +36,7 @@ namespace KSA.KSP.Ai
                 ConfigNode root = ConfigNode.Load(SettingsPath);
                 ConfigNode node = root != null ? (root.HasNode(AiSettings.NodeName) ? root.GetNode(AiSettings.NodeName) : root) : null;
                 AiSettings s = AiSettings.Parse(ConfigNodeConverter.ToDataNode(node));
+                s.ApiKey = KeyProtector.Unprotect(s.ApiKey);
                 KsaCore.Log.Info("AI settings loaded: mode " + s.DesignMode + ", provider " + s.Provider + ", key " + (s.HasApiKey ? "present" : "missing")
                                  + ", design model '" + s.DesignModel + "', local model '" + s.LocalModel + "'");
                 return s;
@@ -54,9 +55,16 @@ namespace KSA.KSP.Ai
             {
                 Directory.CreateDirectory(PluginDataDir);
                 ConfigNode node = ConfigNodeConverter.ToConfigNode(settings.ToDataNode());
+                // Encrypt the key for this Windows user before it touches the disk (plain text only where DPAPI is unavailable).
+                ConfigNode api = node.GetNode("API");
+                if (api != null && settings.HasApiKey)
+                {
+                    string protectedKey = KeyProtector.Protect(settings.ApiKey);
+                    if (protectedKey != null) api.SetValue("apiKey", protectedKey, true);
+                }
                 var root = new ConfigNode();
                 root.AddNode(node);
-                root.Save(SettingsPath, "KSA user settings. Contains your API key: never commit or share this file.");
+                root.Save(SettingsPath, "KSA user settings. The API key is encrypted to this Windows account (dpapi:...); still never commit or share this file.");
                 KsaCore.Log.Info("AI settings saved (mode " + settings.DesignMode + ")");
                 return true;
             }

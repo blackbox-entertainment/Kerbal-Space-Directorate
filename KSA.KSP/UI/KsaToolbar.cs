@@ -90,7 +90,7 @@ namespace KSA.KSP.UI
         /// Loads the icon PNG that KSP already read from GameData at startup.
         /// Falls back to a code-drawn tile if the texture is missing, so the button always appears.
         /// </summary>
-        private Texture GetIcon()
+        internal static Texture GetIcon()
         {
             if (_icon != null) return _icon;
 
@@ -101,7 +101,7 @@ namespace KSA.KSP.UI
                 return _icon;
             }
 
-            _log.Warn("Toolbar icon '" + IconUrl + "' not found in GameDatabase; using fallback tile");
+            KsaCore.Log.Warn("Toolbar icon '" + IconUrl + "' not found in GameDatabase; using fallback tile");
             _icon = DrawFallbackIcon();
             return _icon;
         }
