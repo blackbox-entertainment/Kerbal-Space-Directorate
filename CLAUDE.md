@@ -50,6 +50,8 @@ KSA.sln
 - AI: prompt builder, stage plan schema + validation, post-mortems, narrative
 - Simulated mission resolution
 - Interfaces for anything platform-specific (`ILlmTransport`, `IClock`, `IPersistence`, `IPartCatalog`, `ILogger`)
+- `DataNode`: the platform-neutral config/save tree. Core parses careers, medals, and save state from it; KSA.KSP converts ConfigNode to and from it. Tests load the real `GameData/KSA/Configs/*.cfg` through `DataNodeText`.
+- `Agency`: the orchestrator. The host feeds it roster snapshots, mission events, a clock, and persistence; it applies promotion and medal rules and raises `Notice` strings.
 
 **KSA.KSP** (KSP-only)
 - `ScenarioModule` save/load

@@ -3,16 +3,16 @@ using UnityEngine;
 namespace KSA.KSP
 {
     /// <summary>
-    /// Minimal pipeline proof: runs once when the Main Menu loads and writes
-    /// "[KSA] Loaded vX.Y.Z" to KSP.log.
+    /// Runs once when the Main Menu loads: proves the pipeline ("[KSA] Loaded vX.Y.Z") and loads the
+    /// career and medal catalogs from GameDatabase, listing them in KSP.log (Jira KSA-18, KSA-20).
     /// </summary>
     [KSPAddon(KSPAddon.Startup.MainMenu, false)]
     public class KsaBootstrap : MonoBehaviour
     {
         private void Start()
         {
-            Core.ILogger log = new KspLogger();
-            log.Info("Loaded v" + Core.CoreInfo.Version);
+            KsaCore.Log.Info("Loaded v" + Core.CoreInfo.Version);
+            KsaCore.LoadCatalogs();
         }
     }
 }

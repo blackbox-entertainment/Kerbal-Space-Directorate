@@ -8,7 +8,13 @@ namespace KSA.KSP.Roster
     {
         public IReadOnlyList<CrewRecord> GetRoster()
         {
-            var result = new List<CrewRecord>();
+            return GetSnapshots();
+        }
+
+        /// <summary>Full snapshots: roster row plus traits and the achievement log.</summary>
+        public List<CrewSnapshot> GetSnapshots()
+        {
+            var result = new List<CrewSnapshot>();
             Game game = HighLogic.CurrentGame;
             if (game == null || game.CrewRoster == null) return result;
 
@@ -16,12 +22,49 @@ namespace KSA.KSP.Roster
             foreach (ProtoCrewMember pcm in game.CrewRoster.Crew)
             {
                 if (pcm == null) continue;
-                result.Add(new CrewRecord(pcm.name, MapRole(pcm.trait), pcm.experienceLevel, MapStatus(pcm.rosterStatus)));
+                result.Add(Snapshot(pcm));
             }
             return result;
         }
 
-        private static CrewRole MapRole(string trait)
+        public static CrewSnapshot Snapshot(ProtoCrewMember pcm)
+        {
+            return new CrewSnapshot(pcm.name, MapRole(pcm.trait), pcm.experienceLevel, MapStatus(pcm.rosterStatus),
+                                    pcm.courage, pcm.stupidity, Achievements(pcm));
+        }
+
+        /// <summary>Achievement keys "Type:Body" from both the career log (past flights) and the current flight log.</summary>
+        public static List<string> Achievements(ProtoCrewMember pcm)
+        {
+            var keys = new List<string>();
+            if (pcm == null) return keys;
+            AppendLog(pcm.careerLog, keys);
+            AppendLog(pcm.flightLog, keys);
+            return keys;
+        }
+
+        private static void AppendLog(FlightLog log, List<string> keys)
+        {
+            if (log == null || log.Entries == null) return;
+            for (int i = 0; i < log.Entries.Count; i++)
+            {
+                FlightLog.Entry e = log.Entries[i];
+                if (e == null || string.IsNullOrEmpty(e.type)) continue;
+                string key = AchievementKey(e.type, e.target);
+                if (!keys.Contains(key)) keys.Add(key);
+            }
+        }
+
+        /// <summary>Normalises the game's log entry into Core's vocabulary (ExitVessel becomes EVA).</summary>
+        public static string AchievementKey(string type, string body)
+        {
+            string t = type;
+            if (t == "ExitVessel") t = "EVA";
+            else if (t == "BoardVessel") t = "Board";
+            return t + ":" + (string.IsNullOrEmpty(body) ? "-" : body);
+        }
+
+        public static CrewRole MapRole(string trait)
         {
             switch (trait)
             {
@@ -33,7 +76,7 @@ namespace KSA.KSP.Roster
             }
         }
 
-        private static CrewStatus MapStatus(ProtoCrewMember.RosterStatus status)
+        public static CrewStatus MapStatus(ProtoCrewMember.RosterStatus status)
         {
             switch (status)
             {

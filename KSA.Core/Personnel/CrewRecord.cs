@@ -3,7 +3,7 @@ using System;
 namespace KSA.Core.Personnel
 {
     /// <summary>A read-only snapshot of one crew member, as shown in the roster.</summary>
-    public sealed class CrewRecord
+    public class CrewRecord
     {
         public const int MaxStars = 5;
 
