@@ -16,8 +16,9 @@ namespace KSA.KSP.UI
     {
         private const string DialogName = "KSA_Projects";
         private const float Width = 720f;
-        private const float WindowHeight = 660f;
-        private const float ListHeight = 540f;
+        /// <summary>Tall enough to show mission, design, crew and the engineering team without scrolling on a 1080p screen.</summary>
+        private static float WindowHeight { get { return Mathf.Clamp(Screen.height - 140f, 660f, 960f); } }
+        private static float ListHeight { get { return WindowHeight - 120f; } }
         private const float LabelWidth = 110f;
         private const float LineHeight = 22f;
         private const float SectionGap = 12f;

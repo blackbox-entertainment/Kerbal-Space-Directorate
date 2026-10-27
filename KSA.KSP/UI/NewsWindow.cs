@@ -15,8 +15,8 @@ namespace KSA.KSP.UI
     {
         private const string DialogName = "KSA_PressRoom";
         private const float Width = 720f;
-        private const float WindowHeight = 680f;
-        private const float ListHeight = 540f;
+        private static float WindowHeight { get { return Mathf.Clamp(Screen.height - 140f, 680f, 960f); } }
+        private static float ListHeight { get { return WindowHeight - 140f; } }
         private const float LineHeight = 22f;
         private const float ButtonHeight = 26f;
         private const float ItemGap = 8f;
