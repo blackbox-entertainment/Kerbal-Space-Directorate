@@ -81,9 +81,14 @@ namespace KSA.KSP
         }
 
         /// <summary>Pulls the current roster from the game into the Agency and logs what changed.</summary>
+        private static int _lastSyncFrame = -1;
+
         public static void SyncRoster(string reason)
         {
             if (Agency == null) return;
+            // The game fires kerbal events in bursts (one per applicant, per status change); one sync per frame is plenty.
+            if (UnityEngine.Time.frameCount == _lastSyncFrame) return;
+            _lastSyncFrame = UnityEngine.Time.frameCount;
             List<CrewSnapshot> snapshots = new KspRosterSource().GetSnapshots();
             var result = Agency.SyncRoster(snapshots);
             Log.Info("Roster sync (" + reason + "): " + snapshots.Count + " crew, " + result.Hired.Count + " hired, " + result.Departed.Count + " departed");
