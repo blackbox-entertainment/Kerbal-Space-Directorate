@@ -349,7 +349,7 @@ namespace KSA.KSP.UI
         {
             if (_selectedCrew.Contains(crewId)) _selectedCrew.Remove(crewId);
             else if (_selectedCrew.Count < crewSize) _selectedCrew.Add(crewId);
-            else _status = "Crew is full (" + crewSize + "). Unpick someone first.";
+            else _status = "This mission carries " + crewSize + " crew (set per mission type in missions.cfg). Unpick someone first, or choose a bigger mission.";
             Refresh();
         }
 
