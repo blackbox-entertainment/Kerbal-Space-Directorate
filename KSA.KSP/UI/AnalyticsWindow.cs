@@ -15,7 +15,7 @@ namespace KSA.KSP.UI
     public sealed class AnalyticsWindow
     {
         private const string DialogName = "KSA_Analytics";
-        private const float Width = 760f;
+        private const float Width = 900f;
         private static float WindowHeight { get { return Mathf.Clamp(Screen.height - 140f, 700f, 960f); } }
         private static float ListHeight { get { return WindowHeight - 120f; } }
         private const float LineHeight = 22f;
@@ -243,7 +243,7 @@ namespace KSA.KSP.UI
 
         // ------------------------------------------------------------------ charts
 
-        private const int ChartWidth = 640;
+        private const int ChartWidth = 740;
         private const int ChartHeight = 170;
         private readonly List<Texture2D> _textures = new List<Texture2D>();
 
