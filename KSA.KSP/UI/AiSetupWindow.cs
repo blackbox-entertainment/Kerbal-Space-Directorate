@@ -213,6 +213,12 @@ namespace KSA.KSP.UI
                 return new DialogGUIButton((sel ? "> " : "") + m.Label + " (" + m.Tier + ", local)", () => OnPickLocalModel(id), ModelButtonWidth, ButtonHeight, false);
             });
             items.Add(Input("Custom local model", _settings.LocalModel, textWidth, v => { _settings.LocalModel = (v ?? string.Empty).Trim(); return _settings.LocalModel; }, null));
+            items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                new DialogGUISpace(16f),
+                new DialogGUIButton((_settings.AutoStartLocalServer ? "[x] " : "[ ] ") + "Start server with the game", () => { _settings.AutoStartLocalServer = !_settings.AutoStartLocalServer; _status = "Auto-start " + (_settings.AutoStartLocalServer ? "on" : "off") + " (not saved yet)."; Refresh(); }, 220f, ButtonHeight, false),
+                new DialogGUILabel("Ollama needs no server exe (it runs in the background). For llama.cpp set the exe and arguments below; KSA starts it when nothing answers and stops it on quit.", textWidth - 250f, LineHeight)));
+            items.Add(Input("Server exe", _settings.LocalServerExe, textWidth, v => { _settings.LocalServerExe = (v ?? string.Empty).Trim(); return _settings.LocalServerExe; }, null));
+            items.Add(Input("Server arguments", _settings.LocalServerArgs, textWidth, v => { _settings.LocalServerArgs = (v ?? string.Empty).Trim(); return _settings.LocalServerArgs; }, null));
         }
 
         private readonly List<string> _discovered = new List<string>();

@@ -148,6 +148,7 @@ namespace KSA.KSP
             a.AllowDlcParts = Expansions.ExpansionsLoader.IsExpansionInstalled("MakingHistory") || Expansions.ExpansionsLoader.IsExpansionInstalled("Serenity");
             a.LaunchGravity = 9.81;
             a.BuildRequested += OnBuildRequested;
+            Ai.LocalServerLauncher.EnsureRunning(a.Ai);
             Log.Info("AI engineering " + (a.AiDesignAvailable ? "available (" + a.Ai.DesignMode + ")" : "off") + "; " + models.Count + " curated models");
         }
 
@@ -156,6 +157,8 @@ namespace KSA.KSP
         {
             if (Agency == null) return;
             Agency.Ai = KsaSettingsFile.Load();
+            Ai.LocalServerLauncher.Reset();
+            Ai.LocalServerLauncher.EnsureRunning(Agency.Ai);
         }
 
         private static void OnBuildRequested(Project p, Core.Design.DesignRecord record)

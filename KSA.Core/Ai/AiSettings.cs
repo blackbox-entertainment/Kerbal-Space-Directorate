@@ -31,6 +31,10 @@ namespace KSA.Core.Ai
         public string LocalEndpoint { get; set; } = "http://localhost:11434/v1/chat/completions";
         public string LocalModel { get; set; } = string.Empty;
         public bool LocalEnabled { get; set; } = true;
+        /// <summary>Optional: a local server the host starts with the game when the endpoint is not answering (e.g. llama-server.exe).</summary>
+        public string LocalServerExe { get; set; } = string.Empty;
+        public string LocalServerArgs { get; set; } = string.Empty;
+        public bool AutoStartLocalServer { get; set; } = false;
 
         // Fallback
         public string OnApiFailure { get; set; } = "UseTemplateLibrary";
@@ -114,6 +118,9 @@ namespace KSA.Core.Ai
                 s.LocalEndpoint = local.GetValue("endpoint", s.LocalEndpoint);
                 s.LocalModel = CleanModel(local.GetValue("model", string.Empty));
                 s.LocalEnabled = local.GetBool("enabled", true);
+                s.LocalServerExe = local.GetValue("serverExe", s.LocalServerExe);
+                s.LocalServerArgs = local.GetValue("serverArgs", s.LocalServerArgs);
+                s.AutoStartLocalServer = local.GetBool("autoStart", s.AutoStartLocalServer);
             }
             DataNode fb = node.GetChild("FALLBACK");
             if (fb != null)
@@ -148,6 +155,9 @@ namespace KSA.Core.Ai
             local.AddValue("endpoint", LocalEndpoint);
             local.AddValue("model", LocalModel);
             local.AddValue("enabled", LocalEnabled);
+            local.AddValue("serverExe", LocalServerExe);
+            local.AddValue("serverArgs", LocalServerArgs);
+            local.AddValue("autoStart", AutoStartLocalServer);
             DataNode fb = n.AddChild("FALLBACK");
             fb.AddValue("onApiFailure", OnApiFailure);
             fb.AddValue("onLocalFailure", OnLocalFailure);
