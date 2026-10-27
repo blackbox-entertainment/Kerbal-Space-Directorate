@@ -612,7 +612,7 @@ Each milestone is playable on its own. Jira epics KSA-1 to KSA-8.
 ## 14. Open Questions
 
 1. ~~Final name~~ Decided 2026-10-26: **Kerbal Space Directorate**. Internal code name stays KSA.
-2. Can the player **override** a design manually, or is hands-off strict?
+2. ~~Manual override~~ Decided 2026-10-26: see 14.1 item 7. Design override remains strict (hands-off); flight override is an opt-in.
 3. Can kerbals **quit** (low morale) or **retire** (age/service time)?
 4. Track **kerbal age** and a hall of fame?
 5. Rival **space agencies** for a space-race mode?
@@ -633,6 +633,7 @@ Stock kerbals carry only stars (0–5), a trait, and Courage/Stupidity (cosmetic
 4. **Roster opens the Service Record.** Clicking a kerbal row in the roster opens that kerbal's Service Record (missions, medals, rank history, incidents, quotes), read-only. M1 shows the stock class icon per kerbal; live 3D face portraits (as in the Astronaut Complex) are deferred to a custom UI pass in M7.
 5. **Per-mission flight mode.** Every mission has a Simulate / Watch Live selector at launch, pre-filled from an agency-wide default setting (Simulate, Watch Live, or Hybrid; Hybrid ships as default). Watch Live requires MechJeb; without it the mission falls back to Simulate with a notice. Supersedes the fixed "Hybrid only" wording in section 7.
 6. **Landing site selection.** When landing on the Mun or any body with a surface, the crew picks a flat spot. Before descent, KSA samples terrain slope in a grid around the intended target (stock PQS terrain queries) and shifts the target to the flattest nearby cell, with a per-body maximum slope. Live mode feeds that target to MechJeb's landing guidance; Simulated mode uses site slope as a factor in the outcome roll. Programs (bases) choose a site once and reuse it so modules land next to each other. Pilot stars widen the search and lower the accepted slope.
+7. **Manual flight override ("Director may fly").** A mod setting, off by default. When on, Live flights show a Take Control button that pauses the autopilot and hands the player the controls; control can be handed back at any time. The mission is logged as Director-flown in the Service Record, the pilot earns reduced KSA rank credit for it, and the post-mortem narrative reflects it. Not available for Simulated missions (choose Watch Live first). Design override stays strict: the player never edits an AI stage plan by hand.
 
 ---
 

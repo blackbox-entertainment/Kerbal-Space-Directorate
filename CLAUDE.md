@@ -135,6 +135,7 @@ GameData/KSA/
 | Roster and dossier | Roster rows click through to a read-only Service Record (M1). Class icons in M1; 3D portraits deferred to M7 custom UI. |
 | Mission mode | Per-mission Simulate / Watch Live selector, pre-filled from an agency default (Hybrid by default). Watch Live needs MechJeb, else falls back to Simulate. |
 | Landing sites | Crew picks a flat spot: sample terrain slope around the target, shift to the flattest cell, per-body max slope. Feeds MechJeb in Live (M5), outcome roll in Simulated (M3). Bases reuse one site. |
+| Manual flight override | Opt-in setting, off by default. Take Control button during Live flights; logged as Director-flown with reduced rank credit; not available in Simulated. Design override stays strict (M5). |
 
 **Candidate supported mod set (not final):** ReStock/ReStock+, Near Future series, SSPXr (inflatables), KPBS (surface bases), Outer Planets Mod, Hooligan Labs Airships (Eve cloud city), Extraplanetary Launchpads. Required: ModuleManager, MechJeb2 (Live mode). Optional: kOS.
 
