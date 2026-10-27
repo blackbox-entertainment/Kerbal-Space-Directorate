@@ -79,7 +79,15 @@ namespace KSA.KSP.Events
         {
             if (Agency == null || pcm == null) return;
             KsaCore.SyncRoster("stock hire");
-            string msg = pcm.name + " hired through the stock Astronaut Complex list for " + cost.ToString("N0") + " funds (no interview, no drive). KSA Recruiting offers interviews and cheaper walk-ins.";
+            string msg;
+            if (!Agency.Settings.StockHiring && Funding.Instance != null)
+            {
+                // KSA prices: give the stock price back and charge the walk-in rate instead.
+                Funding.Instance.AddFunds(cost, TransactionReasons.CrewRecruited);
+                double fee = Agency.ChargeStockHire(pcm.name);
+                msg = pcm.name + " hired as a KSA walk-in for " + fee.ToString("N0") + " funds (the stock price of " + cost.ToString("N0") + " was refunded). Interviews and drives are in KSA Recruiting.";
+            }
+            else msg = pcm.name + " hired through the stock Astronaut Complex list for " + cost.ToString("N0") + " funds (no interview, no drive).";
             ScreenMessages.PostScreenMessage("[KSA] " + msg, 8f, ScreenMessageStyle.UPPER_CENTER);
             KsaCore.Log.Info(msg);
         }

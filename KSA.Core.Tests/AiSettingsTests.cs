@@ -16,6 +16,18 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void UrlsSurviveTheConfigCommentRule()
+        {
+            // KSP's ConfigNode treats "//" as a comment start, so URLs are percent-encoded on save and decoded on load.
+            Assert.That(AiSettings.EscapeUrl("http://localhost:11434/v1/chat/completions"), Is.EqualTo("http:%2F%2Flocalhost:11434/v1/chat/completions"));
+            Assert.That(AiSettings.UnescapeUrl("http:%2F%2Flocalhost:11434/v1/chat/completions", "x"), Is.EqualTo("http://localhost:11434/v1/chat/completions"));
+            Assert.That(AiSettings.UnescapeUrl("https:", "https://fallback/v1"), Is.EqualTo("https://fallback/v1"), "a value cut off by an old plain-text save falls back");
+            var s = new AiSettings { LocalEndpoint = "http://localhost:8081/v1/chat/completions" };
+            AiSettings back = AiSettings.Parse(s.ToDataNode());
+            Assert.That(back.LocalEndpoint, Is.EqualTo(s.LocalEndpoint));
+        }
+
+        [Test]
         public void ExampleFileParsesWithAiOffAndNoKey()
         {
             AiSettings s = AiSettings.Parse(ExampleSettings());

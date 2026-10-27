@@ -4,9 +4,10 @@ using UnityEngine;
 namespace KSA.KSP.UI
 {
     /// <summary>
-    /// While a stock building screen is open, a small KSA button bar sits at the top of the screen with the agency
-    /// windows that belong there: Administration gets Programs and Analytics, the Astronaut Complex gets Recruiting
-    /// and the Roster, Mission Control gets the agency's Mission Control. The windows close with the building.
+    /// While a stock building screen is open, a small KSA button strip in KSP's own skin sits at the bottom right
+    /// with the agency windows that belong there: Administration gets Programs, Analytics and Departments, the
+    /// Astronaut Complex gets Recruiting and the Roster, Mission Control gets the agency's Mission Control.
+    /// The windows close with the building.
     /// </summary>
     [KSPAddon(KSPAddon.Startup.SpaceCentre, false)]
     public sealed class FacilityHooks : MonoBehaviour
@@ -57,30 +58,33 @@ namespace KSA.KSP.UI
         private void OnGUI()
         {
             if (_open == Facility.None || !Ready) return;
-            const float w = 460f, h = 34f;
-            GUILayout.BeginArea(new Rect((Screen.width - w) / 2f, 42f, w, h), GUI.skin.box);
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("KSA:", GUILayout.Width(36f));
-            switch (_open)
+            GUISkin previous = GUI.skin;
+            GUI.skin = HighLogic.Skin;   // KSP's own buttons and box
+            try
             {
-                case Facility.Administration:
-                    if (GUILayout.Button("Programs")) ToggleWindow(ref _programs, () => new ProgramsWindow(KsaCore.Agency, () => { _programs = null; }), wnd => wnd.Open(), wnd => wnd.Close());
-                    if (GUILayout.Button("Analytics")) ToggleWindow(ref _analytics, () => new AnalyticsWindow(KsaCore.Agency, () => { _analytics = null; }), wnd => wnd.Open(), wnd => wnd.Close());
-                    if (GUILayout.Button("Departments")) ToggleWindow(ref _departments, () => new DepartmentsWindow(KsaCore.Agency, () => { _departments = null; }), wnd => wnd.Open(), wnd => wnd.Close());
-                    GUILayout.Label("Stations, bases, figures, department heads");
-                    break;
-                case Facility.AstronautComplex:
-                    if (GUILayout.Button("Recruiting")) ToggleWindow(ref _recruiting, () => new RecruitingWindow(KsaCore.Agency, () => { _recruiting = null; }), wnd => wnd.Open(), wnd => wnd.Close());
-                    if (GUILayout.Button("Roster")) ToggleWindow(ref _roster, () => new RosterWindow(new KspRosterSource(), KsaCore.Log, () => { _roster = null; }), wnd => wnd.Open(), wnd => wnd.Close());
-                    GUILayout.Label("Drives, interviews, hires with service records");
-                    break;
-                case Facility.MissionControl:
-                    if (GUILayout.Button("Mission Control")) ToggleWindow(ref _missionControl, () => new MissionControlWindow(KsaCore.Agency, () => { _missionControl = null; }), wnd => wnd.Open(), wnd => wnd.Close());
-                    GUILayout.Label("Live flights, pad, reports");
-                    break;
+                const float h = 60f;
+                float w = _open == Facility.Administration ? 330f : 250f;
+                GUILayout.BeginArea(new Rect(Screen.width - w - 24f, Screen.height - h - 70f, w, h), "KSA", GUI.skin.window);
+                GUILayout.BeginHorizontal();
+                switch (_open)
+                {
+                    case Facility.Administration:
+                        if (GUILayout.Button("Programs")) ToggleWindow(ref _programs, () => new ProgramsWindow(KsaCore.Agency, () => { _programs = null; }), wnd => wnd.Open(), wnd => wnd.Close());
+                        if (GUILayout.Button("Analytics")) ToggleWindow(ref _analytics, () => new AnalyticsWindow(KsaCore.Agency, () => { _analytics = null; }), wnd => wnd.Open(), wnd => wnd.Close());
+                        if (GUILayout.Button("Departments")) ToggleWindow(ref _departments, () => new DepartmentsWindow(KsaCore.Agency, () => { _departments = null; }), wnd => wnd.Open(), wnd => wnd.Close());
+                        break;
+                    case Facility.AstronautComplex:
+                        if (GUILayout.Button("Recruiting")) ToggleWindow(ref _recruiting, () => new RecruitingWindow(KsaCore.Agency, () => { _recruiting = null; }), wnd => wnd.Open(), wnd => wnd.Close());
+                        if (GUILayout.Button("Roster")) ToggleWindow(ref _roster, () => new RosterWindow(new KspRosterSource(), KsaCore.Log, () => { _roster = null; }), wnd => wnd.Open(), wnd => wnd.Close());
+                        break;
+                    case Facility.MissionControl:
+                        if (GUILayout.Button("Mission Control")) ToggleWindow(ref _missionControl, () => new MissionControlWindow(KsaCore.Agency, () => { _missionControl = null; }), wnd => wnd.Open(), wnd => wnd.Close());
+                        break;
+                }
+                GUILayout.EndHorizontal();
+                GUILayout.EndArea();
             }
-            GUILayout.EndHorizontal();
-            GUILayout.EndArea();
+            finally { GUI.skin = previous; }
         }
 
         private static void ToggleWindow<T>(ref T field, System.Func<T> make, System.Action<T> open, System.Action<T> close) where T : class

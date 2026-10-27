@@ -25,7 +25,6 @@ namespace KSA.KSP
                 GameEvents.Contract.onOffered.Add(OnContractOffered);
             }
             if (!settings.StockContracts) WithdrawOffered();
-            if (!settings.StockHiring) PurgeApplicants();
         }
 
         private static void OnContractOffered(Contract c)

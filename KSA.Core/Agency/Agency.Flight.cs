@@ -166,6 +166,21 @@ namespace KSA.Core
             CrewDecider.Ask(new LlmClient(Transport, Log), endpoint, Clock, 20, pilot, profile, AgencyName, request, Rng, record);
         }
 
+        /// <summary>
+        /// A kerbal hired through the stock Astronaut Complex list: the host refunds the stock price and we charge the
+        /// cheapest walk-in rate from recruiting.cfg instead, so every hire costs KSA money. Returns the fee charged.
+        /// </summary>
+        public double ChargeStockHire(string crewName)
+        {
+            double fee = double.MaxValue;
+            foreach (KSA.Core.Recruiting.RecruitSource s in Catalogs.Recruiting.Sources) if (s.WalkInWeight > 0 && s.HireFee < fee) fee = s.HireFee;
+            if (fee == double.MaxValue) fee = 5000;
+            RefreshFunds();
+            Ledger.Withdraw(fee, Finance.LedgerCategory.Hiring, "Hired " + crewName + " (walk-in via the Astronaut Complex)", CurrentDay, CurrentYear);
+            Push(null, crewName + " hired as a walk-in for " + Money(fee) + " (no interview).");
+            return fee;
+        }
+
         /// <summary>The host tells us which vessel flies the project (so recovery and crashes can be matched).</summary>
         public void BindVessel(string projectId, string vesselId)
         {

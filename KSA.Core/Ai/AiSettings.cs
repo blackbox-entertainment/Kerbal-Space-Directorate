@@ -90,6 +90,17 @@ namespace KSA.Core.Ai
             return new LlmEndpoint { Url = LocalEndpoint, ApiKey = string.Empty, Model = LocalModel, Provider = "Local", IsLocal = true };
         }
 
+        /// <summary>KSP's config reader treats "//" as a comment, so URLs are stored with the slashes percent-encoded.</summary>
+        public static string EscapeUrl(string url) { return (url ?? string.Empty).Replace("//", "%2F%2F"); }
+
+        /// <summary>Decodes a stored URL; a value cut off at "http:" by an older plain-text save falls back to the default.</summary>
+        public static string UnescapeUrl(string stored, string fallback)
+        {
+            string u = (stored ?? string.Empty).Replace("%2F", "/").Replace("%2f", "/").Trim();
+            if (u.Length == 0 || u.EndsWith(":") || (u.StartsWith("http", System.StringComparison.OrdinalIgnoreCase) && !u.Contains("//"))) return fallback;
+            return u;
+        }
+
         public static AiSettings Parse(DataNode node)
         {
             var s = new AiSettings();
@@ -105,7 +116,7 @@ namespace KSA.Core.Ai
             if (api != null)
             {
                 s.Provider = api.GetValue("provider", s.Provider);
-                s.ApiEndpoint = api.GetValue("endpoint", s.ApiEndpoint);
+                s.ApiEndpoint = UnescapeUrl(api.GetValue("endpoint", s.ApiEndpoint), s.ApiEndpoint);
                 s.ApiKey = api.GetValue("apiKey", string.Empty).Trim();
                 s.DesignModel = CleanModel(api.GetValue("designModel", string.Empty));
                 s.PostMortemModel = CleanModel(api.GetValue("postMortemModel", string.Empty));
@@ -115,7 +126,7 @@ namespace KSA.Core.Ai
             DataNode local = node.GetChild("LOCAL");
             if (local != null)
             {
-                s.LocalEndpoint = local.GetValue("endpoint", s.LocalEndpoint);
+                s.LocalEndpoint = UnescapeUrl(local.GetValue("endpoint", s.LocalEndpoint), s.LocalEndpoint);
                 s.LocalModel = CleanModel(local.GetValue("model", string.Empty));
                 s.LocalEnabled = local.GetBool("enabled", true);
                 s.LocalServerExe = local.GetValue("serverExe", s.LocalServerExe);
@@ -145,14 +156,14 @@ namespace KSA.Core.Ai
             n.AddValue("logPrompts", LogPrompts);
             DataNode api = n.AddChild("API");
             api.AddValue("provider", Provider);
-            api.AddValue("endpoint", ApiEndpoint);
+            api.AddValue("endpoint", EscapeUrl(ApiEndpoint));
             api.AddValue("apiKey", ApiKey);
             api.AddValue("designModel", DesignModel);
             api.AddValue("postMortemModel", PostMortemModel);
             api.AddValue("maxCallsPerDay", MaxCallsPerDay);
             api.AddValue("monthlySpendCapUSD", MonthlySpendCapUsd);
             DataNode local = n.AddChild("LOCAL");
-            local.AddValue("endpoint", LocalEndpoint);
+            local.AddValue("endpoint", EscapeUrl(LocalEndpoint));
             local.AddValue("model", LocalModel);
             local.AddValue("enabled", LocalEnabled);
             local.AddValue("serverExe", LocalServerExe);
