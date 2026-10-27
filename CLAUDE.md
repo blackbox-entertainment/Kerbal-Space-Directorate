@@ -169,6 +169,7 @@ Each milestone is playable on its own. Don't start a milestone until the previou
 
 ## 9. Legal and licensing notes
 
+- **License:** MIT, copyright Blackbox Entertainment (LICENSE at repo root, added 2026-10-26). Blackbox holds copyright on all first-party code, so KSA.Core can be relicensed for a standalone game.
 - Code T writes is T's. KSP's code, assets, kerbals, and the "Kerbal" name belong to Take-Two/Squad and can't be reused in a standalone game.
 - If outside contributors join, get agreement that T can relicense their code, or keep contributions out of Core.
 - Model licenses vary (Apache 2.0, MIT, or custom terms like Llama/Gemma). Recommend models; don't redistribute them.
