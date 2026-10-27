@@ -16,6 +16,9 @@ namespace KSA.Core
         public RecruitCatalog Recruiting { get; set; }
         public MoraleRules Morale { get; set; }
         public AgencySettings Settings { get; set; }
+        public KSA.Core.Missions.MissionCatalog Missions { get; set; }
+        public KSA.Core.Missions.TemplateCatalog Templates { get; set; }
+        public KSA.Core.Projects.ProgramCatalog ProgramTypes { get; set; }
 
         public AgencyCatalogs()
         {
@@ -25,6 +28,9 @@ namespace KSA.Core
             Recruiting = new RecruitCatalog();
             Morale = new MoraleRules();
             Settings = new AgencySettings();
+            Missions = new KSA.Core.Missions.MissionCatalog();
+            Templates = new KSA.Core.Missions.TemplateCatalog();
+            ProgramTypes = new KSA.Core.Projects.ProgramCatalog();
         }
 
         public void Validate()
@@ -35,6 +41,9 @@ namespace KSA.Core
             if (Recruiting == null) throw new ArgumentNullException(nameof(Recruiting));
             if (Morale == null) throw new ArgumentNullException(nameof(Morale));
             if (Settings == null) throw new ArgumentNullException(nameof(Settings));
+            if (Missions == null) Missions = new KSA.Core.Missions.MissionCatalog();
+            if (Templates == null) Templates = new KSA.Core.Missions.TemplateCatalog();
+            if (ProgramTypes == null) ProgramTypes = new KSA.Core.Projects.ProgramCatalog();
         }
     }
 

@@ -14,10 +14,10 @@ namespace KSA.Core
     /// Format version 2 adds STATE, LEDGER, GOAL, REVIEW, APPLICANT and extra crew fields. Version 1 saves load with
     /// defaults (the agency then starts its books on the next tick). Unknown keys are ignored.
     /// </summary>
-    public static class AgencyStateSerializer
+    public static partial class AgencyStateSerializer
     {
         public const string RootName = "KSA_AGENCY";
-        public const int CurrentVersion = 2;
+        public const int CurrentVersion = 3;
 
         public static DataNode Write(Agency agency)
         {
@@ -90,6 +90,8 @@ namespace KSA.Core
             foreach (Applicant a in agency.Applicants.Applicants) WriteApplicant(pool.AddChild("APPLICANT"), a);
             foreach (Applicant a in agency.Applicants.Returning) WriteApplicant(pool.AddChild("RETURNING"), a);
 
+            WriteProjects(root, agency);
+
             // --- crew ---
             foreach (CrewProfile p in agency.Crew.All)
             {
@@ -114,6 +116,7 @@ namespace KSA.Core
                 c.AddValue("lowMoraleYears", p.LowMoraleYears);
                 c.AddValue("lastMissionYear", p.LastMissionYear);
                 c.AddValue("portrait", p.PortraitKey);
+                c.AddValue("project", p.ProjectId);
                 c.AddValue("daysInSpace", p.Record.DaysInSpace);
                 foreach (string tag in p.PersonalityTags) c.AddValue("tag", tag);
                 foreach (string a in p.Record.Achievements) c.AddValue("achievement", a);
@@ -287,6 +290,8 @@ namespace KSA.Core
                 foreach (DataNode n in pool.GetChildren("RETURNING")) agency.Applicants.Returning.Add(ReadApplicant(n));
             }
 
+            ReadProjects(root, agency);
+
             // --- crew ---
             foreach (DataNode c in root.GetChildren("CREW"))
             {
@@ -313,6 +318,7 @@ namespace KSA.Core
                     LowMoraleYears = c.GetInt("lowMoraleYears", 0),
                     LastMissionYear = c.GetInt("lastMissionYear", 0)
                     , PortraitKey = c.GetValue("portrait", string.Empty)
+                    , ProjectId = c.GetValue("project", string.Empty)
                 };
                 if (p.Status == CrewStatus.Dead && p.DepartureReason == DepartureReason.None)
                 {

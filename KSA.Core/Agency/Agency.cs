@@ -24,7 +24,7 @@ namespace KSA.Core
     /// every rule to the events the host reports. Platform-free. The host (KSA.KSP) feeds it roster snapshots,
     /// mission events, a clock, names, and persistence, and acts on the events it raises.
     /// </summary>
-    public sealed class Agency
+    public sealed partial class Agency
     {
         public const int MinHireAge = 24;
         public const int MaxHireAge = 38;
@@ -121,6 +121,7 @@ namespace KSA.Core
             while (Calendar.YearOf(day) > State.CurrentYear && guard++ < 100)
                 RunYearEnd(notices);
             TickRecruiting(day, notices);
+            TickProjects(day, notices);
             return notices;
         }
 

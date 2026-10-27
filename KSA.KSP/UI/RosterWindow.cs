@@ -97,7 +97,8 @@ namespace KSA.KSP.UI
                         {
                             rank = agency.Careers.RankName(p.Track, p.RankId);
                             morale = p.Morale.ToString();
-                            canDismiss = !p.Departed && !p.IsFlying && p.Status != CrewStatus.Dead && p.Status != CrewStatus.Assigned;
+                            canDismiss = !p.Departed && !p.IsFlying && p.ProjectId.Length == 0 && p.Status != CrewStatus.Dead && p.Status != CrewStatus.Assigned;
+                            if (p.ProjectId.Length > 0) rank += " (on " + p.ProjectId + ")";
                         }
                     }
                     rows.Add(CrewRow(c, rank, morale, canDismiss));

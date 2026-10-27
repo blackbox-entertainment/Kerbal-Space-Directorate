@@ -49,6 +49,8 @@ namespace KSA.Core.Personnel
         public int LastMissionYear { get; set; }
         /// <summary>Host-defined portrait key captured at sync time; survives departure and reload.</summary>
         public string PortraitKey { get; set; }
+        /// <summary>Id of the project this crew member is assigned to, or empty.</summary>
+        public string ProjectId { get; set; }
 
         public ServiceRecord Record { get; } = new ServiceRecord();
 
@@ -62,6 +64,7 @@ namespace KSA.Core.Personnel
             InFlightSinceUT = -1;
             DepartedDay = -1;
             PortraitKey = string.Empty;
+            ProjectId = string.Empty;
         }
 
         public bool IsFlying { get { return InFlightSinceUT >= 0; } }

@@ -21,6 +21,12 @@ namespace KSA.Core
         public int MaxApplicants { get; set; } = 12;
         /// <summary>Fraction of active crew that must be laid off in a Crisis Year (rounded up, at least 1).</summary>
         public double CrisisLayoffFraction { get; set; } = 0.25;
+        public KSA.Core.Missions.DefaultMissionMode DefaultMissionMode { get; set; } = KSA.Core.Missions.DefaultMissionMode.Hybrid;
+        public int DesignBaseDays { get; set; } = 10;
+        public int BuildBaseDays { get; set; } = 15;
+        public double CancelRefundFraction { get; set; } = 0.5;
+        /// <summary>Recover landed crewed vessels on the home world automatically (GDD, T 2026-10-26).</summary>
+        public bool AutoRecover { get; set; } = true;
         public List<string> PersonalityTags { get; } = new List<string> { "Cautious", "Reckless", "Perfectionist", "Showboat", "Steady", "Curious" };
 
         public static AgencySettings Parse(DataNode node)
@@ -38,6 +44,12 @@ namespace KSA.Core
             s.WalkInsPerQuarter = node.GetInt("walkInsPerQuarter", s.WalkInsPerQuarter);
             s.MaxApplicants = node.GetInt("maxApplicants", s.MaxApplicants);
             s.CrisisLayoffFraction = node.GetDouble("crisisLayoffFraction", s.CrisisLayoffFraction);
+            KSA.Core.Missions.DefaultMissionMode mode;
+            if (System.Enum.TryParse(node.GetValue("defaultMissionMode", "Hybrid"), true, out mode)) s.DefaultMissionMode = mode;
+            s.DesignBaseDays = node.GetInt("designBaseDays", s.DesignBaseDays);
+            s.BuildBaseDays = node.GetInt("buildBaseDays", s.BuildBaseDays);
+            s.CancelRefundFraction = node.GetDouble("cancelRefundFraction", s.CancelRefundFraction);
+            s.AutoRecover = node.GetBool("autoRecover", s.AutoRecover);
             List<string> tags = node.GetList("personalityTags");
             if (tags.Count > 0)
             {

@@ -16,7 +16,7 @@ namespace KSA.KSP.UI
     {
         private const string DialogName = "KSA_DirectorOffice";
         private const float Width = 620f;
-        private const float WindowHeight = 560f;
+        private const float WindowHeight = 600f;
         private const float ListHeight = 400f;
         private const float LabelWidth = 130f;
         private const float LineHeight = 22f;
@@ -30,6 +30,9 @@ namespace KSA.KSP.UI
         private RecruitingWindow _recruiting;
         private GovernmentReviewWindow _review;
         private HallOfFameWindow _hallOfFame;
+        private ProjectsWindow _projects;
+        private ProgramsWindow _programs;
+        private MissionControlWindow _missionControl;
 
         public DirectorOfficeWindow(Agency agency, Action onClosed)
         {
@@ -91,6 +94,14 @@ namespace KSA.KSP.UI
                 + ", spent " + Agency.Money(_agency.Ledger.ExpensesFor(_agency.CurrentYear)), textWidth));
             items.Add(Field("Prestige", ((int)Math.Round(s.Prestige)) + " / 100", textWidth));
             items.Add(Field("Staff", active + " active, average morale " + moraleAvg + ", applicants waiting: " + _agency.Applicants.Applicants.Count, textWidth));
+            int inFlight = 0, inWork = 0, ready = 0;
+            foreach (KSA.Core.Projects.Project pr in _agency.Projects)
+            {
+                if (pr.Status == KSA.Core.Projects.ProjectStatus.InFlight) inFlight++;
+                else if (pr.Status == KSA.Core.Projects.ProjectStatus.Ready) ready++;
+                else if (pr.IsActive) inWork++;
+            }
+            items.Add(Field("Projects", inFlight + " in flight, " + ready + " ready, " + inWork + " in design or build, " + _agency.Programs.Count + " programs", textWidth));
 
             // --- Alerts ---
             var alerts = new List<string>();
@@ -130,14 +141,18 @@ namespace KSA.KSP.UI
                 new DialogGUIVerticalLayout(false, false, 3f, new RectOffset(6, 6, 6, 6), TextAnchor.UpperLeft, items.ToArray()));
 
             var buttons = new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 4, 0), TextAnchor.MiddleLeft,
-                new DialogGUIButton("Roster", OpenRoster, 100f, 30f, false),
-                new DialogGUIButton("Recruiting", OpenRecruiting, 110f, 30f, false),
-                new DialogGUIButton("Gov. Review", OpenReview, 110f, 30f, false),
-                new DialogGUIButton("Hall of Fame", OpenHallOfFame, 110f, 30f, false),
+                new DialogGUIButton("Roster", OpenRoster, 95f, 30f, false),
+                new DialogGUIButton("Recruiting", OpenRecruiting, 100f, 30f, false),
+                new DialogGUIButton("Gov. Review", OpenReview, 100f, 30f, false),
+                new DialogGUIButton("Hall of Fame", OpenHallOfFame, 100f, 30f, false),
                 new DialogGUIFlexibleSpace(),
                 new DialogGUIButton("Close", OnCloseClicked, 90f, 30f, true));
+            var buttons2 = new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                new DialogGUIButton("Projects", OpenProjects, 95f, 30f, false),
+                new DialogGUIButton("Programs", OpenPrograms, 100f, 30f, false),
+                new DialogGUIButton("Mission Control", OpenMissionControl, 130f, 30f, false));
 
-            var content = new DialogGUIVerticalLayout(true, true, 4f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft, list, buttons);
+            var content = new DialogGUIVerticalLayout(true, true, 4f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft, list, buttons, buttons2);
 
             var dialog = new MultiOptionDialog(DialogName, "", "Kerbal Space Directorate", HighLogic.UISkin,
                 new Rect(0.5f, 0.5f, Width, WindowHeight), content);
@@ -175,8 +190,32 @@ namespace KSA.KSP.UI
             _hallOfFame.Open();
         }
 
+        private void OpenProjects()
+        {
+            if (_projects != null && _projects.IsOpen) return;
+            _projects = new ProjectsWindow(_agency, () => { _projects = null; Refresh(); });
+            _projects.Open();
+        }
+
+        private void OpenPrograms()
+        {
+            if (_programs != null && _programs.IsOpen) return;
+            _programs = new ProgramsWindow(_agency, () => { _programs = null; Refresh(); });
+            _programs.Open();
+        }
+
+        private void OpenMissionControl()
+        {
+            if (_missionControl != null && _missionControl.IsOpen) return;
+            _missionControl = new MissionControlWindow(_agency, () => { _missionControl = null; });
+            _missionControl.Open();
+        }
+
         private void CloseChildren()
         {
+            if (_projects != null) { ProjectsWindow w = _projects; _projects = null; w.Close(); }
+            if (_programs != null) { ProgramsWindow w = _programs; _programs = null; w.Close(); }
+            if (_missionControl != null) { MissionControlWindow w = _missionControl; _missionControl = null; w.Close(); }
             if (_roster != null) { RosterWindow w = _roster; _roster = null; w.Close(); }
             if (_recruiting != null) { RecruitingWindow w = _recruiting; _recruiting = null; w.Close(); }
             if (_review != null) { GovernmentReviewWindow w = _review; _review = null; w.Close(); }

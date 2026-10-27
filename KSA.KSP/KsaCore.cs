@@ -4,6 +4,8 @@ using KSA.Core.Careers;
 using KSA.Core.Data;
 using KSA.Core.Goals;
 using KSA.Core.Medals;
+using KSA.Core.Missions;
+using KSA.Core.Projects;
 using KSA.Core.Personnel;
 using KSA.Core.Recruiting;
 using KSA.KSP.Data;
@@ -35,7 +37,10 @@ namespace KSA.KSP
                 Medals = MedalCatalog.Parse(Nodes(MedalCatalog.NodeName), warnings),
                 Goals = GoalCatalog.Parse(Nodes(GoalCatalog.NodeName), warnings),
                 Recruiting = RecruitCatalog.Parse(Nodes(RecruitCatalog.NodeName), warnings),
-                Morale = MoraleRules.Parse(Nodes(MoraleRules.NodeName), warnings)
+                Morale = MoraleRules.Parse(Nodes(MoraleRules.NodeName), warnings),
+                Missions = MissionCatalog.Parse(Nodes(MissionCatalog.NodeName), warnings),
+                Templates = TemplateCatalog.Parse(Nodes(TemplateCatalog.NodeName), warnings),
+                ProgramTypes = ProgramCatalog.Parse(Nodes(ProgramCatalog.NodeName), warnings)
             };
             List<DataNode> settingsNodes = Nodes(AgencySettings.NodeName);
             c.Settings = AgencySettings.Parse(settingsNodes.Count > 0 ? settingsNodes[0] : null);
@@ -50,6 +55,7 @@ namespace KSA.KSP
             var medalNames = new List<string>();
             foreach (MedalDefinition m in c.Medals.Medals) medalNames.Add(m.Name);
             Log.Info("Medals (" + c.Medals.Count + "): " + string.Join(", ", medalNames.ToArray()));
+            Log.Info("Missions: " + c.Missions.Count + ", templates: " + c.Templates.Count + ", program types: " + c.ProgramTypes.Count);
             Log.Info("Goals: " + c.Goals.Count + ", recruitment sources: " + c.Recruiting.Count + ", base grant " + Agency.Money(c.Settings.BaseGrant)
                      + ", " + c.Settings.GoalsPerYear + " goals/year" + (settingsNodes.Count == 0 ? " (defaults; no KSA_AGENCY_SETTINGS node found)" : string.Empty));
             foreach (string w in warnings) Log.Warn("Config: " + w);
@@ -62,6 +68,9 @@ namespace KSA.KSP
             ClearAgency();
             var a = new Agency(Catalogs, Clock, Log) { Names = new KspNameSource() };
             a.Ledger.Mirror = new KspFunds();
+            foreach (AssemblyLoader.LoadedAssembly la in AssemblyLoader.loadedAssemblies) if (la != null && !string.IsNullOrEmpty(la.name)) a.InstalledMods.Add(la.name);
+            a.LiveFlightAvailable = false; // M5
+            a.MissionResolved += OnMissionResolved;
             a.CrewDeparted += OnCrewDeparted;
             a.ApplicantHired += OnApplicantHired;
             a.YearEnded += OnYearEnded;
@@ -76,6 +85,7 @@ namespace KSA.KSP
                 Agency.CrewDeparted -= OnCrewDeparted;
                 Agency.ApplicantHired -= OnApplicantHired;
                 Agency.YearEnded -= OnYearEnded;
+                Agency.MissionResolved -= OnMissionResolved;
             }
             Agency = null;
         }
@@ -121,6 +131,11 @@ namespace KSA.KSP
         {
             KspCrewFactory.Create(a, p);
             SyncRoster("hire");
+        }
+
+        private static void OnMissionResolved(Core.Projects.MissionReport r)
+        {
+            ScreenMessages.PostScreenMessage("[KSA] " + r.ProjectName + ": " + Agency.OutcomeText(r.Outcome), 8f, ScreenMessageStyle.UPPER_CENTER);
         }
 
         private static void OnYearEnded(Core.Review.ReviewResult r)

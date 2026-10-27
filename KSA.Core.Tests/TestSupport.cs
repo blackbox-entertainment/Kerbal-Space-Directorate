@@ -5,6 +5,8 @@ using KSA.Core.Careers;
 using KSA.Core.Data;
 using KSA.Core.Goals;
 using KSA.Core.Medals;
+using KSA.Core.Missions;
+using KSA.Core.Projects;
 using KSA.Core.Personnel;
 using KSA.Core.Recruiting;
 
@@ -69,6 +71,9 @@ namespace KSA.Core.Tests
         public static GoalCatalog Goals(List<string> warnings = null) { return GoalCatalog.Parse(Load("goals.cfg"), warnings); }
         public static RecruitCatalog Recruiting(List<string> warnings = null) { return RecruitCatalog.Parse(Load("recruiting.cfg"), warnings); }
         public static MoraleRules Morale(List<string> warnings = null) { return MoraleRules.Parse(Load("morale.cfg"), warnings); }
+        public static MissionCatalog Missions(List<string> warnings = null) { return MissionCatalog.Parse(Load("missions.cfg"), warnings); }
+        public static TemplateCatalog Templates(List<string> warnings = null) { return TemplateCatalog.Parse(Load("templates.cfg"), warnings); }
+        public static ProgramCatalog ProgramTypes(List<string> warnings = null) { return ProgramCatalog.Parse(Load("programs.cfg"), warnings); }
 
         public static AgencySettings Settings()
         {
@@ -87,7 +92,10 @@ namespace KSA.Core.Tests
                 Goals = Goals(),
                 Recruiting = Recruiting(),
                 Morale = Morale(),
-                Settings = Settings()
+                Settings = Settings(),
+                Missions = Missions(),
+                Templates = Templates(),
+                ProgramTypes = ProgramTypes()
             };
         }
     }
