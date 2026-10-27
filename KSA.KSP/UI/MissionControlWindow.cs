@@ -167,10 +167,8 @@ namespace KSA.KSP.UI
             if (_agency.Reports.Count > ReportsShown) Line(items, "(" + (_agency.Reports.Count - ReportsShown) + " older report(s) not shown)", textWidth);
             items.Add(new DialogGUISpace(SectionGap));
 
-            items.Add(new DialogGUISpace(KsaUi.ScrollTail));
-
             var list = new DialogGUIScrollList(new Vector2(Width - 30f, ListHeight), false, true,
-                new DialogGUIVerticalLayout(false, false, 3f, new RectOffset(6, 6, 6, 6), TextAnchor.UpperLeft, items.ToArray()));
+                new DialogGUIVerticalLayout(false, false, 3f, new RectOffset(6, 6, 6, 6), TextAnchor.UpperLeft, KsaUi.Scrollable(items)));
 
             var content = new DialogGUIVerticalLayout(true, true, 4f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft,
                 new DialogGUILabel(_status.Length > 0 ? _status : "Launch what is ready, watch what is flying, and read every mission the agency has flown, newest first.", Width - 40f, LineHeight),
@@ -179,11 +177,10 @@ namespace KSA.KSP.UI
                     new DialogGUIFlexibleSpace(),
                     new DialogGUIButton("Close", OnCloseClicked, 90f, 30f, true)));
 
-            var dialog = new MultiOptionDialog(DialogName, "", "Mission Control", HighLogic.UISkin,
+            var dialog = new MultiOptionDialog(DialogName, "", "Mission Control", KsaUi.Skin,
                 new Rect(0.5f, 0.5f, Width, WindowHeight), content);
 
-            _dialog = PopupDialog.SpawnPopupDialog(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), dialog, false, HighLogic.UISkin, false);
-            KsaUi.MakeOpaque(_dialog);
+            _dialog = PopupDialog.SpawnPopupDialog(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), dialog, false, KsaUi.Skin, false);
         }
 
         // --- Director actions: call the Agency, remember its message, rebuild ---

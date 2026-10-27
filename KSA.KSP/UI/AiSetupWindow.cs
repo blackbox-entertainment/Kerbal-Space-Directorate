@@ -80,10 +80,8 @@ namespace KSA.KSP.UI
             BuildUsageSection(items, textWidth);
             items.Add(new DialogGUISpace(SectionGap * 5)); // wrapped labels under-report their height; keep the last row reachable
 
-            items.Add(new DialogGUISpace(KsaUi.ScrollTail));
-
             var list = new DialogGUIScrollList(new Vector2(Width - 30f, ListHeight), false, true,
-                new DialogGUIVerticalLayout(false, false, 3f, new RectOffset(6, 6, 6, 6), TextAnchor.UpperLeft, items.ToArray()));
+                new DialogGUIVerticalLayout(false, false, 3f, new RectOffset(6, 6, 6, 6), TextAnchor.UpperLeft, KsaUi.Scrollable(items)));
 
             var buttons = new DialogGUIHorizontalLayout(true, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
                 new DialogGUIButton(_testing ? "Testing..." : "Test connection", OnTestConnection, 130f, 30f, false),
@@ -97,11 +95,10 @@ namespace KSA.KSP.UI
                 list,
                 buttons);
 
-            var dialog = new MultiOptionDialog(DialogName, "", "AI Setup", HighLogic.UISkin,
+            var dialog = new MultiOptionDialog(DialogName, "", "AI Setup", KsaUi.Skin,
                 new Rect(0.5f, 0.5f, Width, WindowHeight), content);
 
-            _dialog = PopupDialog.SpawnPopupDialog(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), dialog, false, HighLogic.UISkin, false);
-            KsaUi.MakeOpaque(_dialog);
+            _dialog = PopupDialog.SpawnPopupDialog(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), dialog, false, KsaUi.Skin, false);
         }
 
         // --- Design mode ---

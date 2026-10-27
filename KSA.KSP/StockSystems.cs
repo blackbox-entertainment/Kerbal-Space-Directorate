@@ -13,6 +13,10 @@ namespace KSA.KSP
     public static class StockSystems
     {
         private static bool _hooked;
+        private static readonly Listener Handler = new Listener();
+
+        /// <summary>KSP GameEvents reject static handlers (null target), so the hook lives on an instance.</summary>
+        private sealed class Listener { public void ContractOffered(Contract c) { OnContractOffered(c); } }
         private static int _withdrawn;
         private static int _purged;
 
@@ -22,7 +26,7 @@ namespace KSA.KSP
             if (!_hooked)
             {
                 _hooked = true;
-                GameEvents.Contract.onOffered.Add(OnContractOffered);
+                GameEvents.Contract.onOffered.Add(Handler.ContractOffered);
             }
             if (!settings.StockContracts) WithdrawOffered();
         }

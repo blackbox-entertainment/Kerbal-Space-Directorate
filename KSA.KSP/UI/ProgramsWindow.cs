@@ -75,10 +75,8 @@ namespace KSA.KSP.UI
             BuildNewProgramSection(items, textWidth);
             items.Add(new DialogGUISpace(SectionGap));
 
-            items.Add(new DialogGUISpace(KsaUi.ScrollTail));
-
             var list = new DialogGUIScrollList(new Vector2(Width - 30f, ListHeight), false, true,
-                new DialogGUIVerticalLayout(false, false, 3f, new RectOffset(6, 6, 6, 6), TextAnchor.UpperLeft, items.ToArray()));
+                new DialogGUIVerticalLayout(false, false, 3f, new RectOffset(6, 6, 6, 6), TextAnchor.UpperLeft, KsaUi.Scrollable(items)));
 
             var content = new DialogGUIVerticalLayout(true, true, 4f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft,
                 new DialogGUILabel(_status.Length > 0 ? _status : "A program builds a station or base one module project at a time.", Width - 40f, LineHeight),
@@ -87,11 +85,10 @@ namespace KSA.KSP.UI
                     new DialogGUIFlexibleSpace(),
                     new DialogGUIButton("Close", OnCloseClicked, 90f, 30f, true)));
 
-            var dialog = new MultiOptionDialog(DialogName, "", "Programs", HighLogic.UISkin,
+            var dialog = new MultiOptionDialog(DialogName, "", "Programs", KsaUi.Skin,
                 new Rect(0.5f, 0.5f, Width, WindowHeight), content);
 
-            _dialog = PopupDialog.SpawnPopupDialog(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), dialog, false, HighLogic.UISkin, false);
-            KsaUi.MakeOpaque(_dialog);
+            _dialog = PopupDialog.SpawnPopupDialog(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), dialog, false, KsaUi.Skin, false);
         }
 
         // --- Programs ---

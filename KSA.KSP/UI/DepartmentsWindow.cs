@@ -98,10 +98,8 @@ namespace KSA.KSP.UI
             items.Add(new DialogGUISpace(8f));
             Line(items, Color("The stock Administration building's strategies still work on stock Funds, Science and Reputation; KSA prestige and budget are separate.", Grey), textWidth);
 
-            items.Add(new DialogGUISpace(KsaUi.ScrollTail));
-
             var list = new DialogGUIScrollList(new Vector2(Width - 30f, ListHeight), false, true,
-                new DialogGUIVerticalLayout(false, false, 3f, new RectOffset(6, 6, 6, 6), TextAnchor.UpperLeft, items.ToArray()));
+                new DialogGUIVerticalLayout(false, false, 3f, new RectOffset(6, 6, 6, 6), TextAnchor.UpperLeft, KsaUi.Scrollable(items)));
 
             var content = new DialogGUIVerticalLayout(true, true, 4f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft,
                 new DialogGUILabel(_status.Length > 0 ? _status : "Who runs what.", Width - 40f, LineHeight),
@@ -110,9 +108,8 @@ namespace KSA.KSP.UI
                     new DialogGUIFlexibleSpace(),
                     new DialogGUIButton("Close", OnCloseClicked, 90f, 30f, true)));
 
-            var dialog = new MultiOptionDialog(DialogName, "", "Departments", HighLogic.UISkin, new Rect(0.5f, 0.5f, Width, WindowHeight), content);
-            _dialog = PopupDialog.SpawnPopupDialog(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), dialog, false, HighLogic.UISkin, false);
-            KsaUi.MakeOpaque(_dialog);
+            var dialog = new MultiOptionDialog(DialogName, "", "Departments", KsaUi.Skin, new Rect(0.5f, 0.5f, Width, WindowHeight), content);
+            _dialog = PopupDialog.SpawnPopupDialog(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), dialog, false, KsaUi.Skin, false);
         }
 
         private void OnChoose(Department d)

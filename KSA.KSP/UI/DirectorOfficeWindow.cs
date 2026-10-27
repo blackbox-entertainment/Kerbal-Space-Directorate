@@ -147,10 +147,8 @@ namespace KSA.KSP.UI
             }
             items.Add(new DialogGUISpace(SectionGap));
 
-            items.Add(new DialogGUISpace(KsaUi.ScrollTail));
-
             var list = new DialogGUIScrollList(new Vector2(Width - 30f, ListHeight), false, true,
-                new DialogGUIVerticalLayout(false, false, 3f, new RectOffset(6, 6, 6, 6), TextAnchor.UpperLeft, items.ToArray()));
+                new DialogGUIVerticalLayout(false, false, 3f, new RectOffset(6, 6, 6, 6), TextAnchor.UpperLeft, KsaUi.Scrollable(items)));
 
             var buttons = new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 4, 0), TextAnchor.MiddleLeft,
                 new DialogGUIButton("Roster", OpenRoster, 95f, 30f, false),
@@ -171,11 +169,10 @@ namespace KSA.KSP.UI
 
             var content = new DialogGUIVerticalLayout(true, true, 4f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft, list, buttons, buttons2, buttons3);
 
-            var dialog = new MultiOptionDialog(DialogName, "", "Kerbal Space Directorate", HighLogic.UISkin,
+            var dialog = new MultiOptionDialog(DialogName, "", "Kerbal Space Directorate", KsaUi.Skin,
                 new Rect(0.5f, 0.5f, Width, WindowHeight), content);
 
-            _dialog = PopupDialog.SpawnPopupDialog(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), dialog, false, HighLogic.UISkin, false);
-            KsaUi.MakeOpaque(_dialog);
+            _dialog = PopupDialog.SpawnPopupDialog(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), dialog, false, KsaUi.Skin, false);
         }
 
         // --- child windows (one of each at a time) ---

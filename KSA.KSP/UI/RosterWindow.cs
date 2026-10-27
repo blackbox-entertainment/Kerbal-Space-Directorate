@@ -106,9 +106,8 @@ namespace KSA.KSP.UI
             }
 
             float width = PortraitSize + KsaIcons.BadgeSize + NameWidth + RankWidth + RoleWidth + StarsWidth + MoraleWidth + StatusWidth + ActionWidth + 40f;
-            rows.Add(new DialogGUISpace(KsaUi.ScrollTail));
             var list = new DialogGUIScrollList(new Vector2(width + 40f, 380f), false, true,
-                new DialogGUIVerticalLayout(false, false, 4f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft, rows.ToArray()));
+                new DialogGUIVerticalLayout(false, false, 4f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft, KsaUi.Scrollable(rows)));
 
             string hint = "Click a name to open the Service Record.";
             if (agency != null && agency.State.PendingLayoffs > 0) hint += "  Layoffs required: " + agency.State.PendingLayoffs + ".";
@@ -120,11 +119,10 @@ namespace KSA.KSP.UI
                     new DialogGUIFlexibleSpace(),
                     new DialogGUIButton("Close", OnCloseClicked, 80f, 28f, true)));
 
-            var dialog = new MultiOptionDialog(DialogName, "", "KSA Roster (" + crew.Count + ")", HighLogic.UISkin,
+            var dialog = new MultiOptionDialog(DialogName, "", "KSA Roster (" + crew.Count + ")", KsaUi.Skin,
                 new Rect(0.5f, 0.5f, width + 70f, 540f), content);
 
-            _dialog = PopupDialog.SpawnPopupDialog(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), dialog, false, HighLogic.UISkin, false);
-            KsaUi.MakeOpaque(_dialog);
+            _dialog = PopupDialog.SpawnPopupDialog(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), dialog, false, KsaUi.Skin, false);
         }
 
         private static DialogGUIHorizontalLayout HeaderRow()
