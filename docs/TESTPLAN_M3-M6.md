@@ -24,7 +24,7 @@ Mark each step pass or fail. If something fails, copy the `[KSA]` lines from the
 
 1. Recruiting → run a drive → the Interview button now reads "Interview (√200)". Press it: funds drop by 200 and the button becomes "Interview (√300)". A fully interviewed applicant shows "Interviewed". With a senior crew member on staff each interview reveals two facts, so it costs half as much to learn everything.
 2. Hire an applicant without interviewing: allowed, you just take the risk.
-3. Roster → Dismiss someone: the message says morale across the agency fell by 4. Check another kerbal's morale column dropped. A death drops everyone else by 15 (both numbers live in `GameDataKSAConfigsmorale.cfg`).
+3. Roster → Dismiss someone: the message says how far morale across the agency fell. Check another kerbal's morale column dropped by that much. The hit scales with roster size: with 12 kerbals left a dismissal costs 4 and a death 15; with 3 left it is 8 and 30; with 99 left it is 1 and 5 (`GameDataKSAConfigsmorale.cfg`, KSA_MORALE_SCALING).
 4. Service Record → "Traits": after a completed mission the pilot's stupidity drops a little and courage rises; the Astronaut Complex shows the same numbers (the mod writes them back to the kerbal).
 5. Director's Office → Analytics: a year-over-year table (grant, spend, net, balance, prestige, missions, deaths, goals, review band) and the Space race league table with three rival agencies. Warp past a year end: rivals fly, headlines appear in the Press Room ("Northern Launch Directorate completes suborbital flight"), and the Firsts list shows who got there first.
 

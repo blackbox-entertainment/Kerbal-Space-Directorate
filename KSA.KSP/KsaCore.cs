@@ -40,7 +40,7 @@ namespace KSA.KSP
                 Medals = MedalCatalog.Parse(Nodes(MedalCatalog.NodeName), warnings),
                 Goals = GoalCatalog.Parse(Nodes(GoalCatalog.NodeName), warnings),
                 Recruiting = RecruitCatalog.Parse(Nodes(RecruitCatalog.NodeName), warnings),
-                Morale = MoraleRules.Parse(Nodes(MoraleRules.NodeName), warnings),
+                Morale = MoraleRules.Parse(Concat(Nodes(MoraleRules.NodeName), Nodes(MoraleRules.ScalingNodeName)), warnings),
                 Missions = MissionCatalog.Parse(Nodes(MissionCatalog.NodeName), warnings),
                 Templates = TemplateCatalog.Parse(Nodes(TemplateCatalog.NodeName), warnings),
                 ProgramTypes = ProgramCatalog.Parse(Nodes(ProgramCatalog.NodeName), warnings),
@@ -219,6 +219,13 @@ namespace KSA.KSP
         private static void OnYearEnded(Core.Review.ReviewResult r)
         {
             ScreenMessages.PostScreenMessage("[KSA] Government Review, year " + r.Year + ": " + r.BandText, 10f, ScreenMessageStyle.UPPER_CENTER);
+        }
+
+        private static List<DataNode> Concat(List<DataNode> a, List<DataNode> b)
+        {
+            var list = new List<DataNode>(a);
+            list.AddRange(b);
+            return list;
         }
 
         private static List<DataNode> Nodes(string nodeName)

@@ -450,10 +450,11 @@ namespace KSA.Core
             }
             BookFlightTime(p);
             State.DeathsThisYear++;
+            int survivors = ActiveCountExcluding(p);
             foreach (CrewProfile other in Crew.Active)
-                if (other != p) Catalogs.Morale.Apply(other, MoraleEvent.CrewDeath);
+                if (other != p) Catalogs.Morale.ApplyScaled(other, MoraleEvent.CrewDeath, survivors);
             DriftAfterDeath(p);
-            int blow = -Catalogs.Morale.Delta(MoraleEvent.CrewDeath);
+            int blow = -Catalogs.Morale.ScaledDelta(MoraleEvent.CrewDeath, survivors);
             Push(notices, p.Name + " was killed in the line of duty" + (blow > 0 ? "; morale across the agency fell by " + blow : string.Empty));
             EvaluateProgress(p, m != null ? m.MissionId : null, notices);
             return notices;
@@ -504,10 +505,19 @@ namespace KSA.Core
             var notices = new List<string>();
             Depart(p, DepartureReason.Fired, CurrentDay, notices);
             if (State.PendingLayoffs > 0) State.PendingLayoffs--;
-            foreach (CrewProfile other in Crew.Active) Catalogs.Morale.Apply(other, MoraleEvent.ColleagueFired);
-            int hit = -Catalogs.Morale.Delta(MoraleEvent.ColleagueFired);
+            int remaining = ActiveCountExcluding(p);
+            foreach (CrewProfile other in Crew.Active) if (other != p) Catalogs.Morale.ApplyScaled(other, MoraleEvent.ColleagueFired, remaining);
+            int hit = -Catalogs.Morale.ScaledDelta(MoraleEvent.ColleagueFired, remaining);
             message = p.Name + " has been dismissed." + (hit > 0 ? " Morale across the agency fell by " + hit + "." : string.Empty) + (State.PendingLayoffs > 0 ? " Layoffs still required: " + State.PendingLayoffs : string.Empty);
             return true;
+        }
+
+        /// <summary>How many active kerbals are left once <paramref name="gone"/> is out: the roster that feels a loss.</summary>
+        private int ActiveCountExcluding(CrewProfile gone)
+        {
+            int n = 0;
+            foreach (CrewProfile c in Crew.Active) if (c != gone) n++;
+            return n;
         }
 
         private void Depart(CrewProfile p, DepartureReason reason, int day, List<string> notices)
