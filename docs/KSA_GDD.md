@@ -613,14 +613,14 @@ Each milestone is playable on its own. Jira epics KSA-1 to KSA-8.
 
 1. ~~Final name~~ Decided 2026-10-26: **Kerbal Space Directorate**. Internal code name stays KSA.
 2. ~~Manual override~~ Decided 2026-10-26: see 14.1 item 7. Design override remains strict (hands-off); flight override is an opt-in.
-3. Can kerbals **quit** (low morale) or **retire** (age/service time)?
-4. Track **kerbal age** and a hall of fame?
-5. Rival **space agencies** for a space-race mode?
-6. How punishing are Crisis Years? Is **"Director fired"** a game over?
+3. ~~Quit or retire~~ Decided 2026-10-26: yes to both (14.1 item 8).
+4. ~~Age and hall of fame~~ Decided 2026-10-26: yes to both (14.1 item 9).
+5. ~~Rival agencies~~ Decided 2026-10-26: yes, as an optional mode after M7 (14.1 item 10).
+6. ~~Crisis Years~~ Decided 2026-10-26: hurt, but never game over; probation then a new Director (14.1 item 11).
 7. ~~Separate science directorate budget?~~ Decided 2026-10-26: yes. Research is a Project type funded by the Director (see 14.1).
-8. **Community-sourced** template library?
-9. Default OpenRouter models for design vs. post-mortem (benchmark in M4)
-10. Cloud city buoyancy: **Airships vs. Hooligan Labs**?
+8. ~~Community templates~~ Decided 2026-10-26: yes, after release (14.1 item 12).
+9. ~~Default models~~ Decided 2026-10-26: curated list, cheapest-that-works default plus a few flagships, player-selectable (14.1 item 13).
+10. ~~Airship mod~~ Decided 2026-10-26: HL Airships Core (14.1 item 14).
 11. ~~GitHub owner~~ Decided: Blackbox Entertainment organization (2026-10-26)
 
 ### 14.1 Decisions recorded 2026-10-26
@@ -634,6 +634,13 @@ Stock kerbals carry only stars (0–5), a trait, and Courage/Stupidity (cosmetic
 5. **Per-mission flight mode.** Every mission has a Simulate / Watch Live selector at launch, pre-filled from an agency-wide default setting (Simulate, Watch Live, or Hybrid; Hybrid ships as default). Watch Live requires MechJeb; without it the mission falls back to Simulate with a notice. Supersedes the fixed "Hybrid only" wording in section 7.
 6. **Landing site selection.** When landing on the Mun or any body with a surface, the crew picks a flat spot. Before descent, KSA samples terrain slope in a grid around the intended target (stock PQS terrain queries) and shifts the target to the flattest nearby cell, with a per-body maximum slope. Live mode feeds that target to MechJeb's landing guidance; Simulated mode uses site slope as a factor in the outcome roll. Programs (bases) choose a site once and reuse it so modules land next to each other. Pilot stars widen the search and lower the accepted slope.
 7. **Manual flight override ("Director may fly").** A mod setting, off by default. When on, Live flights show a Take Control button that pauses the autopilot and hands the player the controls; control can be handed back at any time. The mission is logged as Director-flown in the Service Record, the pilot earns reduced KSA rank credit for it, and the post-mortem narrative reflects it. Not available for Simulated missions (choose Watch Live first). Design override stays strict: the player never edits an AI stage plan by hand.
+8. **Kerbals can quit and retire.** Quitting is driven by low morale (passed over for selection, deaths, lean years, long idle stretches); retirement by age or years of service. Both go through the hall of fame. M2.
+9. **Age and hall of fame.** Every kerbal has an age (assigned at hire, advances with the fiscal calendar). Retired and dead kerbals keep their Service Record in a Hall of Fame window. Age from M1, hall from M2.
+10. **Rival agencies: optional mode, post-M7.** A space-race mode with competing agencies that claim firsts and poach applicants. Off by default, enabled per save. Not scheduled before release.
+11. **Crisis Years hurt but never end the game.** A Crisis Year brings budget cuts, cancellations, and forced layoffs, and puts the Director on probation. A second bad year ends the Director's tenure: the agency continues under a new Director with the same staff, and the record shows it. No game over. M2.
+12. **Community template library: yes, after release.** Ship with first-party templates; open a submission path (shared .craft plus a KSA metadata file) once the mod has traction. Post-M7.
+13. **AI models: curated, player-selectable.** The AI Setup window offers a short list per task: a cheapest-that-does-the-job default plus two or three flagship options, for design, post-mortem, and narrative separately. Exact model IDs are benchmarked in M4 and kept in a ModuleManager config so they can be updated without a code release.
+14. **Eve cloud city uses HL Airships Core.** Angel-125's Airships stays on the compatibility list. M3.
 
 ---
 

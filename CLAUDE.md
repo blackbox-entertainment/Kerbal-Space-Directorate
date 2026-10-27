@@ -136,6 +136,13 @@ GameData/KSA/
 | Mission mode | Per-mission Simulate / Watch Live selector, pre-filled from an agency default (Hybrid by default). Watch Live needs MechJeb, else falls back to Simulate. |
 | Landing sites | Crew picks a flat spot: sample terrain slope around the target, shift to the flattest cell, per-body max slope. Feeds MechJeb in Live (M5), outcome roll in Simulated (M3). Bases reuse one site. |
 | Manual flight override | Opt-in setting, off by default. Take Control button during Live flights; logged as Director-flown with reduced rank credit; not available in Simulated. Design override stays strict (M5). |
+| Quit and retire | Yes: quit from low morale, retire from age or service; both via the Hall of Fame (M2). |
+| Age and hall of fame | Age tracked from hire (M1); Hall of Fame window keeps retired and dead kerbals' records (M2). |
+| Rival agencies | Optional space-race mode, off by default, post-M7. |
+| Crisis Years | Hurt (cuts, cancellations, layoffs) and put the Director on probation; a second bad year replaces the Director, agency continues. Never game over (M2). |
+| Community templates | Yes, after release: first-party templates ship, submission path opens post-M7. |
+| AI models | Curated per-task list in AI Setup: cheapest-that-works default plus a few flagships, player-selectable; IDs live in a ModuleManager config, benchmarked in M4. |
+| Eve cloud city | HL Airships Core (M3). Angel-125 Airships stays compatible. |
 
 **Candidate supported mod set (not final):** ReStock/ReStock+, Near Future series, SSPXr (inflatables), KPBS (surface bases), Outer Planets Mod, Hooligan Labs Airships (Eve cloud city), Extraplanetary Launchpads. Required: ModuleManager, MechJeb2 (Live mode). Optional: kOS.
 
