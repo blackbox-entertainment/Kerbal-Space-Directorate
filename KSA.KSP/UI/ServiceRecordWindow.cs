@@ -38,17 +38,20 @@ namespace KSA.KSP.UI
         public void Open()
         {
             if (_dialog != null) return;
+            PortraitRenderer.BatchReady += Refresh;
             Spawn();
         }
 
         public void Close()
         {
+            PortraitRenderer.BatchReady -= Refresh;
             if (_dialog == null) return;
             PopupDialog d = _dialog;
             _dialog = null;
             d.Dismiss();
         }
 
+        /// <summary>Rebuilds the window in place (also runs when a portrait finishes rendering).</summary>
         private void Refresh()
         {
             if (_dialog == null) return;
@@ -185,6 +188,7 @@ namespace KSA.KSP.UI
         private void OnCloseClicked()
         {
             _dialog = null;
+            PortraitRenderer.BatchReady -= Refresh;
             if (_onClosed != null) _onClosed();
         }
 

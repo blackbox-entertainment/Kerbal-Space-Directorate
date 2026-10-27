@@ -58,6 +58,11 @@
       <HintPath>$(KspManaged)\UnityEngine.IMGUIModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <!-- Texture2D.EncodeToPNG / LoadImage for the portrait cache (KSA-56). -->
+    <Reference Include="UnityEngine.ImageConversionModule">
+      <HintPath>$(KspManaged)\UnityEngine.ImageConversionModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <!-- UnityWebRequest for the LLM transport. -->
     <Reference Include="UnityEngine.UnityWebRequestModule">
       <HintPath>$(KspManaged)\UnityEngine.UnityWebRequestModule.dll</HintPath>

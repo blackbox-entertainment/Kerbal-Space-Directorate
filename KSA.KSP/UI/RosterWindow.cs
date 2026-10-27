@@ -225,6 +225,7 @@ namespace KSA.KSP.UI
             GameEvents.onKerbalRemoved.Add(OnKerbalAddedOrRemoved);
             GameEvents.onKerbalTypeChange.Add(OnKerbalTypeChange);
             GameEvents.onKerbalStatusChange.Add(OnKerbalStatusChange);
+            PortraitRenderer.BatchReady += OnPortraitsReady;
             _subscribed = true;
         }
 
@@ -235,7 +236,13 @@ namespace KSA.KSP.UI
             GameEvents.onKerbalRemoved.Remove(OnKerbalAddedOrRemoved);
             GameEvents.onKerbalTypeChange.Remove(OnKerbalTypeChange);
             GameEvents.onKerbalStatusChange.Remove(OnKerbalStatusChange);
+            PortraitRenderer.BatchReady -= OnPortraitsReady;
             _subscribed = false;
+        }
+
+        private void OnPortraitsReady()
+        {
+            Refresh(); // swap suit sprites for the faces that just finished rendering
         }
 
         private void OnKerbalAddedOrRemoved(ProtoCrewMember pcm) { Refresh(); }

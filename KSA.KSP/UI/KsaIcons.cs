@@ -37,10 +37,21 @@ namespace KSA.KSP.UI
         // ------------------------------------------------------------ portraits
 
         /// <summary>
-        /// The same picture the Astronaut Complex shows: the kerbal's SpritePath texture from GameDatabase,
-        /// falling back to the stock suit icon from the game's asset bundles. Null if neither can be found.
+        /// The kerbal's rendered face (PortraitRenderer, KSA-56) once it is ready; until then, or if rendering is
+        /// unavailable, the same picture the Astronaut Complex shows: the SpritePath texture from GameDatabase, or
+        /// the stock suit icon from the game's asset bundles. Null if nothing can be found.
         /// </summary>
         public static Texture Portrait(ProtoCrewMember pcm)
+        {
+            if (pcm == null) return null;
+
+            Texture rendered = PortraitRenderer.Get(pcm);
+            if (rendered != null) return rendered;
+            return Sprite(pcm);
+        }
+
+        /// <summary>The Astronaut Complex picture only (sprite or suit icon), never a rendered face.</summary>
+        public static Texture Sprite(ProtoCrewMember pcm)
         {
             if (pcm == null) return null;
 
@@ -70,6 +81,9 @@ namespace KSA.KSP.UI
             if (string.IsNullOrEmpty(crewName)) return null;
             if (HighLogic.CurrentGame != null && HighLogic.CurrentGame.CrewRoster != null && HighLogic.CurrentGame.CrewRoster.Exists(crewName))
                 return Portrait(HighLogic.CurrentGame.CrewRoster[crewName]);
+            // Off the roster: a face rendered while they were still on it beats the stored sprite key.
+            Texture cached = PortraitRenderer.GetCached(crewName);
+            if (cached != null) return cached;
             Agency agency = KsaCore.Agency;
             CrewProfile p = agency != null ? agency.Crew.Get(crewName) : null;
             return p != null ? FromKey(p.PortraitKey) : null;

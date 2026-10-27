@@ -23,7 +23,7 @@ Mark each step pass or fail. If something fails, copy the `[KSA]` lines from the
 ## A3. Buildings (added 2026-10-27)
 
 1. Click the **Administration** building: the KSA Programs and Analytics windows open with it and close with it. **Astronaut Complex**: Recruiting opens. **Mission Control** building: the agency Mission Control opens. In the **Tracking Station** the KSA toolbar button opens Mission Control. The Director's Office on the Space Center toolbar still reaches everything.
-2. Roster portraits are larger (56 px) and the Service Record shows a 128 px portrait. These are the Astronaut Complex head-and-suit sprites scaled up, not hand-painted art like the Administration department heads.
+2. **Rendered portraits (KSA-56).** Open the Roster: for about half a second each kerbal shows the generic suit sprite, then it swaps to a rendered face (the kerbal's own IVA model, helmet off, veteran suit for the originals). The Service Record shows it at 128 px, the Hall of Fame too. PNGs appear under `E:KSP_devGameDataKSAPluginDataportraits`. If faces are black, helmeted or empty, send me the `[KSA] Portrait rig:` and `[KSA] Portrait` lines from KSP.log; delete the portraits folder to force a re-render.
 
 ## A2. Recruiting tweaks (added 2026-10-27)
 

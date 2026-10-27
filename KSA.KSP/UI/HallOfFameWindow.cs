@@ -43,11 +43,13 @@ namespace KSA.KSP.UI
         public void Open()
         {
             if (_dialog != null) return;
+            PortraitRenderer.BatchReady += OnPortraitsReady;
             Spawn();
         }
 
         public void Close()
         {
+            PortraitRenderer.BatchReady -= OnPortraitsReady;
             CloseRecord();
             if (_dialog == null) return;
             PopupDialog d = _dialog;
@@ -191,8 +193,14 @@ namespace KSA.KSP.UI
         private void OnCloseClicked()
         {
             _dialog = null;
+            PortraitRenderer.BatchReady -= OnPortraitsReady;
             CloseRecord();
             if (_onClosed != null) _onClosed();
+        }
+
+        private void OnPortraitsReady()
+        {
+            Refresh(); // dead crew are still on the game roster, so their faces render too
         }
 
         // --- layout helpers: every line has an explicit height so rows never overlap ---
