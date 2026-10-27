@@ -77,7 +77,7 @@ namespace KSA.Core.Ai
 
         private void Attempt(LlmEndpoint endpoint, string body, int promptChars, int attempt, Action<LlmResult> done)
         {
-            var req = new LlmRequest { Url = endpoint.Url, Body = body, DelaySeconds = attempt == 1 ? 0 : Math.Pow(2, attempt - 1) };
+            var req = new LlmRequest { Url = endpoint.Url, Body = body, DelaySeconds = attempt == 1 ? 0 : Math.Pow(2, attempt - 1), TimeoutSeconds = endpoint.IsLocal ? 900 : 120 };
             req.Headers["Content-Type"] = "application/json";
             if (!string.IsNullOrEmpty(endpoint.ApiKey)) req.Headers["Authorization"] = "Bearer " + endpoint.ApiKey;
             if (!endpoint.IsLocal)

@@ -105,7 +105,7 @@ namespace KSA.KSP.UI
                 }
             }
 
-            float width = PortraitSize + KsaIcons.BadgeSize + NameWidth + RankWidth + RoleWidth + StarsWidth + MoraleWidth + StatusWidth + ActionWidth + 40f;
+            float width = PortraitSize + KsaIcons.BadgeSize + NameWidth + RankWidth + RoleWidth + StarsWidth + MoraleWidth + StatusWidth + LabWidth + ActionWidth + 44f;
             var list = new DialogGUIScrollList(new Vector2(width + 40f, 380f), false, true,
                 new DialogGUIVerticalLayout(false, false, 4f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft, KsaUi.Scrollable(rows)));
 
@@ -139,6 +139,19 @@ namespace KSA.KSP.UI
                 new DialogGUISpace(ActionWidth));
         }
 
+        private const float LabWidth = 60f;
+
+        /// <summary>Scientists (and Science-track kerbals) can be put in the research lab, where they make Science each year instead of flying.</summary>
+        private DialogGUIBase LabButton(CrewRecord c)
+        {
+            Agency a = KsaCore.Agency;
+            KSA.Core.Personnel.CrewProfile p = a != null ? a.Crew.Get(c.Name) : null;
+            if (p == null || p.Departed || (p.Role != KSA.Core.Personnel.CrewRole.Scientist && p.Track != KSA.Core.Personnel.CareerTrack.Science)) return new DialogGUISpace(LabWidth);
+            string id = c.Name;
+            bool inLab = p.InLab;
+            return new DialogGUIButton(inLab ? "[x] Lab" : "Lab", () => { string msg; a.SetLab(id, !inLab, out msg); ScreenMessages.PostScreenMessage("[KSA] " + msg, 5f, ScreenMessageStyle.UPPER_CENTER); Refresh(); }, LabWidth, RowHeight, false);
+        }
+
         private DialogGUIHorizontalLayout CrewRow(CrewRecord c, string rank, string morale, bool canDismiss)
         {
             string id = c.Name;
@@ -149,6 +162,7 @@ namespace KSA.KSP.UI
             else
                 action = new DialogGUIButton("Dismiss", () => AskDismiss(id), ActionWidth, RowHeight, false);
 
+            DialogGUIBase lab = LabButton(c);
             return new DialogGUIHorizontalLayout(false, false, 4f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
                 KsaIcons.PortraitImage(c.Name, PortraitSize),
                 KsaIcons.Badge(c.Role),
@@ -158,6 +172,7 @@ namespace KSA.KSP.UI
                 new DialogGUILabel(RosterView.StarsText(c.Stars), StarsWidth, RowHeight),
                 new DialogGUILabel(morale, MoraleWidth, RowHeight),
                 new DialogGUILabel(RosterView.StatusText(c.Status), StatusWidth, RowHeight),
+                lab,
                 action);
         }
 

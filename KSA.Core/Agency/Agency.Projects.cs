@@ -50,7 +50,7 @@ namespace KSA.Core
             var list = new List<CrewProfile>();
             foreach (CrewProfile p in Crew.Active)
             {
-                if (p.Status == CrewStatus.Dead || p.IsFlying || p.ProjectId.Length > 0 || IsDepartmentHead(p.Id)) continue;
+                if (p.Status == CrewStatus.Dead || p.IsFlying || p.ProjectId.Length > 0 || p.InLab || IsDepartmentHead(p.Id)) continue;
                 if (role != CrewRole.Unknown && p.Role != role) continue;
                 list.Add(p);
             }
@@ -106,9 +106,14 @@ namespace KSA.Core
         {
             MissionType type = Catalogs.Missions.Get(missionTypeId);
             if (type == null) { message = "Unknown mission type."; return null; }
+            string why = MissionBlocker(type);
+            if (why != null) { message = type.Name + " " + why + ". Earn Science (lab, missions) and unlock parts in R&D first."; return null; }
+            if (type == null) { message = "Unknown mission type."; return null; }
             Template template = string.IsNullOrEmpty(templateId) ? Catalogs.Templates.Best(type.Id, InstalledMods) : Catalogs.Templates.Get(templateId);
             if (template == null) { message = "No design template can fly " + type.Name + " with the mods installed."; return null; }
             if (!template.Flies(type.Id) || !template.IsAvailable(InstalledMods)) { message = template.Name + " cannot fly " + type.Name + " here."; return null; }
+            string blocked = TemplateBlocker(template);
+            if (blocked != null) { message = template.Name + " " + blocked + ". Put scientists in the lab or fly missions to earn Science, then unlock the parts in R&D."; return null; }
 
             List<string> crew = crewIds != null ? new List<string>(crewIds) : AutoCrew(type);
             if (crew.Count != type.CrewSize) { message = type.Name + " needs " + type.CrewSize + " available crew (" + crew.Count + " chosen)."; return null; }
@@ -379,6 +384,7 @@ namespace KSA.Core
             }
             DriftAfterMission(r);
             ClaimPlayerFirsts(notices); // a first is claimed the moment it is flown, not at year end
+            AwardMissionScience(r, Catalogs.Missions.Get(p.MissionTypeId), notices);
             p.Report = r;
             p.EndDay = day;
             p.Status = r.IsSuccess ? ProjectStatus.Complete : ProjectStatus.Failed;

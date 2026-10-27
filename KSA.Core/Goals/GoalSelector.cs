@@ -34,6 +34,13 @@ namespace KSA.Core.Goals
         public static List<GoalDefinition> Pick(GoalCatalog catalog, int count, Func<string, bool> hasAchievement,
                                                 ICollection<string> previouslyMetIds, ICollection<string> currentlyActiveIds, Random rng)
         {
+            return Pick(catalog, count, hasAchievement, previouslyMetIds, currentlyActiveIds, rng, null);
+        }
+
+        /// <summary>As above, skipping goals the <paramref name="feasible"/> filter rejects (e.g. missions the tech tree cannot fly yet).</summary>
+        public static List<GoalDefinition> Pick(GoalCatalog catalog, int count, Func<string, bool> hasAchievement,
+                                                ICollection<string> previouslyMetIds, ICollection<string> currentlyActiveIds, Random rng, Func<GoalDefinition, bool> feasible)
+        {
             var picked = new List<GoalDefinition>();
             if (catalog == null || count <= 0) return picked;
             rng = rng ?? new Random();
@@ -45,6 +52,7 @@ namespace KSA.Core.Goals
                 bool metBefore = previouslyMetIds != null && previouslyMetIds.Contains(g.Id);
                 if (metBefore && !g.Repeatable) continue;
                 if (g.Condition == GoalConditionType.Achievement && hasAchievement != null && hasAchievement(g.Pattern)) continue;
+                if (feasible != null && !feasible(g)) continue;
                 candidates.Add(g);
             }
 

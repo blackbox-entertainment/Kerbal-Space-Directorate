@@ -196,6 +196,7 @@ namespace KSA.Core
             State.Prestige = r.PrestigeAfter;
             if (r.PrestigeAfter > r.PrestigeBefore && PrestigeGainFactor() > 1) { double extra = (r.PrestigeAfter - r.PrestigeBefore) * (PrestigeGainFactor() - 1); State.Prestige = Math.Min(100, State.Prestige + extra); r.PrestigeAfter = State.Prestige; }
             DepartmentYearNotes(notices);
+            AwardLabScience(notices);
             int moraleBonus = YearEndMoraleBonus();
             if (moraleBonus > 0) foreach (CrewProfile p in Crew.Active) p.Morale = Math.Min(100, p.Morale + moraleBonus);
             State.HiringFreeze = r.HiringFreeze;
@@ -266,7 +267,7 @@ namespace KSA.Core
             foreach (GoalState g in ActiveGoals) activeIds.Add(g.GoalId);
 
             int want = Settings.GoalsPerYear - ActiveGoals.Count;
-            List<GoalDefinition> picked = GoalSelector.Pick(Catalogs.Goals, want, HasAgencyAchievement, metIds, activeIds, Rng);
+            List<GoalDefinition> picked = GoalSelector.Pick(Catalogs.Goals, want, HasAgencyAchievement, metIds, activeIds, Rng, GoalFeasible);
             foreach (GoalDefinition g in picked)
             {
                 ActiveGoals.Add(new GoalState { GoalId = g.Id, YearIssued = State.CurrentYear, Status = GoalStatus.Active });

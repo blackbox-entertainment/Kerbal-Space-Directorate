@@ -55,6 +55,8 @@ namespace KSA.Core
     {
         /// <summary>Player-chosen agency name; empty means the agency.cfg default.</summary>
         public string AgencyName { get; set; } = string.Empty;
+        /// <summary>Lifetime Science credited to the game by the agency.</summary>
+        public double ScienceEarned { get; set; }
         public bool Started { get; set; }
         /// <summary>The fiscal year currently in progress (1-based). 0 before the agency starts.</summary>
         public int CurrentYear { get; set; }

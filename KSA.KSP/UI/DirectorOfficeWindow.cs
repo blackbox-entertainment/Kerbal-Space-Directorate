@@ -103,6 +103,7 @@ namespace KSA.KSP.UI
                 + ", spent " + Agency.Money(_agency.Ledger.ExpensesFor(_agency.CurrentYear)), textWidth));
             items.Add(Field("Prestige", ((int)Math.Round(s.Prestige)) + " / 100", textWidth));
             items.Add(Field("Staff", active + " active, average morale " + moraleAvg + ", applicants waiting: " + _agency.Applicants.Applicants.Count, textWidth));
+            items.Add(Field("Research", _agency.LabScientists().Count + " in the lab, about " + _agency.ProjectedLabScience().ToString("0") + " Science at year end; " + _agency.State.ScienceEarned.ToString("0") + " earned so far (Roster: Lab button on scientists)", textWidth));
             int inFlight = 0, inWork = 0, ready = 0;
             foreach (KSA.Core.Projects.Project pr in _agency.Projects)
             {

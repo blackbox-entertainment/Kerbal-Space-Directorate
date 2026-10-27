@@ -24,6 +24,8 @@ namespace KSA.Core.Personnel
         public float Stupidity { get; set; }
         /// <summary>True once experience has moved Courage or Stupidity; the agency's values then win over the host's.</summary>
         public bool TraitsOwned { get; set; }
+        /// <summary>Assigned to the research lab: produces Science each year, not available for missions.</summary>
+        public bool InLab { get; set; }
         public CrewStatus Status { get; set; }
 
         // --- Owned by KSA ---

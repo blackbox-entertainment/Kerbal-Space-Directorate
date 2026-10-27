@@ -1,0 +1,152 @@
+using System;
+using System.Collections.Generic;
+using KSA.Core.Missions;
+using KSA.Core.Personnel;
+using KSA.Core.Projects;
+
+namespace KSA.Core
+{
+    /// <summary>
+    /// Research (M3 decision, built 2026-10-27): the stock tech tree stays, but the agency earns the Science to climb it.
+    /// Scientists assigned to the lab produce Science every fiscal year; successful missions produce Science by tier.
+    /// The host credits the points to the game. Templates whose parts are not researched cannot be used.
+    /// </summary>
+    public sealed partial class Agency
+    {
+        /// <summary>(points, reason): the host adds them to the game's Science total.</summary>
+        public event Action<double, string> ScienceEarned;
+
+        /// <summary>Host check: null when a template's parts are all researched, else why it cannot be built yet.</summary>
+        public Func<Template, string> TemplateCheck { get; set; }
+
+        public string TemplateBlocker(Template t)
+        {
+            Func<Template, string> check = TemplateCheck;
+            return t == null || check == null ? null : check(t);
+        }
+
+        public List<CrewProfile> LabScientists()
+        {
+            var list = new List<CrewProfile>();
+            foreach (CrewProfile c in Crew.Active) if (c.InLab && c.Status != CrewStatus.Dead) list.Add(c);
+            return list;
+        }
+
+        /// <summary>Science the lab will produce at the next year end with today's staff.</summary>
+        public double ProjectedLabScience()
+        {
+            double total = 0;
+            foreach (CrewProfile c in LabScientists()) total += LabOutput(c);
+            return Math.Round(total * (1 + Settings.Departments.SuccessBonusPerRung * 0 + DepartmentRung(Department.Science) * Settings.LabScienceHeadBonus), 1);
+        }
+
+        private double LabOutput(CrewProfile c)
+        {
+            double perStar = c.Role == CrewRole.Scientist ? Settings.LabSciencePerStar : Settings.LabSciencePerStar * 0.5;
+            return Settings.LabScienceBase + perStar * c.Stars;
+        }
+
+        /// <summary>Puts a kerbal in (or takes them out of) the research lab. Lab staff are not available for missions.</summary>
+        public bool SetLab(string crewId, bool inLab, out string message)
+        {
+            CrewProfile c = Crew.Get(crewId);
+            if (c == null || c.Departed) { message = "No such active crew member."; return false; }
+            if (inLab)
+            {
+                if (c.IsFlying || c.ProjectId.Length > 0) { message = c.Name + " is busy on a project."; return false; }
+                if (IsDepartmentHead(c.Id)) { message = c.Name + " runs a department."; return false; }
+                if (c.Role != CrewRole.Scientist && c.Track != CareerTrack.Science) { message = c.Name + " is not a scientist; the lab needs Science-track kerbals (others produce half)."; }
+            }
+            c.InLab = inLab;
+            message = inLab ? c.Name + " joins the research lab: about " + LabOutput(c).ToString("0") + " Science per year." : c.Name + " leaves the lab and is available for missions.";
+            Push(null, message);
+            return true;
+        }
+
+        /// <summary>
+        /// Can the agency fly this mission with what is researched today? A buildable template says yes; otherwise the
+        /// researched part kinds must cover the profile (a pod, a way up, a way down; engines, tanks and decouplers for
+        /// orbit; more engine choice and landing legs beyond Kerbin). Null when feasible, else the reason.
+        /// </summary>
+        public string MissionBlocker(MissionType type)
+        {
+            if (type == null) return "Unknown mission.";
+            bool anyTemplate = false, anyBuildable = false;
+            foreach (Template t in Catalogs.Templates.Templates)
+            {
+                if (!t.Flies(type.Id) || !t.IsAvailable(InstalledMods)) continue;
+                anyTemplate = true;
+                if (TemplateBlocker(t) == null) { anyBuildable = true; break; }
+            }
+            if (anyBuildable) return null;
+            if (Parts == null) return anyTemplate ? "its template parts are not researched yet" : null;
+            var kinds = new HashSet<KSA.Core.Parts.PartKind>();
+            int engines = 0;
+            foreach (KSA.Core.Parts.PartInfo p in Parts.All) { kinds.Add(p.Kind); if (p.Kind == KSA.Core.Parts.PartKind.Engine) engines++; }
+            var missing = new List<string>();
+            if (!kinds.Contains(KSA.Core.Parts.PartKind.Command)) missing.Add("a crew pod");
+            if (!kinds.Contains(KSA.Core.Parts.PartKind.Parachute)) missing.Add("a parachute");
+            bool beyond = type.Profile != MissionProfile.Suborbital && type.Profile != MissionProfile.Orbit && type.Profile != MissionProfile.Station;
+            if (type.Profile == MissionProfile.Suborbital)
+            {
+                if (!kinds.Contains(KSA.Core.Parts.PartKind.Engine) && !kinds.Contains(KSA.Core.Parts.PartKind.Booster)) missing.Add("an engine or booster");
+            }
+            else
+            {
+                if (!kinds.Contains(KSA.Core.Parts.PartKind.Engine)) missing.Add("a liquid engine");
+                if (!kinds.Contains(KSA.Core.Parts.PartKind.Tank)) missing.Add("fuel tanks");
+                if (!kinds.Contains(KSA.Core.Parts.PartKind.Decoupler)) missing.Add("decouplers");
+            }
+            if (beyond && engines < 3) missing.Add("more engine options (" + engines + " of 3 researched)");
+            if ((type.Profile == MissionProfile.Land || type.Profile == MissionProfile.Base) && !kinds.Contains(KSA.Core.Parts.PartKind.LandingLeg)) missing.Add("landing legs");
+            if (type.Profile == MissionProfile.Station && !kinds.Contains(KSA.Core.Parts.PartKind.Docking)) missing.Add("docking ports");
+            if (missing.Count == 0) return null;
+            return "needs research: " + string.Join(", ", missing.ToArray());
+        }
+
+        private static bool PatternMatches(string achievement, string pattern)
+        {
+            if (string.IsNullOrEmpty(achievement) || string.IsNullOrEmpty(pattern)) return false;
+            int star = pattern.IndexOf('*');
+            if (star < 0) return string.Equals(achievement, pattern, StringComparison.OrdinalIgnoreCase);
+            return achievement.StartsWith(pattern.Substring(0, star), StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>Goals the government may issue: achievement goals only when some mission that earns them is feasible now.</summary>
+        public bool GoalFeasible(Goals.GoalDefinition g)
+        {
+            if (g == null) return false;
+            if (g.Condition != Goals.GoalConditionType.Achievement || string.IsNullOrEmpty(g.Pattern)) return true;
+            foreach (MissionType t in Catalogs.Missions.Types)
+            {
+                bool earns = false;
+                foreach (string a in t.Achievements) if (PatternMatches(a, g.Pattern)) { earns = true; break; }
+                if (earns && MissionBlocker(t) == null) return true;
+            }
+            return false;
+        }
+
+        private void AwardLabScience(List<string> notices)
+        {
+            double points = ProjectedLabScience();
+            if (points <= 0) return;
+            State.ScienceEarned += points;
+            Push(notices, "Research lab delivered " + points.ToString("0.#") + " Science (" + LabScientists().Count + " in the lab)");
+            Action<double, string> h = ScienceEarned;
+            if (h != null) h(points, "Research lab, year " + CurrentYear);
+        }
+
+        private void AwardMissionScience(MissionReport r, MissionType type, List<string> notices)
+        {
+            if (r == null || type == null || !r.IsSuccess) return;
+            double points = type.Tier == MissionTier.Late ? Settings.MissionScienceLate : type.Tier == MissionTier.Mid ? Settings.MissionScienceMid : Settings.MissionScienceEarly;
+            if (r.Outcome == MissionOutcome.PartialSuccess) points *= 0.5;
+            points = Math.Round(points * (1 + DepartmentRung(Department.Science) * Settings.LabScienceHeadBonus), 1);
+            if (points <= 0) return;
+            State.ScienceEarned += points;
+            Push(notices, r.ProjectName + " returned " + points.ToString("0.#") + " Science");
+            Action<double, string> h = ScienceEarned;
+            if (h != null) h(points, r.ProjectName);
+        }
+    }
+}

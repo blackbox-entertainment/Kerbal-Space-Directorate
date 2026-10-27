@@ -31,7 +31,7 @@ namespace KSA.Core.Tests
             Assert.That(defs.Exists(d => d.Name.Contains("Northern")));
             List<MilestoneLadder.Rung> ladder = MilestoneLadder.Build(ShippedConfigs.Missions());
             Assert.That(ladder.Count, Is.GreaterThanOrEqualTo(8));
-            Assert.That(ladder[0].Achievement, Is.EqualTo("Suborbit:Kerbin"), "easiest first");
+            Assert.That(ladder[0].Achievement, Is.EqualTo("Flight:Kerbin"), "easiest first: the Flea test hop");
             Assert.That(ladder.Exists(r => r.Achievement == "Flyby:Mun"));
             Assert.That(ladder.Exists(r => r.Achievement == "EVA:Mun"), "a landing mission's purpose is the spacewalk on the surface");
             Assert.That(MilestoneLadder.Describe("Land:Mun"), Is.EqualTo("landing on Mun"));

@@ -153,6 +153,7 @@ GameData/KSA/
 | Crew competence in flight | The kerbals fly: pilot stars/courage/stupidity/morale set precision, margins, mistakes (agency.cfg FLIGHT_CREW). Judgement calls by trait rule or a local/API model in character (crewDecisions). Decided 2026-10-27. |
 | Department heads | Built 2026-10-27: Management-track kerbals hold Finances / Science / PR / Operations (Departments window); rank-scaled bonuses from agency.cfg DEPARTMENTS. Stock strategies untouched. |
 | Stock contracts and hiring | Off by default in KSA games (agency.cfg stockContracts, stockHiring): offered contracts withdrawn, stock applicant list emptied. Decided 2026-10-27. |
+| Research and tech gating | Built 2026-10-27: templates and mission types gated on researched parts (MissionBlocker/TemplateBlocker), goals only when feasible; lab scientists and successful missions credit stock Science (agency.cfg RESEARCH); Flea test hop for day one. |
 
 **Candidate supported mod set (not final):** ReStock/ReStock+, Near Future series, SSPXr (inflatables), KPBS (surface bases), Outer Planets Mod, Hooligan Labs Airships (Eve cloud city), Extraplanetary Launchpads. Required: ModuleManager. Optional: MechJeb2 (future bridge for missions beyond Kerbin orbit), kOS.
 

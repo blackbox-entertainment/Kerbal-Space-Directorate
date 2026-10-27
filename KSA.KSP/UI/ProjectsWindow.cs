@@ -177,7 +177,8 @@ namespace KSA.KSP.UI
                 MissionType t = types[i];
                 string tid = t.Id;
                 bool isSel = selected != null && string.Equals(selected.Id, tid, StringComparison.OrdinalIgnoreCase);
-                return new DialogGUIButton((isSel ? "> " : "") + t.Name, () => OnSelectType(tid), 170f, ButtonHeight, false);
+                bool locked = _agency.MissionBlocker(t) != null;
+                return new DialogGUIButton((isSel ? "> " : "") + (locked ? "<color=#888888>" + t.Name + " (research)</color>" : t.Name), () => OnSelectType(tid), 170f, ButtonHeight, false);
             });
             if (selected == null)
             {
@@ -206,7 +207,8 @@ namespace KSA.KSP.UI
                 Template t = templates[i];
                 string tid = t.Id;
                 bool isSel = selectedTemplate != null && string.Equals(selectedTemplate.Id, tid, StringComparison.OrdinalIgnoreCase);
-                string label = (isSel ? "> " : "") + t.Name + " (" + (t.Seats > 0 ? t.Seats + (t.Seats == 1 ? " seat, " : " seats, ") : "") + Percent(t.DesignScore) + ", " + Agency.Money(_agency.ProjectCost(typeForCost, t)) + ")";
+                string blocked = _agency.TemplateBlocker(t);
+                string label = (isSel ? "> " : "") + t.Name + " (" + (t.Seats > 0 ? t.Seats + (t.Seats == 1 ? " seat, " : " seats, ") : "") + Percent(t.DesignScore) + ", " + Agency.Money(_agency.ProjectCost(typeForCost, t)) + ")" + (blocked != null ? "  [" + blocked + "]" : "");
                 return new DialogGUIButton(label, () => OnSelectTemplate(tid), 220f, ButtonHeight, false);
             });
 

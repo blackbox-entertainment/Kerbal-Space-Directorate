@@ -54,6 +54,15 @@ namespace KSA.Core
         public bool StockContracts { get; set; } = false;
         /// <summary>Keep the stock Astronaut Complex applicant list (default false: KSA Recruiting is the hiring path).</summary>
         public bool StockHiring { get; set; } = false;
+        /// <summary>Research lab: Science per year per lab scientist = base + perStar x stars (RESEARCH block).</summary>
+        public double LabScienceBase { get; set; } = 2;
+        public double LabSciencePerStar { get; set; } = 4;
+        /// <summary>Head of Science: lab and mission science x (1 + this x rung).</summary>
+        public double LabScienceHeadBonus { get; set; } = 0.15;
+        /// <summary>Science returned by a successful mission, by tier (half for a partial success).</summary>
+        public double MissionScienceEarly { get; set; } = 12;
+        public double MissionScienceMid { get; set; } = 40;
+        public double MissionScienceLate { get; set; } = 120;
         /// <summary>Rival agencies run in the background and claim firsts (decision 19).</summary>
         public bool RivalsEnabled { get; set; } = true;
         public List<string> PersonalityTags { get; } = new List<string> { "Cautious", "Reckless", "Perfectionist", "Showboat", "Steady", "Curious" };
@@ -81,6 +90,16 @@ namespace KSA.Core
             s.Departments = DepartmentRules.Parse(node.GetChild(DepartmentRules.NodeName));
             s.StockContracts = node.GetBool("stockContracts", s.StockContracts);
             s.StockHiring = node.GetBool("stockHiring", s.StockHiring);
+            DataNode research = node.GetChild("RESEARCH");
+            if (research != null)
+            {
+                s.LabScienceBase = research.GetDouble("labBase", s.LabScienceBase);
+                s.LabSciencePerStar = research.GetDouble("labPerStar", s.LabSciencePerStar);
+                s.LabScienceHeadBonus = research.GetDouble("headOfScienceBonus", s.LabScienceHeadBonus);
+                s.MissionScienceEarly = research.GetDouble("missionEarly", s.MissionScienceEarly);
+                s.MissionScienceMid = research.GetDouble("missionMid", s.MissionScienceMid);
+                s.MissionScienceLate = research.GetDouble("missionLate", s.MissionScienceLate);
+            }
             s.CrisisLayoffFraction = node.GetDouble("crisisLayoffFraction", s.CrisisLayoffFraction);
             KSA.Core.Missions.DefaultMissionMode mode;
             if (System.Enum.TryParse(node.GetValue("defaultMissionMode", "Hybrid"), true, out mode)) s.DefaultMissionMode = mode;

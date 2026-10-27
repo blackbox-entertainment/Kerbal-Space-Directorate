@@ -1,0 +1,282 @@
+ship = KSA Flea test hop
+version = 1.12.5
+description = Starting-parts test hop: Mk1 pod on an RT-5 Flea with a Mk16 parachute and basic fins. Straight up, straight down.
+type = VAB
+size = 1.4,4.2,1.4
+steamPublishedFileId = 0
+persistentId = 3100000001
+rot = 0,0,0,1
+missionFlag = Squad/Flags/default
+vesselType = Ship
+PART
+{
+	part = mk1pod.v2_4294900001
+	partName = Part
+	persistentId = 3100000011
+	pos = 0,15,0
+	attPos = 0,0,0
+	attPos0 = 0,15,0
+	rot = 0,0,0,1
+	attRot = 0,0,0,1
+	attRot0 = 0,0,0,1
+	mir = 1,1,1
+	symMethod = Radial
+	autostrutMode = Off
+	rigidAttachment = False
+	istg = -1
+	resPri = 0
+	dstg = 0
+	sidx = -1
+	sqor = -1
+	sepI = -1
+	attm = 0
+	modCost = 0
+	modMass = 0
+	modSize = 0,0,0
+	link = parachuteSingle_4294900002
+	link = solidBooster.sm.v2_4294900003
+	attN = bottom,solidBooster.sm.v2_4294900003_0|-0.4050379|0
+	attN = top,parachuteSingle_4294900002_0|0.6423756|0
+	EVENTS
+	{
+	}
+	ACTIONS
+	{
+	}
+	PARTDATA
+	{
+	}
+}
+PART
+{
+	part = parachuteSingle_4294900002
+	partName = Part
+	persistentId = 3100000012
+	pos = 0,15.7630135,0
+	attPos = 0,0,0
+	attPos0 = 0,0.7630135,0
+	rot = 0,0,0,1
+	attRot = 0,0,0,1
+	attRot0 = 0,0,0,1
+	mir = 1,1,1
+	symMethod = Radial
+	autostrutMode = Off
+	rigidAttachment = False
+	istg = 0
+	resPri = 0
+	dstg = 0
+	sidx = 0
+	sqor = 0
+	sepI = 0
+	attm = 0
+	modCost = 0
+	modMass = 0
+	modSize = 0,0,0
+	attN = bottom,mk1pod.v2_4294900001_0|-0.120649|0
+	EVENTS
+	{
+	}
+	ACTIONS
+	{
+	}
+	PARTDATA
+	{
+	}
+}
+PART
+{
+	part = solidBooster.sm.v2_4294900003
+	partName = Part
+	persistentId = 3100000013
+	pos = 0,13.8374621,0
+	attPos = 0,0,0
+	attPos0 = 0,-1.1625379,0
+	rot = 0,0,0,1
+	attRot = 0,0,0,1
+	attRot0 = 0,0,0,1
+	mir = 1,1,1
+	symMethod = Radial
+	autostrutMode = Off
+	rigidAttachment = False
+	istg = 1
+	resPri = 0
+	dstg = 1
+	sidx = 0
+	sqor = 1
+	sepI = 1
+	attm = 0
+	modCost = 0
+	modMass = 0
+	modSize = 0,0,0
+	link = basicFin_4294900004
+	link = basicFin_4294900005
+	link = basicFin_4294900006
+	link = basicFin_4294900007
+	attN = top,mk1pod.v2_4294900001_0|0.7575|0
+	attN = bottom,Null_0|-0.9975|0
+	EVENTS
+	{
+	}
+	ACTIONS
+	{
+	}
+	PARTDATA
+	{
+	}
+}
+PART
+{
+	part = basicFin_4294900004
+	partName = Part
+	persistentId = 3100000014
+	pos = 0.625,13.3,0
+	attPos = 0,0,0
+	attPos0 = 0.625,-0.5374621,0
+	rot = 0,1,0,0
+	attRot = 0,0,0,1
+	attRot0 = 0,1,0,0
+	mir = 1,1,1
+	symMethod = Radial
+	autostrutMode = Off
+	rigidAttachment = False
+	istg = -1
+	resPri = 0
+	dstg = 0
+	sidx = -1
+	sqor = -1
+	sepI = -1
+	attm = 1
+	modCost = 0
+	modMass = 0
+	modSize = 0,0,0
+	sym = basicFin_4294900005
+	sym = basicFin_4294900006
+	sym = basicFin_4294900007
+	srfN = srfAttach,solidBooster.sm.v2_4294900003_0.625|-0.5374621|0
+	EVENTS
+	{
+	}
+	ACTIONS
+	{
+	}
+	PARTDATA
+	{
+	}
+}
+PART
+{
+	part = basicFin_4294900005
+	partName = Part
+	persistentId = 3100000015
+	pos = 0,13.3,0.625
+	attPos = 0,0,0
+	attPos0 = 0,-0.5374621,0.625
+	rot = 0,0.7071068,0,0.7071068
+	attRot = 0,0,0,1
+	attRot0 = 0,0.7071068,0,0.7071068
+	mir = 1,1,1
+	symMethod = Radial
+	autostrutMode = Off
+	rigidAttachment = False
+	istg = -1
+	resPri = 0
+	dstg = 0
+	sidx = -1
+	sqor = -1
+	sepI = -1
+	attm = 1
+	modCost = 0
+	modMass = 0
+	modSize = 0,0,0
+	sym = basicFin_4294900004
+	sym = basicFin_4294900006
+	sym = basicFin_4294900007
+	srfN = srfAttach,solidBooster.sm.v2_4294900003_0|-0.5374621|0.625
+	EVENTS
+	{
+	}
+	ACTIONS
+	{
+	}
+	PARTDATA
+	{
+	}
+}
+PART
+{
+	part = basicFin_4294900006
+	partName = Part
+	persistentId = 3100000016
+	pos = -0.625,13.3,0
+	attPos = 0,0,0
+	attPos0 = -0.625,-0.5374621,0
+	rot = 0,0,0,1
+	attRot = 0,0,0,1
+	attRot0 = 0,0,0,1
+	mir = 1,1,1
+	symMethod = Radial
+	autostrutMode = Off
+	rigidAttachment = False
+	istg = -1
+	resPri = 0
+	dstg = 0
+	sidx = -1
+	sqor = -1
+	sepI = -1
+	attm = 1
+	modCost = 0
+	modMass = 0
+	modSize = 0,0,0
+	sym = basicFin_4294900004
+	sym = basicFin_4294900005
+	sym = basicFin_4294900007
+	srfN = srfAttach,solidBooster.sm.v2_4294900003_-0.625|-0.5374621|0
+	EVENTS
+	{
+	}
+	ACTIONS
+	{
+	}
+	PARTDATA
+	{
+	}
+}
+PART
+{
+	part = basicFin_4294900007
+	partName = Part
+	persistentId = 3100000017
+	pos = 0,13.3,-0.625
+	attPos = 0,0,0
+	attPos0 = 0,-0.5374621,-0.625
+	rot = 0,-0.7071068,0,0.7071068
+	attRot = 0,0,0,1
+	attRot0 = 0,-0.7071068,0,0.7071068
+	mir = 1,1,1
+	symMethod = Radial
+	autostrutMode = Off
+	rigidAttachment = False
+	istg = -1
+	resPri = 0
+	dstg = 0
+	sidx = -1
+	sqor = -1
+	sepI = -1
+	attm = 1
+	modCost = 0
+	modMass = 0
+	modSize = 0,0,0
+	sym = basicFin_4294900004
+	sym = basicFin_4294900005
+	sym = basicFin_4294900006
+	srfN = srfAttach,solidBooster.sm.v2_4294900003_0|-0.5374621|-0.625
+	EVENTS
+	{
+	}
+	ACTIONS
+	{
+	}
+	PARTDATA
+	{
+	}
+}

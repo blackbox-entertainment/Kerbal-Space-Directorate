@@ -33,6 +33,7 @@ namespace KSA.Core
             st.AddValue("currentYear", s.CurrentYear);
             st.AddValue("prestige", s.Prestige);
             st.AddValue("agencyName", s.AgencyName);
+            st.AddValue("scienceEarned", s.ScienceEarned);
             st.AddValue("hiringFreeze", s.HiringFreeze);
             st.AddValue("probation", s.Probation);
             st.AddValue("directorNumber", s.DirectorNumber);
@@ -104,6 +105,7 @@ namespace KSA.Core
                 c.AddValue("courage", p.Courage);
                 c.AddValue("stupidity", p.Stupidity);
                 c.AddValue("traitsOwned", p.TraitsOwned);
+                c.AddValue("inLab", p.InLab);
                 c.AddValue("status", p.Status.ToString());
                 c.AddValue("track", p.Track.ToString());
                 c.AddValue("rank", p.RankId);
@@ -205,6 +207,7 @@ namespace KSA.Core
                 s.CurrentYear = st.GetInt("currentYear", 0);
                 s.Prestige = st.GetDouble("prestige", agency.Settings.StartingPrestige);
                 s.AgencyName = st.GetValue("agencyName", string.Empty);
+                s.ScienceEarned = st.GetDouble("scienceEarned", 0);
                 s.HiringFreeze = st.GetBool("hiringFreeze", false);
                 s.Probation = st.GetBool("probation", false);
                 s.DirectorNumber = st.GetInt("directorNumber", 1);
@@ -308,6 +311,7 @@ namespace KSA.Core
                     Courage = (float)c.GetDouble("courage", 0.5),
                     Stupidity = (float)c.GetDouble("stupidity", 0.5),
                     TraitsOwned = c.GetBool("traitsOwned", false),
+                    InLab = c.GetBool("inLab", false),
                     Status = ParseEnum(c.GetValue("status"), CrewStatus.Available),
                     Track = ParseEnum(c.GetValue("track"), CareerTrack.None),
                     RankId = c.GetValue("rank", string.Empty),

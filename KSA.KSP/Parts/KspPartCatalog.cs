@@ -31,6 +31,8 @@ namespace KSA.KSP.Parts
         }
 
         private static int _techVersion;
+        /// <summary>Changes whenever researched parts change; cache key for anything that depends on the tech tree.</summary>
+        public static int TechVersion { get { return _techVersion; } }
 
         /// <summary>Call when parts are researched or purchased so the next read rebuilds the catalog.</summary>
         public static void Invalidate() { _cache = null; _cacheKey = null; _techVersion++; }
