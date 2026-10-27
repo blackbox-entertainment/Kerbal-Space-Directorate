@@ -125,7 +125,7 @@ GameData/KSA/
 | Mission modes | Hybrid default: Simulated unless it's a "First" or the player clicks Watch Live |
 | AI providers | OpenRouter for design and kOS scripts; local (Ollama/LM Studio) for narrative |
 | Hardware targets | Minimum 16 GB RAM (AI via API only), Recommended 32 GB (full mod set, optional small local model). T's 64 GB dev machine is **not** a target. |
-| GitHub owner | **Blackbox Entertainment** organization, GitHub slug `blackbox-entertainment` (decided 2026-10-26). Remote: https://github.com/blackbox-entertainment/Kerbel-space-agency |
+| GitHub owner | **Blackbox Entertainment** organization, GitHub slug `blackbox-entertainment` (decided 2026-10-26). Remote: https://github.com/blackbox-entertainment/Kerbal-space-agency |
 | Repo location | `G:\KSA` (local), VS Code with C# Dev Kit |
 
 **Candidate supported mod set (not final):** ReStock/ReStock+, Near Future series, SSPXr (inflatables), KPBS (surface bases), Outer Planets Mod, Hooligan Labs Airships (Eve cloud city), Extraplanetary Launchpads. Required: ModuleManager, MechJeb2 (Live mode). Optional: kOS.
