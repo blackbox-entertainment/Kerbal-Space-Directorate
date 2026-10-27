@@ -5,6 +5,7 @@
     <!-- All game assemblies come from the dev install pointed to by the KSPDIR environment variable. -->
     <KspManaged>$(KSPDIR)\KSP_x64_Data\Managed</KspManaged>
     <KspGameData>$(KSPDIR)\GameData</KspGameData>
+    <RepoGameData>$(MSBuildThisFileDirectory)..\GameData\KSA</RepoGameData>
   </PropertyGroup>
 
   <ItemGroup>
@@ -53,15 +54,17 @@
            Text="Assembly-CSharp.dll not found under $(KspManaged). Check that KSPDIR points at a KSP install." />
   </Target>
 
-  <!-- Post-build: deploy plugin DLLs and Configs into the dev install. -->
+  <!-- Post-build: deploy plugin DLLs, Configs, and Textures into the dev install. -->
   <Target Name="KsaDeploy" AfterTargets="Build" Condition="'$(KSPDIR)' != ''">
     <ItemGroup>
       <KsaPluginFiles Include="$(OutDir)KSA.Core.dll;$(OutDir)KSA.KSP.dll" />
-      <KsaConfigFiles Include="$(MSBuildThisFileDirectory)..\GameData\KSA\Configs\**\*" Exclude="$(MSBuildThisFileDirectory)..\GameData\KSA\Configs\**\.gitkeep" />
+      <KsaConfigFiles Include="$(RepoGameData)\Configs\**\*" Exclude="$(RepoGameData)\Configs\**\.gitkeep" />
+      <KsaTextureFiles Include="$(RepoGameData)\Textures\**\*" Exclude="$(RepoGameData)\Textures\**\.gitkeep" />
     </ItemGroup>
-    <MakeDir Directories="$(KspGameData)\KSA\Plugins;$(KspGameData)\KSA\Configs" />
+    <MakeDir Directories="$(KspGameData)\KSA\Plugins;$(KspGameData)\KSA\Configs;$(KspGameData)\KSA\Textures" />
     <Copy SourceFiles="@(KsaPluginFiles)" DestinationFolder="$(KspGameData)\KSA\Plugins" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(KsaConfigFiles)" DestinationFiles="@(KsaConfigFiles->'$(KspGameData)\KSA\Configs\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
-    <Message Importance="high" Text="[KSA] Deployed KSA.Core.dll and KSA.KSP.dll to $(KspGameData)\KSA\Plugins" />
+    <Copy SourceFiles="@(KsaTextureFiles)" DestinationFiles="@(KsaTextureFiles->'$(KspGameData)\KSA\Textures\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="[KSA] Deployed KSA.Core.dll, KSA.KSP.dll, Configs and Textures to $(KspGameData)\KSA" />
   </Target>
 </Project>

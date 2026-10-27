@@ -94,6 +94,7 @@ GameData/KSA/
 ├── Plugins/          KSA.Core.dll, KSA.KSP.dll
 ├── Configs/          ModuleManager data: medals, goals, careers, recruiting sources
 ├── Templates/        offline fallback .craft designs
+├── Textures/         toolbar icon and other UI art (PNG, loaded via GameDatabase)
 └── PluginData/       ksa_settings.cfg (user-local), logs/
 ```
 

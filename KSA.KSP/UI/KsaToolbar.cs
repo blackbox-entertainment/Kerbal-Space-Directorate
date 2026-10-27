@@ -11,8 +11,10 @@ namespace KSA.KSP.UI
     [KSPAddon(KSPAddon.Startup.SpaceCentre, false)]
     public class KsaToolbar : MonoBehaviour
     {
+        /// <summary>GameDatabase URL of the toolbar icon: GameData/KSA/Textures/toolbar.png (no extension).</summary>
+        private const string IconUrl = "KSA/Textures/toolbar";
         private const int IconSize = 38;
-        private static Texture2D _icon;
+        private static Texture _icon;
 
         private readonly Core.ILogger _log = new KspLogger();
         private ApplicationLauncherButton _button;
@@ -78,11 +80,28 @@ namespace KSA.KSP.UI
             if (_button != null) _button.SetFalse(false);
         }
 
-        /// <summary>Placeholder icon drawn in code so no texture asset is needed yet: blue tile, white border, white bar.</summary>
-        private static Texture2D GetIcon()
+        /// <summary>
+        /// Loads the icon PNG that KSP already read from GameData at startup.
+        /// Falls back to a code-drawn tile if the texture is missing, so the button always appears.
+        /// </summary>
+        private Texture GetIcon()
         {
             if (_icon != null) return _icon;
 
+            Texture2D fromDisk = GameDatabase.Instance.GetTexture(IconUrl, false);
+            if (fromDisk != null)
+            {
+                _icon = fromDisk;
+                return _icon;
+            }
+
+            _log.Warn("Toolbar icon '" + IconUrl + "' not found in GameDatabase; using fallback tile");
+            _icon = DrawFallbackIcon();
+            return _icon;
+        }
+
+        private static Texture2D DrawFallbackIcon()
+        {
             var tex = new Texture2D(IconSize, IconSize, TextureFormat.ARGB32, false);
             tex.hideFlags = HideFlags.HideAndDontSave;
             var fill = new Color(0.12f, 0.35f, 0.75f, 1f);
@@ -97,8 +116,7 @@ namespace KSA.KSP.UI
                 }
             }
             tex.Apply();
-            _icon = tex;
-            return _icon;
+            return tex;
         }
     }
 }
