@@ -124,6 +124,7 @@ namespace KSA.KSP.UI
                 new Rect(0.5f, 0.5f, width + 70f, 540f), content);
 
             _dialog = PopupDialog.SpawnPopupDialog(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), dialog, false, HighLogic.UISkin, false);
+            KsaUi.MakeOpaque(_dialog);
         }
 
         private static DialogGUIHorizontalLayout HeaderRow()

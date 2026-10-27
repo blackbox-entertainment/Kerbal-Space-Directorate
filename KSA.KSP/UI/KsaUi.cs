@@ -17,6 +17,35 @@ namespace KSA.KSP.UI
 
         private static readonly Regex Tags = new Regex("<[^>]+>", RegexOptions.Compiled);
 
+        /// <summary>Opaque backdrop colour for every KSA window (the stock skin's window sprite is translucent).</summary>
+        public static readonly UnityEngine.Color Backdrop = new UnityEngine.Color(0.11f, 0.12f, 0.15f, 1f);
+
+        /// <summary>
+        /// Puts a solid panel behind a spawned dialog's content so the space centre does not show through.
+        /// Safe to call on every spawn; does nothing when the dialog is null.
+        /// </summary>
+        public static void MakeOpaque(PopupDialog dialog)
+        {
+            if (dialog == null) return;
+            try
+            {
+                UnityEngine.Transform root = dialog.transform;
+                if (root.Find("KSA_Backdrop") != null) return;
+                var go = new UnityEngine.GameObject("KSA_Backdrop", typeof(UnityEngine.RectTransform), typeof(UnityEngine.UI.Image));
+                var rt = go.GetComponent<UnityEngine.RectTransform>();
+                rt.SetParent(root, false);
+                rt.anchorMin = UnityEngine.Vector2.zero;
+                rt.anchorMax = UnityEngine.Vector2.one;
+                rt.offsetMin = new UnityEngine.Vector2(2f, 2f);
+                rt.offsetMax = new UnityEngine.Vector2(-2f, -2f);
+                rt.SetAsFirstSibling();
+                var img = go.GetComponent<UnityEngine.UI.Image>();
+                img.color = Backdrop;
+                img.raycastTarget = false;
+            }
+            catch (Exception e) { KsaCore.Log.Warn("Could not make a dialog opaque: " + e.Message); }
+        }
+
         /// <summary>Height a label needs for its text at the given width: one line per wrap, rich-text tags ignored.</summary>
         public static float LabelHeight(string text, float width, float lineHeight)
         {

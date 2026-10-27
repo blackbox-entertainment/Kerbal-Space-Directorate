@@ -112,6 +112,7 @@ namespace KSA.KSP.UI
 
             var dialog = new MultiOptionDialog(DialogName, "", "Departments", HighLogic.UISkin, new Rect(0.5f, 0.5f, Width, WindowHeight), content);
             _dialog = PopupDialog.SpawnPopupDialog(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), dialog, false, HighLogic.UISkin, false);
+            KsaUi.MakeOpaque(_dialog);
         }
 
         private void OnChoose(Department d)
