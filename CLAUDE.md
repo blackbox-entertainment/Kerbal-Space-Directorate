@@ -132,6 +132,8 @@ GameData/KSA/
 | Admin staff | Hireable Management-track kerbals replace the stock Administration faces in function (M2). Decided 2026-10-26. |
 | Kerbal stats | Stock stars = competence. One growth stat per track (Leadership / Insight / Design) earned through assignments. Courage = risk tolerance, Stupidity = error chance. Personality tags + morale as modifiers. No more raw stats. |
 | Research | A Project type run by Science-track kerbals, producing stock Science points per fiscal year; stock tech tree unchanged (M3). |
+| Roster and dossier | Roster rows click through to a read-only Service Record (M1). Class icons in M1; 3D portraits deferred to M7 custom UI. |
+| Mission mode | Per-mission Simulate / Watch Live selector, pre-filled from an agency default (Hybrid by default). Watch Live needs MechJeb, else falls back to Simulate. |
 
 **Candidate supported mod set (not final):** ReStock/ReStock+, Near Future series, SSPXr (inflatables), KPBS (surface bases), Outer Planets Mod, Hooligan Labs Airships (Eve cloud city), Extraplanetary Launchpads. Required: ModuleManager, MechJeb2 (Live mode). Optional: kOS.
 

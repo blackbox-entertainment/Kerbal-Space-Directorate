@@ -630,6 +630,8 @@ Stock kerbals carry only stars (0–5), a trait, and Courage/Stupidity (cosmetic
 1. **Admin staff become hireable KSA kerbals** on the Management track (Program Manager → Deputy Director), replacing the stock Administration faces in function. Arrives in M2.
 2. **Stats:** stock stars remain the competence number. Each track gets one growth stat that rises through assignments rather than flights: **Leadership** (Management: team efficiency, morale buffer), **Insight** (Science: research output), **Design** (Engineering: design quality). Courage feeds risk tolerance in design prompts and abort calls; Stupidity feeds error chance. Personality tags and morale act as modifiers on top. No further raw stats; avoid a spreadsheet.
 3. **Research is a Project type** run on the ground by Science-track kerbals, producing stock Science points over a fiscal year scaled by stars and Insight. It plugs into the stock tech tree unchanged. Arrives in M3.
+4. **Roster opens the Service Record.** Clicking a kerbal row in the roster opens that kerbal's Service Record (missions, medals, rank history, incidents, quotes), read-only. M1 shows the stock class icon per kerbal; live 3D face portraits (as in the Astronaut Complex) are deferred to a custom UI pass in M7.
+5. **Per-mission flight mode.** Every mission has a Simulate / Watch Live selector at launch, pre-filled from an agency-wide default setting (Simulate, Watch Live, or Hybrid; Hybrid ships as default). Watch Live requires MechJeb; without it the mission falls back to Simulate with a notice. Supersedes the fixed "Hybrid only" wording in section 7.
 
 ---
 
