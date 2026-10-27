@@ -106,6 +106,7 @@ namespace KSA.KSP.UI
             }
 
             float width = PortraitSize + KsaIcons.BadgeSize + NameWidth + RankWidth + RoleWidth + StarsWidth + MoraleWidth + StatusWidth + ActionWidth + 40f;
+            rows.Add(new DialogGUISpace(KsaUi.ScrollTail));
             var list = new DialogGUIScrollList(new Vector2(width + 40f, 380f), false, true,
                 new DialogGUIVerticalLayout(false, false, 4f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft, rows.ToArray()));
 

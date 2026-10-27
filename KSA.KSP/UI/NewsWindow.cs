@@ -86,15 +86,17 @@ namespace KSA.KSP.UI
             foreach (NewsItem n in news)
             {
                 string prefix = _newIds.Contains(n.Id) ? "<color=#ffe066>NEW</color> " : string.Empty;
-                items.Add(new DialogGUILabel(prefix + "<b>" + n.Headline + "</b>", textWidth, LineHeight));
+                items.Add(new DialogGUILabel(prefix + "<b>" + n.Headline + "</b>", textWidth, KsaUi.LabelHeight(n.Headline, textWidth, LineHeight)));
                 items.Add(new DialogGUILabel("<color=#aaaaaa>Day " + n.Day + ", year " + n.Year + " · " + KindText(n.Kind)
                     + (string.IsNullOrEmpty(n.Byline) ? string.Empty : " · " + n.Byline) + " · " + n.Source + "</color>", textWidth, LineHeight));
                 foreach (string line in Wrap(n.Body, WrapWidth))
-                    items.Add(new DialogGUILabel(line, textWidth, LineHeight));
+                    items.Add(new DialogGUILabel(line, textWidth, KsaUi.LabelHeight(line, textWidth, LineHeight)));
                 items.Add(new DialogGUISpace(ItemGap));
             }
             if (_agency.News.Items.Count > ItemsShown && !_filter.HasValue)
                 items.Add(new DialogGUILabel("(" + (_agency.News.Items.Count - ItemsShown) + " older item(s) not shown)", textWidth, LineHeight));
+
+            items.Add(new DialogGUISpace(KsaUi.ScrollTail));
 
             var list = new DialogGUIScrollList(new Vector2(Width - 30f, ListHeight), false, true,
                 new DialogGUIVerticalLayout(false, false, 3f, new RectOffset(6, 6, 6, 6), TextAnchor.UpperLeft, items.ToArray()));

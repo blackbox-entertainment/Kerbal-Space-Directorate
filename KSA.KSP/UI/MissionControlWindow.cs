@@ -167,6 +167,8 @@ namespace KSA.KSP.UI
             if (_agency.Reports.Count > ReportsShown) Line(items, "(" + (_agency.Reports.Count - ReportsShown) + " older report(s) not shown)", textWidth);
             items.Add(new DialogGUISpace(SectionGap));
 
+            items.Add(new DialogGUISpace(KsaUi.ScrollTail));
+
             var list = new DialogGUIScrollList(new Vector2(Width - 30f, ListHeight), false, true,
                 new DialogGUIVerticalLayout(false, false, 3f, new RectOffset(6, 6, 6, 6), TextAnchor.UpperLeft, items.ToArray()));
 
@@ -300,7 +302,7 @@ namespace KSA.KSP.UI
         {
             items.Add(new DialogGUIHorizontalLayout(false, false, 0f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
                 new DialogGUISpace(16f),
-                new DialogGUILabel(text, textWidth - 16f, LineHeight)));
+                new DialogGUILabel(text, textWidth - 16f, KsaUi.LabelHeight(text, textWidth - 16f, LineHeight))));
         }
     }
 }

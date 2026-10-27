@@ -98,6 +98,8 @@ namespace KSA.KSP.UI
             items.Add(new DialogGUISpace(8f));
             Line(items, Color("The stock Administration building's strategies still work on stock Funds, Science and Reputation; KSA prestige and budget are separate.", Grey), textWidth);
 
+            items.Add(new DialogGUISpace(KsaUi.ScrollTail));
+
             var list = new DialogGUIScrollList(new Vector2(Width - 30f, ListHeight), false, true,
                 new DialogGUIVerticalLayout(false, false, 3f, new RectOffset(6, 6, 6, 6), TextAnchor.UpperLeft, items.ToArray()));
 
@@ -146,7 +148,7 @@ namespace KSA.KSP.UI
 
         private static void Line(List<DialogGUIBase> items, string text, float textWidth)
         {
-            items.Add(new DialogGUILabel(text, textWidth, LineHeight));
+            items.Add(new DialogGUILabel(text, textWidth, KsaUi.LabelHeight(text, textWidth, LineHeight)));
         }
     }
 }
