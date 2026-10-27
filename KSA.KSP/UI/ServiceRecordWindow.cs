@@ -67,7 +67,8 @@ namespace KSA.KSP.UI
             string rankName = _agency.Careers.RankName(p.Track, p.RankId);
             int age = p.AgeOn(_agency.CurrentDay, _agency.Clock.DaysPerYear);
             items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 2, 6), TextAnchor.MiddleLeft,
-                new DialogGUIImage(new Vector2(32f, 32f), Vector2.zero, Color.white, KsaIcons.ForRole(p.Role) ?? Texture2D.whiteTexture),
+                KsaIcons.PortraitImage(p.Id, 96f),
+                KsaIcons.Badge(p.Role),
                 new DialogGUILabel("<size=16><b>" + p.Name + "</b></size>\n" + RosterView.RoleText(p.Role) + ", " + rankName, true, false)));
             items.Add(Field("Rank", rankName + (p.Track != CareerTrack.None ? " (" + p.Track + " track)" : string.Empty)));
             items.Add(Field("Role", RosterView.RoleText(p.Role) + ", " + RosterView.StarsText(p.Stars)));
@@ -76,7 +77,7 @@ namespace KSA.KSP.UI
             items.Add(Field("Morale", p.Morale + " / 100  |  salary " + p.Salary + " / yr"));
             items.Add(Field("Traits", "courage " + Percent(p.Courage) + ", stupidity " + Percent(p.Stupidity)
                 + (p.PersonalityTags.Count > 0 ? "  |  " + string.Join(", ", p.PersonalityTags.ToArray()) : string.Empty)));
-            items.Add(Field("In space", p.Record.DaysInSpace.ToString("0.0") + " days, " + p.Record.CompletedMissionCount + " missions completed"));
+            items.Add(Field("In space", FormatDays(p.Record.DaysInSpace) + ", " + p.Record.CompletedMissionCount + " missions completed"));
 
             // --- Director action ---
             RankDefinition pending = _agency.Promotions.PendingSelection(p);
@@ -157,6 +158,13 @@ namespace KSA.KSP.UI
         private static DialogGUILabel Section(string title)
         {
             return new DialogGUILabel("\n<b>" + title + "</b>", true, false);
+        }
+
+        private static string FormatDays(double days)
+        {
+            if (days <= 0) return "none";
+            if (days < 1) return (days * 24).ToString("0.0") + " hours";
+            return days.ToString("0.0") + " days";
         }
 
         private static string Percent(float v)

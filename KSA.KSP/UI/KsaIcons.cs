@@ -4,14 +4,16 @@ using UnityEngine;
 
 namespace KSA.KSP.UI
 {
-    /// <summary>Small UI art loaded once from GameData/KSA/Textures. Missing files degrade to "no icon", never a crash.</summary>
+    /// <summary>Small UI art: class badges from GameData/KSA/Textures and kerbal portraits from the game itself.</summary>
     public static class KsaIcons
     {
-        private static readonly Dictionary<string, Texture2D> Cache = new Dictionary<string, Texture2D>();
+        private static readonly Dictionary<string, Texture> Cache = new Dictionary<string, Texture>();
 
         public const float BadgeSize = 20f;
 
-        public static Texture2D ForRole(CrewRole role)
+        // ------------------------------------------------------------ class badges
+
+        public static Texture ForRole(CrewRole role)
         {
             switch (role)
             {
@@ -26,17 +28,62 @@ namespace KSA.KSP.UI
         /// <summary>A badge image for a dialog row, or a blank spacer of the same width when the texture is missing.</summary>
         public static DialogGUIBase Badge(CrewRole role)
         {
-            Texture2D tex = ForRole(role);
+            Texture tex = ForRole(role);
             if (tex == null) return new DialogGUISpace(BadgeSize);
             return new DialogGUIImage(new Vector2(BadgeSize, BadgeSize), Vector2.zero, Color.white, tex);
         }
 
-        private static Texture2D Get(string url)
+        // ------------------------------------------------------------ portraits
+
+        /// <summary>
+        /// The same picture the Astronaut Complex shows: the kerbal's SpritePath texture from GameDatabase,
+        /// falling back to the stock suit icon from the game's asset bundles. Null if neither can be found.
+        /// </summary>
+        public static Texture Portrait(ProtoCrewMember pcm)
         {
-            Texture2D tex;
+            if (pcm == null) return null;
+
+            string spritePath = pcm.SpritePath;
+            if (!string.IsNullOrEmpty(spritePath))
+            {
+                Texture fromDb = Get(spritePath);
+                if (fromDb != null) return fromDb;
+            }
+
+            string suitPath = pcm.GetKerbalIconSuitPath();
+            if (string.IsNullOrEmpty(suitPath)) return null;
+            Texture cached;
+            if (Cache.TryGetValue("asset:" + suitPath, out cached)) return cached;
+            Texture fromAssets = AssetBase.GetTexture(suitPath);
+            if (fromAssets == null) KsaCore.Log.Warn("No portrait for " + pcm.name + " (sprite '" + spritePath + "', suit icon '" + suitPath + "')");
+            Cache["asset:" + suitPath] = fromAssets;
+            return fromAssets;
+        }
+
+        /// <summary>Portrait by crew name, via the current game's roster. Null outside a loaded game.</summary>
+        public static Texture PortraitFor(string crewName)
+        {
+            if (string.IsNullOrEmpty(crewName) || HighLogic.CurrentGame == null || HighLogic.CurrentGame.CrewRoster == null) return null;
+            if (!HighLogic.CurrentGame.CrewRoster.Exists(crewName)) return null;
+            return Portrait(HighLogic.CurrentGame.CrewRoster[crewName]);
+        }
+
+        /// <summary>A portrait image for a dialog, or a blank spacer of the same size.</summary>
+        public static DialogGUIBase PortraitImage(string crewName, float size)
+        {
+            Texture tex = PortraitFor(crewName);
+            if (tex == null) return new DialogGUISpace(size);
+            return new DialogGUIImage(new Vector2(size, size), Vector2.zero, Color.white, tex);
+        }
+
+        // ------------------------------------------------------------ internals
+
+        private static Texture Get(string url)
+        {
+            Texture tex;
             if (Cache.TryGetValue(url, out tex)) return tex;
             tex = GameDatabase.Instance != null ? GameDatabase.Instance.GetTexture(url, false) : null;
-            if (tex == null) KsaCore.Log.Warn("Icon '" + url + "' not found in GameDatabase");
+            if (tex == null && url.StartsWith("KSA/")) KsaCore.Log.Warn("Icon '" + url + "' not found in GameDatabase");
             Cache[url] = tex;
             return tex;
         }

@@ -134,7 +134,7 @@ GameData/KSA/
 | Admin staff | Hireable Management-track kerbals replace the stock Administration faces in function (M2). Decided 2026-10-26. |
 | Kerbal stats | Stock stars = competence. One growth stat per track (Leadership / Insight / Design) earned through assignments. Courage = risk tolerance, Stupidity = error chance. Personality tags + morale as modifiers. No more raw stats. |
 | Research | A Project type run by Science-track kerbals, producing stock Science points per fiscal year; stock tech tree unchanged (M3). |
-| Roster and dossier | Roster rows click through to a read-only Service Record (M1). Class icons in M1; 3D portraits deferred to M7 custom UI. |
+| Roster and dossier | Roster rows click through to a read-only Service Record (M1). Portraits use the Astronaut Complex texture (`ProtoCrewMember.SpritePath` via GameDatabase, fallback `AssetBase.GetTexture(GetKerbalIconSuitPath())`), plus class badges. Done in M1 (2026-10-26). |
 | Mission mode | Per-mission Simulate / Watch Live selector, pre-filled from an agency default (Hybrid by default). Watch Live needs MechJeb, else falls back to Simulate. |
 | Landing sites | Crew picks a flat spot: sample terrain slope around the target, shift to the flattest cell, per-body max slope. Feeds MechJeb in Live (M5), outcome roll in Simulated (M3). Bases reuse one site. |
 | Manual flight override | Opt-in setting, off by default. Take Control button during Live flights; logged as Director-flown with reduced rank credit; not available in Simulated. Design override stays strict (M5). |

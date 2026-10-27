@@ -14,6 +14,7 @@ namespace KSA.KSP.UI
     public sealed class RosterWindow
     {
         private const string DialogName = "KSA_RosterWindow";
+        private const float PortraitSize = 36f;
         private const float NameWidth = 150f;
         private const float RankWidth = 140f;
         private const float RoleWidth = 80f;
@@ -91,7 +92,7 @@ namespace KSA.KSP.UI
                 }
             }
 
-            float width = KsaIcons.BadgeSize + NameWidth + RankWidth + RoleWidth + StarsWidth + StatusWidth;
+            float width = PortraitSize + KsaIcons.BadgeSize + NameWidth + RankWidth + RoleWidth + StarsWidth + StatusWidth;
             var list = new DialogGUIScrollList(new Vector2(width + 40f, 260f), false, true,
                 new DialogGUIVerticalLayout(true, true, 2f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft, rows.ToArray()));
 
@@ -111,6 +112,7 @@ namespace KSA.KSP.UI
         private static DialogGUIHorizontalLayout HeaderRow()
         {
             return new DialogGUIHorizontalLayout(false, false, 4f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                new DialogGUISpace(PortraitSize),
                 new DialogGUISpace(KsaIcons.BadgeSize),
                 new DialogGUILabel("<b>Name</b>", NameWidth, 20f),
                 new DialogGUILabel("<b>Rank</b>", RankWidth, 20f),
@@ -123,6 +125,7 @@ namespace KSA.KSP.UI
         {
             string id = c.Name;
             return new DialogGUIHorizontalLayout(false, false, 4f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                KsaIcons.PortraitImage(c.Name, PortraitSize),
                 KsaIcons.Badge(c.Role),
                 new DialogGUIButton(c.Name, () => OpenRecord(id), NameWidth, 22f, false),
                 new DialogGUILabel(rank, RankWidth, 20f),
