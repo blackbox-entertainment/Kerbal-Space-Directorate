@@ -105,7 +105,7 @@ namespace KSA.KSP.UI
                 Line(items, StatsText(a), textWidth);
                 items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
                     new DialogGUISpace(16f),
-                    new DialogGUIButton("Interview", () => OnInterview(id), 110f, ButtonHeight, false),
+                    InterviewButton(a, id),
                     new DialogGUIButton("Hire (" + Agency.Money(a.HireFee) + ")", () => OnHire(id), 190f, ButtonHeight, false),
                     new DialogGUIButton("Reject", () => OnReject(id), 90f, ButtonHeight, false)));
             }
@@ -115,7 +115,7 @@ namespace KSA.KSP.UI
                 new DialogGUIVerticalLayout(false, false, 3f, new RectOffset(6, 6, 6, 6), TextAnchor.UpperLeft, items.ToArray()));
 
             var content = new DialogGUIVerticalLayout(true, true, 4f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft,
-                new DialogGUILabel(_status.Length > 0 ? _status : "Run a drive, interview applicants to learn about them, then hire the best.", Width - 40f, LineHeight),
+                new DialogGUILabel(_status.Length > 0 ? _status : "Run a drive, pay to interview applicants (or hire blind), then hire the best.", Width - 40f, LineHeight),
                 list,
                 new DialogGUIHorizontalLayout(true, false, 4f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleRight,
                     new DialogGUIFlexibleSpace(),
@@ -134,6 +134,13 @@ namespace KSA.KSP.UI
             string message;
             bool ok = _agency.RunDrive(sourceId, out message);
             Report(ok, message);
+        }
+
+        private DialogGUIButton InterviewButton(Applicant a, string id)
+        {
+            var button = new DialogGUIButton(a.FullyRevealed ? "Interviewed" : "Interview (" + Agency.Money(_agency.InterviewCost(a)) + ")", () => OnInterview(id), 190f, ButtonHeight, false);
+            button.OptionInteractableCondition = () => !a.FullyRevealed;
+            return button;
         }
 
         private void OnInterview(string applicantId)

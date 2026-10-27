@@ -43,7 +43,8 @@ namespace KSA.KSP
                 Morale = MoraleRules.Parse(Nodes(MoraleRules.NodeName), warnings),
                 Missions = MissionCatalog.Parse(Nodes(MissionCatalog.NodeName), warnings),
                 Templates = TemplateCatalog.Parse(Nodes(TemplateCatalog.NodeName), warnings),
-                ProgramTypes = ProgramCatalog.Parse(Nodes(ProgramCatalog.NodeName), warnings)
+                ProgramTypes = ProgramCatalog.Parse(Nodes(ProgramCatalog.NodeName), warnings),
+                Rivals = Core.Rivals.RivalDefinition.Parse(Nodes(Core.Rivals.RivalDefinition.NodeName), warnings)
             };
             List<DataNode> settingsNodes = Nodes(AgencySettings.NodeName);
             c.Settings = AgencySettings.Parse(settingsNodes.Count > 0 ? settingsNodes[0] : null);
@@ -58,6 +59,7 @@ namespace KSA.KSP
             var medalNames = new List<string>();
             foreach (MedalDefinition m in c.Medals.Medals) medalNames.Add(m.Name);
             Log.Info("Medals (" + c.Medals.Count + "): " + string.Join(", ", medalNames.ToArray()));
+            Log.Info("Rivals: " + c.Rivals.Count);
             Log.Info("Missions: " + c.Missions.Count + ", templates: " + c.Templates.Count + ", program types: " + c.ProgramTypes.Count);
             Log.Info("Goals: " + c.Goals.Count + ", recruitment sources: " + c.Recruiting.Count + ", base grant " + Agency.Money(c.Settings.BaseGrant)
                      + ", " + c.Settings.GoalsPerYear + " goals/year" + (settingsNodes.Count == 0 ? " (defaults; no KSA_AGENCY_SETTINGS node found)" : string.Empty));
@@ -81,6 +83,7 @@ namespace KSA.KSP
             a.CrewDeparted += OnCrewDeparted;
             a.ApplicantHired += OnApplicantHired;
             a.YearEnded += OnYearEnded;
+            a.TraitsChanged += OnTraitsChanged;
             Agency = a;
             return a;
         }
@@ -95,6 +98,7 @@ namespace KSA.KSP
                 Agency.CrewDeparted -= OnCrewDeparted;
                 Agency.ApplicantHired -= OnApplicantHired;
                 Agency.YearEnded -= OnYearEnded;
+                Agency.TraitsChanged -= OnTraitsChanged;
                 Agency.MissionResolved -= OnMissionResolved;
             }
             Agency = null;
@@ -177,6 +181,16 @@ namespace KSA.KSP
         {
             public IReadOnlyList<Core.Parts.PartInfo> All { get { return KspPartCatalog.Current.All; } }
             public Core.Parts.PartInfo Get(string name) { return KspPartCatalog.Current.Get(name); }
+        }
+
+        /// <summary>Experience moved a kerbal's Courage or Stupidity: the stock kerbal follows (shown in the Astronaut Complex).</summary>
+        private static void OnTraitsChanged(CrewProfile p)
+        {
+            if (HighLogic.CurrentGame == null || HighLogic.CurrentGame.CrewRoster == null) return;
+            ProtoCrewMember pcm = HighLogic.CurrentGame.CrewRoster[p.Name];
+            if (pcm == null) return;
+            pcm.courage = p.Courage;
+            pcm.stupidity = p.Stupidity;
         }
 
         private static void OnCrewDeparted(CrewProfile p, DepartureReason reason)

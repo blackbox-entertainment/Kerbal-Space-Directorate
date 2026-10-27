@@ -201,13 +201,16 @@ namespace KSA.Core
             foreach (CrewProfile p in Crew.Active)
             {
                 if (yearEvent != MoraleEvent.Idle) Catalogs.Morale.Apply(p, yearEvent);
-                if (p.LastMissionYear != year && !p.IsFlying) Catalogs.Morale.Apply(p, MoraleEvent.Idle);
+                if (p.LastMissionYear != year && !p.IsFlying) { Catalogs.Morale.Apply(p, MoraleEvent.Idle); DriftAfterIdleYear(p); }
                 if (Promotions.PendingSelection(p) != null)
                 {
                     Catalogs.Morale.Apply(p, MoraleEvent.PassedOver);
                     Push(notices, p.Name + " was passed over for astronaut selection");
                 }
             }
+            ClaimPlayerFirsts(notices);
+            RecordYear(year, r);
+            TickRivals(year, notices);
             Push(notices, "Government Review, year " + year + ": " + r.BandText + " (" + met + "/" + issued + " goals). Budget " + (r.BudgetChangePercent >= 0 ? "+" : "") + r.BudgetChangePercent + "%");
             foreach (string e in r.Events) Push(notices, e);
 
@@ -326,11 +329,17 @@ namespace KSA.Core
                     p.DepartureReason = DepartureReason.None;
                 }
 
+                bool fresh = result.Hired.Contains(p);
                 p.Role = s.Role;
                 p.Stars = s.Stars;
                 p.Status = s.Status;
-                p.Courage = s.Courage;
-                p.Stupidity = s.Stupidity;
+                if (fresh || !p.TraitsOwned)
+                {
+                    // The game sets the starting traits; after that the agency owns them (they drift with experience) and
+                    // pushes changes back to the host through TraitsChanged.
+                    p.Courage = s.Courage;
+                    p.Stupidity = s.Stupidity;
+                }
                 if (!string.IsNullOrEmpty(s.PortraitKey)) p.PortraitKey = s.PortraitKey;
                 for (int i = 0; i < s.Achievements.Count; i++) p.Record.Achievements.Add(s.Achievements[i]);
 
@@ -443,7 +452,9 @@ namespace KSA.Core
             State.DeathsThisYear++;
             foreach (CrewProfile other in Crew.Active)
                 if (other != p) Catalogs.Morale.Apply(other, MoraleEvent.CrewDeath);
-            Push(notices, p.Name + " was killed in the line of duty");
+            DriftAfterDeath(p);
+            int blow = -Catalogs.Morale.Delta(MoraleEvent.CrewDeath);
+            Push(notices, p.Name + " was killed in the line of duty" + (blow > 0 ? "; morale across the agency fell by " + blow : string.Empty));
             EvaluateProgress(p, m != null ? m.MissionId : null, notices);
             return notices;
         }
@@ -494,7 +505,8 @@ namespace KSA.Core
             Depart(p, DepartureReason.Fired, CurrentDay, notices);
             if (State.PendingLayoffs > 0) State.PendingLayoffs--;
             foreach (CrewProfile other in Crew.Active) Catalogs.Morale.Apply(other, MoraleEvent.ColleagueFired);
-            message = p.Name + " has been dismissed." + (State.PendingLayoffs > 0 ? " Layoffs still required: " + State.PendingLayoffs : string.Empty);
+            int hit = -Catalogs.Morale.Delta(MoraleEvent.ColleagueFired);
+            message = p.Name + " has been dismissed." + (hit > 0 ? " Morale across the agency fell by " + hit + "." : string.Empty) + (State.PendingLayoffs > 0 ? " Layoffs still required: " + State.PendingLayoffs : string.Empty);
             return true;
         }
 
@@ -557,6 +569,7 @@ namespace KSA.Core
         {
             RecruitSource src = Catalogs.Recruiting.Get(sourceId);
             if (src == null) { message = "Unknown recruitment source."; return false; }
+            RefreshFunds();
             if (!Ledger.CanAfford(src.DriveCost)) { message = "Not enough funds for a " + src.Name + " drive (" + Money(src.DriveCost) + ")."; return false; }
             if (Applicants.Applicants.Count >= Settings.MaxApplicants) { message = "The applicant pool is full. Interview or reject some applicants first."; return false; }
 
@@ -569,14 +582,35 @@ namespace KSA.Core
             return true;
         }
 
-        /// <summary>An interview reveals more about an applicant. Senior staff on the panel reveal more per interview.</summary>
+        /// <summary>What the applicant's next interview costs: base + step per interview already held.</summary>
+        public double InterviewCost(Applicant a)
+        {
+            int held = a != null ? a.Interviews : 0;
+            double first = Math.Max(Settings.InterviewBaseCost, a != null ? a.HireFee * Settings.InterviewFeeFraction : 0);
+            return Math.Max(0, Math.Round(first + Settings.InterviewCostStep * held));
+        }
+
+        /// <summary>In Career the stock Funds can change between ticks (VAB, launches); re-read them before spending.</summary>
+        private void RefreshFunds()
+        {
+            if (Ledger.Mirror != null && Ledger.Mirror.IsActive && State.Started) Ledger.SyncFromMirror();
+        }
+
+        /// <summary>
+        /// A paid interview reveals more about an applicant (decision 2026-10-27: 200 funds, +100 each further round).
+        /// Senior staff on the panel reveal two facts per interview, so they halve the bill. Hiring blind is always allowed.
+        /// </summary>
         public bool Interview(string applicantId, out string message)
         {
             Applicant a = Applicants.Get(applicantId);
             if (a == null) { message = "No such applicant."; return false; }
             if (a.FullyRevealed) { message = "Nothing more to learn about " + a.Name + "."; return false; }
+            double cost = InterviewCost(a);
+            RefreshFunds();
+            if (!Ledger.CanAfford(cost)) { message = "Not enough funds to interview " + a.Name + " (" + Money(cost) + ")."; return false; }
+            Ledger.Withdraw(cost, LedgerCategory.Recruiting, "Interview: " + a.Name, CurrentDay, CurrentYear);
             Applicants.Interview(applicantId, PanelBonus());
-            message = "Interviewed " + a.Name + (PanelBonus() > 0 ? " (senior panel)." : ".");
+            message = "Interviewed " + a.Name + " for " + Money(cost) + (PanelBonus() > 0 ? " (senior panel)." : ".");
             return true;
         }
 

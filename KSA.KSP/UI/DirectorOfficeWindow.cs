@@ -16,7 +16,7 @@ namespace KSA.KSP.UI
     {
         private const string DialogName = "KSA_DirectorOffice";
         private const float Width = 620f;
-        private const float WindowHeight = 630f;
+        private const float WindowHeight = 666f;
         private const float ListHeight = 400f;
         private const float LabelWidth = 130f;
         private const float LineHeight = 22f;
@@ -35,6 +35,7 @@ namespace KSA.KSP.UI
         private MissionControlWindow _missionControl;
         private AiSetupWindow _aiSetup;
         private NewsWindow _news;
+        private AnalyticsWindow _analytics;
 
         public DirectorOfficeWindow(Agency agency, Action onClosed)
         {
@@ -162,8 +163,10 @@ namespace KSA.KSP.UI
                 new DialogGUIButton("Mission Control", OpenMissionControl, 130f, 30f, false),
                 new DialogGUIButton("AI Setup", OpenAiSetup, 95f, 30f, false),
                 new DialogGUIButton(_agency.News.Unread > 0 ? "Press Room (" + _agency.News.Unread + " new)" : "Press Room", OpenNews, 150f, 30f, false));
+            var buttons3 = new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                new DialogGUIButton("Analytics", OpenAnalytics, 95f, 30f, false));
 
-            var content = new DialogGUIVerticalLayout(true, true, 4f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft, list, buttons, buttons2);
+            var content = new DialogGUIVerticalLayout(true, true, 4f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft, list, buttons, buttons2, buttons3);
 
             var dialog = new MultiOptionDialog(DialogName, "", "Kerbal Space Directorate", HighLogic.UISkin,
                 new Rect(0.5f, 0.5f, Width, WindowHeight), content);
@@ -237,8 +240,16 @@ namespace KSA.KSP.UI
             Refresh(); // the Press Room marks everything read: drop the "(N new)" badge at once
         }
 
+        private void OpenAnalytics()
+        {
+            if (_analytics != null && _analytics.IsOpen) return;
+            _analytics = new AnalyticsWindow(_agency, () => { _analytics = null; });
+            _analytics.Open();
+        }
+
         private void CloseChildren()
         {
+            if (_analytics != null) { AnalyticsWindow w = _analytics; _analytics = null; w.Close(); }
             if (_news != null) { NewsWindow w = _news; _news = null; w.Close(); }
             if (_aiSetup != null) { AiSetupWindow w = _aiSetup; _aiSetup = null; w.Close(); }
             if (_projects != null) { ProjectsWindow w = _projects; _projects = null; w.Close(); }

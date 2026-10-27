@@ -19,6 +19,7 @@ namespace KSA.Core
         public KSA.Core.Missions.MissionCatalog Missions { get; set; }
         public KSA.Core.Missions.TemplateCatalog Templates { get; set; }
         public KSA.Core.Projects.ProgramCatalog ProgramTypes { get; set; }
+        public System.Collections.Generic.List<KSA.Core.Rivals.RivalDefinition> Rivals { get; set; }
 
         public AgencyCatalogs()
         {
@@ -31,6 +32,7 @@ namespace KSA.Core
             Missions = new KSA.Core.Missions.MissionCatalog();
             Templates = new KSA.Core.Missions.TemplateCatalog();
             ProgramTypes = new KSA.Core.Projects.ProgramCatalog();
+            Rivals = new System.Collections.Generic.List<KSA.Core.Rivals.RivalDefinition>();
         }
 
         public void Validate()
@@ -44,6 +46,7 @@ namespace KSA.Core
             if (Missions == null) Missions = new KSA.Core.Missions.MissionCatalog();
             if (Templates == null) Templates = new KSA.Core.Missions.TemplateCatalog();
             if (ProgramTypes == null) ProgramTypes = new KSA.Core.Projects.ProgramCatalog();
+            if (Rivals == null) Rivals = new System.Collections.Generic.List<KSA.Core.Rivals.RivalDefinition>();
         }
     }
 

@@ -140,7 +140,6 @@ GameData/KSA/
 | Manual flight override | Opt-in setting, off by default. Take Control button during Live flights; logged as Director-flown with reduced rank credit; not available in Simulated. Design override stays strict (M5). |
 | Quit and retire | Yes: quit from low morale, retire from age or service; both via the Hall of Fame (M2). |
 | Age and hall of fame | Age tracked from hire (M1); Hall of Fame window keeps retired and dead kerbals' records (M2). |
-| Rival agencies | Optional space-race mode, off by default, post-M7. |
 | Crisis Years | Hurt (cuts, cancellations, layoffs) and put the Director on probation; a second bad year replaces the Director, agency continues. Never game over (M2). |
 | Community templates | Yes, after release: first-party templates ship, submission path opens post-M7. |
 | AI models | Curated per-task list in AI Setup: cheapest-that-works default plus a few flagships, player-selectable; IDs live in a ModuleManager config, benchmarked in M4. |
@@ -148,6 +147,9 @@ GameData/KSA/
 | Live flight | Built-in flight director flies Kerbin suborbital/orbital missions live (M5); other profiles simulate until a MechJeb bridge exists. MechJeb is optional, not required. Decided 2026-10-26. |
 | Narrative | Local model only (never cloud budget); canned text first, AI rewrite in place. Post-mortems may use the cloud. Decided 2026-10-26. |
 | Courage/Stupidity drift | Planned: slow drift with missions (stupidity down, courage up on success, down on deaths/idle). Not built yet. |
+| Interviews | Paid: 200 funds first round, +100 each further round (agency.cfg). Senior panel reveals two facts per round. Blind hiring allowed. Decided 2026-10-27. |
+| Rival agencies | Three rivals from rivals.cfg simulated each fiscal year; firsts, league table and year-over-year figures in the Analytics window. On by default (agency.cfg rivals). Decided 2026-10-27. |
+| Flight director | Grow KSA's own (ascent now; transfers KSA-51, landing KSA-52, docking KSA-53). MechJeb optional, never copied (GPL). Decided 2026-10-27. |
 
 **Candidate supported mod set (not final):** ReStock/ReStock+, Near Future series, SSPXr (inflatables), KPBS (surface bases), Outer Planets Mod, Hooligan Labs Airships (Eve cloud city), Extraplanetary Launchpads. Required: ModuleManager. Optional: MechJeb2 (future bridge for missions beyond Kerbin orbit), kOS.
 
@@ -199,7 +201,7 @@ Each milestone is playable on its own. Don't start a milestone until the previou
 1. Can the player manually override an AI design, or is hands-off strict?
 2. Can kerbals quit (low morale) or retire (age/service)?
 3. Track kerbal age and a hall of fame?
-4. Rival agencies / space race mode?
+4. ~~Rival agencies / space race mode?~~ Decided 2026-10-27: light version shipped (decision 19); poaching post-release.
 5. How punishing are Crisis Years? Is "Director fired" a game over?
 6. Separate science directorate budget?
 7. Community-sourced template library?

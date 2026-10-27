@@ -102,6 +102,7 @@ namespace KSA.Core
                 c.AddValue("stars", p.Stars);
                 c.AddValue("courage", p.Courage);
                 c.AddValue("stupidity", p.Stupidity);
+                c.AddValue("traitsOwned", p.TraitsOwned);
                 c.AddValue("status", p.Status.ToString());
                 c.AddValue("track", p.Track.ToString());
                 c.AddValue("rank", p.RankId);
@@ -304,6 +305,7 @@ namespace KSA.Core
                     Stars = c.GetInt("stars", 0),
                     Courage = (float)c.GetDouble("courage", 0.5),
                     Stupidity = (float)c.GetDouble("stupidity", 0.5),
+                    TraitsOwned = c.GetBool("traitsOwned", false),
                     Status = ParseEnum(c.GetValue("status"), CrewStatus.Available),
                     Track = ParseEnum(c.GetValue("track"), CareerTrack.None),
                     RankId = c.GetValue("rank", string.Empty),

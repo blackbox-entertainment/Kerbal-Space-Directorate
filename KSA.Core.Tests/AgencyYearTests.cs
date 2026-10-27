@@ -165,6 +165,29 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void Recruiting_InterviewsCostMoreEachRound_AndNeedFunds()
+        {
+            SyncStarters();
+            _agency.Tick();
+            string msg;
+            Assert.That(_agency.RunDrive("University", out msg), Is.True, msg);
+            Applicant a = _agency.Applicants.Applicants[_agency.Applicants.Applicants.Count - 1];
+            double first = _agency.InterviewCost(a);
+            Assert.That(first, Is.EqualTo(System.Math.Max(200, a.HireFee * 0.1)), "first round: base or a tenth of the hire fee");
+            double before = _agency.Ledger.Balance;
+            Assert.That(_agency.Interview(a.Id, out msg), Is.True, msg);
+            Assert.That(_agency.InterviewCost(a), Is.EqualTo(first + 100), "second round costs a step more");
+            Assert.That(_agency.Interview(a.Id, out msg), Is.True, msg);
+            Assert.That(_agency.Ledger.Balance, Is.EqualTo(before - (2 * first + 100)));
+            _agency.Ledger.SetBalance(50);
+            Applicant b = _agency.Applicants.Applicants[0];
+            if (b.Id == a.Id) b = _agency.Applicants.Applicants[1];
+            Assert.That(_agency.Interview(b.Id, out msg), Is.False);
+            Assert.That(msg, Does.Contain("Not enough funds"));
+            Assert.That(_agency.Hire(b.Id, out msg), Is.False, "hiring blind is allowed but still needs the hire fee");
+        }
+
+        [Test]
         public void Recruiting_DriveInterviewHire()
         {
             SyncStarters();
@@ -189,7 +212,7 @@ namespace KSA.Core.Tests
             Assert.That(hiredProfile.Name, Is.EqualTo(a.Name));
             Assert.That(hiredProfile.RankId, Is.AnyOf("JuniorEngineer", "ResearchAssistant"));
             Assert.That(hiredProfile.PersonalityTags, Is.EqualTo(a.Tags));
-            Assert.That(_agency.Ledger.Balance, Is.EqualTo(before - 12000 - 4000));
+            Assert.That(_agency.Ledger.Balance, Is.EqualTo(before - 12000 - 400 - 4000), "drive, one interview (a tenth of the 4,000 fee), hire fee");
             Assert.That(_agency.Applicants.Applicants.Count, Is.EqualTo(baseline + 3));
 
             _agency.State.HiringFreeze = true;

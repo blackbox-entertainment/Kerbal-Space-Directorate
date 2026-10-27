@@ -48,6 +48,9 @@ namespace KSA.Core
             }
             root.AddChild(agency.Costs.ToDataNode());
             root.AddChild(agency.News.ToDataNode());
+            foreach (KSA.Core.Rivals.RivalAgency rv in agency.Rivals) root.AddChild(rv.ToDataNode());
+            foreach (KSA.Core.Analytics.YearSummary ys in agency.YearHistory) root.AddChild(ys.ToDataNode());
+            foreach (FirstClaim fc in agency.Firsts) root.AddChild("FIRST").AddValue("achievement", fc.Achievement).AddValue("by", fc.ClaimedBy).AddValue("year", fc.Year);
 
             foreach (Program g in agency.Programs)
             {
@@ -143,6 +146,12 @@ namespace KSA.Core
             }
             agency.Costs.Load(root.GetChild("COST_GUARD"));
             agency.News.Load(root.GetChild("NEWSFEED"));
+            agency.Rivals.Clear();
+            foreach (DataNode rv in root.GetChildren("RIVAL")) agency.Rivals.Add(KSA.Core.Rivals.RivalAgency.FromDataNode(rv));
+            agency.YearHistory.Clear();
+            foreach (DataNode ys in root.GetChildren("YEAR_SUMMARY")) agency.YearHistory.Add(KSA.Core.Analytics.YearSummary.FromDataNode(ys));
+            agency.Firsts.Clear();
+            foreach (DataNode fc in root.GetChildren("FIRST")) agency.Firsts.Add(new FirstClaim { Achievement = fc.GetValue("achievement", string.Empty), ClaimedBy = fc.GetValue("by", string.Empty), Year = fc.GetInt("year", 0) });
 
             foreach (DataNode n in root.GetChildren("PROGRAM"))
             {

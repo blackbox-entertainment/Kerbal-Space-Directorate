@@ -20,6 +20,12 @@ namespace KSA.Core
         public int RetireServiceYears { get; set; } = 25;
         public int WalkInsPerQuarter { get; set; } = 1;
         public int MaxApplicants { get; set; } = 12;
+        /// <summary>First interview of an applicant costs this much; each later one costs InterviewCostStep more.</summary>
+        public double InterviewBaseCost { get; set; } = 200;
+        public double InterviewCostStep { get; set; } = 100;
+        /// <summary>The first interview is at least this fraction of the hire fee, so poaching a veteran costs more to vet.</summary>
+        public double InterviewFeeFraction { get; set; } = 0.1;
+        public KSA.Core.Personnel.TraitDrift Drift { get; set; } = new KSA.Core.Personnel.TraitDrift();
         /// <summary>Fraction of active crew that must be laid off in a Crisis Year (rounded up, at least 1).</summary>
         public double CrisisLayoffFraction { get; set; } = 0.25;
         public KSA.Core.Missions.DefaultMissionMode DefaultMissionMode { get; set; } = KSA.Core.Missions.DefaultMissionMode.Hybrid;
@@ -32,6 +38,8 @@ namespace KSA.Core
         public bool ManualOverride { get; set; } = false;
         /// <summary>Target orbit for live Kerbin flights, metres.</summary>
         public double LiveOrbitAltitude { get; set; } = 85000;
+        /// <summary>Rival agencies run in the background and claim firsts (decision 19).</summary>
+        public bool RivalsEnabled { get; set; } = true;
         public List<string> PersonalityTags { get; } = new List<string> { "Cautious", "Reckless", "Perfectionist", "Showboat", "Steady", "Curious" };
 
         public static AgencySettings Parse(DataNode node)
@@ -48,6 +56,10 @@ namespace KSA.Core
             s.RetireServiceYears = node.GetInt("retireServiceYears", s.RetireServiceYears);
             s.WalkInsPerQuarter = node.GetInt("walkInsPerQuarter", s.WalkInsPerQuarter);
             s.MaxApplicants = node.GetInt("maxApplicants", s.MaxApplicants);
+            s.InterviewBaseCost = node.GetDouble("interviewBaseCost", s.InterviewBaseCost);
+            s.InterviewCostStep = node.GetDouble("interviewCostStep", s.InterviewCostStep);
+            s.InterviewFeeFraction = node.GetDouble("interviewFeeFraction", s.InterviewFeeFraction);
+            s.Drift = KSA.Core.Personnel.TraitDrift.Parse(node.GetChild(KSA.Core.Personnel.TraitDrift.NodeName));
             s.CrisisLayoffFraction = node.GetDouble("crisisLayoffFraction", s.CrisisLayoffFraction);
             KSA.Core.Missions.DefaultMissionMode mode;
             if (System.Enum.TryParse(node.GetValue("defaultMissionMode", "Hybrid"), true, out mode)) s.DefaultMissionMode = mode;
@@ -58,6 +70,7 @@ namespace KSA.Core
             s.AgencyName = node.GetValue("agencyName", s.AgencyName);
             s.ManualOverride = node.GetBool("manualOverride", s.ManualOverride);
             s.LiveOrbitAltitude = node.GetDouble("liveOrbitAltitude", s.LiveOrbitAltitude);
+            s.RivalsEnabled = node.GetBool("rivals", s.RivalsEnabled);
             List<string> tags = node.GetList("personalityTags");
             if (tags.Count > 0)
             {

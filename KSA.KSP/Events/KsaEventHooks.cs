@@ -96,6 +96,7 @@ namespace KSA.KSP.Events
                 Agency.AddAchievements(pcm.name, KspRosterSource.Achievements(pcm));
                 MissionOutcome outcome = HadCrashThisMission(pcm.name) ? MissionOutcome.PartialSuccess : MissionOutcome.Success;
                 List<string> notices = Agency.EndMission(pcm.name, outcome);
+                Agency.DriftAfterAdHocMission(pcm.name, outcome);
                 KsaCore.Log.Info("Recovered " + pcm.name + " from " + pv.vesselName + " (" + notices.Count + " notices)");
             }
             KsaCore.SyncRoster("recovery");

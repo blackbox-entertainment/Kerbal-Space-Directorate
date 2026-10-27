@@ -374,6 +374,8 @@ namespace KSA.Core
                     notices.AddRange(EndMission(id, r.Outcome));
                 }
             }
+            DriftAfterMission(r);
+            ClaimPlayerFirsts(notices); // a first is claimed the moment it is flown, not at year end
             p.Report = r;
             p.EndDay = day;
             p.Status = r.IsSuccess ? ProjectStatus.Complete : ProjectStatus.Failed;

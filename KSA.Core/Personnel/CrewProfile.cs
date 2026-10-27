@@ -22,6 +22,8 @@ namespace KSA.Core.Personnel
         public float Courage { get; set; }
         /// <summary>0..1</summary>
         public float Stupidity { get; set; }
+        /// <summary>True once experience has moved Courage or Stupidity; the agency's values then win over the host's.</summary>
+        public bool TraitsOwned { get; set; }
         public CrewStatus Status { get; set; }
 
         // --- Owned by KSA ---

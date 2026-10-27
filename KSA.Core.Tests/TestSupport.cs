@@ -74,6 +74,7 @@ namespace KSA.Core.Tests
         public static MissionCatalog Missions(List<string> warnings = null) { return MissionCatalog.Parse(Load("missions.cfg"), warnings); }
         public static TemplateCatalog Templates(List<string> warnings = null) { return TemplateCatalog.Parse(Load("templates.cfg"), warnings); }
         public static ProgramCatalog ProgramTypes(List<string> warnings = null) { return ProgramCatalog.Parse(Load("programs.cfg"), warnings); }
+        public static List<KSA.Core.Rivals.RivalDefinition> Rivals(List<string> warnings = null) { return KSA.Core.Rivals.RivalDefinition.Parse(Load("rivals.cfg"), warnings); }
 
         public static AgencySettings Settings()
         {
@@ -95,7 +96,8 @@ namespace KSA.Core.Tests
                 Settings = Settings(),
                 Missions = Missions(),
                 Templates = Templates(),
-                ProgramTypes = ProgramTypes()
+                ProgramTypes = ProgramTypes(),
+                Rivals = Rivals()
             };
         }
     }

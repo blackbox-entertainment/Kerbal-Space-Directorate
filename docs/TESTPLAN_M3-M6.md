@@ -20,6 +20,14 @@ Mark each step pass or fail. If something fails, copy the `[KSA]` lines from the
 5. **Mode selector.** Create a Kerbin Orbit project and press "Watch Live" before starting it. On Ready it should NOT auto-launch; a notice says "launch it live from Mission Control" (that's M5 below).
 6. **Save/load.** Quicksave, quit to the main menu, load. Projects, programs, reports and news are still there.
 
+## A2. Recruiting tweaks (added 2026-10-27)
+
+1. Recruiting → run a drive → the Interview button now reads "Interview (√200)". Press it: funds drop by 200 and the button becomes "Interview (√300)". A fully interviewed applicant shows "Interviewed". With a senior crew member on staff each interview reveals two facts, so it costs half as much to learn everything.
+2. Hire an applicant without interviewing: allowed, you just take the risk.
+3. Roster → Dismiss someone: the message says morale across the agency fell by 4. Check another kerbal's morale column dropped. A death drops everyone else by 15 (both numbers live in `GameDataKSAConfigsmorale.cfg`).
+4. Service Record → "Traits": after a completed mission the pilot's stupidity drops a little and courage rises; the Astronaut Complex shows the same numbers (the mod writes them back to the kerbal).
+5. Director's Office → Analytics: a year-over-year table (grant, spend, net, balance, prestige, missions, deaths, goals, review band) and the Space race league table with three rival agencies. Warp past a year end: rivals fly, headlines appear in the Press Room ("Northern Launch Directorate completes suborbital flight"), and the Firsts list shows who got there first.
+
 ## B. M4: AI engineering
 
 Needs an OpenRouter key (or Ollama running locally with a model pulled).
