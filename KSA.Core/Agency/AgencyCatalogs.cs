@@ -53,6 +53,8 @@ namespace KSA.Core
     /// <summary>Mutable agency-wide state that is not crew: year, prestige, freezes, probation, counters.</summary>
     public sealed class AgencyState
     {
+        /// <summary>Player-chosen agency name; empty means the agency.cfg default.</summary>
+        public string AgencyName { get; set; } = string.Empty;
         public bool Started { get; set; }
         /// <summary>The fiscal year currently in progress (1-based). 0 before the agency starts.</summary>
         public int CurrentYear { get; set; }

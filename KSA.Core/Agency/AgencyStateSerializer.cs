@@ -32,6 +32,7 @@ namespace KSA.Core
             st.AddValue("started", s.Started);
             st.AddValue("currentYear", s.CurrentYear);
             st.AddValue("prestige", s.Prestige);
+            st.AddValue("agencyName", s.AgencyName);
             st.AddValue("hiringFreeze", s.HiringFreeze);
             st.AddValue("probation", s.Probation);
             st.AddValue("directorNumber", s.DirectorNumber);
@@ -203,6 +204,7 @@ namespace KSA.Core
                 s.Started = st.GetBool("started", false);
                 s.CurrentYear = st.GetInt("currentYear", 0);
                 s.Prestige = st.GetDouble("prestige", agency.Settings.StartingPrestige);
+                s.AgencyName = st.GetValue("agencyName", string.Empty);
                 s.HiringFreeze = st.GetBool("hiringFreeze", false);
                 s.Probation = st.GetBool("probation", false);
                 s.DirectorNumber = st.GetInt("directorNumber", 1);

@@ -65,13 +65,21 @@ namespace KSA.KSP.UI
 
             Line(items, "Management-track kerbals run the agency's departments. A head keeps their salary, cannot fly or join a project, and gives a bonus that grows with rank and stars.", textWidth);
             if (!rules.Enabled) Line(items, Color("Department effects are disabled in agency.cfg (DEPARTMENTS enabled = false).", Amber), textWidth);
+            if (candidates.Count == 0)
+                Line(items, Color("Nobody can be appointed yet: no kerbal is on the Management track. Roster → pick a 3-star kerbal → select them for Program Manager; they then show up here.", Amber), textWidth);
+            else
+            {
+                var names = new List<string>();
+                foreach (CrewProfile c in candidates) names.Add(c.Name + " (" + RosterView.StarsText(c.Stars) + ")");
+                Line(items, "Can be appointed now: " + string.Join(", ", names.ToArray()), textWidth);
+            }
             items.Add(new DialogGUISpace(6f));
 
             foreach (Department d in new[] { Department.Finances, Department.Science, Department.PublicRelations, Department.Operations })
             {
                 CrewProfile head = _agency.HeadOf(d);
                 double rung = _agency.DepartmentRung(d);
-                string holder = head != null ? "<b>" + Color(head.Name, Green) + "</b>  " + RosterView.StarsText(head.Stars) + "  " + _agency.Careers.RankName(head.Track, head.RankId) : Color("vacant", Grey);
+                string holder = head != null ? "<b>" + Color(head.Name, Green) + "</b>  " + RosterView.StarsText(head.Stars) + "  " + _agency.Careers.RankName(head.Track, head.RankId) : Color(Caretaker(d) + " (stock caretaker, no bonus)", Grey);
                 items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 4, 0), TextAnchor.MiddleLeft,
                     new DialogGUILabel("<b>" + DepartmentRules.Title(d) + "</b>", 200f, LineHeight),
                     new DialogGUILabel(holder, textWidth - 200f - 220f, LineHeight),
@@ -140,6 +148,18 @@ namespace KSA.KSP.UI
         {
             _dialog = null;
             if (_onClosed != null) _onClosed();
+        }
+
+        /// <summary>The stock Administration faces mind the shop until a Management-track kerbal takes the post.</summary>
+        private static string Caretaker(Department d)
+        {
+            switch (d)
+            {
+                case Department.Finances: return "Mortimer Kerman";
+                case Department.Science: return "Linus Kerman";
+                case Department.PublicRelations: return "Walt Kerman";
+                default: return "Gus Kerman";
+            }
         }
 
         private static string Color(string text, string hex) { return "<color=" + hex + ">" + text + "</color>"; }

@@ -22,7 +22,18 @@ namespace KSA.Core
         /// <summary>A new item was published, or an AI rewrite replaced its text.</summary>
         public event Action<NewsItem> NewsPublished;
 
-        public string AgencyName { get { return Settings.AgencyName; } }
+        public string AgencyName { get { return State.AgencyName.Length > 0 ? State.AgencyName : Settings.AgencyName; } }
+
+        /// <summary>Renames the agency for this save (press releases, league table, HUD). Empty restores the config default.</summary>
+        public bool Rename(string name, out string message)
+        {
+            string n = (name ?? string.Empty).Trim();
+            if (n.Length > 48) { message = "Keep the name under 48 characters."; return false; }
+            State.AgencyName = n;
+            message = n.Length > 0 ? "The agency is now " + n + "." : "Agency name reset to " + Settings.AgencyName + ".";
+            Push(null, message);
+            return true;
+        }
 
         private void InitNarrative()
         {

@@ -48,6 +48,7 @@ namespace KSA.KSP.UI
         public void Open()
         {
             if (_dialog != null) return;
+            ProbeLocal();
             Spawn();
         }
 
@@ -177,81 +178,197 @@ namespace KSA.KSP.UI
 
         private void BuildLocalSection(List<DialogGUIBase> items, float textWidth)
         {
-            Section(items, "Local (Ollama / LM Studio)", textWidth);
+            Section(items, "Local AI (free, runs on this PC)", textWidth);
+            string model = RecommendedLocalModel();
+            string size = RecommendedLocalSize();
+            bool haveRecommended = HasDiscovered(_settings.LocalModel) || HasDiscovered(model);
+            if (!_probeDone)
+            {
+                Line(items, "Checking for Ollama on this PC...", textWidth);
+            }
+            else if (!_probeOk)
+            {
+                Line(items, Amber("Step 1: install Ollama. It runs in the background and needs no setup."), textWidth);
+                items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                    new DialogGUISpace(16f),
+                    new DialogGUIButton("Get Ollama (opens ollama.com)", () => Application.OpenURL("https://ollama.com/download"), 230f, ButtonHeight, false),
+                    new DialogGUIButton("Check again", ProbeLocal, 110f, ButtonHeight, false),
+                    new DialogGUILabel("Install it, let it start, then press Check again.", textWidth - 380f, LineHeight)));
+            }
+            else if (_pulling)
+            {
+                Line(items, "Downloading " + _pullingModel + " (" + size + ")... keep playing; this line changes when it is done.", textWidth);
+            }
+            else if (_discovered.Count == 0)
+            {
+                Line(items, Green("Ollama is running.") + " Step 2: download a model. One click, " + size + ", nothing to type.", textWidth);
+                items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                    new DialogGUISpace(16f),
+                    new DialogGUIButton("Set up local AI (" + model + ")", () => PullModel(model, true), 260f, ButtonHeight, false),
+                    new DialogGUILabel("Picked for this PC's graphics memory (" + SystemInfo.graphicsMemorySize + " MB). It is tested and saved for you when the download ends.", textWidth - 290f, 2 * LineHeight)));
+            }
+            else
+            {
+                string current = _settings.LocalModel.Length > 0 && HasDiscovered(_settings.LocalModel) ? _settings.LocalModel : _discovered[0];
+                bool on = _settings.LocalEnabled && (_settings.DesignMode == DesignMode.Local || _settings.DesignMode == DesignMode.Hybrid);
+                Line(items, Green("Ollama is running with " + _discovered.Count + " model(s).") + " Using: <b>" + current + "</b>" + (on ? "" : "  (press Use it to switch local AI on)"), textWidth);
+                items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                    new DialogGUISpace(16f),
+                    new DialogGUIButton("Use it", () => UseLocal(current), 110f, ButtonHeight, false),
+                    new DialogGUIButton("Check again", ProbeLocal, 110f, ButtonHeight, false),
+                    haveRecommended ? (DialogGUIBase)new DialogGUILabel("Ready.", 120f, LineHeight) : new DialogGUIButton("Download " + model + " (" + size + ")", () => PullModel(model, true), 260f, ButtonHeight, false)));
+                if (_discovered.Count > 1)
+                {
+                    Line(items, "Models on this PC (click to switch):", textWidth);
+                    ButtonRows(items, _discovered.Count, textWidth, ModelButtonWidth, i =>
+                    {
+                        string id = _discovered[i];
+                        bool sel = string.Equals(_settings.LocalModel, id, StringComparison.OrdinalIgnoreCase);
+                        return new DialogGUIButton((sel ? "> " : "") + id, () => UseLocal(id), ModelButtonWidth, ButtonHeight, false);
+                    });
+                }
+            }
+
+            items.Add(new DialogGUISpace(4f));
+            items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                new DialogGUISpace(16f),
+                new DialogGUIButton((_advanced ? "[x] " : "[ ] ") + "Advanced", () => { _advanced = !_advanced; Refresh(); }, 120f, ButtonHeight, false),
+                new DialogGUILabel("Other servers (llama.cpp, LM Studio), custom endpoints and models.", textWidth - 150f, LineHeight)));
+            if (!_advanced) return;
+
             items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
                 new DialogGUISpace(16f),
                 new DialogGUIButton((_settings.LocalEnabled ? "[x] " : "[ ] ") + "Local enabled", OnToggleLocal, 160f, ButtonHeight, false),
-                new DialogGUILabel("Ollama, LM Studio or llama.cpp on this PC; the endpoint is their OpenAI-compatible chat URL.", textWidth - 190f, LineHeight)));
+                new DialogGUILabel("The endpoint is the server's OpenAI-compatible chat URL.", textWidth - 190f, LineHeight)));
             items.Add(Input("Local endpoint", _settings.LocalEndpoint, textWidth, v => { _settings.LocalEndpoint = (v ?? string.Empty).Trim(); return _settings.LocalEndpoint; }, null));
             items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
                 new DialogGUISpace(16f),
                 new DialogGUILabel("Presets:", 60f, LineHeight),
                 new DialogGUIButton("Ollama :11434", () => OnLocalPreset("http://localhost:11434/v1/chat/completions"), 120f, ButtonHeight, false),
                 new DialogGUIButton("llama.cpp :8081", () => OnLocalPreset("http://localhost:8081/v1/chat/completions"), 120f, ButtonHeight, false),
-                new DialogGUIButton("LM Studio :1234", () => OnLocalPreset("http://localhost:1234/v1/chat/completions"), 120f, ButtonHeight, false)));
-            items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
-                new DialogGUISpace(16f),
-                new DialogGUILabel("Models:", 60f, LineHeight),
-                new DialogGUIButton(_listing ? "Asking..." : "List models on server", OnListLocalModels, 170f, ButtonHeight, false),
-                new DialogGUIButton(_pulling ? "Pulling..." : "Pull selected model on Ollama", OnPullModel, 210f, ButtonHeight, false),
-                new DialogGUILabel(_pulling ? "Downloading; keep playing." : "Pull downloads the selected model onto Ollama (GBs).", textWidth - 470f, LineHeight)));
-
-            Line(items, "Local model (" + (_settings.LocalModel.Length > 0 ? _settings.LocalModel : "none") + "):", textWidth);
-            if (_discovered.Count > 0)
+                new DialogGUIButton("LM Studio :1234", () => OnLocalPreset("http://localhost:1234/v1/chat/completions"), 120f, ButtonHeight, false),
+                new DialogGUIButton("List models on server", ProbeLocal, 170f, ButtonHeight, false)));
+            List<ModelOption> local = ModelsFor(AiTask.Narrative, true);
+            if (local.Count > 0)
             {
-                Line(items, "Models the server reports (" + _discovered.Count + "):", textWidth);
-                ButtonRows(items, _discovered.Count, textWidth, ModelButtonWidth, i =>
+                Line(items, "Suggested models (download with the button below, or load one on your own server):", textWidth);
+                ButtonRows(items, local.Count, textWidth, ModelButtonWidth, i =>
                 {
-                    string id = _discovered[i];
+                    ModelOption m = local[i];
+                    string id = m.Id;
                     bool sel = string.Equals(_settings.LocalModel, id, StringComparison.OrdinalIgnoreCase);
-                    return new DialogGUIButton((sel ? "> " : "") + id, () => OnPickLocalModel(id), ModelButtonWidth, ButtonHeight, false);
+                    return new DialogGUIButton((sel ? "> " : "") + m.Label, () => OnPickLocalModel(id), ModelButtonWidth, ButtonHeight, false);
                 });
             }
-            List<ModelOption> local = ModelsFor(AiTask.Narrative, true);
-            if (local.Count == 0) Line(items, "No curated local models in ai_models.cfg; type a model name below (e.g. the Ollama tag).", textWidth);
-            else Line(items, "Suggested (must be pulled or loaded on the server first):", textWidth);
-            ButtonRows(items, local.Count, textWidth, ModelButtonWidth, i =>
-            {
-                ModelOption m = local[i];
-                string id = m.Id;
-                bool sel = string.Equals(_settings.LocalModel, id, StringComparison.OrdinalIgnoreCase);
-                return new DialogGUIButton((sel ? "> " : "") + m.Label + " (" + m.Tier + ", local)", () => OnPickLocalModel(id), ModelButtonWidth, ButtonHeight, false);
-            });
             items.Add(Input("Custom local model", _settings.LocalModel, textWidth, v => { _settings.LocalModel = (v ?? string.Empty).Trim(); return _settings.LocalModel; }, null));
             items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
                 new DialogGUISpace(16f),
-                new DialogGUIButton((_settings.AutoStartLocalServer ? "[x] " : "[ ] ") + "Start server with the game", () => { _settings.AutoStartLocalServer = !_settings.AutoStartLocalServer; _status = "Auto-start " + (_settings.AutoStartLocalServer ? "on" : "off") + " (not saved yet)."; Refresh(); }, 220f, ButtonHeight, false),
-                new DialogGUILabel("llama.cpp only: KSA starts the exe below when nothing answers, stops it on quit. Ollama needs none.", textWidth - 250f, 2 * LineHeight)));
+                new DialogGUIButton(_pulling ? "Downloading..." : "Download this model on Ollama", () => PullModel(_settings.LocalModel, false), 220f, ButtonHeight, false),
+                new DialogGUIButton((_settings.AutoStartLocalServer ? "[x] " : "[ ] ") + "Start server with the game", () => { _settings.AutoStartLocalServer = !_settings.AutoStartLocalServer; Refresh(); }, 220f, ButtonHeight, false),
+                new DialogGUILabel("llama.cpp only: KSA starts the exe below when nothing answers.", textWidth - 470f, 2 * LineHeight)));
             items.Add(Input("Server exe", _settings.LocalServerExe, textWidth, v => { _settings.LocalServerExe = (v ?? string.Empty).Trim(); return _settings.LocalServerExe; }, null));
             items.Add(Input("Server arguments", _settings.LocalServerArgs, textWidth, v => { _settings.LocalServerArgs = (v ?? string.Empty).Trim(); return _settings.LocalServerArgs; }, null));
         }
 
         private readonly List<string> _discovered = new List<string>();
-        private bool _listing;
         private bool _pulling;
+        private string _pullingModel = string.Empty;
+        private bool _advanced;
+        private bool _probeDone;
+        private bool _probeOk;
+        private bool _saveAfterTest;
 
-        /// <summary>Ollama only: POST /api/pull downloads the selected model onto the server (several GB; the game keeps running).</summary>
-        private void OnPullModel()
+        private static string Green(string s) { return "<color=#8be28b>" + s + "</color>"; }
+        private static string Amber(string s) { return "<color=#ffd27f>" + s + "</color>"; }
+
+        private bool HasDiscovered(string id)
         {
-            if (_pulling) return;
-            string model = (_settings.LocalModel ?? string.Empty).Trim();
-            if (model.Length == 0) { _status = "<color=#ffd27f>Pick or type a local model first.</color>"; Refresh(); return; }
+            if (string.IsNullOrEmpty(id)) return false;
+            foreach (string d in _discovered) if (string.Equals(d, id, StringComparison.OrdinalIgnoreCase) || string.Equals(d, id + ":latest", StringComparison.OrdinalIgnoreCase)) return true;
+            return false;
+        }
+
+        /// <summary>A 7B model wants about 6 GB of graphics memory; smaller cards get the 4B model.</summary>
+        private static string RecommendedLocalModel() { return SystemInfo.graphicsMemorySize >= 7000 ? "qwen2.5:7b" : "gemma3:4b"; }
+        private static string RecommendedLocalSize() { return SystemInfo.graphicsMemorySize >= 7000 ? "about 4.7 GB" : "about 3.3 GB"; }
+
+        private string LocalBase()
+        {
             string url = _settings.LocalEndpoint ?? string.Empty;
             int cut = url.IndexOf("/v1/", StringComparison.OrdinalIgnoreCase);
-            if (cut < 0) { _status = "<color=#ffd27f>Pull works with Ollama endpoints (http://localhost:11434/v1/...). For llama.cpp, start llama-server with a .gguf instead.</color>"; Refresh(); return; }
-            string pullUrl = url.Substring(0, cut) + "/api/pull";
+            return cut > 0 ? url.Substring(0, cut) : url.TrimEnd('/');
+        }
+
+        /// <summary>Asks Ollama (or any OpenAI-compatible server) what it has; drives the step-by-step text.</summary>
+        private void ProbeLocal()
+        {
+            string modelsUrl = LocalBase() + "/v1/models";
+            _probeDone = false;
+            Ai.UnityWebTransport.Instance.GetText(modelsUrl, 4, (ok, body) =>
+            {
+                _probeDone = true;
+                _probeOk = ok;
+                _discovered.Clear();
+                if (ok)
+                {
+                    try
+                    {
+                        object parsed = KSA.Core.Data.Json.Parse(body);
+                        var map = parsed as Dictionary<string, object>;
+                        object data;
+                        if (map != null && map.TryGetValue("data", out data) && data is List<object>)
+                            foreach (object o in (List<object>)data)
+                            {
+                                var m = o as Dictionary<string, object>;
+                                object id;
+                                if (m != null && m.TryGetValue("id", out id) && id is string && _discovered.Count < 24) _discovered.Add((string)id);
+                            }
+                    }
+                    catch (Exception e) { KsaCore.Log.Warn("Model list unreadable: " + e.Message); }
+                }
+                KsaCore.Log.Info("AI Setup: local probe " + (ok ? _discovered.Count + " model(s)" : "no server (" + body + ")"));
+                if (_dialog != null) Refresh();
+            });
+        }
+
+        /// <summary>Selects a local model, switches local AI on, tests it, and saves when the test passes.</summary>
+        private void UseLocal(string model)
+        {
+            _settings.LocalModel = model;
+            _settings.LocalEnabled = true;
+            if (_settings.DesignMode == DesignMode.Off) _settings.DesignMode = DesignMode.Local;
+            else if (_settings.DesignMode == DesignMode.Api) _settings.DesignMode = DesignMode.Hybrid;
+            _saveAfterTest = true;
+            OnTestConnection();
+        }
+
+        /// <summary>Ollama only: POST /api/pull downloads a model (several GB; the game keeps running). With setup, it is then selected, tested and saved.</summary>
+        private void PullModel(string model, bool setup)
+        {
+            if (_pulling) return;
+            model = (model ?? string.Empty).Trim();
+            if (model.Length == 0) { _status = Amber("Pick or type a local model first."); Refresh(); return; }
+            string pullUrl = LocalBase() + "/api/pull";
             _pulling = true;
-            _status = "Pulling " + model + " through " + pullUrl + "... this downloads the model (often 2 to 6 GB); keep playing, the status updates when it is done.";
+            _pullingModel = model;
+            _status = "Downloading " + model + "... keep playing; the status changes when it is done.";
             Refresh();
-            var req = new LlmRequest { Url = pullUrl, Body = "{\"name\": \"" + model.Replace("\"", "") + "\", \"stream\": false}", TimeoutSeconds = 3600 };
+            var req = new LlmRequest { Url = pullUrl, Body = "{\"name\": \"" + model.Replace("\"", "") + "\", \"stream\": false}", TimeoutSeconds = 7200 };
             req.Headers["Content-Type"] = "application/json";
             Ai.UnityWebTransport.Instance.Send(req, resp =>
             {
                 _pulling = false;
-                if (resp != null && resp.Ok) { _status = "<color=#8be28b>Pulled " + model + ".</color> Press Test connection, then Save."; _discovered.Clear(); }
-                else _status = "<color=#ff8080>Pull failed: " + (resp != null ? (resp.Error ?? ("HTTP " + resp.Status)) : "no reply") + "</color> (is this an Ollama endpoint? Run 'ollama pull " + model + "' in PowerShell as a fallback).";
-                KsaCore.Log.Info("AI Setup: pull " + model + " " + (resp != null && resp.Ok ? "ok" : "failed"));
-                if (_dialog != null) Refresh();
+                bool ok = resp != null && resp.Ok;
+                KsaCore.Log.Info("AI Setup: pull " + model + " " + (ok ? "ok" : "failed: " + (resp != null ? resp.Error : "no reply")));
+                if (!ok)
+                {
+                    _status = "<color=#ff8080>Download failed: " + (resp != null ? (resp.Error ?? ("HTTP " + resp.Status)) : "no reply") + ".</color> Is Ollama running? Press Check again and retry.";
+                    if (_dialog != null) Refresh();
+                    return;
+                }
+                _discovered.Add(model);
+                _status = Green("Downloaded " + model + ".");
+                if (setup) UseLocal(model); else if (_dialog != null) Refresh();
             });
         }
 
@@ -260,44 +377,9 @@ namespace KSA.KSP.UI
             _settings.LocalEndpoint = url;
             _settings.LocalEnabled = true;
             _discovered.Clear();
-            _status = "Local endpoint set to " + url + " (not saved yet). Press 'List models on server' to see what it offers.";
+            _status = "Local endpoint set to " + url + " (not saved yet).";
+            ProbeLocal();
             Refresh();
-        }
-
-        /// <summary>GET {base}/v1/models: Ollama, llama.cpp server and LM Studio all answer it.</summary>
-        private void OnListLocalModels()
-        {
-            if (_listing) return;
-            string url = _settings.LocalEndpoint ?? string.Empty;
-            int cut = url.IndexOf("/chat/completions", StringComparison.OrdinalIgnoreCase);
-            string modelsUrl = (cut > 0 ? url.Substring(0, cut) : url.TrimEnd('/')) + "/models";
-            _listing = true;
-            _status = "Asking " + modelsUrl + "...";
-            Refresh();
-            Ai.UnityWebTransport.Instance.GetText(modelsUrl, 8, (ok, body) =>
-            {
-                _listing = false;
-                _discovered.Clear();
-                if (!ok) { _status = "<color=#ffd27f>No answer from " + modelsUrl + ": " + body + ". Is the server running?</color>"; Refresh(); return; }
-                try
-                {
-                    object parsed = KSA.Core.Data.Json.Parse(body);
-                    var map = parsed as Dictionary<string, object>;
-                    object data;
-                    if (map != null && map.TryGetValue("data", out data) && data is List<object>)
-                        foreach (object o in (List<object>)data)
-                        {
-                            var m = o as Dictionary<string, object>;
-                            object id;
-                            if (m != null && m.TryGetValue("id", out id) && id is string && _discovered.Count < 24) _discovered.Add((string)id);
-                        }
-                }
-                catch (Exception e) { KsaCore.Log.Warn("Model list unreadable: " + e.Message); }
-                _status = _discovered.Count > 0
-                    ? "The server offers " + _discovered.Count + " model(s); pick one below."
-                    : "<color=#ffd27f>The server answered but lists no models. Pull or load one first (e.g. 'ollama pull qwen2.5:7b', or start llama-server with a .gguf).</color>";
-                Refresh();
-            });
         }
 
         // --- Usage ---
@@ -408,10 +490,12 @@ namespace KSA.KSP.UI
                 string text = (result.Text ?? string.Empty).Trim();
                 if (text.Length > 40) text = text.Substring(0, 40) + "...";
                 _status = "<color=#8be28b>Connection OK</color> after " + result.Attempts + " attempt" + (result.Attempts == 1 ? "" : "s") + ": \"" + text + "\"";
+                if (_saveAfterTest) { _saveAfterTest = false; string err; if (KsaSettingsFile.Save(_settings, out err)) { KsaCore.ReloadAiSettings(); _status += " Saved: local AI is on."; } else _status += " (save failed: " + err + ")"; }
                 KsaCore.Log.Info("AI Setup: connection test passed");
             }
             else
             {
+                _saveAfterTest = false;
                 string err = result != null ? result.Error : "no result";
                 string hint = string.Empty;
                 if (err != null && err.IndexOf("not found", StringComparison.OrdinalIgnoreCase) >= 0 && err.IndexOf("model", StringComparison.OrdinalIgnoreCase) >= 0)

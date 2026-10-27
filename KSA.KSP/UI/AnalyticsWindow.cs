@@ -131,7 +131,7 @@ namespace KSA.KSP.UI
                 for (int i = 0; i < league.Count; i++)
                 {
                     LeagueRow r = league[i];
-                    string name = r.IsPlayer ? "<b>" + Color(r.Name, Green) + "</b>" : r.Name;
+                    string name = r.IsPlayer ? "<b>" + Color(r.Name + " (you)", Green) + "</b>" : r.Name;
                     items.Add(Row(
                         Cell((i + 1).ToString(), ColRank), Cell(name, ColName), Cell(r.Style ?? string.Empty, ColStyle),
                         Cell(((int)Math.Round(r.Prestige)).ToString(), ColLPrestige), Cell(r.Milestones.ToString(), ColMilestones), Cell(r.Firsts.ToString(), ColFirsts),
@@ -263,7 +263,7 @@ namespace KSA.KSP.UI
             };
             AddChart(items, "Money", ChartTexture.Lines(ChartWidth, ChartHeight, money, out lo, out hi, true), money, Cash(lo), Cash(hi), axis, textWidth);
 
-            var race = new List<ChartTexture.Series> { new ChartTexture.Series(_agency.AgencyName, ChartTexture.Palette[0], prestige) };
+            var race = new List<ChartTexture.Series> { new ChartTexture.Series(_agency.AgencyName + " (you)", ChartTexture.Palette[0], prestige) };
             if (_agency.Settings.RivalsEnabled)
             {
                 int ci = 1;
@@ -295,7 +295,7 @@ namespace KSA.KSP.UI
                 values.Add(Math.Max(0, league[i].Score));
                 Color c = league[i].IsPlayer ? ChartTexture.Palette[0] : ChartTexture.Palette[1 + (i % (ChartTexture.Palette.Length - 1))];
                 colors.Add(c);
-                legend.Add(new ChartTexture.Series(league[i].Name + " (" + Math.Round(league[i].Score) + ")", c, null));
+                legend.Add(new ChartTexture.Series(league[i].Name + (league[i].IsPlayer ? " (you)" : "") + " (" + Math.Round(league[i].Score) + ")", c, null));
             }
             double max;
             Texture2D tex = ChartTexture.Bars(ChartWidth, 30 + 26 * league.Count, values, colors, out max);

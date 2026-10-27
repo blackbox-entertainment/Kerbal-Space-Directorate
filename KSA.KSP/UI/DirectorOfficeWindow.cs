@@ -89,6 +89,12 @@ namespace KSA.KSP.UI
             int moraleAvg = active > 0 ? moraleSum / active : 0;
 
             items.Add(new DialogGUILabel("<size=16><b>" + s.DirectorTitle + "'s Office</b></size>", textWidth, 28f));
+            if (_pendingName == null) _pendingName = _agency.AgencyName;
+            items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                new DialogGUILabel("Agency", LabelWidth, LineHeight),
+                new DialogGUITextInput(_pendingName, false, 48, v => { _pendingName = v ?? string.Empty; return _pendingName; }, LineHeight + 4f),
+                new DialogGUIButton("Rename", OnRename, 90f, 26f, false),
+                new DialogGUILabel("Your space agency's name: press releases, the league table and rivals use it.", textWidth - LabelWidth - 330f, LineHeight)));
             items.Add(Field("Fiscal year", _agency.CurrentYear + ", day " + _agency.DayOfYear + " of " + _agency.Calendar.DaysPerYear
                 + "  (" + _agency.Calendar.DaysLeftInYear(_agency.CurrentDay) + " days to the review)", textWidth));
             items.Add(Field("Balance", Agency.Money(_agency.Ledger.Balance)
@@ -247,6 +253,16 @@ namespace KSA.KSP.UI
             if (_departments != null && _departments.IsOpen) return;
             _departments = new DepartmentsWindow(_agency, () => { _departments = null; Refresh(); });
             _departments.Open();
+        }
+
+        private string _pendingName;
+        private void OnRename()
+        {
+            string msg;
+            _agency.Rename(_pendingName, out msg);
+            _pendingName = null;
+            ScreenMessages.PostScreenMessage("[KSA] " + msg, 5f, ScreenMessageStyle.UPPER_CENTER);
+            Refresh();
         }
 
         private void OpenAnalytics()
