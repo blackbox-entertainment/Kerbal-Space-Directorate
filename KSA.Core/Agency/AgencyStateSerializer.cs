@@ -17,7 +17,7 @@ namespace KSA.Core
     public static partial class AgencyStateSerializer
     {
         public const string RootName = "KSA_AGENCY";
-        public const int CurrentVersion = 3;
+        public const int CurrentVersion = 4;
 
         public static DataNode Write(Agency agency)
         {

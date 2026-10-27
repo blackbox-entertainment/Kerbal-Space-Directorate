@@ -16,6 +16,8 @@ namespace KSA.Core.Missions
         public bool HasProgramManager { get; set; }
         /// <summary>0 flat .. 1 steep. Only matters for landings. Negative = unknown site, roll one.</summary>
         public double SiteSlope { get; set; }
+        /// <summary>0..1 from an approved AI design analysis (M4); null keeps the template's score.</summary>
+        public double? DesignOverride { get; set; }
 
         public SimulationInput() { LeadEngineerRung = -1; SiteSlope = -1; }
     }
@@ -38,6 +40,7 @@ namespace KSA.Core.Missions
         public static double DesignScore(SimulationInput input)
         {
             double score = input.Template != null ? input.Template.DesignScore : 0.4;
+            if (input.DesignOverride.HasValue) score = input.DesignOverride.Value; // an approved AI design replaces the template's figure
             if (input.LeadEngineerRung > 0) score += Math.Min(0.15, 0.05 * input.LeadEngineerRung);
             if (input.HasProgramManager) score += 0.03;
             return Clamp01(score);

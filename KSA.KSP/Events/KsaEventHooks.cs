@@ -34,6 +34,8 @@ namespace KSA.KSP.Events
             GameEvents.onKerbalAdded.Add(OnRosterChanged);
             GameEvents.onKerbalRemoved.Add(OnRosterChanged);
             GameEvents.onKerbalTypeChange.Add(OnKerbalTypeChange);
+            GameEvents.OnTechnologyResearched.Add(OnTechChanged);
+            GameEvents.OnPartPurchased.Add(OnPartPurchased);
         }
 
         private void OnDestroy()
@@ -46,6 +48,8 @@ namespace KSA.KSP.Events
             GameEvents.onKerbalAdded.Remove(OnRosterChanged);
             GameEvents.onKerbalRemoved.Remove(OnRosterChanged);
             GameEvents.onKerbalTypeChange.Remove(OnKerbalTypeChange);
+            GameEvents.OnTechnologyResearched.Remove(OnTechChanged);
+            GameEvents.OnPartPurchased.Remove(OnPartPurchased);
         }
 
         private static Agency Agency { get { return KsaCore.Agency; } }
@@ -146,6 +150,8 @@ namespace KSA.KSP.Events
         private void OnRosterChanged(ProtoCrewMember pcm) { KsaCore.SyncRoster("roster change"); }
 
         private void OnKerbalTypeChange(ProtoCrewMember pcm, ProtoCrewMember.KerbalType from, ProtoCrewMember.KerbalType to) { KsaCore.SyncRoster("kerbal type change"); }
+        private void OnTechChanged(GameEvents.HostTargetAction<RDTech, RDTech.OperationResult> data) { KSA.KSP.Parts.KspPartCatalog.Invalidate(); }
+        private void OnPartPurchased(AvailablePart ap) { KSA.KSP.Parts.KspPartCatalog.Invalidate(); }
 
         private static List<string> CrewIds(List<ProtoCrewMember> crew)
         {

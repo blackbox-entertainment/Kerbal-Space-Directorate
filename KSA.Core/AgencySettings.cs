@@ -27,6 +27,10 @@ namespace KSA.Core
         public double CancelRefundFraction { get; set; } = 0.5;
         /// <summary>Recover landed crewed vessels on the home world automatically (GDD, T 2026-10-26).</summary>
         public bool AutoRecover { get; set; } = true;
+        /// <summary>Opt-in: the Director may take the controls during a live flight (decision 2026-10-26).</summary>
+        public bool ManualOverride { get; set; } = false;
+        /// <summary>Target orbit for live Kerbin flights, metres.</summary>
+        public double LiveOrbitAltitude { get; set; } = 85000;
         public List<string> PersonalityTags { get; } = new List<string> { "Cautious", "Reckless", "Perfectionist", "Showboat", "Steady", "Curious" };
 
         public static AgencySettings Parse(DataNode node)
@@ -50,6 +54,8 @@ namespace KSA.Core
             s.BuildBaseDays = node.GetInt("buildBaseDays", s.BuildBaseDays);
             s.CancelRefundFraction = node.GetDouble("cancelRefundFraction", s.CancelRefundFraction);
             s.AutoRecover = node.GetBool("autoRecover", s.AutoRecover);
+            s.ManualOverride = node.GetBool("manualOverride", s.ManualOverride);
+            s.LiveOrbitAltitude = node.GetDouble("liveOrbitAltitude", s.LiveOrbitAltitude);
             List<string> tags = node.GetList("personalityTags");
             if (tags.Count > 0)
             {

@@ -34,12 +34,20 @@ namespace KSA.Core.Projects
         public string MissionId { get; set; }
         public MissionReport Report { get; set; }
         public List<string> Notes { get; } = new List<string>();
+        /// <summary>What the engineering team produced in the Design phase (M4). Null means the template, untouched.</summary>
+        public KSA.Core.Design.DesignRecord Design { get; set; }
+        /// <summary>Live flight (M5): the host vessel id once launched, the Director-flown flag, and the flight timeline.</summary>
+        public string VesselId { get; set; }
+        public bool DirectorFlown { get; set; }
+        public double LaunchUT { get; set; }
+        public List<string> FlightLog { get; } = new List<string>();
+        public List<string> FlightAchievements { get; } = new List<string>();
 
         public Project()
         {
             Id = string.Empty; Name = string.Empty; MissionTypeId = string.Empty; TemplateId = string.Empty; GoalId = string.Empty;
             ProgramId = string.Empty; ModuleRole = string.Empty; LeadEngineer = string.Empty; ProgramManager = string.Empty; MissionId = string.Empty;
-            LaunchDay = -1; EndDay = -1;
+            LaunchDay = -1; EndDay = -1; VesselId = string.Empty; LaunchUT = -1;
         }
 
         public bool IsActive { get { return Status != ProjectStatus.Complete && Status != ProjectStatus.Failed && Status != ProjectStatus.Cancelled; } }
@@ -82,10 +90,14 @@ namespace KSA.Core.Projects
         public double SuccessChance { get; set; }
         /// <summary>Short tag for the lessons-learned list that feeds AI prompts in M4.</summary>
         public string Lesson { get; set; }
+        /// <summary>True when the Director took manual control during a live flight (M5).</summary>
+        public bool DirectorFlown { get; set; }
+        /// <summary>AI post-mortem text (M5), empty when none was written.</summary>
+        public string PostMortem { get; set; }
 
         public MissionReport()
         {
-            ProjectId = string.Empty; ProjectName = string.Empty; MissionId = string.Empty; MissionTypeId = string.Empty; Lesson = string.Empty;
+            ProjectId = string.Empty; ProjectName = string.Empty; MissionId = string.Empty; MissionTypeId = string.Empty; Lesson = string.Empty; PostMortem = string.Empty;
         }
 
         public bool IsSuccess { get { return Outcome == MissionOutcome.Success || Outcome == MissionOutcome.PartialSuccess; } }

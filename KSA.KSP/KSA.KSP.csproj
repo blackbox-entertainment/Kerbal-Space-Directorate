@@ -44,6 +44,16 @@
       <HintPath>$(KspManaged)\UnityEngine.AnimationModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <!-- UnityEngine.Input (auto-recovery cancel keys). -->
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>$(KspManaged)\UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- UnityWebRequest for the LLM transport. -->
+    <Reference Include="UnityEngine.UnityWebRequestModule">
+      <HintPath>$(KspManaged)\UnityEngine.UnityWebRequestModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
 
   <!-- Fail early with a clear message if KSPDIR is missing or wrong. -->

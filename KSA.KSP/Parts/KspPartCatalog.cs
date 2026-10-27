@@ -1,0 +1,218 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using KSA.Core.Parts;
+using CorePart = KSA.Core.Parts.PartInfo;
+using UnityEngine;
+
+namespace KSA.KSP.Parts
+{
+    /// <summary>
+    /// Builds Core's part catalog from the game's PartLoader (Jira KSA-42). In Career and Science games only
+    /// researched, purchased parts are offered. DLC parts are flagged so stock-only designs stay possible.
+    /// </summary>
+    public static class KspPartCatalog
+    {
+        private static PartCatalog _cache;
+        private static string _cacheKey;
+
+        /// <summary>Part names as used in craft files and prompts: the AvailablePart.name (dots, not underscores).</summary>
+        public static PartCatalog Current
+        {
+            get
+            {
+                string key = (HighLogic.CurrentGame != null ? HighLogic.CurrentGame.Mode.ToString() : "none") + ":" + TechStamp();
+                if (_cache != null && _cacheKey == key) return _cache;
+                _cache = Build();
+                _cacheKey = key;
+                return _cache;
+            }
+        }
+
+        private static int _techVersion;
+
+        /// <summary>Call when parts are researched or purchased so the next read rebuilds the catalog.</summary>
+        public static void Invalidate() { _cache = null; _cacheKey = null; _techVersion++; }
+
+        private static string TechStamp()
+        {
+            if (HighLogic.CurrentGame == null || HighLogic.CurrentGame.Mode == Game.Modes.SANDBOX || ResearchAndDevelopment.Instance == null) return "all";
+            return ResearchAndDevelopment.Instance.Science.ToString("0") + "/" + _techVersion;
+        }
+
+        public static PartCatalog Build()
+        {
+            var catalog = new PartCatalog();
+            if (PartLoader.LoadedPartsList == null) { KsaCore.Log.Warn("PartLoader not ready; empty part catalog"); return catalog; }
+            bool gated = HighLogic.CurrentGame != null && HighLogic.CurrentGame.Mode != Game.Modes.SANDBOX && ResearchAndDevelopment.Instance != null;
+            int skippedTech = 0, skippedKind = 0;
+            foreach (AvailablePart ap in PartLoader.LoadedPartsList)
+            {
+                try
+                {
+                    if (ap == null || ap.partPrefab == null) continue;
+                    if (ap.category == PartCategories.none || ap.TechHidden) continue;
+                    if (ap.name.StartsWith("kerbalEVA", StringComparison.OrdinalIgnoreCase) || ap.name.StartsWith("flag", StringComparison.OrdinalIgnoreCase)) continue;
+                    if (gated && !(ResearchAndDevelopment.PartTechAvailable(ap) && ResearchAndDevelopment.PartModelPurchased(ap))) { skippedTech++; continue; }
+                    CorePart info = Describe(ap);
+                    if (info == null) { skippedKind++; continue; }
+                    catalog.Add(info);
+                }
+                catch (Exception e)
+                {
+                    KsaCore.Log.Warn("Part " + (ap != null ? ap.name : "?") + " skipped: " + e.Message);
+                }
+            }
+            KsaCore.Log.Info("Part catalog: " + catalog.Count + " parts usable (" + skippedTech + " not researched, " + skippedKind + " unsuitable kinds)");
+            return catalog;
+        }
+
+        public static CorePart Describe(AvailablePart ap)
+        {
+            Part p = ap.partPrefab;
+            PartKind kind = Classify(ap, p);
+            if (kind == PartKind.Other) return null;
+
+            var info = new CorePart
+            {
+                Name = ap.name,
+                Title = ap.title ?? ap.name,
+                Kind = kind,
+                Mass = p.mass,
+                Cost = ap.cost,
+                CrewCapacity = p.CrewCapacity,
+                Mod = ModOf(ap.partUrl),
+                RequiresDlc = IsDlc(ap.partUrl)
+            };
+
+            // Propellant and resources.
+            double fuel = 0;
+            if (p.Resources != null)
+            {
+                foreach (PartResource r in p.Resources)
+                {
+                    PartResourceDefinition def = PartResourceLibrary.Instance != null ? PartResourceLibrary.Instance.GetDefinition(r.resourceName) : null;
+                    if (def == null || def.density <= 0) continue;
+                    if (r.resourceName == "ElectricCharge") continue;
+                    fuel += r.maxAmount * def.density;
+                }
+            }
+            info.FuelMass = fuel;
+            info.Cost = ap.cost; // stock cost already includes full resources
+
+            // Engines.
+            ModuleEngines eng = p.FindModuleImplementing<ModuleEngines>();
+            if (eng != null)
+            {
+                info.Thrust = eng.maxThrust;
+                if (eng.atmosphereCurve != null)
+                {
+                    info.IspVacuum = eng.atmosphereCurve.Evaluate(0f);
+                    info.IspSeaLevel = eng.atmosphereCurve.Evaluate(1f);
+                }
+            }
+
+            // Nodes and size.
+            AttachNode top = null, bottom = null;
+            if (p.attachNodes != null)
+            {
+                foreach (AttachNode n in p.attachNodes)
+                {
+                    if (n == null || n.nodeType != AttachNode.NodeType.Stack) continue;
+                    if (n.id == "top") top = n;
+                    else if (n.id == "bottom") bottom = n;
+                }
+            }
+            info.HasTopNode = top != null;
+            info.HasBottomNode = bottom != null;
+            int size = top != null ? top.size : (bottom != null ? bottom.size : -1);
+            info.Diameter = size < 0 ? 0 : (size == 0 ? 0.625 : 1.25 * size);
+            if (p.srfAttachNode != null && p.attachRules != null && p.attachRules.srfAttach) info.Tags.Add("radial");
+            if (p.CrewCapacity > 0) info.Tags.Add("crew" + p.CrewCapacity);
+            return info;
+        }
+
+        private static PartKind Classify(AvailablePart ap, Part p)
+        {
+            PartModuleList mods = p.Modules;
+            bool has(string moduleName) { return mods != null && mods.Contains(moduleName); }
+            string n = ap.name.ToLowerInvariant();
+
+            if (has("HLEnvelopePartModule") || n.Contains("envelope") || n.Contains("airship") || n.Contains("blimp")) return PartKind.Envelope;
+            ModuleEngines eng = p.FindModuleImplementing<ModuleEngines>();
+            if (eng != null)
+            {
+                if (has("ModuleResourceIntake") || n.Contains("jet") || n.Contains("rapier") || n.Contains("turbo") || n.Contains("ion")) return PartKind.Other;
+                bool solid = false;
+                foreach (Propellant pr in eng.propellants) if (pr.name == "SolidFuel") solid = true;
+                return solid ? PartKind.Booster : PartKind.Engine;
+            }
+            if (has("ModuleCommand"))
+            {
+                if (p.CrewCapacity > 0) return PartKind.Command;
+                return ap.category == PartCategories.Pods ? PartKind.Command : PartKind.Other; // probe cores: uncrewed, not offered in v1
+            }
+            if (has("ModuleDecouple") || has("ModuleAnchoredDecoupler")) return PartKind.Decoupler;
+            if (has("ModuleParachute")) return PartKind.Parachute;
+            if (has("ModuleAblator") || n.Contains("heatshield")) return PartKind.HeatShield;
+            if (has("ModuleProceduralFairing")) return PartKind.Fairing;
+            if (has("ModuleDockingNode")) return PartKind.Docking;
+            if (has("ModuleRCS") || has("ModuleRCSFX")) return PartKind.Rcs;
+            if (has("ModuleDeployableSolarPanel") || has("ModuleGenerator") || (ap.category == PartCategories.Electrical)) return PartKind.Power;
+            if (has("ModuleDataTransmitter") && ap.category == PartCategories.Communication) return PartKind.Antenna;
+            if (has("ModuleScienceLab") || has("ModuleScienceExperiment") || ap.category == PartCategories.Science) return PartKind.Science;
+            if (ap.category == PartCategories.Ground || has("ModuleWheelBase"))
+            {
+                if (n.Contains("leg") || n.Contains("gear")) return PartKind.LandingLeg;
+                return n.Contains("wheel") ? PartKind.Wheel : PartKind.LandingLeg;
+            }
+            if (has("ModuleLifeSupport") || has("LifeSupportModule") || has("ModuleTACLifeSupport") || has("USILS")) return PartKind.LifeSupport;
+            if (p.CrewCapacity > 0) return PartKind.Habitat;
+            if (ap.category == PartCategories.FuelTank || ap.category == PartCategories.Propulsion)
+                return p.Resources != null && p.Resources.Count > 0 ? PartKind.Tank : PartKind.Other;
+            if (ap.category == PartCategories.Structural || ap.category == PartCategories.Coupling)
+            {
+                if (n.Contains("strut") || n.Contains("ladder") || n.Contains("clamp") || n.Contains("wing")) return PartKind.Other;
+                return PartKind.Structural;
+            }
+            if (ap.category == PartCategories.Payload && has("ModuleCargoBay")) return PartKind.Structural;
+            return PartKind.Other;
+        }
+
+        public static string ModOf(string partUrl)
+        {
+            if (string.IsNullOrEmpty(partUrl)) return "Stock";
+            int slash = partUrl.IndexOf('/');
+            string first = slash > 0 ? partUrl.Substring(0, slash) : partUrl;
+            return first == "Squad" || first == "SquadExpansion" ? "Stock" : first;
+        }
+
+        public static bool IsDlc(string partUrl)
+        {
+            return !string.IsNullOrEmpty(partUrl) && partUrl.StartsWith("SquadExpansion", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>Writes the catalog to PluginData/parts_catalog.txt so part names can be checked without the game.</summary>
+        public static string Dump(PartCatalog catalog)
+        {
+            string path = Path.Combine(KsaSettingsFileDir(), "parts_catalog.txt");
+            var sb = new StringBuilder();
+            sb.AppendLine("name | title | kind | mass t | fuel t | thrust kN | isp vac | crew | cost | diameter | nodes | mod | dlc");
+            foreach (CorePart p in catalog.All)
+                sb.AppendLine(p.Name + " | " + p.Title + " | " + p.Kind + " | " + p.Mass.ToString("0.###") + " | " + p.FuelMass.ToString("0.###") + " | " + p.Thrust.ToString("0")
+                              + " | " + p.IspVacuum.ToString("0") + " | " + p.CrewCapacity + " | " + p.Cost.ToString("0") + " | " + p.Diameter.ToString("0.###")
+                              + " | " + (p.HasTopNode ? "T" : "-") + (p.HasBottomNode ? "B" : "-") + " | " + p.Mod + " | " + (p.RequiresDlc ? "DLC" : "-"));
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                File.WriteAllText(path, sb.ToString());
+                KsaCore.Log.Info("Part catalog written to " + path);
+            }
+            catch (Exception e) { KsaCore.Log.Warn("Could not write part catalog: " + e.Message); }
+            return path;
+        }
+
+        private static string KsaSettingsFileDir() { return Ai.KsaSettingsFile.PluginDataDir; }
+    }
+}

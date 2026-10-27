@@ -39,7 +39,14 @@ namespace KSA.Core
                 foreach (string c in p.Crew) n.AddValue("crew", c);
                 foreach (string e in p.Engineers) n.AddValue("engineer", e);
                 foreach (string note in p.Notes) n.AddValue("note", note);
+                n.AddValue("vesselId", p.VesselId);
+                n.AddValue("directorFlown", p.DirectorFlown);
+                n.AddValue("launchUT", p.LaunchUT);
+                foreach (string e in p.FlightLog) n.AddValue("flight", e);
+                foreach (string a in p.FlightAchievements) n.AddValue("flightAchievement", a);
+                if (p.Design != null) n.AddChild(p.Design.ToDataNode());
             }
+            root.AddChild(agency.Costs.ToDataNode());
 
             foreach (Program g in agency.Programs)
             {
@@ -73,6 +80,8 @@ namespace KSA.Core
                 n.AddValue("crewScore", r.CrewScore);
                 n.AddValue("successChance", r.SuccessChance);
                 n.AddValue("lesson", r.Lesson);
+                n.AddValue("directorFlown", r.DirectorFlown);
+                n.AddValue("postMortem", r.PostMortem);
                 foreach (string c in r.Crew) n.AddValue("crew", c);
                 foreach (string l in r.Lines) n.AddValue("line", l);
                 foreach (string a in r.Achievements) n.AddValue("achievement", a);
@@ -117,8 +126,21 @@ namespace KSA.Core
                 p.Crew.AddRange(n.GetValues("crew"));
                 p.Engineers.AddRange(n.GetValues("engineer"));
                 p.Notes.AddRange(n.GetValues("note"));
+                p.VesselId = n.GetValue("vesselId", string.Empty);
+                p.DirectorFlown = n.GetBool("directorFlown", false);
+                p.LaunchUT = n.GetDouble("launchUT", -1);
+                p.FlightLog.AddRange(n.GetValues("flight"));
+                p.FlightAchievements.AddRange(n.GetValues("flightAchievement"));
+                p.Design =KSA.Core.Design.DesignRecord.FromDataNode(n.GetChild("DESIGN"));
+                if (p.Design != null && p.Design.Verdict == KSA.Core.Design.DesignVerdict.Pending)
+                {
+                    // The game was saved mid-session; the session is gone. Fall back to the template.
+                    p.Design.Verdict = KSA.Core.Design.DesignVerdict.Failed;
+                    p.Design.Error = "Design session interrupted by save/load.";
+                }
                 agency.Projects.Add(p);
             }
+            agency.Costs.Load(root.GetChild("COST_GUARD"));
 
             foreach (DataNode n in root.GetChildren("PROGRAM"))
             {
@@ -156,7 +178,9 @@ namespace KSA.Core
                     DesignScore = n.GetDouble("designScore", 0),
                     CrewScore = n.GetDouble("crewScore", 0),
                     SuccessChance = n.GetDouble("successChance", 0),
-                    Lesson = n.GetValue("lesson", string.Empty)
+                    Lesson = n.GetValue("lesson", string.Empty),
+                    DirectorFlown = n.GetBool("directorFlown", false),
+                    PostMortem = n.GetValue("postMortem", string.Empty)
                 };
                 r.Crew.AddRange(n.GetValues("crew"));
                 r.Lines.AddRange(n.GetValues("line"));

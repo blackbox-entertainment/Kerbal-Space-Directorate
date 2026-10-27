@@ -33,6 +33,7 @@ namespace KSA.KSP.UI
         private ProjectsWindow _projects;
         private ProgramsWindow _programs;
         private MissionControlWindow _missionControl;
+        private AiSetupWindow _aiSetup;
 
         public DirectorOfficeWindow(Agency agency, Action onClosed)
         {
@@ -150,7 +151,8 @@ namespace KSA.KSP.UI
             var buttons2 = new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
                 new DialogGUIButton("Projects", OpenProjects, 95f, 30f, false),
                 new DialogGUIButton("Programs", OpenPrograms, 100f, 30f, false),
-                new DialogGUIButton("Mission Control", OpenMissionControl, 130f, 30f, false));
+                new DialogGUIButton("Mission Control", OpenMissionControl, 130f, 30f, false),
+                new DialogGUIButton("AI Setup", OpenAiSetup, 95f, 30f, false));
 
             var content = new DialogGUIVerticalLayout(true, true, 4f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft, list, buttons, buttons2);
 
@@ -211,8 +213,16 @@ namespace KSA.KSP.UI
             _missionControl.Open();
         }
 
+        private void OpenAiSetup()
+        {
+            if (_aiSetup != null && _aiSetup.IsOpen) return;
+            _aiSetup = new AiSetupWindow(_agency, () => { _aiSetup = null; Refresh(); });
+            _aiSetup.Open();
+        }
+
         private void CloseChildren()
         {
+            if (_aiSetup != null) { AiSetupWindow w = _aiSetup; _aiSetup = null; w.Close(); }
             if (_projects != null) { ProjectsWindow w = _projects; _projects = null; w.Close(); }
             if (_programs != null) { ProgramsWindow w = _programs; _programs = null; w.Close(); }
             if (_missionControl != null) { MissionControlWindow w = _missionControl; _missionControl = null; w.Close(); }

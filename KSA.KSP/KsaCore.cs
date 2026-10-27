@@ -8,7 +8,10 @@ using KSA.Core.Missions;
 using KSA.Core.Projects;
 using KSA.Core.Personnel;
 using KSA.Core.Recruiting;
+using KSA.KSP.Ai;
+using KSA.KSP.Build;
 using KSA.KSP.Data;
+using KSA.KSP.Parts;
 using KSA.KSP.Roster;
 
 namespace KSA.KSP
@@ -70,6 +73,7 @@ namespace KSA.KSP
             a.Ledger.Mirror = new KspFunds();
             foreach (AssemblyLoader.LoadedAssembly la in AssemblyLoader.loadedAssemblies) if (la != null && !string.IsNullOrEmpty(la.name)) a.InstalledMods.Add(la.name);
             a.LiveFlightAvailable = false; // M5
+            WireAi(a);
             a.MissionResolved += OnMissionResolved;
             a.CrewDeparted += OnCrewDeparted;
             a.ApplicantHired += OnApplicantHired;
@@ -82,6 +86,7 @@ namespace KSA.KSP
         {
             if (Agency != null)
             {
+                Agency.BuildRequested -= OnBuildRequested;
                 Agency.CrewDeparted -= OnCrewDeparted;
                 Agency.ApplicantHired -= OnApplicantHired;
                 Agency.YearEnded -= OnYearEnded;
@@ -118,6 +123,55 @@ namespace KSA.KSP
                 if (shown++ >= 6) break;
                 ScreenMessages.PostScreenMessage("[KSA] " + n, 6f, ScreenMessageStyle.UPPER_CENTER);
             }
+        }
+
+        // ------------------------------------------------------------------ M4: AI engineering
+
+        /// <summary>Reads the user settings, offers the part catalog and HTTP transport, and builds craft files on request.</summary>
+        public static void WireAi(Agency a)
+        {
+            List<Core.Ai.ModelOption> models = KsaSettingsFile.Models();
+            a.Ai = KsaSettingsFile.Load();
+            a.Transport = UnityWebTransport.Instance;
+            a.Parts = new LivePartCatalog();
+            a.Requirements = KsaSettingsFile.Requirements();
+            a.ModelRates = KsaSettingsFile.Rates(models);
+            a.AllowDlcParts = Expansions.ExpansionsLoader.IsExpansionInstalled("MakingHistory") || Expansions.ExpansionsLoader.IsExpansionInstalled("Serenity");
+            a.LaunchGravity = 9.81;
+            a.BuildRequested += OnBuildRequested;
+            Log.Info("AI engineering " + (a.AiDesignAvailable ? "available (" + a.Ai.DesignMode + ")" : "off") + "; " + models.Count + " curated models");
+        }
+
+        /// <summary>Re-reads ksa_settings.cfg after the AI Setup window saves it.</summary>
+        public static void ReloadAiSettings()
+        {
+            if (Agency == null) return;
+            Agency.Ai = KsaSettingsFile.Load();
+        }
+
+        private static void OnBuildRequested(Project p, Core.Design.DesignRecord record)
+        {
+            if (record == null || record.Plan == null) return;
+            CraftWriter.Result r = CraftWriter.Write(record.Plan, Agency.Parts, record.DesignName, "KSA " + p.Id + " " + p.Name);
+            if (r.Ok)
+            {
+                record.CraftPath = r.Path;
+                p.Notes.Add("Vehicle assembled: " + r.Parts + " parts, saved to the VAB as \"KSA " + p.Id + " " + p.Name + "\".");
+                foreach (string w in r.Warnings) p.Notes.Add("Assembly note: " + w);
+                ScreenMessages.PostScreenMessage("[KSA] " + p.Name + ": vehicle assembled (" + r.Parts + " parts)", 6f, ScreenMessageStyle.UPPER_CENTER);
+            }
+            else
+            {
+                p.Notes.Add("Vehicle assembly failed: " + r.Error + " The template craft will fly instead.");
+                Log.Warn("Assembly failed for " + p.Name + ": " + r.Error);
+            }
+        }
+
+        /// <summary>Always reflects the current game: parts researched later show up without a restart.</summary>
+        private sealed class LivePartCatalog : Core.Parts.IPartCatalog
+        {
+            public IReadOnlyList<Core.Parts.PartInfo> All { get { return KspPartCatalog.Current.All; } }
+            public Core.Parts.PartInfo Get(string name) { return KspPartCatalog.Current.Get(name); }
         }
 
         private static void OnCrewDeparted(CrewProfile p, DepartureReason reason)

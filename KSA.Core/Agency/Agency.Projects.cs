@@ -158,6 +158,7 @@ namespace KSA.Core
             message = "Project " + project.Name + " started: " + Money(cost) + ", design " + project.DesignDays + " days, build " + project.BuildDays + " days, mode " + project.Mode + ".";
             Push(null, message);
             RaiseProjectChanged(project);
+            StartDesign(project, null);
             return project;
         }
 
@@ -253,11 +254,15 @@ namespace KSA.Core
                     switch (p.Status)
                     {
                         case ProjectStatus.Design:
-                            if (day >= p.PhaseStartDay + p.DesignDays)
+                            if (day >= p.PhaseStartDay + p.DesignDays && !DesignInProgress(p.Id))
                             {
                                 p.Status = ProjectStatus.Build; p.PhaseStartDay = p.PhaseStartDay + p.DesignDays; changed = true;
-                                p.Notes.Add("Design complete on day " + p.PhaseStartDay + " (" + Catalogs.Templates.NameOf(p.TemplateId) + ").");
+                                string designName = p.Design != null && p.Design.IsAi && p.Design.Verdict == Design.DesignVerdict.Approved
+                                    ? p.Design.DesignName + " (AI)"
+                                    : Catalogs.Templates.NameOf(p.TemplateId);
+                                p.Notes.Add("Design complete on day " + p.PhaseStartDay + " (" + designName + ").");
                                 Push(notices, p.Name + ": design complete, build started");
+                                OnEnteredBuild(p);
                                 RaiseProjectChanged(p);
                             }
                             break;
@@ -323,6 +328,7 @@ namespace KSA.Core
             var input = new SimulationInput { Type = type, Template = Catalogs.Templates.Get(p.TemplateId), HasProgramManager = p.ProgramManager.Length > 0 };
             foreach (string id in p.Crew) { CrewProfile c = Crew.Get(id); if (c != null) input.Crew.Add(c); }
             input.LeadEngineerRung = RankRung(Crew.Get(p.LeadEngineer));
+            input.DesignOverride = DesignOverride(p);
             Program program = p.ProgramId.Length > 0 ? GetProgram(p.ProgramId) : null;
             if (program != null && type.IsLanding) input.SiteSlope = program.SiteSlope;
 
