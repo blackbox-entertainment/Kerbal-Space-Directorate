@@ -113,6 +113,7 @@ namespace KSA.Core
                 c.AddValue("departedDay", p.DepartedDay);
                 c.AddValue("lowMoraleYears", p.LowMoraleYears);
                 c.AddValue("lastMissionYear", p.LastMissionYear);
+                c.AddValue("portrait", p.PortraitKey);
                 c.AddValue("daysInSpace", p.Record.DaysInSpace);
                 foreach (string tag in p.PersonalityTags) c.AddValue("tag", tag);
                 foreach (string a in p.Record.Achievements) c.AddValue("achievement", a);
@@ -311,6 +312,7 @@ namespace KSA.Core
                     DepartedDay = c.GetInt("departedDay", -1),
                     LowMoraleYears = c.GetInt("lowMoraleYears", 0),
                     LastMissionYear = c.GetInt("lastMissionYear", 0)
+                    , PortraitKey = c.GetValue("portrait", string.Empty)
                 };
                 if (p.Status == CrewStatus.Dead && p.DepartureReason == DepartureReason.None)
                 {

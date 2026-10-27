@@ -329,6 +329,7 @@ namespace KSA.Core
                 p.Status = s.Status;
                 p.Courage = s.Courage;
                 p.Stupidity = s.Stupidity;
+                if (!string.IsNullOrEmpty(s.PortraitKey)) p.PortraitKey = s.PortraitKey;
                 for (int i = 0; i < s.Achievements.Count; i++) p.Record.Achievements.Add(s.Achievements[i]);
 
                 if (Promotions.AssignStartingRank(p))

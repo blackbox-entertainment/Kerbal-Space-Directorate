@@ -29,8 +29,20 @@ namespace KSA.KSP.Roster
 
         public static CrewSnapshot Snapshot(ProtoCrewMember pcm)
         {
-            return new CrewSnapshot(pcm.name, MapRole(pcm.trait), pcm.experienceLevel, MapStatus(pcm.rosterStatus),
-                                    pcm.courage, pcm.stupidity, Achievements(pcm));
+            var snap = new CrewSnapshot(pcm.name, MapRole(pcm.trait), pcm.experienceLevel, MapStatus(pcm.rosterStatus),
+                                        pcm.courage, pcm.stupidity, Achievements(pcm));
+            snap.PortraitKey = PortraitKey(pcm);
+            return snap;
+        }
+
+        /// <summary>"db:&lt;SpritePath&gt;" when the game has a portrait texture for this kerbal, else "asset:&lt;suit icon path&gt;".</summary>
+        public static string PortraitKey(ProtoCrewMember pcm)
+        {
+            if (pcm == null) return string.Empty;
+            string sprite = pcm.SpritePath;
+            if (!string.IsNullOrEmpty(sprite) && GameDatabase.Instance != null && GameDatabase.Instance.GetTexture(sprite, false) != null) return "db:" + sprite;
+            string suit = pcm.GetKerbalIconSuitPath();
+            return string.IsNullOrEmpty(suit) ? string.Empty : "asset:" + suit;
         }
 
         /// <summary>Achievement keys "Type:Body" from both the career log (past flights) and the current flight log.</summary>

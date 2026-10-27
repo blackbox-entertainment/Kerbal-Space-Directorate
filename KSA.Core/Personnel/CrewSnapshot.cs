@@ -14,6 +14,8 @@ namespace KSA.Core.Personnel
         public float Stupidity { get; }
         /// <summary>Achievement keys in "Type:Body" form (see <see cref="ServiceRecord.Achievements"/>).</summary>
         public IReadOnlyList<string> Achievements { get; }
+        /// <summary>Host-defined key for the crew member's portrait, so it can be shown after they leave the host roster. May be empty.</summary>
+        public string PortraitKey { get; set; }
 
         public CrewSnapshot(string name, CrewRole role, int stars, CrewStatus status,
                             float courage, float stupidity, IReadOnlyList<string> achievements)

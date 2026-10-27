@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using KSA.Core;
 using KSA.Core.Personnel;
 using UnityEngine;
 
@@ -60,12 +61,34 @@ namespace KSA.KSP.UI
             return fromAssets;
         }
 
-        /// <summary>Portrait by crew name, via the current game's roster. Null outside a loaded game.</summary>
+        /// <summary>
+        /// Portrait by crew name: from the game roster while they are on it, otherwise from the portrait key the agency
+        /// stored on their profile (so dismissed, retired and dead crew keep their picture). Null if neither exists.
+        /// </summary>
         public static Texture PortraitFor(string crewName)
         {
-            if (string.IsNullOrEmpty(crewName) || HighLogic.CurrentGame == null || HighLogic.CurrentGame.CrewRoster == null) return null;
-            if (!HighLogic.CurrentGame.CrewRoster.Exists(crewName)) return null;
-            return Portrait(HighLogic.CurrentGame.CrewRoster[crewName]);
+            if (string.IsNullOrEmpty(crewName)) return null;
+            if (HighLogic.CurrentGame != null && HighLogic.CurrentGame.CrewRoster != null && HighLogic.CurrentGame.CrewRoster.Exists(crewName))
+                return Portrait(HighLogic.CurrentGame.CrewRoster[crewName]);
+            Agency agency = KsaCore.Agency;
+            CrewProfile p = agency != null ? agency.Crew.Get(crewName) : null;
+            return p != null ? FromKey(p.PortraitKey) : null;
+        }
+
+        /// <summary>Resolves a stored portrait key ("db:path" or "asset:path").</summary>
+        public static Texture FromKey(string key)
+        {
+            if (string.IsNullOrEmpty(key)) return null;
+            if (key.StartsWith("db:")) return Get(key.Substring(3));
+            if (key.StartsWith("asset:"))
+            {
+                Texture cached;
+                if (Cache.TryGetValue(key, out cached)) return cached;
+                Texture tex = AssetBase.GetTexture(key.Substring(6));
+                Cache[key] = tex;
+                return tex;
+            }
+            return null;
         }
 
         /// <summary>A portrait image for a dialog, or a blank spacer of the same size.</summary>

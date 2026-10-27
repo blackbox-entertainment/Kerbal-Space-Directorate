@@ -47,6 +47,8 @@ namespace KSA.Core.Personnel
         public int LowMoraleYears { get; set; }
         /// <summary>Fiscal year of the last completed mission (0 = never).</summary>
         public int LastMissionYear { get; set; }
+        /// <summary>Host-defined portrait key captured at sync time; survives departure and reload.</summary>
+        public string PortraitKey { get; set; }
 
         public ServiceRecord Record { get; } = new ServiceRecord();
 
@@ -59,6 +61,7 @@ namespace KSA.Core.Personnel
             Morale = DefaultMorale;
             InFlightSinceUT = -1;
             DepartedDay = -1;
+            PortraitKey = string.Empty;
         }
 
         public bool IsFlying { get { return InFlightSinceUT >= 0; } }
