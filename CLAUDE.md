@@ -127,6 +127,9 @@ GameData/KSA/
 | Hardware targets | Minimum 16 GB RAM (AI via API only), Recommended 32 GB (full mod set, optional small local model). T's 64 GB dev machine is **not** a target. |
 | GitHub owner | **Blackbox Entertainment** organization, GitHub slug `blackbox-entertainment` (decided 2026-10-26). Remote: https://github.com/blackbox-entertainment/Kerbal-space-agency |
 | Repo location | `G:\KSA` (local), VS Code with C# Dev Kit |
+| Admin staff | Hireable Management-track kerbals replace the stock Administration faces in function (M2). Decided 2026-10-26. |
+| Kerbal stats | Stock stars = competence. One growth stat per track (Leadership / Insight / Design) earned through assignments. Courage = risk tolerance, Stupidity = error chance. Personality tags + morale as modifiers. No more raw stats. |
+| Research | A Project type run by Science-track kerbals, producing stock Science points per fiscal year; stock tech tree unchanged (M3). |
 
 **Candidate supported mod set (not final):** ReStock/ReStock+, Near Future series, SSPXr (inflatables), KPBS (surface bases), Outer Planets Mod, Hooligan Labs Airships (Eve cloud city), Extraplanetary Launchpads. Required: ModuleManager, MechJeb2 (Live mode). Optional: kOS.
 

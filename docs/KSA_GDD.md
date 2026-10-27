@@ -617,11 +617,19 @@ Each milestone is playable on its own. Jira epics KSA-1 to KSA-8.
 4. Track **kerbal age** and a hall of fame?
 5. Rival **space agencies** for a space-race mode?
 6. How punishing are Crisis Years? Is **"Director fired"** a game over?
-7. Separate **science directorate** budget?
+7. ~~Separate science directorate budget?~~ Decided 2026-10-26: yes. Research is a Project type funded by the Director (see 14.1).
 8. **Community-sourced** template library?
 9. Default OpenRouter models for design vs. post-mortem (benchmark in M4)
 10. Cloud city buoyancy: **Airships vs. Hooligan Labs**?
 11. ~~GitHub owner~~ Decided: Blackbox Entertainment organization (2026-10-26)
+
+### 14.1 Decisions recorded 2026-10-26
+
+Stock kerbals carry only stars (0–5), a trait, and Courage/Stupidity (cosmetic in stock). Stock admin staff (Mortimer, Linus, Walt, Gus) are fixed faces with no stats. KSA fills that gap:
+
+1. **Admin staff become hireable KSA kerbals** on the Management track (Program Manager → Deputy Director), replacing the stock Administration faces in function. Arrives in M2.
+2. **Stats:** stock stars remain the competence number. Each track gets one growth stat that rises through assignments rather than flights: **Leadership** (Management: team efficiency, morale buffer), **Insight** (Science: research output), **Design** (Engineering: design quality). Courage feeds risk tolerance in design prompts and abort calls; Stupidity feeds error chance. Personality tags and morale act as modifiers on top. No further raw stats; avoid a spreadsheet.
+3. **Research is a Project type** run on the ground by Science-track kerbals, producing stock Science points over a fiscal year scaled by stars and Insight. It plugs into the stock tech tree unchanged. Arrives in M3.
 
 ---
 
