@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <!-- Thin adapter between KSA.Core and Kerbal Space Program. -->
 
   <PropertyGroup>
@@ -27,6 +27,20 @@
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>$(KspManaged)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- Needed by DialogGUI / PopupDialog (TextAnchor lives in TextRenderingModule; layouts use UnityEngine.UI). -->
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>$(KspManaged)\UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(KspManaged)\UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- Needed by ApplicationLauncherButton (exposes an Animator). -->
+    <Reference Include="UnityEngine.AnimationModule">
+      <HintPath>$(KspManaged)\UnityEngine.AnimationModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>
