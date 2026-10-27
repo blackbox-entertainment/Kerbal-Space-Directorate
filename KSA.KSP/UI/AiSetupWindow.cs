@@ -16,7 +16,7 @@ namespace KSA.KSP.UI
         private const string DialogName = "KSA_AiSetup";
         private const float Width = 720f;
         private static float WindowHeight { get { return Mathf.Clamp(Screen.height - 140f, 700f, 960f); } }
-        private static float ListHeight { get { return WindowHeight - 120f; } }
+        private static float ListHeight { get { return WindowHeight - 150f; } }
         private const float LabelWidth = 150f;
         private const float LineHeight = 22f;
         private const float SectionGap = 12f;
@@ -78,7 +78,7 @@ namespace KSA.KSP.UI
             BuildApiSection(items, textWidth);
             BuildLocalSection(items, textWidth);
             BuildUsageSection(items, textWidth);
-            items.Add(new DialogGUISpace(SectionGap));
+            items.Add(new DialogGUISpace(SectionGap * 5)); // wrapped labels under-report their height; keep the last row reachable
 
             var list = new DialogGUIScrollList(new Vector2(Width - 30f, ListHeight), false, true,
                 new DialogGUIVerticalLayout(false, false, 3f, new RectOffset(6, 6, 6, 6), TextAnchor.UpperLeft, items.ToArray()));
@@ -91,7 +91,7 @@ namespace KSA.KSP.UI
                 new DialogGUIButton("Close", OnCloseClicked, 90f, 30f, true));
 
             var content = new DialogGUIVerticalLayout(true, true, 4f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft,
-                new DialogGUILabel(_status.Length > 0 ? _status : "Choose a design mode, enter your key or local model, then Save.", Width - 40f, LineHeight),
+                new DialogGUILabel(_status.Length > 0 ? _status : "Choose a design mode, enter your key or local model, then Save.", Width - 40f, 2 * LineHeight),
                 list,
                 buttons);
 
@@ -181,7 +181,7 @@ namespace KSA.KSP.UI
             items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
                 new DialogGUISpace(16f),
                 new DialogGUIButton((_settings.LocalEnabled ? "[x] " : "[ ] ") + "Local enabled", OnToggleLocal, 160f, ButtonHeight, false),
-                new DialogGUILabel("Install Ollama or LM Studio, pull a model, and point the endpoint at it (OpenAI-compatible /v1/chat/completions).", textWidth - 190f, LineHeight)));
+                new DialogGUILabel("Ollama, LM Studio or llama.cpp on this PC; the endpoint is their OpenAI-compatible chat URL.", textWidth - 190f, LineHeight)));
             items.Add(Input("Local endpoint", _settings.LocalEndpoint, textWidth, v => { _settings.LocalEndpoint = (v ?? string.Empty).Trim(); return _settings.LocalEndpoint; }, null));
             items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
                 new DialogGUISpace(16f),
@@ -221,7 +221,7 @@ namespace KSA.KSP.UI
             items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
                 new DialogGUISpace(16f),
                 new DialogGUIButton((_settings.AutoStartLocalServer ? "[x] " : "[ ] ") + "Start server with the game", () => { _settings.AutoStartLocalServer = !_settings.AutoStartLocalServer; _status = "Auto-start " + (_settings.AutoStartLocalServer ? "on" : "off") + " (not saved yet)."; Refresh(); }, 220f, ButtonHeight, false),
-                new DialogGUILabel("Ollama needs no server exe (it runs in the background). For llama.cpp set the exe and arguments below; KSA starts it when nothing answers and stops it on quit.", textWidth - 250f, LineHeight)));
+                new DialogGUILabel("llama.cpp only: KSA starts the exe below when nothing answers, stops it on quit. Ollama needs none.", textWidth - 250f, 2 * LineHeight)));
             items.Add(Input("Server exe", _settings.LocalServerExe, textWidth, v => { _settings.LocalServerExe = (v ?? string.Empty).Trim(); return _settings.LocalServerExe; }, null));
             items.Add(Input("Server arguments", _settings.LocalServerArgs, textWidth, v => { _settings.LocalServerArgs = (v ?? string.Empty).Trim(); return _settings.LocalServerArgs; }, null));
         }
