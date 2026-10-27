@@ -66,7 +66,7 @@ namespace KSA.KSP.UI
             // --- Header ---
             string rankName = _agency.Careers.RankName(p.Track, p.RankId);
             int age = p.AgeOn(_agency.CurrentDay, _agency.Clock.DaysPerYear);
-            items.Add(new DialogGUIHorizontalLayout(true, false, 6f, new RectOffset(0, 0, 2, 6), TextAnchor.MiddleLeft,
+            items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 2, 6), TextAnchor.MiddleLeft,
                 new DialogGUIImage(new Vector2(32f, 32f), Vector2.zero, Color.white, KsaIcons.ForRole(p.Role) ?? Texture2D.whiteTexture),
                 new DialogGUILabel("<size=16><b>" + p.Name + "</b></size>\n" + RosterView.RoleText(p.Role) + ", " + rankName, true, false)));
             items.Add(Field("Rank", rankName + (p.Track != CareerTrack.None ? " (" + p.Track + " track)" : string.Empty)));

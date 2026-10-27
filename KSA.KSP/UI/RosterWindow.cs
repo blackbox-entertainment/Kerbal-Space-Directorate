@@ -110,7 +110,7 @@ namespace KSA.KSP.UI
 
         private static DialogGUIHorizontalLayout HeaderRow()
         {
-            return new DialogGUIHorizontalLayout(true, false, 4f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+            return new DialogGUIHorizontalLayout(false, false, 4f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
                 new DialogGUISpace(KsaIcons.BadgeSize),
                 new DialogGUILabel("<b>Name</b>", NameWidth, 20f),
                 new DialogGUILabel("<b>Rank</b>", RankWidth, 20f),
@@ -122,7 +122,7 @@ namespace KSA.KSP.UI
         private DialogGUIHorizontalLayout CrewRow(CrewRecord c, string rank)
         {
             string id = c.Name;
-            return new DialogGUIHorizontalLayout(true, false, 4f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+            return new DialogGUIHorizontalLayout(false, false, 4f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
                 KsaIcons.Badge(c.Role),
                 new DialogGUIButton(c.Name, () => OpenRecord(id), NameWidth, 22f, false),
                 new DialogGUILabel(rank, RankWidth, 20f),
