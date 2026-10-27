@@ -183,10 +183,28 @@ namespace KSA.KSP.UI
                 new DialogGUIButton((_settings.LocalEnabled ? "[x] " : "[ ] ") + "Local enabled", OnToggleLocal, 160f, ButtonHeight, false),
                 new DialogGUILabel("Install Ollama or LM Studio, pull a model, and point the endpoint at it (OpenAI-compatible /v1/chat/completions).", textWidth - 190f, LineHeight)));
             items.Add(Input("Local endpoint", _settings.LocalEndpoint, textWidth, v => { _settings.LocalEndpoint = (v ?? string.Empty).Trim(); return _settings.LocalEndpoint; }, null));
+            items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                new DialogGUISpace(16f),
+                new DialogGUILabel("Presets:", 60f, LineHeight),
+                new DialogGUIButton("Ollama :11434", () => OnLocalPreset("http://localhost:11434/v1/chat/completions"), 120f, ButtonHeight, false),
+                new DialogGUIButton("llama.cpp :8081", () => OnLocalPreset("http://localhost:8081/v1/chat/completions"), 120f, ButtonHeight, false),
+                new DialogGUIButton("LM Studio :1234", () => OnLocalPreset("http://localhost:1234/v1/chat/completions"), 120f, ButtonHeight, false),
+                new DialogGUIButton(_listing ? "Asking..." : "List models on server", OnListLocalModels, 160f, ButtonHeight, false)));
 
             Line(items, "Local model (" + (_settings.LocalModel.Length > 0 ? _settings.LocalModel : "none") + "):", textWidth);
+            if (_discovered.Count > 0)
+            {
+                Line(items, "Models the server reports (" + _discovered.Count + "):", textWidth);
+                ButtonRows(items, _discovered.Count, textWidth, ModelButtonWidth, i =>
+                {
+                    string id = _discovered[i];
+                    bool sel = string.Equals(_settings.LocalModel, id, StringComparison.OrdinalIgnoreCase);
+                    return new DialogGUIButton((sel ? "> " : "") + id, () => OnPickLocalModel(id), ModelButtonWidth, ButtonHeight, false);
+                });
+            }
             List<ModelOption> local = ModelsFor(AiTask.Narrative, true);
             if (local.Count == 0) Line(items, "No curated local models in ai_models.cfg; type a model name below (e.g. the Ollama tag).", textWidth);
+            else Line(items, "Suggested (must be pulled or loaded on the server first):", textWidth);
             ButtonRows(items, local.Count, textWidth, ModelButtonWidth, i =>
             {
                 ModelOption m = local[i];
@@ -195,6 +213,54 @@ namespace KSA.KSP.UI
                 return new DialogGUIButton((sel ? "> " : "") + m.Label + " (" + m.Tier + ", local)", () => OnPickLocalModel(id), ModelButtonWidth, ButtonHeight, false);
             });
             items.Add(Input("Custom local model", _settings.LocalModel, textWidth, v => { _settings.LocalModel = (v ?? string.Empty).Trim(); return _settings.LocalModel; }, null));
+        }
+
+        private readonly List<string> _discovered = new List<string>();
+        private bool _listing;
+
+        private void OnLocalPreset(string url)
+        {
+            _settings.LocalEndpoint = url;
+            _settings.LocalEnabled = true;
+            _discovered.Clear();
+            _status = "Local endpoint set to " + url + " (not saved yet). Press 'List models on server' to see what it offers.";
+            Refresh();
+        }
+
+        /// <summary>GET {base}/v1/models: Ollama, llama.cpp server and LM Studio all answer it.</summary>
+        private void OnListLocalModels()
+        {
+            if (_listing) return;
+            string url = _settings.LocalEndpoint ?? string.Empty;
+            int cut = url.IndexOf("/chat/completions", StringComparison.OrdinalIgnoreCase);
+            string modelsUrl = (cut > 0 ? url.Substring(0, cut) : url.TrimEnd('/')) + "/models";
+            _listing = true;
+            _status = "Asking " + modelsUrl + "...";
+            Refresh();
+            Ai.UnityWebTransport.Instance.GetText(modelsUrl, 8, (ok, body) =>
+            {
+                _listing = false;
+                _discovered.Clear();
+                if (!ok) { _status = "<color=#ffd27f>No answer from " + modelsUrl + ": " + body + ". Is the server running?</color>"; Refresh(); return; }
+                try
+                {
+                    object parsed = KSA.Core.Data.Json.Parse(body);
+                    var map = parsed as Dictionary<string, object>;
+                    object data;
+                    if (map != null && map.TryGetValue("data", out data) && data is List<object>)
+                        foreach (object o in (List<object>)data)
+                        {
+                            var m = o as Dictionary<string, object>;
+                            object id;
+                            if (m != null && m.TryGetValue("id", out id) && id is string && _discovered.Count < 24) _discovered.Add((string)id);
+                        }
+                }
+                catch (Exception e) { KsaCore.Log.Warn("Model list unreadable: " + e.Message); }
+                _status = _discovered.Count > 0
+                    ? "The server offers " + _discovered.Count + " model(s); pick one below."
+                    : "<color=#ffd27f>The server answered but lists no models. Pull or load one first (e.g. 'ollama pull qwen2.5:7b', or start llama-server with a .gguf).</color>";
+                Refresh();
+            });
         }
 
         // --- Usage ---

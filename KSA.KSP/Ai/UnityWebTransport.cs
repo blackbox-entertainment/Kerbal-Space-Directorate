@@ -75,6 +75,38 @@ namespace KSA.KSP.Ai
             catch (Exception e) { KsaCore.Log.Error("LLM callback threw: " + e); }
         }
 
+        /// <summary>Plain GET for small JSON endpoints such as /v1/models. Callback gets (ok, body or error).</summary>
+        public void GetText(string url, int timeoutSeconds, Action<bool, string> callback)
+        {
+            if (string.IsNullOrEmpty(url) || callback == null) return;
+            Runner.Instance.StartCoroutine(RunGet(url, timeoutSeconds, callback));
+        }
+
+        private IEnumerator RunGet(string url, int timeoutSeconds, Action<bool, string> callback)
+        {
+            UnityWebRequest www;
+            try
+            {
+                www = UnityWebRequest.Get(url);
+                www.timeout = Math.Max(3, timeoutSeconds);
+            }
+            catch (Exception e) { callback(false, e.Message); yield break; }
+            yield return www.SendWebRequest();
+            bool ok;
+            string body;
+            try
+            {
+#pragma warning disable 618
+                ok = !(www.isNetworkError || www.isHttpError) && www.responseCode >= 200 && www.responseCode < 300;
+#pragma warning restore 618
+                body = ok ? (www.downloadHandler != null ? www.downloadHandler.text ?? string.Empty : string.Empty) : (string.IsNullOrEmpty(www.error) ? "HTTP " + www.responseCode : www.error);
+            }
+            catch (Exception e) { ok = false; body = e.Message; }
+            finally { www.Dispose(); }
+            try { callback(ok, body); }
+            catch (Exception e) { KsaCore.Log.Error("GET callback threw: " + e); }
+        }
+
         /// <summary>A hidden object that survives scene changes so coroutines keep running across them.</summary>
         private sealed class Runner : MonoBehaviour
         {
