@@ -87,6 +87,8 @@ namespace KSA.KSP.UI
             {
                 foreach (CrewRecord c in crew)
                 {
+                    KSA.Core.Personnel.CrewProfile prof = KsaCore.Agency != null ? KsaCore.Agency.Crew.Get(c.Name) : null;
+                    if (prof != null && prof.Departed) continue; // the fallen and the retired live in the Hall of Fame
                     string rank = "-";
                     string morale = "-";
                     bool canDismiss = false;

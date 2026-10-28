@@ -338,6 +338,7 @@ namespace KSA.Core
                     p.Departed = false;
                     p.DepartureReason = DepartureReason.None;
                 }
+                else if (p.Departed) continue; // dead stays dead, whatever the game's roster says (stock respawns the missing)
 
                 bool fresh = result.Hired.Contains(p);
                 p.Role = s.Role;
@@ -446,6 +447,7 @@ namespace KSA.Core
             var notices = new List<string>();
             CrewProfile p = Crew.Get(crewId);
             if (p == null) return notices;
+            if (p.Departed && p.DepartureReason == DepartureReason.Died) return notices; // already recorded: no second morale blow
 
             RecordIncident(crewId, IncidentKind.Death, description);
             p.Status = CrewStatus.Dead;
