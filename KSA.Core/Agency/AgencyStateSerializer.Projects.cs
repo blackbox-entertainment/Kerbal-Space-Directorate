@@ -52,6 +52,16 @@ namespace KSA.Core
             foreach (KSA.Core.Analytics.YearSummary ys in agency.YearHistory) root.AddChild(ys.ToDataNode());
             foreach (FirstClaim fc in agency.Firsts) root.AddChild("FIRST").AddValue("achievement", fc.Achievement).AddValue("by", fc.ClaimedBy).AddValue("year", fc.Year);
             foreach (DepartmentPost dp in agency.Departments) if (dp.Filled) root.AddChild("DEPARTMENT").AddValue("department", dp.Department.ToString()).AddValue("crew", dp.CrewId).AddValue("sinceDay", dp.SinceDay);
+            foreach (MissionType mt in agency.Catalogs.Missions.Types)
+            {
+                if (!mt.IsCustom) continue;
+                DataNode cm = root.AddChild("CUSTOM_MISSION");
+                cm.AddValue("id", mt.Id); cm.AddValue("name", mt.Name); cm.AddValue("description", mt.Description); cm.AddValue("tier", mt.Tier.ToString()); cm.AddValue("body", mt.Body);
+                cm.AddValue("profile", mt.Profile.ToString()); cm.AddValue("crew", mt.CrewSize); cm.AddValue("minStars", mt.MinStars); cm.AddValue("durationDays", mt.DurationDays);
+                cm.AddValue("baseCost", mt.BaseCost); cm.AddValue("difficulty", mt.Difficulty); cm.AddValue("orbits", mt.Orbits); cm.AddValue("surfaceDays", mt.SurfaceDays);
+                cm.AddValue("purpose", mt.Purpose); cm.AddValue("scienceYield", mt.ScienceYield);
+                foreach (string a in mt.Achievements) cm.AddValue("achievement", a);
+            }
 
             foreach (Program g in agency.Programs)
             {
@@ -67,6 +77,8 @@ namespace KSA.Core
                 n.AddValue("site", g.Site);
                 n.AddValue("siteSlope", g.SiteSlope);
                 n.AddValue("vesselId", g.VesselId);
+                n.AddValue("lastSuppliedDay", g.LastSuppliedDay);
+                foreach (string cid in g.CrewAboard) n.AddValue("aboard", cid);
                 foreach (string pid in g.ModuleProjectIds) n.AddValue("module", pid);
                 foreach (string note in g.Notes) n.AddValue("note", note);
             }
@@ -153,6 +165,22 @@ namespace KSA.Core
             foreach (DataNode ys in root.GetChildren("YEAR_SUMMARY")) agency.YearHistory.Add(KSA.Core.Analytics.YearSummary.FromDataNode(ys));
             agency.Firsts.Clear();
             foreach (DataNode fc in root.GetChildren("FIRST")) agency.Firsts.Add(new FirstClaim { Achievement = fc.GetValue("achievement", string.Empty), ClaimedBy = fc.GetValue("by", string.Empty), Year = fc.GetInt("year", 0) });
+            foreach (DataNode cm in root.GetChildren("CUSTOM_MISSION"))
+            {
+                string cid = cm.GetValue("id", string.Empty);
+                if (cid.Length == 0 || agency.Catalogs.Missions.Get(cid) != null) continue;
+                MissionTier ctier; MissionProfile cprofile;
+                if (!System.Enum.TryParse(cm.GetValue("tier", "Early"), out ctier)) ctier = MissionTier.Early;
+                if (!System.Enum.TryParse(cm.GetValue("profile", "Orbit"), out cprofile)) cprofile = MissionProfile.Orbit;
+                var mt = new MissionType
+                {
+                    Id = cid, Name = cm.GetValue("name", cid), Description = cm.GetValue("description", string.Empty), Tier = ctier, Body = cm.GetValue("body", "Kerbin"), Profile = cprofile,
+                    CrewSize = cm.GetInt("crew", 1), MinStars = cm.GetInt("minStars", 0), DurationDays = cm.GetInt("durationDays", 1), BaseCost = cm.GetDouble("baseCost", 10000), Difficulty = cm.GetDouble("difficulty", 0.3),
+                    Orbits = cm.GetInt("orbits", 0), SurfaceDays = cm.GetDouble("surfaceDays", 0), Purpose = cm.GetValue("purpose", string.Empty), ScienceYield = cm.GetDouble("scienceYield", 0), IsCustom = true
+                };
+                mt.Achievements.AddRange(cm.GetValues("achievement"));
+                agency.Catalogs.Missions.Add(mt);
+            }
             foreach (DataNode dn in root.GetChildren("DEPARTMENT"))
             {
                 Department dept;
@@ -177,9 +205,11 @@ namespace KSA.Core
                     Site = n.GetValue("site", string.Empty),
                     SiteSlope = n.GetDouble("siteSlope", 0)
                     , VesselId = n.GetValue("vesselId", string.Empty)
+                    , LastSuppliedDay = n.GetInt("lastSuppliedDay", -1)
                 };
                 if (g.Id.Length == 0) continue;
                 g.ModuleProjectIds.AddRange(n.GetValues("module"));
+                g.CrewAboard.AddRange(n.GetValues("aboard"));
                 g.Notes.AddRange(n.GetValues("note"));
                 agency.Programs.Add(g);
             }

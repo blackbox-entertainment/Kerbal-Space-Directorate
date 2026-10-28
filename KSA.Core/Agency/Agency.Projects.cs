@@ -44,6 +44,17 @@ namespace KSA.Core
 
         // ------------------------------------------------------------------ staffing helpers
 
+        /// <summary>Farthest distance, surface days and longest mission on the crew member's record (KSA-60).</summary>
+        private void UpdateExplorationRecord(CrewProfile c, MissionReport r)
+        {
+            MissionType type = Catalogs.Missions.Get(r.MissionTypeId);
+            double far = r.FarthestKm > 0 ? r.FarthestKm : (r.IsSuccess || r.Outcome == MissionOutcome.PartialSuccess) && type != null ? BodyDistances.FromHomeKm(type.Body) : 0;
+            if (far > c.Record.FarthestKm) c.Record.FarthestKm = far;
+            double surface = r.SurfaceDays > 0 ? r.SurfaceDays : r.IsSuccess ? BodyDistances.SurfaceDaysFor(type) : 0;
+            if (type != null && !string.Equals(type.Body, "Kerbin", StringComparison.OrdinalIgnoreCase)) c.Record.DaysOnOtherWorlds += surface;
+            if (r.DaysInSpace > c.Record.LongestMissionDays) c.Record.LongestMissionDays = r.DaysInSpace;
+        }
+
         /// <summary>How many projects of this mission type finished successfully (for the "done before" marks).</summary>
         public int MissionsCompleted(string missionTypeId)
         {
@@ -125,9 +136,10 @@ namespace KSA.Core
             string why = MissionBlocker(type);
             if (why != null) { message = type.Name + " " + why + ". Earn Science (lab, missions) and unlock parts in R&D first."; return null; }
             if (type == null) { message = "Unknown mission type."; return null; }
-            Template template = string.IsNullOrEmpty(templateId) ? Catalogs.Templates.Best(type.Id, InstalledMods) : Catalogs.Templates.Get(templateId);
+            List<Template> able = TemplatesFor(type);
+            Template template = string.IsNullOrEmpty(templateId) ? (able.Count > 0 ? able[0] : null) : Catalogs.Templates.Get(templateId);
             if (template == null) { message = "No design template can fly " + type.Name + " with the mods installed."; return null; }
-            if (!template.Flies(type.Id) || !template.IsAvailable(InstalledMods)) { message = template.Name + " cannot fly " + type.Name + " here."; return null; }
+            if (!able.Exists(x => x.Id == template.Id) || !template.IsAvailable(InstalledMods)) { message = template.Name + " cannot fly " + type.Name + " here."; return null; }
             string blocked = TemplateBlocker(template);
             if (blocked != null) { message = template.Name + " " + blocked + ". Put scientists in the lab or fly missions to earn Science, then unlock the parts in R&D."; return null; }
 
@@ -387,6 +399,7 @@ namespace KSA.Core
                 if (c == null) continue;
                 c.InFlightSinceUT = -1;                 // don't double-book against the clock
                 c.Record.DaysInSpace += r.DaysInSpace;
+                UpdateExplorationRecord(c, r);
                 foreach (IncidentKind k in r.Incidents) RecordIncident(id, k, k == IncidentKind.Crash ? "Vehicle lost on " + r.ProjectName : "Problems on " + r.ProjectName);
                 if (r.Deaths.Contains(id))
                 {
@@ -499,12 +512,17 @@ namespace KSA.Core
             if (program == null || program.Status == ProgramStatus.Cancelled) return;
             ProgramType type = Catalogs.ProgramTypes.Get(program.ProgramTypeId);
             if (type == null) return;
+            if (string.Equals(p.ModuleRole, "resupply", StringComparison.OrdinalIgnoreCase)) { if (r != null) ApplyResupply(p, r, program); return; }
+            if (p.Status == ProjectStatus.Complete && r != null && r.Mode == MissionMode.WatchLive) NoteCrewAboard(p, program);
 
             if (p.Status == ProjectStatus.Complete)
             {
                 if (program.NextModuleIndex >= type.Modules.Count)
                 {
                     program.Status = ProgramStatus.Complete;
+                    if (program.LastSuppliedDay < 0) program.LastSuppliedDay = CurrentDay;
+                    // The whole program's crews share the Base:<body> achievement (station, base or cloud city).
+                    foreach (string pid in program.ModuleProjectIds) { Project mp = GetProject(pid); if (mp == null) continue; foreach (string cid in mp.Crew) AddAchievements(cid, new[] { "Base:" + program.Body }); }
                     Push(null, "Program " + program.Name + " complete.");
                     return;
                 }

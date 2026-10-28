@@ -155,6 +155,9 @@ GameData/KSA/
 | Stock contracts and hiring | Off by default in KSA games (agency.cfg stockContracts, stockHiring): offered contracts withdrawn, stock applicant list emptied. Decided 2026-10-27. |
 | Research and tech gating | Built 2026-10-27: templates and mission types gated on researched parts (MissionBlocker/TemplateBlocker), goals only when feasible; lab scientists and successful missions credit stock Science (agency.cfg RESEARCH); Flea test hop for day one. |
 | Science missions | Built 2026-10-27 (KSA-58): purpose = Science mission types with scienceYield, Science:<body> achievement, crew multiplier, live experiments via ScienceRunner/ScienceSweepLeg. |
+| Custom missions | Built 2026-10-27 (KSA-59): CustomMissionSpec → synthetic MissionType (IsCustom, Orbits, SurfaceDays) saved as CUSTOM_MISSION; templates by shape (Agency.TemplatesFor). |
+| Exploration medals | Built 2026-10-27 (KSA-60): FarthestKm / DaysOnOtherWorlds / WorldsVisited / LongestMissionDays on the record; medal triggers FarthestDistance, DaysOnOtherWorlds, WorldsVisited, LongestMission. |
+| Resupply and campaign ladder | Built 2026-10-27 (KSA-61): programs.cfg supplyIntervalDays/resupplyMissionType, Agency.CreateResupply, crew rotation, Base:/Resupply: achievements, goals.cfg `requires`, Campaign window. |
 
 **Candidate supported mod set (not final):** ReStock/ReStock+, Near Future series, SSPXr (inflatables), KPBS (surface bases), Outer Planets Mod, Hooligan Labs Airships (Eve cloud city), Extraplanetary Launchpads. Required: ModuleManager. Optional: MechJeb2 (future bridge for missions beyond Kerbin orbit), kOS.
 

@@ -73,6 +73,27 @@ namespace KSA.Core.Personnel
 
         /// <summary>Cumulative days spent on missions, accumulated at recovery.</summary>
         public double DaysInSpace { get; set; }
+        /// <summary>Farthest the crew member has been from the home world, km (KSA-60).</summary>
+        public double FarthestKm { get; set; }
+        /// <summary>Cumulative days spent on the surface of other worlds.</summary>
+        public double DaysOnOtherWorlds { get; set; }
+        /// <summary>Longest single mission, days.</summary>
+        public double LongestMissionDays { get; set; }
+
+        /// <summary>Distinct bodies other than the home world with a Flyby, Orbit or Land achievement.</summary>
+        public int WorldsVisited(string homeBody)
+        {
+            var worlds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (string a in Achievements)
+            {
+                int colon = a.IndexOf(':');
+                if (colon < 0) continue;
+                string kind = a.Substring(0, colon), body = a.Substring(colon + 1);
+                if (body == "-" || string.Equals(body, homeBody, StringComparison.OrdinalIgnoreCase)) continue;
+                if (kind.Equals("Flyby", StringComparison.OrdinalIgnoreCase) || kind.Equals("Orbit", StringComparison.OrdinalIgnoreCase) || kind.Equals("Land", StringComparison.OrdinalIgnoreCase)) worlds.Add(body);
+            }
+            return worlds.Count;
+        }
 
         public int CompletedMissionCount
         {

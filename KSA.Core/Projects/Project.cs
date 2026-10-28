@@ -85,6 +85,10 @@ namespace KSA.Core.Projects
         public List<IncidentKind> Incidents { get; } = new List<IncidentKind>();
         public List<string> Deaths { get; } = new List<string>();
         public double DaysInSpace { get; set; }
+        /// <summary>Farthest from home during the mission, km (KSA-60). 0 = unknown, the body table decides.</summary>
+        public double FarthestKm { get; set; }
+        /// <summary>Days spent on the surface of another world during the mission.</summary>
+        public double SurfaceDays { get; set; }
         public double DesignScore { get; set; }
         public double CrewScore { get; set; }
         public double SuccessChance { get; set; }

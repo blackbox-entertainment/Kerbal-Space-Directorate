@@ -158,6 +158,8 @@ namespace KSA.Core.Rivals
                 case "land": return "landing on " + body;
                 case "eva": return "spacewalk at " + body;
                 case "science": return "a science return from " + body;
+                case "base": return body == "Kerbin" ? "a crewed station" : "a crewed base at " + body;
+                case "resupply": return body == "Kerbin" ? "a station resupply" : "a resupply run to " + body;
                 case "escape": return "escape from " + body;
                 case "flight": return "first flight";
                 default: return kind.ToLowerInvariant() + (body.Length > 0 ? " of " + body : string.Empty);

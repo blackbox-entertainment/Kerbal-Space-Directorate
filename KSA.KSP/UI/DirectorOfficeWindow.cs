@@ -173,6 +173,7 @@ namespace KSA.KSP.UI
                 new DialogGUIButton(_agency.News.Unread > 0 ? "Press Room (" + _agency.News.Unread + " new)" : "Press Room", OpenNews, 150f, 30f, false));
             var buttons3 = new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
                 new DialogGUIButton("Analytics", OpenAnalytics, 95f, 30f, false),
+                new DialogGUIButton("Campaign", OpenCampaign, 100f, 30f, false),
                 new DialogGUIButton("Departments", OpenDepartments, 110f, 30f, false));
 
             var content = new DialogGUIVerticalLayout(true, true, 4f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft, list, buttons, buttons2, buttons3);
@@ -249,6 +250,14 @@ namespace KSA.KSP.UI
             Refresh(); // the Press Room marks everything read: drop the "(N new)" badge at once
         }
 
+        private CampaignWindow _campaign;
+        private void OpenCampaign()
+        {
+            if (_campaign != null && _campaign.IsOpen) return;
+            _campaign = new CampaignWindow(_agency, () => { _campaign = null; });
+            _campaign.Open();
+        }
+
         private DepartmentsWindow _departments;
         private void OpenDepartments()
         {
@@ -278,6 +287,7 @@ namespace KSA.KSP.UI
         {
             if (_analytics != null) { AnalyticsWindow w = _analytics; _analytics = null; w.Close(); }
             if (_departments != null) { DepartmentsWindow w = _departments; _departments = null; w.Close(); }
+            if (_campaign != null) { CampaignWindow w = _campaign; _campaign = null; w.Close(); }
             if (_news != null) { NewsWindow w = _news; _news = null; w.Close(); }
             if (_aiSetup != null) { AiSetupWindow w = _aiSetup; _aiSetup = null; w.Close(); }
             if (_projects != null) { ProjectsWindow w = _projects; _projects = null; w.Close(); }

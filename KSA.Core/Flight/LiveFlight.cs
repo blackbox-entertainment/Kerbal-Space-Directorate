@@ -23,6 +23,10 @@ namespace KSA.Core.Flight
         public List<string> Events { get; } = new List<string>();
         public double MaxAltitude { get; set; }
         public double MaxSpeed { get; set; }
+        /// <summary>Farthest from the home world during the flight, km (the host measures it).</summary>
+        public double MaxDistanceFromHomeKm { get; set; }
+        /// <summary>Days spent landed on another world (the host measures it).</summary>
+        public double SurfaceDays { get; set; }
         /// <summary>Science missions: points the experiments collected aboard (the host counts them); the primary is earned when > 0.</summary>
         public double SciencePoints { get; set; }
     }
@@ -45,6 +49,8 @@ namespace KSA.Core.Flight
                 CrewScore = crewScore,
                 SuccessChance = 0,
                 DaysInSpace = Math.Max(0.05, result.DaysInSpace),
+                FarthestKm = result.MaxDistanceFromHomeKm,
+                SurfaceDays = result.SurfaceDays,
                 DirectorFlown = result.DirectorFlown
             };
             if (crewIds != null) r.Crew.AddRange(crewIds);

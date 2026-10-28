@@ -93,6 +93,9 @@ namespace KSA.KSP.UI
             items.Add(Field("Traits", "courage " + Percent(p.Courage) + ", stupidity " + Percent(p.Stupidity)
                 + (p.PersonalityTags.Count > 0 ? "  |  " + string.Join(", ", p.PersonalityTags.ToArray()) : string.Empty), textWidth));
             items.Add(Field("In space", FormatDays(p.Record.DaysInSpace) + ", " + p.Record.CompletedMissionCount + " missions completed", textWidth));
+            int worlds = p.Record.WorldsVisited("Kerbin");
+            items.Add(Field("Exploration", "farthest " + p.Record.FarthestKm.ToString("#,##0") + " km from Kerbin  |  " + p.Record.DaysOnOtherWorlds.ToString("0.#") + " days on other worlds  |  "
+                + worlds + " world" + (worlds == 1 ? "" : "s") + " visited  |  longest mission " + p.Record.LongestMissionDays.ToString("0.#") + " days", textWidth));
 
             // --- Director action ---
             RankDefinition pending = _agency.Promotions.PendingSelection(p);

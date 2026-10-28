@@ -12,7 +12,15 @@ namespace KSA.Core.Medals
         /// <summary>An incident of <see cref="MedalDefinition.IncidentKind"/> is on the record.</summary>
         Incident = 2,
         /// <summary>Never automatic; granted by the Director (M2).</summary>
-        Manual = 3
+        Manual = 3,
+        /// <summary>Farthest distance from the home world, km, at or above Threshold (KSA-60).</summary>
+        FarthestDistance = 4,
+        /// <summary>Cumulative days on the surface of other worlds at or above Threshold.</summary>
+        DaysOnOtherWorlds = 5,
+        /// <summary>Distinct other worlds flown by, orbited or landed on, at or above Threshold.</summary>
+        WorldsVisited = 6,
+        /// <summary>Longest single mission in days at or above Threshold.</summary>
+        LongestMission = 7
     }
 
     /// <summary>A medal and the rule that awards it, loaded from config (Jira KSA-20).</summary>

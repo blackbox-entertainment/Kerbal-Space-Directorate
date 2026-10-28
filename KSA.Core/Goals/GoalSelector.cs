@@ -53,6 +53,7 @@ namespace KSA.Core.Goals
                 if (metBefore && !g.Repeatable) continue;
                 if (g.Condition == GoalConditionType.Achievement && hasAchievement != null && hasAchievement(g.Pattern)) continue;
                 if (feasible != null && !feasible(g)) continue;
+                if (!string.IsNullOrEmpty(g.Requires) && hasAchievement != null && !hasAchievement(g.Requires)) continue; // campaign order
                 candidates.Add(g);
             }
 

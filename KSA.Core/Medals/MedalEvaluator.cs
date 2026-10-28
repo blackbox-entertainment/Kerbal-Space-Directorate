@@ -9,6 +9,8 @@ namespace KSA.Core.Medals
     {
         private readonly MedalCatalog _catalog;
         private readonly CrewRegistry _registry;
+        /// <summary>Name of the home world, for the worlds-visited count.</summary>
+        public string HomeBody { get; set; } = "Kerbin";
 
         public MedalEvaluator(MedalCatalog catalog, CrewRegistry registry)
         {
@@ -37,6 +39,14 @@ namespace KSA.Core.Medals
                     return profile.Record.DaysInSpace >= medal.Threshold;
                 case MedalTrigger.Incident:
                     return profile.Record.HasIncident(medal.IncidentKind);
+                case MedalTrigger.FarthestDistance:
+                    return profile.Record.FarthestKm >= medal.Threshold;
+                case MedalTrigger.DaysOnOtherWorlds:
+                    return profile.Record.DaysOnOtherWorlds >= medal.Threshold;
+                case MedalTrigger.WorldsVisited:
+                    return profile.Record.WorldsVisited(HomeBody) >= medal.Threshold;
+                case MedalTrigger.LongestMission:
+                    return profile.Record.LongestMissionDays >= medal.Threshold;
                 default:
                     return false;
             }

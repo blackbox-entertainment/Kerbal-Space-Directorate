@@ -44,6 +44,9 @@ namespace KSA.KSP.Flight
             public HashSet<string> Logged = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             public double SciencePoints;
             public bool ScienceMission;
+            public double MaxDistanceFromHomeKm;
+            public double SurfaceSeconds;
+            public double LastSurfaceSample = -1;
         }
 
         private MissionProgram _program;
@@ -299,6 +302,7 @@ namespace KSA.KSP.Flight
             double speed = _vessel.srfSpeed;
             if (alt > Live.MaxAltitude) Live.MaxAltitude = alt;
             if (speed > Live.MaxSpeed) Live.MaxSpeed = speed;
+            TrackExploration();
             if (_vessel.state == Vessel.State.DEAD) { Log("Vessel destroyed.", null); Resolve(false); return; }
             if (Live.ScienceMission && _science != null)
             {
@@ -335,6 +339,23 @@ namespace KSA.KSP.Flight
             {
                 _nextSample = Planetarium.GetUniversalTime() + 30;
                 CheckOrbit();
+            }
+        }
+
+        /// <summary>Farthest from home and time landed on other worlds, for the exploration medals (KSA-60).</summary>
+        private void TrackExploration()
+        {
+            double now = Planetarium.GetUniversalTime();
+            if (Live.LastSurfaceSample < 0) { Live.LastSurfaceSample = now; return; }
+            double dt = now - Live.LastSurfaceSample;
+            Live.LastSurfaceSample = now;
+            if (dt <= 0 || dt > 3600 * 6) return; // a scene change or a long warp jump: skip the gap
+            CelestialBody home = FlightGlobals.GetHomeBody();
+            if (home != null)
+            {
+                double km = Vector3d.Distance(_vessel.GetWorldPos3D(), home.position) / 1000.0;
+                if (km > Live.MaxDistanceFromHomeKm) Live.MaxDistanceFromHomeKm = km;
+                if (_vessel.mainBody != home && (_vessel.situation == Vessel.Situations.LANDED || _vessel.situation == Vessel.Situations.SPLASHED)) Live.SurfaceSeconds += dt;
             }
         }
 
@@ -461,6 +482,8 @@ namespace KSA.KSP.Flight
                 MaxAltitude = Live.MaxAltitude,
                 MaxSpeed = Live.MaxSpeed,
                 SciencePoints = Live.SciencePoints,
+                MaxDistanceFromHomeKm = Live.MaxDistanceFromHomeKm,
+                SurfaceDays = Live.SurfaceSeconds / KsaCore.Clock.SecondsPerDay,
                 DaysInSpace = Math.Max(0.02, (Planetarium.GetUniversalTime() - Live.LaunchUT) / KsaCore.Clock.SecondsPerDay)
             };
             result.Deaths.AddRange(Live.Deaths);

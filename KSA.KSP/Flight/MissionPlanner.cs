@@ -67,7 +67,8 @@ namespace KSA.KSP.Flight
                     prog.Add(new AscentLeg(ctx.ParkingAltitude, false)).Add(new ReentryLeg(pe));
                     break;
                 case MissionProfile.Orbit:
-                    prog.Add(new AscentLeg(ctx.ParkingAltitude, true)).Add(new HoldOrbitLeg(WantsEva(type) ? 120 : 600));
+                    prog.Add(new AscentLeg(ctx.ParkingAltitude, true));
+                    if (type != null && type.Orbits > 0) prog.Add(new HoldOrbitLeg(type.Orbits)); else prog.Add(new HoldOrbitLeg(WantsEva(type) ? 120 : 600));
                     if (type != null && type.IsScience) prog.Add(new ScienceSweepLeg(1800));
                     if (WantsEva(type)) prog.Add(new SurfaceOpsLeg(40, false, true));
                     prog.Add(new ReentryLeg(pe));
@@ -85,7 +86,8 @@ namespace KSA.KSP.Flight
                 case MissionProfile.OrbitBody:
                     prog.Add(new AscentLeg(ctx.ParkingAltitude, true));
                     Outbound(prog, ctx, target, interplanetary, Math.Max(20000, floor), Math.Max(80000, floor + 50000));
-                    prog.Add(new CaptureLeg(target, orbitAlt)).Add(new HoldOrbitLeg(600));
+                    prog.Add(new CaptureLeg(target, orbitAlt));
+                    if (type != null && type.Orbits > 0) prog.Add(new HoldOrbitLeg(type.Orbits)); else prog.Add(new HoldOrbitLeg(600));
                     if (type != null && type.IsScience) prog.Add(new ScienceSweepLeg(1800));
                     Homebound(prog, ctx, target, interplanetary, true, peLo, peHi);
                     break;
@@ -94,8 +96,15 @@ namespace KSA.KSP.Flight
                     prog.Add(new AscentLeg(ctx.ParkingAltitude, true));
                     Outbound(prog, ctx, target, interplanetary, Math.Max(15000, floor), Math.Max(60000, floor + 40000));
                     prog.Add(new CaptureLeg(target, orbitAlt)).Add(new LandingLeg(ctx.MaxSiteSlope));
+                    if (profile == MissionProfile.Base && type != null && string.Equals(type.ModuleRole, "resupply", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Resupply: deliver beside the base, then the relief crew stays and the old crew flies the lander home.
+                        prog.Add(new DeliverLeg("Base resupply")); break;
+                    }
                     if (profile == MissionProfile.Base) { prog.Add(new DeliverLeg("Base module")); break; }
-                    prog.Add(new SurfaceOpsLeg(type != null && type.IsScience ? 120 : 45)).Add(new AirlessAscentLeg(orbitAlt));
+                    prog.Add(new SurfaceOpsLeg(type != null && type.IsScience ? 120 : 45));
+                    if (type != null && type.SurfaceDays > 0.2) prog.Add(new ScienceSweepLeg(type.SurfaceDays * 21600.0));
+                    prog.Add(new AirlessAscentLeg(orbitAlt));
                     Homebound(prog, ctx, target, interplanetary, true, peLo, peHi);
                     break;
             }

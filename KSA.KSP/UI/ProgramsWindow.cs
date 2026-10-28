@@ -125,8 +125,25 @@ namespace KSA.KSP.UI
                 int firstNote = Math.Max(0, g.Notes.Count - NotesShown);
                 for (int n = firstNote; n < g.Notes.Count; n++) Line(items, "<i>" + g.Notes[n] + "</i>", textWidth);
 
+                // Supply and crew aboard (KSA-61).
+                bool inFlight = _agency.ResupplyInFlight(g.Id);
+                if (g.Status != ProgramStatus.Cancelled)
+                {
+                    string supply = _agency.SupplyStatus(g);
+                    string colour = supply.StartsWith("OVERDUE", StringComparison.Ordinal) ? "#ff8080"
+                        : supply.StartsWith("supplies running low", StringComparison.Ordinal) ? "#ffd27f"
+                        : supply.StartsWith("supplied", StringComparison.Ordinal) ? "#8be28b" : "#aaaaaa";
+                    Line(items, "Supplies: <color=" + colour + ">" + supply + "</color>" + (inFlight ? "  |  <color=#8be28b>resupply in flight</color>" : "")
+                        + "  |  Crew aboard: " + Names(g.CrewAboard), textWidth);
+                }
+
                 var buttons = new List<DialogGUIBase>();
                 buttons.Add(new DialogGUISpace(16f));
+                if (!inFlight && IsResupplyTarget(g.Id))
+                {
+                    buttons.Add(new DialogGUIButton("Send resupply", () => OnResupply(id, null), 130f, ButtonHeight, false));
+                    buttons.Add(new DialogGUIButton("Resupply (Watch Live)", () => OnResupply(id, MissionMode.WatchLive), 170f, ButtonHeight, false));
+                }
                 if (g.Status == ProgramStatus.Stalled)
                     buttons.Add(new DialogGUIButton("Resume", () => OnResume(id), 110f, ButtonHeight, false));
                 if (g.Status == ProgramStatus.Active || g.Status == ProgramStatus.Stalled)
@@ -217,6 +234,33 @@ namespace KSA.KSP.UI
             string message;
             bool ok = _agency.CancelProgram(programId, out message);
             Report(ok, message);
+        }
+
+        private bool IsResupplyTarget(string programId)
+        {
+            foreach (Program g in _agency.ResupplyTargets())
+                if (string.Equals(g.Id, programId, StringComparison.OrdinalIgnoreCase)) return true;
+            return false;
+        }
+
+        /// <summary>Auto-staffed resupply; null mode = the agency default for the resupply mission type.</summary>
+        private void OnResupply(string programId, MissionMode? mode)
+        {
+            string message;
+            Project p = _agency.CreateResupply(programId, null, mode, out message);
+            Report(p != null, message);
+        }
+
+        private string Names(List<string> ids)
+        {
+            if (ids == null || ids.Count == 0) return "none";
+            var names = new List<string>();
+            foreach (string id in ids)
+            {
+                KSA.Core.Personnel.CrewProfile c = _agency.Crew.Get(id);
+                names.Add(c != null ? c.Name : id);
+            }
+            return string.Join(", ", names.ToArray());
         }
 
         private void OnSelectType(string typeId)

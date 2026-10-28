@@ -72,9 +72,8 @@ namespace KSA.Core
         {
             if (type == null) return "Unknown mission.";
             bool anyTemplate = false, anyBuildable = false;
-            foreach (Template t in Catalogs.Templates.Templates)
+            foreach (Template t in TemplatesFor(type))
             {
-                if (!t.Flies(type.Id) || !t.IsAvailable(InstalledMods)) continue;
                 anyTemplate = true;
                 if (TemplateBlocker(t) == null) { anyBuildable = true; break; }
             }

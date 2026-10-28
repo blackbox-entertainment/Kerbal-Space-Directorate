@@ -197,6 +197,7 @@ namespace KSA.Core
             State.Prestige = r.PrestigeAfter;
             if (r.PrestigeAfter > r.PrestigeBefore && PrestigeGainFactor() > 1) { double extra = (r.PrestigeAfter - r.PrestigeBefore) * (PrestigeGainFactor() - 1); State.Prestige = Math.Min(100, State.Prestige + extra); r.PrestigeAfter = State.Prestige; }
             DepartmentYearNotes(notices);
+            SupplyYearNotes(notices);
             AwardLabScience(notices);
             int moraleBonus = YearEndMoraleBonus();
             if (moraleBonus > 0) foreach (CrewProfile p in Crew.Active) p.Morale = Math.Min(100, p.Morale + moraleBonus);

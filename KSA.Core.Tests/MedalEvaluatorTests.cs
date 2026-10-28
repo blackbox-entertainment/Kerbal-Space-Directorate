@@ -33,7 +33,7 @@ namespace KSA.Core.Tests
             var warnings = new List<string>();
             MedalCatalog c = ShippedConfigs.Medals(warnings);
             Assert.That(warnings, Is.Empty);
-            Assert.That(c.Count, Is.EqualTo(7));
+            Assert.That(c.Count, Is.EqualTo(13));
             Assert.That(c.Get("ChiefsCommendation").Trigger, Is.EqualTo(MedalTrigger.Manual));
             Assert.That(c.Get("ChiefsCommendation").PerYearLimit, Is.EqualTo(2));
             Assert.That(c.Get("MemorialStar").Posthumous, Is.True);

@@ -39,6 +39,12 @@ namespace KSA.Core.Missions
         public string Purpose { get; set; }
         /// <summary>Science missions: the points a textbook flight returns before crew and department multipliers.</summary>
         public double ScienceYield { get; set; }
+        /// <summary>Custom and landing missions: orbits to complete around the target (0 = the profile default).</summary>
+        public int Orbits { get; set; }
+        /// <summary>Days to spend on the surface (0 = the profile default).</summary>
+        public double SurfaceDays { get; set; }
+        /// <summary>Director-defined mission (KSA-59): saved with the game rather than read from missions.cfg.</summary>
+        public bool IsCustom { get; set; }
         public bool IsScience { get { return string.Equals(Purpose, "Science", StringComparison.OrdinalIgnoreCase); } }
 
         public MissionType()
@@ -115,7 +121,9 @@ namespace KSA.Core.Missions
                     IsFirst = node.GetBool("first", false),
                     ModuleRole = node.GetValue("moduleRole", string.Empty),
                     Purpose = node.GetValue("purpose", string.Empty),
-                    ScienceYield = node.GetDouble("scienceYield", 0)
+                    ScienceYield = node.GetDouble("scienceYield", 0),
+                    Orbits = node.GetInt("orbits", 0),
+                    SurfaceDays = node.GetDouble("surfaceDays", 0)
                 };
                 t.Achievements.AddRange(node.GetList("achievements"));
                 catalog.Add(t);

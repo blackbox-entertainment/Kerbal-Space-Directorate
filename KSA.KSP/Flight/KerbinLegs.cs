@@ -138,7 +138,10 @@ namespace KSA.KSP.Flight
     {
         private readonly double _seconds;
         private double _until;
+        private readonly int _orbits;
         public HoldOrbitLeg(double seconds) { _seconds = seconds; }
+        /// <summary>Hold for a whole number of orbits (the period is read when the leg begins).</summary>
+        public HoldOrbitLeg(int orbits) { _orbits = Math.Max(1, orbits); }
         public string Name { get { return "On orbit"; } }
         public string Status { get; private set; }
         public LegState State { get; private set; }
@@ -146,7 +149,9 @@ namespace KSA.KSP.Flight
         public void Begin(FlightContext ctx)
         {
             State = LegState.Running;
-            _until = ctx.Now + _seconds;
+            double seconds = _seconds;
+            if (_orbits > 0 && ctx.Vessel != null && ctx.Vessel.orbit != null && ctx.Vessel.orbit.period > 0 && !double.IsInfinity(ctx.Vessel.orbit.period)) { seconds = ctx.Vessel.orbit.period * _orbits; ctx.Say("Holding for " + _orbits + " orbit" + (_orbits == 1 ? "" : "s") + " (" + Math.Round(seconds / 60) + " min)."); }
+            _until = ctx.Now + seconds;
             ctx.Control.Throttle = 0;
             ctx.Control.Sas(VesselAutopilot.AutopilotMode.Prograde, false);
         }

@@ -37,9 +37,12 @@ namespace KSA.Core.Goals
         public bool Repeatable { get; set; }
         /// <summary>Carries over to the next year if not met, instead of being marked missed.</summary>
         public bool MultiYear { get; set; }
+        /// <summary>Campaign order: only issued once the agency holds this achievement pattern (e.g. a landing goal needs Orbit:Mun).</summary>
+        public string Requires { get; set; }
 
         public GoalDefinition()
         {
+            Requires = string.Empty;
             Id = string.Empty;
             Name = string.Empty;
             Description = string.Empty;
@@ -112,6 +115,7 @@ namespace KSA.Core.Goals
                     Tier = tier,
                     Condition = condition,
                     Pattern = node.GetValue("pattern", string.Empty),
+                    Requires = node.GetValue("requires", string.Empty),
                     Threshold = node.GetInt("threshold", 1),
                     Weight = Math.Max(1, node.GetInt("weight", 1)),
                     Repeatable = node.GetBool("repeatable", condition != GoalConditionType.Achievement),

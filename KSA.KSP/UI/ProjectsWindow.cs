@@ -38,6 +38,12 @@ namespace KSA.KSP.UI
         private readonly List<string> _selectedEngineers = new List<string>();
         private MissionMode _mode = MissionMode.Simulate;
 
+        // Custom mission builder (KSA-59): collapsed behind a toggle; the spec survives Refresh() like the selection above.
+        private bool _customOpen;
+        private readonly CustomMissionSpec _custom = new CustomMissionSpec();
+        private const int MaxNameLength = 60;
+        private static readonly MissionProfile[] CustomProfiles = { MissionProfile.Suborbital, MissionProfile.Orbit, MissionProfile.Flyby, MissionProfile.OrbitBody, MissionProfile.Land };
+
         // One Design Review child window at a time, same pattern as the Director's Office.
         private DesignReviewWindow _designReview;
 
@@ -181,9 +187,13 @@ namespace KSA.KSP.UI
                 bool isSel = selected != null && string.Equals(selected.Id, tid, StringComparison.OrdinalIgnoreCase);
                 bool locked = _agency.MissionBlocker(t) != null;
                 int done = _agency.MissionsCompleted(t.Id);
-                string text = locked ? "<color=#888888>" + t.Name + " (research)</color>" : done > 0 ? "<color=#8be28b>" + t.Name + " (done" + (done > 1 ? " x" + done : "") + ")</color>" : t.Name;
+                string name = t.IsCustom ? t.Name + " (custom)" : t.Name;
+                string text = locked ? "<color=#888888>" + name + " (research)</color>" : done > 0 ? "<color=#8be28b>" + name + " (done" + (done > 1 ? " x" + done : "") + ")</color>" : name;
                 return new DialogGUIButton((isSel ? "> " : "") + text, () => OnSelectType(tid), 170f, ButtonHeight, false);
             });
+
+            BuildCustomMissionSection(items, textWidth);
+
             if (selected == null)
             {
                 Line(items, "Choose a mission type.", textWidth);
@@ -197,7 +207,7 @@ namespace KSA.KSP.UI
                 + (selected.IsFirst ? "  |  a First" : ""), textWidth);
 
             // Templates.
-            List<Template> templates = _agency.Catalogs.Templates.For(selected.Id, _agency.InstalledMods);
+            List<Template> templates = _agency.TemplatesFor(selected);
             Template selectedTemplate = null;
             foreach (Template t in templates)
                 if (string.Equals(t.Id, _selectedTemplateId, StringComparison.OrdinalIgnoreCase)) { selectedTemplate = t; break; }
@@ -263,6 +273,183 @@ namespace KSA.KSP.UI
                 new DialogGUISpace(16f),
                 new DialogGUIButton("Start project (" + Agency.Money(cost) + ")", OnStartProject, 240f, 30f, false),
                 new DialogGUILabel(_agency.Ledger.Balance < cost ? "<color=#ffd27f>Not enough funds.</color>" : "Charged to the budget on start.", textWidth - 270f, LineHeight)));
+        }
+
+        // --- Custom mission builder (KSA-59) ---
+
+        private void BuildCustomMissionSection(List<DialogGUIBase> items, float textWidth)
+        {
+            items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 4, 0), TextAnchor.MiddleLeft,
+                new DialogGUISpace(16f),
+                new DialogGUIButton(_customOpen ? "Hide mission builder" : "Define your own mission", OnToggleCustom, 200f, ButtonHeight, false),
+                new DialogGUILabel(_customOpen ? "" : "Pick a body and a profile; the agency prices it.", textWidth - 230f, LineHeight)));
+            if (!_customOpen) return;
+
+            Line(items, "<b>Custom mission</b>", textWidth);
+
+            // Body.
+            Line(items, "Body:", textWidth);
+            string[] bodies = Agency.CustomBodies;
+            ButtonRows(items, bodies.Length, textWidth, 100f, i =>
+            {
+                string body = bodies[i];
+                bool isSel = string.Equals(body, _custom.Body, StringComparison.OrdinalIgnoreCase);
+                return new DialogGUIButton((isSel ? "> " : "") + body, () => OnCustomBody(body), 100f, ButtonHeight, false);
+            });
+
+            // Profile: ones the body cannot take are greyed and inert.
+            Line(items, "Profile:", textWidth);
+            ButtonRows(items, CustomProfiles.Length, textWidth, 130f, i =>
+            {
+                MissionProfile profile = CustomProfiles[i];
+                bool isSel = _custom.Profile == profile;
+                bool allowed = ProfileAllowed(profile);
+                string label = allowed ? ProfileText(profile) : "<color=#888888>" + ProfileText(profile) + "</color>";
+                var b = new DialogGUIButton((isSel ? "> " : "") + label, () => OnCustomProfile(profile), 130f, ButtonHeight, false);
+                if (!allowed) b.OptionInteractableCondition = () => false;
+                return b;
+            });
+
+            // Numbers.
+            var numbers = new List<DialogGUIBase>();
+            numbers.Add(new DialogGUISpace(16f));
+            if (_custom.Profile == MissionProfile.Orbit || _custom.Profile == MissionProfile.OrbitBody)
+            {
+                numbers.Add(new DialogGUILabel("Orbits: " + _custom.Orbits, 80f, LineHeight));
+                numbers.Add(new DialogGUIButton("-", () => OnCustomOrbits(-1), 30f, ButtonHeight, false));
+                numbers.Add(new DialogGUIButton("+", () => OnCustomOrbits(1), 30f, ButtonHeight, false));
+                numbers.Add(new DialogGUISpace(12f));
+            }
+            if (_custom.Profile == MissionProfile.Land)
+            {
+                numbers.Add(new DialogGUILabel("Days on surface: " + _custom.SurfaceDays.ToString("0.#"), 140f, LineHeight));
+                numbers.Add(new DialogGUIButton("-", () => OnCustomSurfaceDays(-1), 30f, ButtonHeight, false));
+                numbers.Add(new DialogGUIButton("+", () => OnCustomSurfaceDays(1), 30f, ButtonHeight, false));
+                numbers.Add(new DialogGUISpace(12f));
+            }
+            numbers.Add(new DialogGUILabel("Crew: " + _custom.CrewSize, 70f, LineHeight));
+            numbers.Add(new DialogGUIButton("-", () => OnCustomCrew(-1), 30f, ButtonHeight, false));
+            numbers.Add(new DialogGUIButton("+", () => OnCustomCrew(1), 30f, ButtonHeight, false));
+            numbers.Add(new DialogGUISpace(12f));
+            numbers.Add(new DialogGUIButton((_custom.Science ? "[x] " : "[ ] ") + "Run experiments", OnCustomScience, 160f, ButtonHeight, false));
+            items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 4, 0), TextAnchor.MiddleLeft, numbers.ToArray()));
+
+            // Name.
+            items.Add(NameInput(textWidth));
+
+            // Live preview.
+            string problem = _agency.ValidateCustom(_custom);
+            if (problem != null)
+            {
+                Line(items, "<color=#ffd27f>" + problem + "</color>", textWidth);
+            }
+            else
+            {
+                MissionType preview = _agency.PreviewCustom(_custom);
+                var earns = new List<string>();
+                foreach (string a in preview.Achievements) if (a != "Recover:-" && a != "Flight:Kerbin") earns.Add(a);
+                Line(items, "~ " + Agency.Money(preview.BaseCost) + ", " + preview.DurationDays + " day" + (preview.DurationDays == 1 ? "" : "s") + " in flight, difficulty " + Percent(preview.Difficulty)
+                    + ", min stars " + preview.MinStars + (preview.IsScience ? ", ~" + preview.ScienceYield.ToString("0") + " science" : "")
+                    + (earns.Count > 0 ? ", earns " + string.Join(", ", earns.ToArray()) : ""), textWidth);
+                string blocked = _agency.MissionBlocker(preview);
+                if (blocked != null) Line(items, "<color=#ffd27f>" + preview.Name + " " + blocked + ".</color>", textWidth);
+            }
+
+            items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 4, 0), TextAnchor.MiddleLeft,
+                new DialogGUISpace(16f),
+                new DialogGUIButton("Define mission", OnDefineCustom, 160f, 30f, false),
+                new DialogGUILabel("Adds it to the mission list and selects it; then pick a design and crew as usual.", textWidth - 190f, LineHeight)));
+        }
+
+        private DialogGUIHorizontalLayout NameInput(float textWidth)
+        {
+            var input = new DialogGUITextInput(_custom.Name ?? string.Empty, false, MaxNameLength, v => { _custom.Name = (v ?? string.Empty).Trim(); return _custom.Name; }, LineHeight + 4f);
+            input.size = new Vector2(textWidth - LabelWidth - 180f, LineHeight + 4f);
+            return new DialogGUIHorizontalLayout(false, false, 4f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                new DialogGUISpace(16f),
+                new DialogGUILabel("<b>Name</b>", LabelWidth - 16f, LineHeight),
+                input,
+                new DialogGUILabel(_custom.Name.Length > 0 ? "" : "blank = \"" + Agency.DefaultName(_custom) + "\"", 170f, LineHeight));
+        }
+
+        private bool ProfileAllowed(MissionProfile profile)
+        {
+            var probe = new CustomMissionSpec { Name = _custom.Name, Body = _custom.Body, Profile = profile, Orbits = _custom.Orbits, SurfaceDays = _custom.SurfaceDays, CrewSize = _custom.CrewSize, Science = _custom.Science };
+            return _agency.ValidateCustom(probe) == null;
+        }
+
+        private static string ProfileText(MissionProfile p)
+        {
+            switch (p)
+            {
+                case MissionProfile.Suborbital: return "Suborbital";
+                case MissionProfile.Orbit: return "Orbit";
+                case MissionProfile.Flyby: return "Flyby";
+                case MissionProfile.OrbitBody: return "Orbit the body";
+                case MissionProfile.Land: return "Land";
+                default: return p.ToString();
+            }
+        }
+
+        private void OnToggleCustom()
+        {
+            _customOpen = !_customOpen;
+            Refresh();
+        }
+
+        private void OnCustomBody(string body)
+        {
+            _custom.Body = body;
+            // Keep a legal profile for the new body: Kerbin takes Suborbital/Orbit, every other world Flyby/OrbitBody/Land.
+            if (!ProfileAllowed(_custom.Profile))
+                foreach (MissionProfile p in CustomProfiles) if (ProfileAllowed(p)) { _custom.Profile = p; break; }
+            Refresh();
+        }
+
+        private void OnCustomProfile(MissionProfile profile)
+        {
+            _custom.Profile = profile;
+            Refresh();
+        }
+
+        private void OnCustomOrbits(int delta)
+        {
+            _custom.Orbits = Math.Max(1, Math.Min(50, _custom.Orbits + delta));
+            Refresh();
+        }
+
+        private void OnCustomSurfaceDays(int delta)
+        {
+            _custom.SurfaceDays = Math.Max(1, Math.Min(400, Math.Round(_custom.SurfaceDays) + delta));
+            Refresh();
+        }
+
+        private void OnCustomCrew(int delta)
+        {
+            _custom.CrewSize = Math.Max(1, Math.Min(6, _custom.CrewSize + delta));
+            Refresh();
+        }
+
+        private void OnCustomScience()
+        {
+            _custom.Science = !_custom.Science;
+            Refresh();
+        }
+
+        private void OnDefineCustom()
+        {
+            string message;
+            MissionType t = _agency.DefineCustomMission(_custom, out message);
+            if (t != null)
+            {
+                _selectedTypeId = t.Id;
+                _selectedTemplateId = string.Empty;
+                _selectedCrew.Clear();
+                _mode = _agency.DefaultModeFor(t);
+                _customOpen = false;
+                _custom.Name = string.Empty;
+            }
+            Report(t != null, message);
         }
 
         // --- Finished projects ---

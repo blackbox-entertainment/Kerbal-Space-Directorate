@@ -24,8 +24,12 @@ namespace KSA.Core.Projects
         public ProgramKind Kind { get; set; }
         public List<string> Bodies { get; } = new List<string>();
         public List<ModuleRecipe> Modules { get; } = new List<ModuleRecipe>();
+        /// <summary>Days a finished program goes between resupplies before the crew aboard start to suffer (0 = never needs supply).</summary>
+        public int SupplyIntervalDays { get; set; }
+        /// <summary>Mission type id of a resupply flight to this program (empty = cannot be resupplied).</summary>
+        public string ResupplyMissionType { get; set; }
 
-        public ProgramType() { Id = string.Empty; Name = string.Empty; Description = string.Empty; }
+        public ProgramType() { Id = string.Empty; Name = string.Empty; Description = string.Empty; ResupplyMissionType = string.Empty; }
 
         public override string ToString() { return Name + " (" + Id + ")"; }
     }
@@ -63,7 +67,7 @@ namespace KSA.Core.Projects
                 {
                     if (warnings != null) warnings.Add("Program type " + id + ": unknown kind"); continue;
                 }
-                var t = new ProgramType { Id = id, Name = node.GetValue("name", id), Description = node.GetValue("description", string.Empty), Kind = kind };
+                var t = new ProgramType { Id = id, Name = node.GetValue("name", id), Description = node.GetValue("description", string.Empty), Kind = kind, SupplyIntervalDays = node.GetInt("supplyIntervalDays", 0), ResupplyMissionType = node.GetValue("resupplyMissionType", string.Empty) };
                 t.Bodies.AddRange(node.GetList("bodies"));
                 foreach (DataNode m in node.GetChildren(ModuleNodeName))
                 {
@@ -98,11 +102,15 @@ namespace KSA.Core.Projects
         public double SiteSlope { get; set; }
         /// <summary>Host vessel id of the station core (or first base module) once flown live; empty when the program was simulated.</summary>
         public string VesselId { get; set; }
+        /// <summary>Last day a resupply arrived (or the program completed). -1 = never.</summary>
+        public int LastSuppliedDay { get; set; }
+        /// <summary>Crew ids living aboard (delivered module crews, rotated by resupplies).</summary>
+        public List<string> CrewAboard { get; } = new List<string>();
         public List<string> Notes { get; } = new List<string>();
 
         public Program()
         {
-            Id = string.Empty; Name = string.Empty; ProgramTypeId = string.Empty; Body = string.Empty; ProgramManager = string.Empty; Site = string.Empty; VesselId = string.Empty;
+            Id = string.Empty; Name = string.Empty; ProgramTypeId = string.Empty; Body = string.Empty; ProgramManager = string.Empty; Site = string.Empty; VesselId = string.Empty; LastSuppliedDay = -1;
         }
 
         public override string ToString() { return Name + " [" + Status + "]"; }
