@@ -54,6 +54,8 @@ namespace KSA.Core
         public bool StockContracts { get; set; } = false;
         /// <summary>Keep the stock Astronaut Complex applicant list (default false: KSA Recruiting is the hiring path).</summary>
         public bool StockHiring { get; set; } = false;
+        /// <summary>Watch Live projects roll out to the pad by themselves this many seconds after they are Ready (0 = wait for the Director).</summary>
+        public int AutoRolloutSeconds { get; set; } = 20;
         /// <summary>Research lab: Science per year per lab scientist = base + perStar x stars (RESEARCH block).</summary>
         public double LabScienceBase { get; set; } = 2;
         public double LabSciencePerStar { get; set; } = 4;
@@ -90,6 +92,7 @@ namespace KSA.Core
             s.Departments = DepartmentRules.Parse(node.GetChild(DepartmentRules.NodeName));
             s.StockContracts = node.GetBool("stockContracts", s.StockContracts);
             s.StockHiring = node.GetBool("stockHiring", s.StockHiring);
+            s.AutoRolloutSeconds = node.GetInt("autoRolloutSeconds", s.AutoRolloutSeconds);
             DataNode research = node.GetChild("RESEARCH");
             if (research != null)
             {

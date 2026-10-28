@@ -123,6 +123,7 @@ namespace KSA.KSP
         {
             if (Agency == null) return;
             StockSystems.Enforce(Agency.Settings);
+            AutoRollout();
             if (Agency.Ledger.Mirror != null && Agency.Ledger.Mirror.IsActive && Agency.State.Started) Agency.Ledger.SyncFromMirror();
             List<string> notices = Agency.Tick();
             if (notices.Count == 0) return;
@@ -151,6 +152,38 @@ namespace KSA.KSP
             a.BuildRequested += OnBuildRequested;
             Ai.LocalServerLauncher.EnsureRunning(a.Ai);
             Log.Info("AI engineering " + (a.AiDesignAvailable ? "available (" + a.Ai.DesignMode + ")" : "off") + "; " + models.Count + " curated models");
+        }
+
+        // ------------------------------------------------------------------ automatic roll-out (Watch Live)
+
+        /// <summary>Set while Mission Control is open: the Director is looking, so nothing rolls out on its own.</summary>
+        public static bool RolloutHold;
+        private static readonly Dictionary<string, double> ReadySince = new Dictionary<string, double>();
+
+        /// <summary>A Ready Watch-Live project rolls to the pad after a short countdown unless Mission Control is open or the setting is 0.</summary>
+        private static void AutoRollout()
+        {
+            if (Agency == null || HighLogic.LoadedScene != GameScenes.SPACECENTER) return;
+            int wait = Agency.Settings.AutoRolloutSeconds;
+            if (wait <= 0) return;
+            double now = UnityEngine.Time.realtimeSinceStartup;
+            foreach (Project p in Agency.Projects)
+            {
+                if (p.Status != ProjectStatus.Ready || p.Mode != MissionMode.WatchLive || Agency.LiveBlocker(p) != null) { ReadySince.Remove(p.Id); continue; }
+                double since;
+                if (!ReadySince.TryGetValue(p.Id, out since))
+                {
+                    ReadySince[p.Id] = now;
+                    ScreenMessages.PostScreenMessage("[KSA] " + p.Name + " is ready: rolling out to the pad in " + wait + " s (open Mission Control to hold)", 8f, ScreenMessageStyle.UPPER_CENTER);
+                    continue;
+                }
+                if (RolloutHold) { ReadySince[p.Id] = now; continue; }
+                if (now - since < wait) continue;
+                ReadySince.Remove(p.Id);
+                string msg;
+                if (Agency.LaunchLive(p.Id, out msg)) Log.Info("Auto roll-out: " + msg); else Log.Warn("Auto roll-out failed: " + msg);
+                return; // one launch at a time: the scene changes now
+            }
         }
 
         /// <summary>Re-reads ksa_settings.cfg after the AI Setup window saves it.</summary>

@@ -46,12 +46,14 @@ namespace KSA.KSP.UI
         public void Open()
         {
             if (_dialog != null) return;
+            KsaCore.RolloutHold = true;
             Spawn();
         }
 
         public void Close()
         {
             if (_dialog == null) return;
+            KsaCore.RolloutHold = false;
             PopupDialog d = _dialog;
             _dialog = null;
             d.Dismiss();
@@ -234,6 +236,7 @@ namespace KSA.KSP.UI
 
         private void OnCloseClicked()
         {
+            KsaCore.RolloutHold = false;
             _dialog = null;
             if (_onClosed != null) _onClosed();
         }
