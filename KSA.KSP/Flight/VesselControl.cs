@@ -125,11 +125,29 @@ namespace KSA.KSP.Flight
                 if (e.flameout) anyFlamedOut = true;
                 if (e.finalThrust > 0.1f) anyThrust = true;
             }
-            if (!anyActive || anyFlamedOut || !anyThrust)
+            // Stage on burnout, or when lit engines give nothing; never to fire a stage that holds only parachutes.
+            if (anyActive && (anyFlamedOut || !anyThrust) && NextStageIsWorthFiring())
             {
                 Stage();
                 line = "Staging (" + (anyFlamedOut ? "burnout" : "no thrust") + "), stage " + _v.currentStage + ".";
             }
+        }
+
+        /// <summary>True when the next stage carries an engine or a decoupler (so staging gets us somewhere), false for chute-only stages.</summary>
+        public bool NextStageIsWorthFiring()
+        {
+            if (_v == null || _v.currentStage <= 0) return false;
+            int next = _v.currentStage - 1;
+            bool anyPart = false;
+            foreach (Part p in _v.parts)
+            {
+                if (p.inverseStage != next) continue;
+                anyPart = true;
+                if (p.FindModuleImplementing<ModuleEngines>() != null) return true;
+                if (p.FindModuleImplementing<ModuleDecouple>() != null || p.FindModuleImplementing<ModuleAnchoredDecoupler>() != null) return true;
+                if (p.FindModuleImplementing<LaunchClamp>() != null) return true;
+            }
+            return !anyPart; // an empty stage is harmless to pop
         }
 
         /// <summary>True when nothing is burning and staging will not help (or has just been tried).</summary>
@@ -149,6 +167,7 @@ namespace KSA.KSP.Flight
             foreach (ModuleEngines e in _v.FindPartModulesImplementing<ModuleEngines>())
                 if (e.EngineIgnited && !e.flameout) return true;
             if (_v.currentStage <= 0 || Now - _lastStage < 2) return false;
+            if (!NextStageIsWorthFiring()) return false;
             Stage();
             line = "Engine start, stage " + _v.currentStage + ".";
             return false;

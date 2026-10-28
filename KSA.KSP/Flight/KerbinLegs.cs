@@ -33,9 +33,12 @@ namespace KSA.KSP.Flight
             Status = "Pre-launch checks.";
             State = LegState.Running;
             Vessel v = ctx.Vessel;
-            switch (v.situation)
+            // A craft just placed on the pad can read as FLYING or LANDED for a moment: on the ground and still means launch.
+            bool onGround = v.situation == Vessel.Situations.PRELAUNCH || v.situation == Vessel.Situations.LANDED
+                            || (v.srfSpeed < 1.0 && (v.heightFromTerrain >= 0 ? v.heightFromTerrain : v.altitude - v.terrainAltitude) < 60);
+            if (onGround) _phase = Phases.Prelaunch;
+            else switch (v.situation)
             {
-                case Vessel.Situations.PRELAUNCH: case Vessel.Situations.LANDED: _phase = Phases.Prelaunch; break;
                 case Vessel.Situations.ORBITING: State = LegState.Done; return;
                 case Vessel.Situations.SUB_ORBITAL: _phase = v.orbit.ApA > _targetAp * 0.9 ? Phases.Coast : Phases.Ascent; break;
                 default: _phase = Phases.Ascent; break;
@@ -57,10 +60,10 @@ namespace KSA.KSP.Flight
                 case Phases.Prelaunch:
                     c.Sas(VesselAutopilot.AutopilotMode.StabilityAssist, true);
                     c.Throttle = 1f;
-                    c.Stage();
-                    _phase = Phases.Climb; _phaseStart = ctx.Now;
-                    Status = "Climbing.";
-                    line = "Ignition. Full throttle.";
+                    // Stage until an engine is lit, one stage per second, never past the engines; then climb.
+                    if (ctx.Now - _phaseStart < 1.0) { Status = "Ignition sequence."; break; }
+                    if (c.EnsureEngine(ref line)) { _phase = Phases.Climb; _phaseStart = ctx.Now; Status = "Climbing."; line = "Ignition. Full throttle."; }
+                    else if (!c.HasStagesLeft) { Status = "No engine to light."; line = "No engine found in any stage; launch scrubbed."; State = LegState.Failed; }
                     break;
                 case Phases.Climb:
                     c.AutoStage(ref line);
