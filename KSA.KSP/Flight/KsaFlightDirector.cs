@@ -154,7 +154,11 @@ namespace KSA.KSP.Flight
             if (Live == null || Live.VesselId != v.persistentId || project == null) return;
             _vessel = v;
             BuildProgram(agency, project, pending == null);
-            if (Live.AutopilotOn && _program != null) _program.Engage();
+            bool onPad = v.situation == Vessel.Situations.PRELAUNCH || (v.srfSpeed < 1.0 && v.altitude - v.terrainAltitude < 60 && v.mainBody == FlightGlobals.GetHomeBody());
+            _holdForLaunch = onPad && agency.Settings.LaunchOnCommand && pending != null;
+            _padStage = v.currentStage;
+            if (_holdForLaunch) { _status = "Holding on the pad. Press Launch (or the staging key) when you are ready."; Log("On the pad, holding for the Director's go.", null); }
+            else if (Live.AutopilotOn && _program != null) _program.Engage();
             GameEvents.onVesselSOIChanged.Add(OnSoiChanged);
             GameEvents.onVesselSituationChange.Add(OnSituationChange);
             GameEvents.onVesselWillDestroy.Add(OnVesselWillDestroy);
@@ -266,6 +270,12 @@ namespace KSA.KSP.Flight
         private void FixedUpdate()
         {
             if (Live == null || _vessel == null) return;
+            if (_holdForLaunch)
+            {
+                // The Director pressed the staging key: that is the go.
+                if (_vessel.currentStage < _padStage || _vessel.situation == Vessel.Situations.FLYING) GoForLaunch();
+                else return;
+            }
             Vessel active = FlightGlobals.ActiveVessel;
             bool ours = active == _vessel || (active != null && active.isEVA);
             if (!ours) return;
@@ -487,6 +497,18 @@ namespace KSA.KSP.Flight
             Log("Flight program restarted at " + _program.Phase + ".", null);
         }
 
+        private bool _holdForLaunch;
+        private int _padStage;
+
+        /// <summary>The Director gives the go: the crew takes over from here.</summary>
+        public void GoForLaunch()
+        {
+            if (!_holdForLaunch) return;
+            _holdForLaunch = false;
+            Log("Go for launch from the Director.", null);
+            if (Live != null && Live.AutopilotOn && _program != null) _program.Engage();
+        }
+
         private void OnGUI()
         {
             if (Live == null || _vessel == null || KsaCore.Agency == null) return;
@@ -498,7 +520,12 @@ namespace KSA.KSP.Flight
             Project p = KsaCore.Agency.GetProject(Live.ProjectId);
             GUILayout.Label(p != null ? p.Name : Live.ProjectId);
             string phase = Live.AutopilotOn && _program != null ? _program.Phase + " (" + (_program.Index + 1) + "/" + _program.Legs.Count + ")" : "Manual";
-            GUILayout.Label("Leg: " + phase);
+            if (_holdForLaunch)
+            {
+                GUILayout.Label("<b>Holding on the pad.</b> The crew is ready.");
+                if (GUILayout.Button("LAUNCH", GUILayout.Height(36f))) GoForLaunch();
+            }
+            else GUILayout.Label("Leg: " + phase);
             GUILayout.Label(_status);
             GUILayout.Label("Alt " + LiveFlightResolver.FormatKm(_vessel.altitude) + "   Ap " + LiveFlightResolver.FormatKm(_vessel.orbit != null ? _vessel.orbit.ApA : 0) + "   Pe " + LiveFlightResolver.FormatKm(_vessel.orbit != null ? _vessel.orbit.PeA : 0));
             GUILayout.Label("Speed " + Math.Round(_vessel.srfSpeed) + " m/s   Stage " + _vessel.currentStage + "   " + (_vessel.mainBody != null ? _vessel.mainBody.bodyName : "") + "   " + Stamp());
