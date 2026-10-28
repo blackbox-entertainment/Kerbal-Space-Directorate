@@ -160,10 +160,38 @@ namespace KSA.KSP
         public static bool RolloutHold;
         private static readonly Dictionary<string, double> ReadySince = new Dictionary<string, double>();
 
+        private static double _lastStrandCheck;
+
+        /// <summary>A live project whose vessel no longer exists anywhere (launch failed, craft deleted, reverted) goes back to the pad and frees its crew.</summary>
+        private static void ScrubStrandedFlights()
+        {
+            double now = UnityEngine.Time.realtimeSinceStartup;
+            if (now - _lastStrandCheck < 10) return;
+            _lastStrandCheck = now;
+            if (FlightGlobals.Vessels == null) return;
+            foreach (Project p in Agency.Projects)
+            {
+                if (p.Status != ProjectStatus.InFlight || p.Mode != MissionMode.WatchLive) continue;
+                bool found = false;
+                uint id;
+                if (uint.TryParse(p.VesselId, out id)) foreach (Vessel v in FlightGlobals.Vessels) if (v != null && v.persistentId == id) { found = true; break; }
+                if (found) continue;
+                if (Flight.KsaFlightDirector.Live != null && Flight.KsaFlightDirector.Live.ProjectId == p.Id) continue;
+                string msg;
+                if (Agency.ReturnToPad(p.Id, out msg))
+                {
+                    Log.Warn("Live project " + p.Name + " has no vessel in the game; " + msg);
+                    ScreenMessages.PostScreenMessage("[KSA] " + p.Name + ": no vessel found for this flight; back on the pad with its crew freed.", 8f, ScreenMessageStyle.UPPER_CENTER);
+                }
+                return;
+            }
+        }
+
         /// <summary>A Ready Watch-Live project rolls to the pad after a short countdown unless Mission Control is open or the setting is 0.</summary>
         private static void AutoRollout()
         {
             if (Agency == null || HighLogic.LoadedScene != GameScenes.SPACECENTER) return;
+            ScrubStrandedFlights();
             int wait = Agency.Settings.AutoRolloutSeconds;
             if (wait <= 0) return;
             double now = UnityEngine.Time.realtimeSinceStartup;
