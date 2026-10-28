@@ -208,6 +208,54 @@ namespace KSA.Core
             return true;
         }
 
+        /// <summary>
+        /// KSA-62: the Director built a rocket in the hangar, seated agency kerbals and launched it. A hangar project
+        /// is created on the spot (no design, build or budget) for the chosen mission type and the crew flies it, so
+        /// the flight earns records, medals and a post-mortem like any other. Returns the project, or null with a reason.
+        /// </summary>
+        public Project AdoptHangarLaunch(string missionTypeId, string vesselId, string vesselName, IList<string> crewNamesAboard, out string message)
+        {
+            MissionType type = Catalogs.Missions.Get(missionTypeId);
+            if (type == null) { message = "Unknown mission type."; return null; }
+            var aboard = new List<string>();
+            if (crewNamesAboard != null)
+                foreach (string n in crewNamesAboard)
+                {
+                    CrewProfile c = Crew.Get(n);
+                    if (c == null || c.Departed || c.Status == CrewStatus.Dead) continue;
+                    if (c.IsFlying || c.ProjectId.Length > 0) { message = c.Name + " is already assigned to another project."; return null; }
+                    aboard.Add(c.Id);
+                }
+            if (aboard.Count == 0) { message = "No agency kerbal is aboard."; return null; }
+            List<Template> able = TemplatesFor(type);
+            int day = CurrentDay;
+            string title = string.IsNullOrEmpty(vesselName) ? type.Name : vesselName.Trim();
+            var p = new Project
+            {
+                Id = "P" + NextProjectNumber++,
+                Name = "Hangar flight: " + title,
+                MissionTypeId = type.Id,
+                TemplateId = able.Count > 0 ? able[0].Id : string.Empty, // only used if the flight ever has to be simulated
+                Budget = 0,
+                Mode = MissionMode.WatchLive,
+                Status = ProjectStatus.Ready,
+                CreatedDay = day,
+                PhaseStartDay = day
+            };
+            p.Crew.AddRange(aboard);
+            foreach (string id in aboard) Crew.Get(id).ProjectId = p.Id;
+            p.Notes.Add("Built by the Director in the hangar (" + title + ") and flown as " + type.Name + ".");
+            Projects.Add(p);
+            var notices = new List<string>();
+            Launch(p, type, day, notices);
+            p.LaunchUT = Clock.UniversalTime;
+            p.VesselId = vesselId ?? string.Empty;
+            RaiseProjectChanged(p);
+            CrewProfile pilot = Crew.Get(aboard[0]);
+            message = (pilot != null ? pilot.Name : "The crew") + " has the vehicle: " + type.Name + ".";
+            return p;
+        }
+
         /// <summary>The host tells us which vessel flies the project (so recovery and crashes can be matched).</summary>
         public void BindVessel(string projectId, string vesselId)
         {

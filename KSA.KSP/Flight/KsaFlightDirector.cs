@@ -1,8 +1,9 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using KSA.Core;
 using KSA.Core.Flight;
 using KSA.Core.Missions;
+using KSA.Core.Personnel;
 using KSA.Core.Projects;
 using UnityEngine;
 
@@ -62,6 +63,12 @@ namespace KSA.KSP.Flight
         private int _adoptTries;
         private float _nextAdoptTry;
 
+        // KSA-62: a hangar-built rocket with agency kerbals aboard. The pad offer and the input watcher.
+        private bool _offering;
+        private Vessel _offerVessel;
+        private static readonly HashSet<uint> Declined = new HashSet<uint>();
+        private float _inputGraceUntil;
+
         private void Start()
         {
             Instance = this;
@@ -72,6 +79,7 @@ namespace KSA.KSP.Flight
 
         private void Update()
         {
+            if (Live != null && _vessel != null && _adopted && !_offering) WatchForDirectorInput();
             // The active vessel may not exist yet in Start right after a launch; keep trying until the flight is ready.
             if (_adopted) return;
             if (UnityEngine.Time.unscaledTime < _nextAdoptTry) return;
@@ -140,6 +148,13 @@ namespace KSA.KSP.Flight
                 if (p == null && nearPad) p = AdoptFromVab(agency, v);
                 if (p == null)
                 {
+                    // KSA-62: not a project craft, but agency kerbals are aboard: offer to let them fly it.
+                    if (nearPad && !Declined.Contains(v.persistentId) && HangarPilot(agency, v) != null)
+                    {
+                        _offering = true;
+                        _offerVessel = v;
+                        return;
+                    }
                     // Not ours yet: a craft placed on the pad settles for a second or two, so look again a few times.
                     if (nearPad && _adoptTries++ < 12) { _adopted = false; _nextAdoptTry = UnityEngine.Time.unscaledTime + 0.5f; }
                     return;
@@ -181,6 +196,124 @@ namespace KSA.KSP.Flight
             GameEvents.onVesselChange.Add(OnVesselChange);
             GameEvents.onCrewOnEva.Add(OnCrewOnEva);
             GameEvents.onPartCouple.Add(OnPartCouple);
+        }
+
+        // ------------------------------------------------------------------ KSA-62: hangar flights
+
+        /// <summary>First agency kerbal aboard who is free to fly, or null.</summary>
+        private static CrewProfile HangarPilot(Agency agency, Vessel v)
+        {
+            CrewProfile best = null;
+            foreach (ProtoCrewMember pcm in v.GetVesselCrew())
+            {
+                CrewProfile c = agency.Crew.Get(pcm.name);
+                if (c == null || c.Departed || c.Status == CrewStatus.Dead || c.IsFlying || c.ProjectId.Length > 0) continue;
+                if (best == null || (c.Role == CrewRole.Pilot && best.Role != CrewRole.Pilot) || (c.Role == best.Role && c.Stars > best.Stars)) best = c;
+            }
+            return best;
+        }
+
+        private static double VacuumDeltaV(Vessel v)
+        {
+            try { return v != null && v.VesselDeltaV != null ? v.VesselDeltaV.TotalDeltaVVac : 0; }
+            catch { return 0; }
+        }
+
+        /// <summary>The Director picked a mission for the hangar rocket: create the project and let the crew fly.</summary>
+        private void StartHangarFlight(string missionTypeId)
+        {
+            Agency agency = KsaCore.Agency;
+            Vessel v = _offerVessel;
+            if (agency == null || v == null) { _offering = false; return; }
+            var aboard = new List<string>();
+            foreach (ProtoCrewMember pcm in v.GetVesselCrew()) aboard.Add(pcm.name);
+            string msg;
+            Project p = agency.AdoptHangarLaunch(missionTypeId, v.persistentId.ToString(), v.vesselName, aboard, out msg);
+            if (p == null) { ScreenMessages.PostScreenMessage("[KSA] " + msg, 6f, ScreenMessageStyle.UPPER_CENTER); return; }
+            _offering = false;
+            MissionType t = agency.Catalogs.Missions.Get(p.MissionTypeId);
+            Live = new LiveFlightState
+            {
+                ProjectId = p.Id,
+                VesselId = v.persistentId,
+                LaunchUT = Planetarium.GetUniversalTime(),
+                TargetOrbit = agency.Settings.LiveOrbitAltitude,
+                BodyOrbit = agency.Settings.LiveTargetOrbitAltitude,
+                ReentryPe = agency.Settings.LiveReentryPeriapsis,
+                ManualAllowed = true, // the Director built it; touching the controls takes it back
+                TargetBody = t != null ? t.Body : "Kerbin"
+            };
+            _vessel = v;
+            BuildProgram(agency, p, false);
+            bool onPad = v.situation == Vessel.Situations.PRELAUNCH || (v.srfSpeed < 1.0 && v.altitude - v.terrainAltitude < 60 && v.mainBody == FlightGlobals.GetHomeBody());
+            _holdForLaunch = onPad;
+            _padStage = v.currentStage;
+            if (_holdForLaunch) { _status = "Holding on the pad. Press Launch (or the staging key) when you are ready."; Log("On the pad, holding for the Director's go.", null); }
+            else _program.Engage();
+            Log("Hangar flight: " + msg + " Touch the controls at any time to take over.", null);
+            ScreenMessages.PostScreenMessage("[KSA] " + msg, 6f, ScreenMessageStyle.UPPER_CENTER);
+            KsaCore.Log.Info("Flight director adopted hangar rocket " + v.vesselName + " as " + p.Name);
+            GameEvents.onVesselSOIChanged.Add(OnSoiChanged);
+            GameEvents.onVesselSituationChange.Add(OnSituationChange);
+            GameEvents.onVesselWillDestroy.Add(OnVesselWillDestroy);
+            GameEvents.onCrewKilled.Add(OnCrewKilled);
+            GameEvents.onVesselChange.Add(OnVesselChange);
+            GameEvents.onCrewOnEva.Add(OnCrewOnEva);
+            GameEvents.onPartCouple.Add(OnPartCouple);
+        }
+
+        private void DeclineHangarFlight()
+        {
+            if (_offerVessel != null) Declined.Add(_offerVessel.persistentId);
+            _offering = false;
+            _offerVessel = null;
+        }
+
+        private void DrawOffer(int id)
+        {
+            Agency agency = KsaCore.Agency;
+            Vessel v = _offerVessel;
+            CrewProfile pilot = agency != null && v != null ? HangarPilot(agency, v) : null;
+            if (pilot == null) { _offering = false; return; }
+            double dv = VacuumDeltaV(v);
+            bool orbitable = dv >= 3300;
+            GUILayout.Label("<b>" + pilot.Name + "</b> is aboard " + v.vesselName + ". What should the crew fly?");
+            GUILayout.Label("Vacuum delta-v " + Math.Round(dv) + " m/s. Suggested: " + (orbitable ? "orbit and return." : "suborbital hop."));
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button((orbitable ? "" : "> ") + "Suborbital hop", GUILayout.Height(30f))) StartHangarFlight("SuborbitalHop");
+            if (GUILayout.Button((orbitable ? "> " : "") + "Orbit and return", GUILayout.Height(30f))) StartHangarFlight("KerbinOrbit");
+            if (GUILayout.Button("Let me fly", GUILayout.Height(30f))) DeclineHangarFlight();
+            GUILayout.EndHorizontal();
+            GUILayout.Label("The crew flies until you touch the stick, throttle or staging; then it is logged as Director-flown.");
+            GUI.DragWindow();
+        }
+
+        /// <summary>Stick, throttle, translation or staging from the Director hands the vehicle over.</summary>
+        private void WatchForDirectorInput()
+        {
+            if (Live == null || !Live.AutopilotOn || !Live.ManualAllowed || _holdForLaunch) return;
+            if (UnityEngine.Time.unscaledTime < _inputGraceUntil) return;
+            if (!DirectorInput()) return;
+            TakeControl();
+            _status = "Director took the controls.";
+            Log("The Director took the controls.", null);
+            ScreenMessages.PostScreenMessage("[KSA] You have the vehicle. Hand back to crew from the Flight Director window.", 6f, ScreenMessageStyle.UPPER_CENTER);
+        }
+
+        private static bool DirectorInput()
+        {
+            if (GUIUtility.keyboardControl != 0) return false; // typing in a text field
+            if (InputLockManager.IsLocked(ControlTypes.ALL_SHIP_CONTROLS)) return false;
+            KeyBinding[] keys =
+            {
+                GameSettings.PITCH_UP, GameSettings.PITCH_DOWN, GameSettings.YAW_LEFT, GameSettings.YAW_RIGHT, GameSettings.ROLL_LEFT, GameSettings.ROLL_RIGHT,
+                GameSettings.THROTTLE_UP, GameSettings.THROTTLE_DOWN, GameSettings.THROTTLE_FULL, GameSettings.THROTTLE_CUTOFF, GameSettings.LAUNCH_STAGES,
+                GameSettings.TRANSLATE_UP, GameSettings.TRANSLATE_DOWN, GameSettings.TRANSLATE_LEFT, GameSettings.TRANSLATE_RIGHT, GameSettings.TRANSLATE_FWD, GameSettings.TRANSLATE_BACK
+            };
+            foreach (KeyBinding k in keys) if (k != null && k.GetKey()) return true;
+            AxisBinding[] axes = { GameSettings.AXIS_PITCH, GameSettings.AXIS_YAW, GameSettings.AXIS_ROLL, GameSettings.AXIS_THROTTLE_INC };
+            foreach (AxisBinding a in axes) if (a != null && Math.Abs(a.GetAxis()) > 0.25f) return true;
+            return false;
         }
 
         /// <summary>
@@ -556,12 +689,18 @@ namespace KSA.KSP.Flight
         {
             if (!_holdForLaunch) return;
             _holdForLaunch = false;
+            _inputGraceUntil = UnityEngine.Time.unscaledTime + 2f; // the staging key that gave the go is not a takeover
             Log("Go for launch from the Director.", null);
             if (Live != null && Live.AutopilotOn && _program != null) _program.Engage();
         }
 
         private void OnGUI()
         {
+            if (_offering && _offerVessel != null && KsaCore.Agency != null)
+            {
+                _hud = GUILayout.Window(GetInstanceID(), _hud, DrawOffer, "KSA Flight Director");
+                return;
+            }
             if (Live == null || _vessel == null || KsaCore.Agency == null) return;
             _hud = GUILayout.Window(GetInstanceID(), _hud, DrawHud, "KSA Flight Director");
         }

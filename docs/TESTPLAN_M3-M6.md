@@ -103,3 +103,13 @@ The flight director runs a list of legs (shown on the HUD as "Leg: name (n/total
 - Pass/fail per step, screenshots of the VAB craft (B4) and the HUD during a live flight (C2).
 - The `[KSA]` log lines for any failure.
 - Your call on three open points: (1) keep the courage/stupidity drift plan (KSA-50), (2) Jira project rename to "Kerbal Space Directorate" (KSA-15), (3) lock the supported mod set (KSA-16).
+
+## C3. M5: Hangar flights (added 2026-10-27, KSA-62)
+
+1. Build any rocket in the VAB (not a KSA project craft), seat a KSA kerbal, press Launch.
+2. On the pad the Flight Director window asks "What should the crew fly?" with Suborbital hop / Orbit and return / Let me fly, and shows the vacuum delta-v with a suggestion (orbit at 3,300 m/s or more).
+3. Pick a mission: a project "Hangar flight: <craft name>" appears in Projects as In flight, costs nothing, and the HUD holds on the pad with LAUNCH.
+4. Press LAUNCH (or the staging key): the crew flies. Do not touch the controls; the mission runs to recovery and the project completes with the usual records and post-mortem.
+5. Fly another one and tap W/A/S/D, the throttle, or the space bar after the go: the HUD says "Director took the controls", the kerbal stops flying, and "Hand back to crew" re-plans from where you left it. The record says Director-flown (reduced rank credit).
+6. "Let me fly" leaves the craft alone and does not ask again for that vessel.
+7. If the only kerbal aboard is already assigned to another project, no offer appears (log: no "adopted hangar rocket" line).
