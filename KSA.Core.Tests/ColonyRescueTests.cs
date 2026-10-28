@@ -73,6 +73,14 @@ namespace KSA.Core.Tests
             var clock = new FakeClock();
             Agency a = Staffed(clock);
             a.Settings.Colony.BirthChancePerPair = 1.0; // deterministic births
+            // Pilots rotate (2026-10-28), so failed simulated resupplies spread their risk over everyone: give the agency
+            // enough pilots for thirty resupplies, so this tests colony growth and not luck.
+            var roster = new List<CrewSnapshot>();
+            foreach (string n in new[] { "Jeb Kerman", "Val Kerman", "Ludo Kerman", "Mira Kerman", "Tobb Kerman", "Gene Kerman", "Wern Kerman", "Linus Kerman" }) roster.Add(Make.Snapshot(n, CrewRole.Pilot, 4));
+            roster.Add(Make.Snapshot("Bill Kerman", CrewRole.Engineer, 4));
+            roster.Add(Make.Snapshot("Bob Kerman", CrewRole.Scientist, 3));
+            for (int i = 1; i <= 16; i++) roster.Add(Make.Snapshot("Reserve" + i + " Kerman", CrewRole.Pilot, 4));
+            a.SyncRoster(roster);
             a.ModuleHardwareCheck = p =>
                 p.ModuleRole == "core" ? new ModuleHardware { Seats = 4, Drills = 1, Isru = 1 }
               : p.ModuleRole == "power" ? new ModuleHardware { Power = 2 }

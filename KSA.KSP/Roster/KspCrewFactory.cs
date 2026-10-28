@@ -7,7 +7,17 @@ namespace KSA.KSP.Roster
     public static class KspCrewFactory
     {
         /// <summary>Adds a hired applicant to the stock roster so every other system in the game sees them.</summary>
+        /// <summary>True while a hire is being added: roster syncs wait, so the half-added kerbal is not counted as gone.</summary>
+        public static bool Creating { get; private set; }
+
         public static ProtoCrewMember Create(Applicant applicant, CrewProfile profile)
+        {
+            Creating = true;
+            try { return CreateInner(applicant, profile); }
+            finally { Creating = false; }
+        }
+
+        private static ProtoCrewMember CreateInner(Applicant applicant, CrewProfile profile)
         {
             KerbalRoster roster = HighLogic.CurrentGame != null ? HighLogic.CurrentGame.CrewRoster : null;
             if (roster == null || applicant == null) return null;

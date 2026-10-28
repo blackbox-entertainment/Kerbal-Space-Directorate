@@ -131,7 +131,12 @@ namespace KSA.KSP.UI
                 // Dynamic label: re-evaluated every frame, so the countdown moves under time warp without reopening the window.
                 items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 4, 0), TextAnchor.MiddleLeft,
                     new DialogGUILabel("<b>" + p.Name + "</b>  (" + p.Id + ")", 260f, LineHeight),
-                    new DialogGUILabel(() => { int d = live.DaysRemaining(_agency.CurrentDay, duration); return typeName + "  |  " + StatusText(live.Status) + "  |  " + d + " day" + (d == 1 ? "" : "s") + " left"; }, textWidth - 266f, LineHeight)));
+                    new DialogGUILabel(() =>
+                    {
+                        if (_agency.WaitingForAiDesign(live)) return typeName + "  |  " + StatusText(live.Status) + "  |  <color=#ffd27f>waiting for the AI design</color>";
+                        int d = live.DaysRemaining(_agency.CurrentDay, duration);
+                        return typeName + "  |  " + StatusText(live.Status) + "  |  " + d + " day" + (d == 1 ? "" : "s") + " left";
+                    }, textWidth - 266f, LineHeight)));
                 Line(items, "Mode " + ModeText(p.Mode) + "  |  budget " + Agency.Money(p.Budget) + "  |  design " + _agency.Catalogs.Templates.NameOf(p.TemplateId), textWidth);
                 Line(items, "Crew: " + Names(p.Crew) + "  |  lead engineer: " + NameOf(p.LeadEngineer), textWidth);
                 Line(items, DesignLine(p), textWidth);

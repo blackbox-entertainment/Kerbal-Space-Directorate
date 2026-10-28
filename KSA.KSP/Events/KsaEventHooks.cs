@@ -19,7 +19,8 @@ namespace KSA.KSP.Events
         private void Update()
         {
             if (KsaCore.Agency == null || !HighLogic.LoadedSceneIsGame) return;
-            Parts.KspLifeSupport.Update(KsaCore.Agency); // KSA-67: keep supplied bases stocked (Kerbalism only; throttled inside)
+            Parts.KspLifeSupport.Update(KsaCore.Agency);
+            KsaCore.HoldWarpForDesigns(); // an AI design still thinking: do not let warp run months past it // KSA-67: keep supplied bases stocked (Kerbalism only; throttled inside)
             if (Time.realtimeSinceStartup < _nextTick) return;
             _nextTick = Time.realtimeSinceStartup + TickIntervalSeconds;
             KsaCore.TickAgency("timer");

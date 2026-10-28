@@ -145,6 +145,22 @@ namespace KSA.KSP.Build
         private static List<Placed> Layout(StagePlan plan, IPartCatalog catalog, Result result)
         {
             if (plan == null || plan.Stages.Count == 0) { result.Error = "Empty plan."; return null; }
+            // A parachute listed inside a stage's stack (models do this) cannot hang under a part: it has no top node.
+            // Move it to the pod's extras, where it sits on top (fixed 2026-10-28: "parachuteSingle has no top node").
+            foreach (PlanStage st in plan.Stages)
+            {
+                for (int i = st.Core.Count - 1; i >= 0; i--)
+                {
+                    PlanPart pp = st.Core[i];
+                    CorePart info = catalog != null ? catalog.Get(pp.Part) : null;
+                    AvailablePart ap = PartLoader.getPartInfoByName(pp.Part);
+                    bool chute = (info != null && info.Kind == PartKind.Parachute) || (ap != null && Node(ap, "top") == null && Node(ap, "bottom") != null && ap.partPrefab.FindModuleImplementing<ModuleParachute>() != null);
+                    if (!chute) continue;
+                    st.Core.RemoveAt(i);
+                    if (!plan.Payload.Extras.Contains(pp.Part)) plan.Payload.Extras.Add(pp.Part);
+                    result.Warnings.Add("Parachute '" + pp.Part + "' moved from stage " + st.Stage + " to the top of the pod.");
+                }
+            }
             var all = new List<Placed>();
             int uid = 4290000000 > int.MaxValue ? 1000000 : 1000000;
             Func<string, Placed> make = name =>

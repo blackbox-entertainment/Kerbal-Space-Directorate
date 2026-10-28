@@ -47,6 +47,12 @@ namespace KSA.Core
 
         public bool DesignInProgress(string projectId) { return projectId != null && _designsInFlight.Contains(projectId); }
 
+        /// <summary>The design days are over but the AI engineering team has not answered yet: the project waits on it.</summary>
+        public bool WaitingForAiDesign(Project p)
+        {
+            return p != null && p.Status == ProjectStatus.Design && CurrentDay >= p.PhaseStartDay + p.DesignDays && DesignInProgress(p.Id);
+        }
+
         private bool _designsResumed;
 
         /// <summary>

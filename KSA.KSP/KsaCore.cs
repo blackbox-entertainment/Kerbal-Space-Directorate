@@ -93,6 +93,7 @@ namespace KSA.KSP
             a.ApplicantHired += OnApplicantHired;
             a.YearEnded += OnYearEnded;
             a.TraitsChanged += OnTraitsChanged;
+            a.ScienceEarned += OnScienceEarned; // lab, mission and colony Science into stock R&D (was never wired; fixed 2026-10-28)
             Agency = a;
             return a;
         }
@@ -124,6 +125,7 @@ namespace KSA.KSP
                 Agency.ApplicantHired -= OnApplicantHired;
                 Agency.YearEnded -= OnYearEnded;
                 Agency.TraitsChanged -= OnTraitsChanged;
+                Agency.ScienceEarned -= OnScienceEarned;
                 Agency.MissionResolved -= OnMissionResolved;
             }
             Agency = null;
@@ -135,6 +137,9 @@ namespace KSA.KSP
         public static void SyncRoster(string reason)
         {
             if (Agency == null) return;
+            // While a hire is being added the game fires roster events before the new kerbal is in the roster; a sync then
+            // would mark the hire as gone (fixed 2026-10-28: "Dobbler Kerman has left the agency" the moment he was hired).
+            if (KspCrewFactory.Creating) return;
             // The game fires kerbal events in bursts (one per applicant, per status change); one sync per frame is plenty.
             if (UnityEngine.Time.frameCount == _lastSyncFrame) return;
             _lastSyncFrame = UnityEngine.Time.frameCount;
@@ -148,6 +153,7 @@ namespace KSA.KSP
         {
             if (Agency == null) return;
             StockSystems.Enforce(Agency.Settings);
+            FlushScience();
             AutoRollout();
             if (Agency.Ledger.Mirror != null && Agency.Ledger.Mirror.IsActive && Agency.State.Started) Agency.Ledger.SyncFromMirror();
             List<string> notices = Agency.Tick();
@@ -302,6 +308,50 @@ namespace KSA.KSP
         }
 
         /// <summary>Experience moved a kerbal's Courage or Stupidity: the stock kerbal follows (shown in the Astronaut Complex).</summary>
+        private static readonly HashSet<string> _warpHeldFor = new HashSet<string>();
+
+        /// <summary>
+        /// Called every frame: when a project's design days are over and the AI engineering team is still thinking,
+        /// drops out of time warp once for that project, so a few seconds of AI do not cost months of game time.
+        /// </summary>
+        public static void HoldWarpForDesigns()
+        {
+            if (Agency == null || TimeWarp.CurrentRate <= 1.01f) return;
+            foreach (Project p in Agency.Projects)
+            {
+                if (!Agency.WaitingForAiDesign(p) || _warpHeldFor.Contains(p.Id)) continue;
+                _warpHeldFor.Add(p.Id);
+                TimeWarp.SetRate(0, true);
+                ScreenMessages.PostScreenMessage("[KSA] " + p.Name + ": waiting for the AI design. Time warp stopped; it continues when the design is in.", 6f, ScreenMessageStyle.UPPER_CENTER);
+                return;
+            }
+        }
+
+        /// <summary>Science the agency earned (lab, simulated missions, colonies) goes into the stock R&D pool, where the tech tree spends it.</summary>
+        private static void OnScienceEarned(double points, string why)
+        {
+            if (points <= 0) return;
+            Log.Info("Science earned: " + points.ToString("0.#") + " (" + why + ")");
+            FlushScience();
+        }
+
+        /// <summary>
+        /// Pays R&D whatever the agency has earned and not yet paid (State.ScienceEarned - State.ScienceCredited). Runs on
+        /// every earning and every tick, so Science earned while R&D was not loaded, or in a save from before this was
+        /// wired (2026-10-28), arrives exactly once. Sandbox has no Science: it is marked paid.
+        /// </summary>
+        public static void FlushScience()
+        {
+            if (Agency == null || HighLogic.CurrentGame == null) return;
+            double owed = Agency.State.ScienceEarned - Agency.State.ScienceCredited;
+            if (owed < 0.05) return;
+            if (HighLogic.CurrentGame.Mode != Game.Modes.CAREER && HighLogic.CurrentGame.Mode != Game.Modes.SCIENCE_SANDBOX) { Agency.State.ScienceCredited = Agency.State.ScienceEarned; return; }
+            if (ResearchAndDevelopment.Instance == null) return;
+            ResearchAndDevelopment.Instance.AddScience((float)owed, TransactionReasons.ScienceTransmission);
+            Agency.State.ScienceCredited += owed;
+            Log.Info("Science paid into R&D: " + owed.ToString("0.#") + " (" + Agency.State.ScienceCredited.ToString("0.#") + " of " + Agency.State.ScienceEarned.ToString("0.#") + " earned so far)");
+        }
+
         private static void OnTraitsChanged(CrewProfile p)
         {
             if (HighLogic.CurrentGame == null || HighLogic.CurrentGame.CrewRoster == null) return;

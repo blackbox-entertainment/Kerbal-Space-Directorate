@@ -90,16 +90,35 @@ namespace KSA.Core
         {
             var ids = new List<string>();
             if (type == null) return ids;
-            foreach (CrewProfile p in AvailableFor(CrewRole.Pilot)) { if (ids.Count >= type.CrewSize) break; if (p.Stars >= type.MinStars) ids.Add(p.Id); }
+            // Rotate the pilots (asked for 2026-10-28): whoever has flown least goes first, then whoever flew longest ago,
+            // then the more experienced. Everyone gets flights and experience instead of one kerbal flying everything.
+            var pilots = new List<CrewProfile>();
+            foreach (CrewProfile p in AvailableFor(CrewRole.Pilot)) if (p.Stars >= type.MinStars) pilots.Add(p);
+            pilots.Sort((x, y) =>
+            {
+                int c = x.Record.Missions.Count.CompareTo(y.Record.Missions.Count);
+                if (c != 0) return c;
+                c = LastFlightDay(x).CompareTo(LastFlightDay(y));
+                if (c != 0) return c;
+                return y.Stars.CompareTo(x.Stars);
+            });
+            foreach (CrewProfile p in pilots) { if (ids.Count >= type.CrewSize) break; ids.Add(p.Id); }
             if (ids.Count < type.CrewSize)
                 foreach (CrewProfile p in AvailableFor(CrewRole.Unknown)) { if (ids.Count >= type.CrewSize) break; if (!ids.Contains(p.Id) && p.Role != CrewRole.Tourist) ids.Add(p.Id); }
             return ids;
         }
 
-        public List<string> AutoEngineers(int count)
+        private static int LastFlightDay(CrewProfile p)
+        {
+            int last = -1;
+            foreach (MissionEntry m in p.Record.Missions) if (m.StartDay > last) last = m.StartDay;
+            return last;
+        }
+
+        public List<string> AutoEngineers(int count, ICollection<string> exclude = null)
         {
             var ids = new List<string>();
-            foreach (CrewProfile p in AvailableFor(CrewRole.Engineer)) { if (ids.Count >= count) break; ids.Add(p.Id); }
+            foreach (CrewProfile p in AvailableFor(CrewRole.Engineer)) { if (ids.Count >= count) break; if (exclude != null && exclude.Contains(p.Id)) continue; ids.Add(p.Id); }
             return ids;
         }
 
@@ -152,7 +171,7 @@ namespace KSA.Core
                 if (p.IsFlying || p.ProjectId.Length > 0) { message = p.Name + " is already assigned."; return null; }
                 if (p.Stars < type.MinStars) { message = p.Name + " lacks the experience for " + type.Name + " (needs " + type.MinStars + " stars)."; return null; }
             }
-            List<string> engineers = engineerIds != null ? new List<string>(engineerIds) : AutoEngineers(2);
+            List<string> engineers = engineerIds != null ? new List<string>(engineerIds) : AutoEngineers(2, crew); // an engineer flying it cannot also design it
             foreach (string id in engineers)
             {
                 CrewProfile p = Crew.Get(id);

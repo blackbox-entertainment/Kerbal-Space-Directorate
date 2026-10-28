@@ -59,6 +59,8 @@ namespace KSA.Core
         public string AgencyName { get; set; } = string.Empty;
         /// <summary>Lifetime Science credited to the game by the agency.</summary>
         public double ScienceEarned { get; set; }
+        /// <summary>Of <see cref="ScienceEarned"/>, how much the host has paid into the game's R&D pool (back-pays older saves).</summary>
+        public double ScienceCredited { get; set; }
         /// <summary>Every world that can hold a colony holds one (KSA-64); announced once.</summary>
         public bool SystemColonized { get; set; }
         /// <summary>The AI runs the agency (KSA-68).</summary>
