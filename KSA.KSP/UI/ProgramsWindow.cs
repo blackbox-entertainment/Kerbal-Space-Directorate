@@ -155,7 +155,9 @@ namespace KSA.KSP.UI
                 ProgramType t = types[i];
                 string tid = t.Id;
                 bool isSel = selected != null && string.Equals(selected.Id, tid, StringComparison.OrdinalIgnoreCase);
-                return new DialogGUIButton((isSel ? "> " : "") + t.Name, () => OnSelectType(tid), 200f, ButtonHeight, false);
+                int done = _agency.ProgramsCompleted(t.Id);
+                string text = done > 0 ? "<color=#8be28b>" + t.Name + " (done" + (done > 1 ? " x" + done : "") + ")</color>" : t.Name;
+                return new DialogGUIButton((isSel ? "> " : "") + text, () => OnSelectType(tid), 200f, ButtonHeight, false);
             });
             if (selected == null)
             {

@@ -44,6 +44,22 @@ namespace KSA.Core
 
         // ------------------------------------------------------------------ staffing helpers
 
+        /// <summary>How many projects of this mission type finished successfully (for the "done before" marks).</summary>
+        public int MissionsCompleted(string missionTypeId)
+        {
+            int n = 0;
+            foreach (Project p in Projects) if (p.Status == ProjectStatus.Complete && string.Equals(p.MissionTypeId, missionTypeId, StringComparison.OrdinalIgnoreCase)) n++;
+            return n;
+        }
+
+        /// <summary>How many programs of this type completed.</summary>
+        public int ProgramsCompleted(string programTypeId)
+        {
+            int n = 0;
+            foreach (Program g in Programs) if (g.Status == ProgramStatus.Complete && string.Equals(g.ProgramTypeId, programTypeId, StringComparison.OrdinalIgnoreCase)) n++;
+            return n;
+        }
+
         /// <summary>Crew who can be put on a new project: active, alive, not flying, not already on a project.</summary>
         public List<CrewProfile> AvailableFor(CrewRole role)
         {

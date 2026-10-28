@@ -178,7 +178,9 @@ namespace KSA.KSP.UI
                 string tid = t.Id;
                 bool isSel = selected != null && string.Equals(selected.Id, tid, StringComparison.OrdinalIgnoreCase);
                 bool locked = _agency.MissionBlocker(t) != null;
-                return new DialogGUIButton((isSel ? "> " : "") + (locked ? "<color=#888888>" + t.Name + " (research)</color>" : t.Name), () => OnSelectType(tid), 170f, ButtonHeight, false);
+                int done = _agency.MissionsCompleted(t.Id);
+                string text = locked ? "<color=#888888>" + t.Name + " (research)</color>" : done > 0 ? "<color=#8be28b>" + t.Name + " (done" + (done > 1 ? " x" + done : "") + ")</color>" : t.Name;
+                return new DialogGUIButton((isSel ? "> " : "") + text, () => OnSelectType(tid), 170f, ButtonHeight, false);
             });
             if (selected == null)
             {
