@@ -287,17 +287,33 @@ namespace KSA.Core
             if (g == null || g.Condition != Goals.GoalConditionType.Achievement || string.IsNullOrEmpty(g.Pattern) || IsGoalCurrentlyMet(gs)) return string.Empty;
             var open = new List<string>();
             var locked = new List<string>();
+            int failures = 0;
+            bool underWay = false;
             foreach (MissionType t in Catalogs.Missions.Types)
             {
                 if (t.ModuleRole.Length > 0 || t.IsRescue) continue;
                 bool earns = false;
                 foreach (string a in t.Achievements) if (PatternMatches(a, g.Pattern)) { earns = true; break; }
                 if (!earns) continue;
-                if (MissionBlocker(t) == null) open.Add(t.Id); else locked.Add(t.Id);
+                foreach (Project p in Projects) if (p.IsActive && p.MissionTypeId == t.Id) underWay = true;
+                // This year's attempts at it, so a failure reads as "try again", not as a dead end.
+                int tries = 0, failed = 0;
+                string lastFailure = null;
+                foreach (MissionReport r in Reports)
+                {
+                    if (r.MissionTypeId != t.Id || Calendar.YearOf(r.Day) != CurrentYear) continue;
+                    tries++;
+                    if (!r.IsSuccess) { failed++; lastFailure = OutcomeText(r.Outcome); }
+                }
+                failures += failed;
+                string entry = t.Id + (tries > 0 ? " (tried " + tries + (failed > 0 ? ", last failure: " + lastFailure : string.Empty) + ")" : string.Empty);
+                if (MissionBlocker(t) == null) open.Add(entry); else locked.Add(entry);
             }
             if (open.Count == 0 && locked.Count == 0) return string.Empty;
             string s = " | met by: " + (open.Count > 0 ? string.Join(", ", open.ToArray()) : "nothing you can start yet");
             if (open.Count == 0 && locked.Count > 0) s += " (research to unlock " + string.Join(", ", locked.GetRange(0, Math.Min(3, locked.Count)).ToArray()) + ")";
+            if (underWay) s += " | an attempt is under way";
+            else if (failures > 0 && open.Count > 0) s += " | STILL OPEN after a failed attempt: try again (fix the cause: a better design, a more experienced pilot, or the other route)";
             return s;
         }
 
@@ -416,7 +432,7 @@ namespace KSA.Core
 
         // ------------------------------------------------------------------ the prompts
 
-        private string DirectorSystemPrompt()
+        public string DirectorSystemPrompt()
         {
             var sb = new StringBuilder();
             sb.AppendLine("You are the Director of " + AgencyName + ", a space agency in the Kerbol system (a small solar system: home world Kerbin, moons Mun and Minmus, planets Moho, Eve, Duna, Dres, Jool, Eeloo).");
@@ -427,6 +443,7 @@ namespace KSA.Core
             sb.AppendLine("Crews come from available kerbals; leave crew and engineers out and the agency staffs the project itself. Pilots fly better with more stars. Scientists in the lab earn Science each year.");
             sb.AppendLine("Flights are how the agency meets its goals and earns prestige and Science: unless money is short or nobody can fly, keep at least one project in design, build or flight.");
             sb.AppendLine("A failure is a lesson, not a reason to stop: fly the cheapest safe mission that moves a goal forward. Do not spend turn after turn only on interviews and drives.");
+            sb.AppendLine("A goal is not lost when a flight toward it fails: it stays open until the year-end review. Try again, after fixing what went wrong if you can.");
             sb.AppendLine("Waiting is right only when projects are already under way and nothing needs deciding. Learn from the results of your last turn.");
             sb.AppendLine("Answer with ONE JSON object and nothing else:");
             sb.AppendLine("{\"thoughts\": \"one or two sentences, in character\", \"plan\": \"your standing strategy in under 60 words (kept for next turn)\", \"actions\": [ {\"do\": \"...\", ...params, \"why\": \"short reason\"} ]}");

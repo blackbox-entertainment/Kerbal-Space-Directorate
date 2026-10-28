@@ -210,6 +210,22 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void AFailedAttemptAtAnOpenGoalReadsAsTryAgain()
+        {
+            var clock = new FakeClock();
+            Agency a = Staffed(clock, new ScriptedTransport());
+            a.ActiveGoals.Clear();
+            a.ActiveGoals.Add(new KSA.Core.Goals.GoalState { GoalId = "ReachSpace", YearIssued = a.CurrentYear });
+            Assert.That(a.DirectorBriefing(), Does.Contain("met by: SuborbitalHop").And.Not.Contains("try again"));
+            var r = new MissionReport { MissionTypeId = "SuborbitalHop", Day = a.CurrentDay, Outcome = MissionOutcome.LossOfCrew, ProjectName = "Suborbital hop" };
+            a.Reports.Add(r);
+            string b = a.DirectorBriefing();
+            Assert.That(b, Does.Contain("SuborbitalHop (tried 1, last failure"));
+            Assert.That(b, Does.Contain("try again"));
+            Assert.That(a.DirectorSystemPrompt(), Does.Contain("Try again"));
+        }
+
+        [Test]
         public void TheBriefingCoversTheWholeAgency()
         {
             var clock = new FakeClock();
