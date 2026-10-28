@@ -53,6 +53,8 @@ namespace KSA.KSP.Flight
         private bool _haltNoted;
 
         private bool _adopted;
+        private int _adoptTries;
+        private float _nextAdoptTry;
 
         private void Start()
         {
@@ -66,6 +68,7 @@ namespace KSA.KSP.Flight
         {
             // The active vessel may not exist yet in Start right after a launch; keep trying until the flight is ready.
             if (_adopted) return;
+            if (UnityEngine.Time.unscaledTime < _nextAdoptTry) return;
             if (FlightGlobals.ready && FlightGlobals.ActiveVessel != null) { TryAdopt(); return; }
             _waited += UnityEngine.Time.unscaledDeltaTime;
             if (_waited < 8f) return;
@@ -127,8 +130,14 @@ namespace KSA.KSP.Flight
             {
                 // Resuming after a scene change or reload: is this vessel a live project?
                 Project p = agency.ProjectForVessel(v.persistentId.ToString());
-                if (p == null && v.situation == Vessel.Situations.PRELAUNCH) p = AdoptFromVab(agency, v);
-                if (p == null) return;
+                bool nearPad = v.mainBody == FlightGlobals.GetHomeBody() && v.srfSpeed < 2.0 && v.altitude - v.terrainAltitude < 100;
+                if (p == null && nearPad) p = AdoptFromVab(agency, v);
+                if (p == null)
+                {
+                    // Not ours yet: a craft placed on the pad settles for a second or two, so look again a few times.
+                    if (nearPad && _adoptTries++ < 12) { _adopted = false; _nextAdoptTry = UnityEngine.Time.unscaledTime + 0.5f; }
+                    return;
+                }
                 project = p;
                 MissionType t = agency.Catalogs.Missions.Get(p.MissionTypeId);
                 Program g = p.ProgramId.Length > 0 ? agency.GetProgram(p.ProgramId) : null;
@@ -180,8 +189,10 @@ namespace KSA.KSP.Flight
                 if (p.Status != ProjectStatus.Ready) continue;
                 bool byDesign = p.Design != null && p.Design.DesignName.Length > 0 && string.Equals(name, p.Design.DesignName, StringComparison.OrdinalIgnoreCase);
                 bool byStem = name.StartsWith("KSA " + p.Id + " ", StringComparison.OrdinalIgnoreCase);
-                bool byTemplate = string.Equals(name, "KSA " + p.Name, StringComparison.OrdinalIgnoreCase);
-                if (!byDesign && !byStem && !byTemplate) continue;
+                bool byTemplate = name.IndexOf(p.Name, StringComparison.OrdinalIgnoreCase) >= 0;
+                MissionType mt = agency.Catalogs.Missions.Get(p.MissionTypeId);
+                bool byMission = mt != null && name.IndexOf(mt.Name, StringComparison.OrdinalIgnoreCase) >= 0;
+                if (!byDesign && !byStem && !byTemplate && !byMission) continue;
                 var aboard = new List<string>();
                 foreach (ProtoCrewMember pcm in v.GetVesselCrew()) aboard.Add(pcm.name);
                 string msg;
