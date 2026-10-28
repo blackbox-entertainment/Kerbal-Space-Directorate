@@ -368,6 +368,10 @@ namespace KSA.KSP.Flight
             if (!resuming) Log(_ctx.Crew.Describe(), null);
             uint dockId;
             if (uint.TryParse(Live.DockTargetVesselId, out dockId)) _ctx.DockTargetId = dockId;
+            // KSA-65: a rescue flight knows who it is picking up.
+            KSA.Core.Projects.Stranding stranding = project.RescueId.Length > 0 ? agency.GetStranding(project.RescueId) : null;
+            if (!resuming) RescueTransferLeg.Aboard.Clear();
+            if (stranding != null) foreach (string cid in stranding.Crew) { KSA.Core.Personnel.CrewProfile sc = agency.Crew.Get(cid); _ctx.RescueNames.Add(sc != null ? sc.Name : cid); }
             _program = MissionPlanner.Build(_ctx, type);
             Live.ScienceMission = type != null && type.IsScience;
             _science = Live.ScienceMission ? new ScienceRunner(_ctx) : null;
@@ -622,6 +626,7 @@ namespace KSA.KSP.Flight
             result.Deaths.AddRange(Live.Deaths);
             foreach (string a in Live.Logged) result.Achievements.Add(a);
             if (recovered) result.Achievements.Add("Recover:-");
+            AddPassengers(result);
             string pid = Live.ProjectId;
             string programId = Live.ProgramId;
             uint vesselId = Live.VesselId;
@@ -639,6 +644,60 @@ namespace KSA.KSP.Flight
             if (r != null) KsaCore.Log.Info("Live flight resolved: " + r.ProjectName + " " + Agency.OutcomeText(r.Outcome));
             if (Instance != null && Instance._program != null) Instance._program.Disengage();
             if (delivered) ScreenMessages.PostScreenMessage("[KSA] " + (r != null ? r.ProjectName : "Module") + " delivered; the crew stays aboard.", 8f, ScreenMessageStyle.UPPER_CENTER);
+        }
+
+        /// <summary>KSA-65: anyone aboard at the end who is not the project crew (a rescued crew) rides home as a passenger.</summary>
+        private static void AddPassengers(LiveFlightResult result)
+        {
+            var names = new HashSet<string>(RescueTransferLeg.Aboard, StringComparer.OrdinalIgnoreCase);
+            Vessel v = Live != null ? FindVessel(Live.VesselId) : null;
+            Project p = Live != null && KsaCore.Agency != null ? KsaCore.Agency.GetProject(Live.ProjectId) : null;
+            if (v != null) foreach (ProtoCrewMember c in v.GetVesselCrew()) if (c != null) names.Add(c.name);
+            foreach (string n in names) if (p == null || !p.Crew.Contains(n)) result.Passengers.Add(n);
+            RescueTransferLeg.Aboard.Clear();
+        }
+
+        /// <summary>
+        /// KSA-65: the Director calls it: the crew is alive but cannot get home (out of fuel in a strange orbit, a lander
+        /// that will not lift off). The project ends, the crew stays aboard the vessel, and a rescue can be launched.
+        /// </summary>
+        public void DeclareStranded()
+        {
+            if (Live == null || _vessel == null || KsaCore.Agency == null) return;
+            if (_program != null) _program.Disengage();
+            bool down = LandingHelpers.IsDown(_vessel);
+            var result = new LiveFlightResult
+            {
+                Stranded = true,
+                StrandedBody = _vessel.mainBody != null ? _vessel.mainBody.bodyName : "Kerbin",
+                StrandedOnSurface = down,
+                StrandedVesselId = _vessel.persistentId.ToString(),
+                Crashed = Live.Crashed,
+                DirectorFlown = Live.DirectorFlown,
+                MaxAltitude = Live.MaxAltitude,
+                MaxSpeed = Live.MaxSpeed,
+                MaxDistanceFromHomeKm = Live.MaxDistanceFromHomeKm,
+                SurfaceDays = Live.SurfaceSeconds / KsaCore.Clock.SecondsPerDay,
+                DaysInSpace = Math.Max(0.02, (Planetarium.GetUniversalTime() - Live.LaunchUT) / KsaCore.Clock.SecondsPerDay)
+            };
+            result.Deaths.AddRange(Live.Deaths);
+            foreach (string a in Live.Logged) result.Achievements.Add(a);
+            string pid = Live.ProjectId;
+            Live = null;
+            RescueTransferLeg.Aboard.Clear();
+            KSA.Core.Projects.MissionReport r = KsaCore.Agency.ResolveLive(pid, result);
+            KsaCore.Log.Info("Live flight declared stranded: " + (r != null ? r.ProjectName : pid) + " at " + result.StrandedBody + (result.StrandedOnSurface ? " (surface)" : " (orbit)"));
+            ScreenMessages.PostScreenMessage("[KSA] Crew stranded " + (result.StrandedOnSurface ? "on " : "in orbit of ") + result.StrandedBody + ". Launch a rescue from the Projects window.", 10f, ScreenMessageStyle.UPPER_CENTER);
+        }
+
+        /// <summary>The stranded button shows when the crew cannot be flying home on their own: away from Kerbin's surface, not on the pad.</summary>
+        private bool CanDeclareStranded()
+        {
+            if (_vessel == null || _holdForLaunch) return false;
+            bool homeSurface = _vessel.mainBody == FlightGlobals.GetHomeBody() && LandingHelpers.IsDown(_vessel);
+            if (homeSurface) return false;
+            bool settled = _vessel.situation == Vessel.Situations.ORBITING || LandingHelpers.IsDown(_vessel) || _vessel.situation == Vessel.Situations.ESCAPING;
+            return settled && (_program == null || _program.Failed || !Live.AutopilotOn);
         }
 
         // ------------------------------------------------------------------ controls
@@ -729,6 +788,7 @@ namespace KSA.KSP.Flight
             else GUILayout.Label("Crew flying (manual override off in agency.cfg)");
             if (_program != null && _program.Failed && Live.AutopilotOn && GUILayout.Button("Retry program")) RetryProgram();
             GUILayout.EndHorizontal();
+            if (Live != null && CanDeclareStranded() && GUILayout.Button("Crew stranded: call for a rescue")) DeclareStranded();
             GUI.DragWindow();
         }
     }

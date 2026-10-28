@@ -24,6 +24,7 @@ namespace KSA.Core
                 n.AddValue("goal", p.GoalId);
                 n.AddValue("program", p.ProgramId);
                 n.AddValue("moduleRole", p.ModuleRole);
+                n.AddValue("rescue", p.RescueId);
                 n.AddValue("budget", p.Budget);
                 n.AddValue("mode", p.Mode.ToString());
                 n.AddValue("status", p.Status.ToString());
@@ -79,8 +80,34 @@ namespace KSA.Core
                 n.AddValue("vesselId", g.VesselId);
                 n.AddValue("lastSuppliedDay", g.LastSuppliedDay);
                 foreach (string cid in g.CrewAboard) n.AddValue("aboard", cid);
+                n.AddValue("stage", g.Stage.ToString());
+                n.AddValue("resupplies", g.ResuppliesDelivered);
+                n.AddValue("colonistsMale", g.ColonistsMale);
+                n.AddValue("colonistsFemale", g.ColonistsFemale);
+                n.AddValue("seats", g.Seats);
+                n.AddValue("drills", g.Drills);
+                n.AddValue("isru", g.Isru);
+                n.AddValue("power", g.Power);
+                n.AddValue("rocket", g.HasRocket);
+                n.AddValue("extraRoom", g.ExtraRoom);
+                n.AddValue("colonyDay", g.ColonyDay);
+                foreach (string hp in g.HardwareCounted) n.AddValue("hardware", hp);
                 foreach (string pid in g.ModuleProjectIds) n.AddValue("module", pid);
                 foreach (string note in g.Notes) n.AddValue("note", note);
+            }
+
+            foreach (Stranding s in agency.Strandings)
+            {
+                DataNode n = root.AddChild("STRANDING");
+                n.AddValue("id", s.Id);
+                n.AddValue("body", s.Body);
+                n.AddValue("onSurface", s.OnSurface);
+                n.AddValue("vesselId", s.VesselId);
+                n.AddValue("day", s.Day);
+                n.AddValue("cause", s.Cause);
+                n.AddValue("rescue", s.RescueProjectId);
+                n.AddValue("resolved", s.Resolved);
+                foreach (string c in s.Crew) n.AddValue("crew", c);
             }
 
             foreach (MissionReport r in agency.Reports)
@@ -127,6 +154,7 @@ namespace KSA.Core
                     GoalId = n.GetValue("goal", string.Empty),
                     ProgramId = n.GetValue("program", string.Empty),
                     ModuleRole = n.GetValue("moduleRole", string.Empty),
+                    RescueId = n.GetValue("rescue", string.Empty),
                     Budget = n.GetDouble("budget", 0),
                     Mode = ParseEnum(n.GetValue("mode"), MissionMode.Simulate),
                     Status = ParseEnum(n.GetValue("status"), ProjectStatus.Design),
@@ -210,8 +238,39 @@ namespace KSA.Core
                 if (g.Id.Length == 0) continue;
                 g.ModuleProjectIds.AddRange(n.GetValues("module"));
                 g.CrewAboard.AddRange(n.GetValues("aboard"));
+                g.Stage = ParseEnum(n.GetValue("stage"), ColonyStage.None);
+                g.ResuppliesDelivered = n.GetInt("resupplies", 0);
+                g.ColonistsMale = n.GetInt("colonistsMale", 0);
+                g.ColonistsFemale = n.GetInt("colonistsFemale", 0);
+                g.Seats = n.GetInt("seats", 0);
+                g.Drills = n.GetInt("drills", 0);
+                g.Isru = n.GetInt("isru", 0);
+                g.Power = n.GetInt("power", 0);
+                g.HasRocket = n.GetBool("rocket", false);
+                g.ExtraRoom = n.GetInt("extraRoom", 0);
+                g.ColonyDay = n.GetInt("colonyDay", -1);
+                g.HardwareCounted.AddRange(n.GetValues("hardware"));
+                if (g.Stage == ColonyStage.None && g.Status == ProgramStatus.Complete) g.Stage = ColonyStage.Base; // saves from before KSA-64
                 g.Notes.AddRange(n.GetValues("note"));
                 agency.Programs.Add(g);
+            }
+
+            foreach (DataNode n in root.GetChildren("STRANDING"))
+            {
+                var s = new Stranding
+                {
+                    Id = n.GetValue("id", string.Empty),
+                    Body = n.GetValue("body", "Kerbin"),
+                    OnSurface = n.GetBool("onSurface", false),
+                    VesselId = n.GetValue("vesselId", string.Empty),
+                    Day = n.GetInt("day", 0),
+                    Cause = n.GetValue("cause", string.Empty),
+                    RescueProjectId = n.GetValue("rescue", string.Empty),
+                    Resolved = n.GetBool("resolved", false)
+                };
+                if (s.Id.Length == 0) continue;
+                s.Crew.AddRange(n.GetValues("crew"));
+                agency.Strandings.Add(s);
             }
 
             foreach (DataNode n in root.GetChildren("REPORT"))

@@ -52,7 +52,7 @@ namespace KSA.KSP.Parts
             return "needs research: " + list;
         }
 
-        private static string ResolvePath(string craft)
+        internal static string ResolvePath(string craft)
         {
             if (string.IsNullOrEmpty(craft)) return null;
             string root = KSPUtil.ApplicationRootPath;

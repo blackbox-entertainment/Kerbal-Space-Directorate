@@ -14,18 +14,18 @@ namespace KSA.KSP.UI
     public sealed class CampaignWindow
     {
         private const string DialogName = "KSA_Campaign";
-        private const float Width = 720f;
+        private const float Width = 860f;
         private static float WindowHeight { get { return Mathf.Clamp(Screen.height - 200f, 520f, 860f); } }
         private static float ListHeight { get { return WindowHeight - 120f; } }
         private const float LineHeight = 22f;
         private const float BodyWidth = 90f;
-        private const float CellWidth = 78f;
+        private const float CellWidth = 74f;
         private const string Green = "#8be28b";
         private const string Grey = "#777777";
         private const string Amber = "#ffd27f";
 
-        private static readonly string[] Steps = { "Flyby", "Orbit", "Land", "Science", "Base", "Resupply" };
-        private static readonly string[] Headers = { "Flyby", "Orbit", "Land", "Science", "Base", "Supplied" };
+        private static readonly string[] Steps = { "Flyby", "Orbit", "Land", "Science", "Base", "Resupply", "Colony" };
+        private static readonly string[] Headers = { "Flyby", "Orbit", "Land", "Science", "Base", "Supplied", "Colony" };
 
         private readonly Agency _agency;
         private readonly Action _onClosed;
@@ -68,6 +68,7 @@ namespace KSA.KSP.UI
             items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft, header.ToArray()));
 
             int doneTotal = 0, stepTotal = 0;
+            List<string> colonizable = _agency.ColonizableWorlds();
             foreach (string body in Agency.CustomBodies)
             {
                 bool home = string.Equals(body, "Kerbin", StringComparison.OrdinalIgnoreCase);
@@ -78,6 +79,11 @@ namespace KSA.KSP.UI
                 {
                     string key = StepKey(body, i, home);
                     string label = home && i == 0 ? "Suborbit" : Headers[i];
+                    if (Steps[i] == "Colony" && !colonizable.Exists(x => string.Equals(x, body, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        row.Add(new DialogGUILabel(Color("-", Grey), CellWidth, LineHeight)); // no colony possible here (KSA-64)
+                        continue;
+                    }
                     bool done = _agency.HasAgencyAchievement(key);
                     stepTotal++;
                     if (done) doneTotal++;
@@ -89,6 +95,7 @@ namespace KSA.KSP.UI
             }
             items.Add(new DialogGUISpace(4f));
             Line(items, doneTotal + " of " + stepTotal + " steps done across " + Agency.CustomBodies.Length + " worlds.", textWidth);
+            Line(items, "Colonies: " + _agency.ColonizedWorlds().Count + " of " + colonizable.Count + " worlds that can hold one" + (_agency.State.SystemColonized ? Color("  |  the Kerbol system is colonized", Green) : string.Empty) + ".", textWidth);
 
             // Government goals.
             items.Add(new DialogGUISpace(10f));
@@ -133,7 +140,8 @@ namespace KSA.KSP.UI
                 case 2: return "land on " + body;
                 case 3: return "run experiments at " + body;
                 case 4: return "build a base or station at " + body + " (Programs)";
-                default: return "send a resupply to the " + body + " program";
+                case 5: return "send a resupply to the " + body + " program";
+                default: return "grow the " + body + " base into a colony";
             }
         }
 

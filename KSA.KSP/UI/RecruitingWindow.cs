@@ -81,6 +81,7 @@ namespace KSA.KSP.UI
             if (_agency.Catalogs.Recruiting.Count == 0) Line(items, "No recruitment sources configured.", textWidth);
             foreach (RecruitSource src in _agency.Catalogs.Recruiting.Sources)
             {
+                if (src.DriveCost <= 0) continue; // colony-born and other non-drive sources (KSA-64)
                 string id = src.Id;
                 var roles = new List<string>();
                 foreach (CrewRole role in src.Roles) roles.Add(RosterView.RoleText(role));

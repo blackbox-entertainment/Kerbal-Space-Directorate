@@ -89,6 +89,7 @@ namespace KSA.KSP.UI
 
             items.Add(Field("Balance", Agency.Money(_agency.Ledger.Balance), textWidth));
 
+            BuildStrandedSection(items, textWidth);
             BuildActiveSection(items, textWidth);
             BuildNewProjectSection(items, textWidth);
             BuildFinishedSection(items, textWidth);
@@ -153,6 +154,38 @@ namespace KSA.KSP.UI
         }
 
         // --- New project ---
+
+        /// <summary>KSA-65: crews waiting for a rescue, with the buttons to send one.</summary>
+        private void BuildStrandedSection(List<DialogGUIBase> items, float textWidth)
+        {
+            List<Stranding> waiting = _agency.ActiveStrandings();
+            if (waiting.Count == 0) return;
+            Section(items, "<color=#ff8080>Stranded crews (" + waiting.Count + ")</color>", textWidth);
+            foreach (Stranding s in waiting)
+            {
+                string id = s.Id;
+                var names = new List<string>();
+                foreach (string cid in s.Crew) { CrewProfile c = _agency.Crew.Get(cid); names.Add(c != null ? c.Name : cid); }
+                Project rescue = s.RescueProjectId.Length > 0 ? _agency.GetProject(s.RescueProjectId) : null;
+                int lostAfter = _agency.Settings.Rescue.LostAfterDays;
+                string clock = lostAfter > 0 ? "  |  " + Math.Max(0, lostAfter - _agency.DaysStranded(s)) + " days before they are given up for lost" : string.Empty;
+                Line(items, "<b>" + string.Join(", ", names.ToArray()) + "</b> stranded " + s.Where + " since day " + s.Day + " (" + _agency.DaysStranded(s) + " days, after " + s.Cause + ")" + clock, textWidth);
+                if (rescue != null && rescue.IsActive) { Line(items, "    Rescue under way: " + rescue.Name + " (" + rescue.Status + ")", textWidth); continue; }
+                string live = s.OnSurface ? "surface rescues fly simulated" : (s.VesselId.Length == 0 ? "no live vessel to meet; flies simulated" : "can be flown live");
+                items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                    new DialogGUISpace(16f),
+                    new DialogGUIButton("Launch rescue", () => OnRescue(id, MissionMode.Simulate), 140f, ButtonHeight, false),
+                    new DialogGUIButton("Rescue (Watch Live)", () => OnRescue(id, MissionMode.WatchLive), 170f, ButtonHeight, false),
+                    new DialogGUILabel("<color=#aaaaaa>" + live + "</color>", textWidth - 360f, ButtonHeight)));
+            }
+        }
+
+        private void OnRescue(string strandingId, MissionMode mode)
+        {
+            string message;
+            Project p = _agency.CreateRescue(strandingId, null, mode, out message);
+            Report(p != null, message);
+        }
 
         private void BuildNewProjectSection(List<DialogGUIBase> items, float textWidth)
         {

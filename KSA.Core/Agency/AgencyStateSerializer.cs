@@ -34,6 +34,8 @@ namespace KSA.Core
             st.AddValue("prestige", s.Prestige);
             st.AddValue("agencyName", s.AgencyName);
             st.AddValue("scienceEarned", s.ScienceEarned);
+            st.AddValue("systemColonized", s.SystemColonized);
+            st.AddValue("nextStranding", s.NextStrandingNumber);
             st.AddValue("hiringFreeze", s.HiringFreeze);
             st.AddValue("probation", s.Probation);
             st.AddValue("directorNumber", s.DirectorNumber);
@@ -126,6 +128,7 @@ namespace KSA.Core
                 c.AddValue("daysOnOtherWorlds", p.Record.DaysOnOtherWorlds);
                 c.AddValue("longestMissionDays", p.Record.LongestMissionDays);
                 c.AddValue("xp", p.Record.Experience);
+                c.AddValue("female", p.Female);
                 foreach (string tag in p.PersonalityTags) c.AddValue("tag", tag);
                 foreach (string a in p.Record.Achievements) c.AddValue("achievement", a);
                 foreach (string q in p.Record.Quotes) c.AddValue("quote", q);
@@ -212,6 +215,8 @@ namespace KSA.Core
                 s.Prestige = st.GetDouble("prestige", agency.Settings.StartingPrestige);
                 s.AgencyName = st.GetValue("agencyName", string.Empty);
                 s.ScienceEarned = st.GetDouble("scienceEarned", 0);
+                s.SystemColonized = st.GetBool("systemColonized", false);
+                s.NextStrandingNumber = st.GetInt("nextStranding", 1);
                 s.HiringFreeze = st.GetBool("hiringFreeze", false);
                 s.Probation = st.GetBool("probation", false);
                 s.DirectorNumber = st.GetInt("directorNumber", 1);
@@ -342,6 +347,7 @@ namespace KSA.Core
                 p.Record.DaysOnOtherWorlds = c.GetDouble("daysOnOtherWorlds", 0);
                 p.Record.LongestMissionDays = c.GetDouble("longestMissionDays", 0);
                 p.Record.Experience = c.GetDouble("xp", 0);
+                p.Female = c.GetBool("female", false);
                 p.PersonalityTags.AddRange(c.GetValues("tag"));
                 foreach (string a in c.GetValues("achievement")) p.Record.Achievements.Add(a);
                 p.Record.Quotes.AddRange(c.GetValues("quote"));

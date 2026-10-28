@@ -8,6 +8,26 @@ namespace KSA.Core.Projects
 
     public enum ProgramStatus { Active = 0, Complete = 1, Stalled = 2, Cancelled = 3 }
 
+    /// <summary>How far a base has grown (KSA-64). Never goes backwards.</summary>
+    public enum ColonyStage { None = 0, Outpost = 1, Base = 2, Settlement = 3, Colony = 4 }
+
+    /// <summary>What a delivered craft carries that matters to a base: the host reads it from the craft file (KSA-64).</summary>
+    public sealed class ModuleHardware
+    {
+        /// <summary>Parts that dig (stock: ModuleResourceHarvester).</summary>
+        public int Drills { get; set; }
+        /// <summary>Converters that turn ore into something useful (stock: ModuleResourceConverter with Ore input).</summary>
+        public int Isru { get; set; }
+        /// <summary>Power sources: solar panels, generators (RTG), fuel cells.</summary>
+        public int Power { get; set; }
+        /// <summary>Crew seats in the delivered craft.</summary>
+        public int Seats { get; set; }
+        /// <summary>The craft can fly: a command part and an engine.</summary>
+        public bool Rocket { get; set; }
+
+        public static ModuleHardware None() { return new ModuleHardware(); }
+    }
+
     public sealed class ModuleRecipe
     {
         public string Role { get; set; }
@@ -28,8 +48,14 @@ namespace KSA.Core.Projects
         public int SupplyIntervalDays { get; set; }
         /// <summary>Mission type id of a resupply flight to this program (empty = cannot be resupplied).</summary>
         public string ResupplyMissionType { get; set; }
+        /// <summary>A program of this type must be complete at the same body first (Eve surface base needs the cloud city).</summary>
+        public string RequiresProgram { get; set; }
+        /// <summary>Relieved crews go to this program at the same body instead of straight home (Eve surface to the cloud city).</summary>
+        public string ReturnVia { get; set; }
+        /// <summary>Can grow into a settlement and a colony (bases and cloud cities; stations do not by default).</summary>
+        public bool Colonize { get; set; }
 
-        public ProgramType() { Id = string.Empty; Name = string.Empty; Description = string.Empty; ResupplyMissionType = string.Empty; }
+        public ProgramType() { Id = string.Empty; Name = string.Empty; Description = string.Empty; ResupplyMissionType = string.Empty; RequiresProgram = string.Empty; ReturnVia = string.Empty; }
 
         public override string ToString() { return Name + " (" + Id + ")"; }
     }
@@ -68,6 +94,9 @@ namespace KSA.Core.Projects
                     if (warnings != null) warnings.Add("Program type " + id + ": unknown kind"); continue;
                 }
                 var t = new ProgramType { Id = id, Name = node.GetValue("name", id), Description = node.GetValue("description", string.Empty), Kind = kind, SupplyIntervalDays = node.GetInt("supplyIntervalDays", 0), ResupplyMissionType = node.GetValue("resupplyMissionType", string.Empty) };
+                t.RequiresProgram = node.GetValue("requiresProgram", string.Empty);
+                t.ReturnVia = node.GetValue("returnVia", string.Empty);
+                t.Colonize = node.GetBool("colonize", kind != ProgramKind.OrbitalStation);
                 t.Bodies.AddRange(node.GetList("bodies"));
                 foreach (DataNode m in node.GetChildren(ModuleNodeName))
                 {
@@ -108,9 +137,37 @@ namespace KSA.Core.Projects
         public List<string> CrewAboard { get; } = new List<string>();
         public List<string> Notes { get; } = new List<string>();
 
+        // --- Growth (KSA-64) ---
+        public ColonyStage Stage { get; set; }
+        /// <summary>Successful resupplies delivered over the program's life.</summary>
+        public int ResuppliesDelivered { get; set; }
+        /// <summary>Settlers and colony-born residents (not roster kerbals).</summary>
+        public int ColonistsMale { get; set; }
+        public int ColonistsFemale { get; set; }
+        /// <summary>Hardware delivered so far, summed over every module and resupply craft.</summary>
+        public int Seats { get; set; }
+        public int Drills { get; set; }
+        public int Isru { get; set; }
+        public int Power { get; set; }
+        /// <summary>A rocket stays at the base (the "return" module): crews can rotate and evacuate.</summary>
+        public bool HasRocket { get; set; }
+        /// <summary>Room the base added itself: supply deliveries and, once a colony, its own building.</summary>
+        public int ExtraRoom { get; set; }
+        /// <summary>Projects whose hardware is already counted (so a reload never counts twice).</summary>
+        public List<string> HardwareCounted { get; } = new List<string>();
+        /// <summary>Day the base became a colony, or -1.</summary>
+        public int ColonyDay { get; set; }
+
+        public int Colonists { get { return ColonistsMale + ColonistsFemale; } }
+        /// <summary>Everyone who lives there: agency crew aboard plus colonists.</summary>
+        public int Residents { get { return CrewAboard.Count + Colonists; } }
+        public int Room { get { return Seats + ExtraRoom; } }
+        /// <summary>Drill, ore converter and power all present.</summary>
+        public bool HardwareSelfSufficient { get { return Drills > 0 && Isru > 0 && Power > 0; } }
+
         public Program()
         {
-            Id = string.Empty; Name = string.Empty; ProgramTypeId = string.Empty; Body = string.Empty; ProgramManager = string.Empty; Site = string.Empty; VesselId = string.Empty; LastSuppliedDay = -1;
+            Id = string.Empty; Name = string.Empty; ProgramTypeId = string.Empty; Body = string.Empty; ProgramManager = string.Empty; Site = string.Empty; VesselId = string.Empty; LastSuppliedDay = -1; ColonyDay = -1;
         }
 
         public override string ToString() { return Name + " [" + Status + "]"; }

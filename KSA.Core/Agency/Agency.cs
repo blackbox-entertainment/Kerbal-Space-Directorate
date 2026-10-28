@@ -199,6 +199,8 @@ namespace KSA.Core
             if (r.PrestigeAfter > r.PrestigeBefore && PrestigeGainFactor() > 1) { double extra = (r.PrestigeAfter - r.PrestigeBefore) * (PrestigeGainFactor() - 1); State.Prestige = Math.Min(100, State.Prestige + extra); r.PrestigeAfter = State.Prestige; }
             DepartmentYearNotes(notices);
             SupplyYearNotes(notices);
+            ColonyYearEnd(notices);
+            StrandedYearEnd(notices);
             AwardLabScience(notices);
             int moraleBonus = YearEndMoraleBonus();
             if (moraleBonus > 0) foreach (CrewProfile p in Crew.Active) p.Morale = Math.Min(100, p.Morale + moraleBonus);
@@ -344,6 +346,7 @@ namespace KSA.Core
 
                 bool fresh = result.Hired.Contains(p);
                 p.Role = s.Role;
+                p.Female = s.Female;
                 p.Stars = Math.Max(s.Stars, LadderStars(p)); // the game's level is a floor; the KSA ladder can only add (KSA-63)
                 p.Status = s.Status;
                 if (fresh || !p.TraitsOwned)

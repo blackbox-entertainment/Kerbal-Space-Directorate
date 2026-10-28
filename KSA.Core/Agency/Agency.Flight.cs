@@ -56,6 +56,14 @@ namespace KSA.Core
             MissionType type = Catalogs.Missions.Get(p.MissionTypeId);
             if (type == null) return "Unknown mission type.";
             if (!ProfileInScope(type)) return "Live flight for " + type.Name + " is outside the scope set in agency.cfg (liveFlightScope = " + Settings.LiveFlightScope + ").";
+            if (type.Floating) return type.Name + " floats in the clouds; the flight director has no airship program, so it is simulated.";
+            if (type.IsRescue)
+            {
+                Stranding s = GetStranding(p.RescueId);
+                if (s == null) return "Nobody to rescue.";
+                if (s.OnSurface) return "Surface rescues are simulated: the flight director cannot aim a landing at a particular spot yet.";
+                if (s.VesselId.Length == 0) return "The stranded crew were not flown live, so there is no vessel to meet; this rescue is simulated.";
+            }
             if (type.Profile == MissionProfile.Station && !string.Equals(type.ModuleRole, "core", StringComparison.OrdinalIgnoreCase))
             {
                 Program g = p.ProgramId.Length > 0 ? GetProgram(p.ProgramId) : null;
@@ -112,6 +120,8 @@ namespace KSA.Core
             foreach (string id in p.Crew) { CrewProfile c = Crew.Get(id); if (c != null) spec.CrewNames.Add(c.Name); }
             Program program = p.ProgramId.Length > 0 ? GetProgram(p.ProgramId) : null;
             if (program != null) { spec.DockTargetVesselId = program.VesselId; spec.MaxSiteSlope = Math.Max(0.1, Math.Min(0.6, program.SiteSlope + 0.15)); }
+            Stranding rescue = p.RescueId.Length > 0 ? GetStranding(p.RescueId) : null;
+            if (rescue != null) spec.DockTargetVesselId = rescue.VesselId; // KSA-65: meet the stranded vessel
 
             p.Mode = MissionMode.WatchLive;
             var notices = new List<string>();

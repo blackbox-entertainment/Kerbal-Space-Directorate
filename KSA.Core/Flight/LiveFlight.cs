@@ -17,6 +17,12 @@ namespace KSA.Core.Flight
         public bool Recovered { get; set; }
         /// <summary>The vessel stayed in space on purpose (station core in orbit, module docked, base module down). Counts like a recovery.</summary>
         public bool Delivered { get; set; }
+        /// <summary>The Director declared the crew stranded (KSA-65): alive, somewhere they cannot get home from.</summary>
+        public bool Stranded { get; set; }
+        public string StrandedBody { get; set; } = string.Empty;
+        public bool StrandedOnSurface { get; set; }
+        public string StrandedVesselId { get; set; } = string.Empty;
+        public List<string> Passengers { get; } = new List<string>();
         public bool DirectorFlown { get; set; }
         public double DaysInSpace { get; set; }
         /// <summary>Timeline lines the host logged during the flight (already stored on the project too).</summary>
@@ -54,6 +60,7 @@ namespace KSA.Core.Flight
                 DirectorFlown = result.DirectorFlown
             };
             if (crewIds != null) r.Crew.AddRange(crewIds);
+            r.Passengers.AddRange(result.Passengers);
 
             // Achievements: what the flight actually logged, filtered to what the mission asked for plus any firsts.
             var earned = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -72,6 +79,15 @@ namespace KSA.Core.Flight
                 r.Deaths.AddRange(result.Deaths);
                 r.Incidents.Add(IncidentKind.Crash);
                 r.Lesson = "Crew lost on " + r.ProjectName + ". Never again.";
+            }
+            else if (result.Stranded)
+            {
+                r.Outcome = result.Crashed ? MissionOutcome.LossOfVehicle : MissionOutcome.Abort;
+                if (crewIds != null) r.Stranded.AddRange(crewIds);
+                r.StrandedBody = string.IsNullOrEmpty(result.StrandedBody) ? (type != null ? type.Body : "Kerbin") : result.StrandedBody;
+                r.StrandedOnSurface = result.StrandedOnSurface;
+                r.StrandedVesselId = result.StrandedVesselId ?? string.Empty;
+                r.Lesson = "Crew stranded " + (r.StrandedOnSurface ? "on the surface of " : "in orbit of ") + r.StrandedBody + " on " + r.ProjectName + "; a rescue is needed.";
             }
             else if (!result.Recovered && !result.Delivered)
             {

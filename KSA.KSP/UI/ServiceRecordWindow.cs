@@ -89,7 +89,8 @@ namespace KSA.KSP.UI
             items.Add(Field("Role", RosterView.RoleText(p.Role) + ", " + RosterView.StarsText(p.Stars), textWidth));
             double toNext = _agency.ToNextStar(p);
             items.Add(Field("Experience", p.Record.Experience.ToString("0.#") + " points" + (toNext > 0 ? "  |  " + toNext.ToString("0.#") + " to the next star" : "  |  top of the ladder"), textWidth));
-            items.Add(Field("Status", RosterView.StatusText(p.Status) + (p.Departed ? " (left the agency)" : string.Empty), textWidth));
+            string whereabouts = _agency.WhereaboutsOf(p.Id);
+            items.Add(Field("Status", RosterView.StatusText(p.Status) + (p.Departed ? " (left the agency)" : string.Empty) + (whereabouts.Length > 0 ? ", " + whereabouts : string.Empty), textWidth));
             items.Add(Field("Age", age + "  |  hired day " + p.HiredDay, textWidth));
             items.Add(Field("Morale", p.Morale + " / 100  |  salary " + p.Salary + " / yr", textWidth));
             foreach (string tag in p.PersonalityTags) Line(items, "    <color=#aaaaaa>" + _agency.Settings.Personality.Describe(tag) + "</color>", textWidth);

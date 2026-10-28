@@ -48,6 +48,8 @@ namespace KSA.KSP.Flight
         /// <summary>Station modules: the vessel to rendezvous with and dock to (null when none).</summary>
         public Vessel DockTarget;
         public uint DockTargetId;
+        /// <summary>KSA-65: names of the stranded crew a rescue flight picks up (empty for every other flight).</summary>
+        public System.Collections.Generic.List<string> RescueNames = new System.Collections.Generic.List<string>();
 
         /// <summary>The flying crew's numbers (decision 21): precision, margins, mistake chance. Never null.</summary>
         public KSA.Core.Flight.CrewFlightProfile Crew = KSA.Core.Flight.CrewFlightProfile.Neutral();

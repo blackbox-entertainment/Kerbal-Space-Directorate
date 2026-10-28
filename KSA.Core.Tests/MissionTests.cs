@@ -19,9 +19,9 @@ namespace KSA.Core.Tests
             ProgramCatalog programs = ShippedConfigs.ProgramTypes(warnings);
 
             Assert.That(warnings, Is.Empty, string.Join(" | ", warnings));
-            Assert.That(missions.Count, Is.EqualTo(46));
+            Assert.That(missions.Count, Is.EqualTo(64)); // + 18 base and resupply missions (KSA-64)
             Assert.That(templates.Count, Is.EqualTo(14));
-            Assert.That(programs.Count, Is.EqualTo(6));
+            Assert.That(programs.Count, Is.EqualTo(15)); // + 9 bases (KSA-64)
 
             foreach (MissionType t in missions.Types)
             {

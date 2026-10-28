@@ -77,6 +77,7 @@ namespace KSA.KSP
             a.LiveFlightAvailable = true; // M5: built-in flight director for Kerbin missions
             a.LiveFlightCheck = Flight.LiveFlightLauncher.Check;
             a.TemplateCheck = Parts.KspTemplateCheck.Blocker; // career: a template needs every part researched and bought
+            a.ModuleHardwareCheck = Parts.KspHardwareCheck.For; // KSA-64: drills, converters, power and seats in delivered craft
             a.LiveLaunchRequested += Flight.LiveFlightLauncher.OnLaunchRequested;
             a.ReportUpdated += OnReportUpdated;
             WireAi(a);

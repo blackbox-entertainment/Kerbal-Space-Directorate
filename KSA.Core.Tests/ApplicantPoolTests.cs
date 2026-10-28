@@ -15,7 +15,7 @@ namespace KSA.Core.Tests
             var warnings = new List<string>();
             RecruitCatalog c = ShippedConfigs.Recruiting(warnings);
             Assert.That(warnings, Is.Empty);
-            Assert.That(c.Count, Is.EqualTo(4));
+            Assert.That(c.Count, Is.EqualTo(5)); // + ColonyBorn (KSA-64)
             Assert.That(c.Get("AirCorps").Roles, Is.EqualTo(new[] { CrewRole.Pilot }));
             Assert.That(c.Get("Industry").Achievements, Is.EqualTo(new[] { "Flight:Kerbin", "Suborbit:Kerbin", "Orbit:Kerbin" }));
             Assert.That(c.Get("WalkIns").WalkInWeight, Is.EqualTo(3));

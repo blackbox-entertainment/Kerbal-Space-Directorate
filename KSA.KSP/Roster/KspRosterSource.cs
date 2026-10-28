@@ -32,6 +32,7 @@ namespace KSA.KSP.Roster
             var snap = new CrewSnapshot(pcm.name, MapRole(pcm.trait), pcm.experienceLevel, MapStatus(pcm.rosterStatus),
                                         pcm.courage, pcm.stupidity, Achievements(pcm));
             snap.PortraitKey = PortraitKey(pcm);
+            snap.Female = pcm.gender == ProtoCrewMember.Gender.Female;
             return snap;
         }
 

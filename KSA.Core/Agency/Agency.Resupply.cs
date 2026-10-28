@@ -46,7 +46,7 @@ namespace KSA.Core
         public int SupplyIntervalFor(Program g)
         {
             ProgramType t = Catalogs.ProgramTypes.Get(g.ProgramTypeId);
-            return t != null ? t.SupplyIntervalDays : 0;
+            return t != null ? GrowthAdjustedInterval(g, t.SupplyIntervalDays) : 0;
         }
 
         /// <summary>Supplied / due soon / overdue, for the UI and the review.</summary>
@@ -90,15 +90,10 @@ namespace KSA.Core
                 return;
             }
             g.LastSuppliedDay = CurrentDay;
-            // Crew rotation: the old crew come home, the relief crew stay aboard.
+            // Crew rotation: the old crew leave in the stationed rocket (home, or up to the program it returns via),
+            // the relief crew stay aboard.
             var relieved = new List<string>(g.CrewAboard);
-            g.CrewAboard.Clear();
-            foreach (string id in relieved)
-            {
-                CrewProfile c = Crew.Get(id);
-                if (c == null || c.Departed) continue;
-                ReturnFromStation(id);
-            }
+            string via = RelieveCrew(g);
             foreach (string id in p.Crew)
             {
                 CrewProfile c = Crew.Get(id);
@@ -108,8 +103,9 @@ namespace KSA.Core
                 g.CrewAboard.Add(id);
             }
             foreach (string id in p.Crew) AddAchievements(id, new[] { "Resupply:" + g.Body });
-            g.Notes.Add("Resupplied on day " + CurrentDay + "; crew rotated (" + relieved.Count + " home, " + p.Crew.Count + " aboard).");
-            Push(null, g.Name + " resupplied; " + relieved.Count + " crew coming home, " + p.Crew.Count + " now aboard.");
+            g.Notes.Add("Resupplied on day " + CurrentDay + "; crew rotated (" + relieved.Count + " " + via + ", " + p.Crew.Count + " aboard).");
+            Push(null, g.Name + " resupplied; " + relieved.Count + " crew going " + via + ", " + p.Crew.Count + " now aboard.");
+            GrowAfterResupply(g, p, null);
         }
 
         /// <summary>A module was delivered (station core, base module...): its crew now live aboard.</summary>

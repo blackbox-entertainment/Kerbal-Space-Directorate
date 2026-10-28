@@ -45,6 +45,10 @@ namespace KSA.Core.Missions
         public double SurfaceDays { get; set; }
         /// <summary>Director-defined mission (KSA-59): saved with the game rather than read from missions.cfg.</summary>
         public bool IsCustom { get; set; }
+        /// <summary>A cloud-city mission: it floats, it never touches a surface (KSA-64). Never flown live.</summary>
+        public bool Floating { get; set; }
+        /// <summary>A rescue flight for a stranded crew (KSA-65).</summary>
+        public bool IsRescue { get { return string.Equals(Purpose, "Rescue", StringComparison.OrdinalIgnoreCase); } }
         public bool IsScience { get { return string.Equals(Purpose, "Science", StringComparison.OrdinalIgnoreCase); } }
 
         public MissionType()
@@ -79,6 +83,7 @@ namespace KSA.Core.Missions
         public int Count { get { return _types.Count; } }
 
         public void Add(MissionType t) { if (t == null) throw new ArgumentNullException(nameof(t)); _types.Add(t); }
+        public bool Remove(string id) { return _types.RemoveAll(x => string.Equals(x.Id, id, StringComparison.OrdinalIgnoreCase)) > 0; }
 
         public MissionType Get(string id)
         {
@@ -123,7 +128,8 @@ namespace KSA.Core.Missions
                     Purpose = node.GetValue("purpose", string.Empty),
                     ScienceYield = node.GetDouble("scienceYield", 0),
                     Orbits = node.GetInt("orbits", 0),
-                    SurfaceDays = node.GetDouble("surfaceDays", 0)
+                    SurfaceDays = node.GetDouble("surfaceDays", 0),
+                    Floating = node.GetBool("floating", false)
                 };
                 t.Achievements.AddRange(node.GetList("achievements"));
                 catalog.Add(t);

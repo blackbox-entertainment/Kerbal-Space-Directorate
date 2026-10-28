@@ -42,6 +42,8 @@ namespace KSA.Core.Projects
         public double LaunchUT { get; set; }
         public List<string> FlightLog { get; } = new List<string>();
         public List<string> FlightAchievements { get; } = new List<string>();
+        /// <summary>Stranding this project is flying to rescue (KSA-65), or empty.</summary>
+        public string RescueId { get; set; } = string.Empty;
 
         public Project()
         {
@@ -98,6 +100,13 @@ namespace KSA.Core.Projects
         public bool DirectorFlown { get; set; }
         /// <summary>AI post-mortem text (M5), empty when none was written.</summary>
         public string PostMortem { get; set; }
+        /// <summary>Survivors who could not get home (KSA-65): they wait for a rescue at <see cref="StrandedBody"/>.</summary>
+        public List<string> Stranded { get; } = new List<string>();
+        public string StrandedBody { get; set; } = string.Empty;
+        public bool StrandedOnSurface { get; set; }
+        public string StrandedVesselId { get; set; } = string.Empty;
+        /// <summary>Live flights: kerbals aboard at the end who were not the project crew (rescued crews, KSA-65).</summary>
+        public List<string> Passengers { get; } = new List<string>();
 
         public MissionReport()
         {

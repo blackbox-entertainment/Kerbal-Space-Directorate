@@ -14,7 +14,7 @@ namespace KSA.Core.Tests
             var warnings = new List<string>();
             GoalCatalog c = ShippedConfigs.Goals(warnings);
             Assert.That(warnings, Is.Empty, string.Join(" | ", warnings));
-            Assert.That(c.Count, Is.EqualTo(30));
+            Assert.That(c.Count, Is.EqualTo(32)); // + FoundColony, ColonizeSystem (KSA-64)
             Assert.That(c.Get("AchieveOrbit").Pattern, Is.EqualTo("Orbit:Kerbin"));
             Assert.That(c.Get("AchieveOrbit").Repeatable, Is.False, "firsts are not repeatable by default");
             Assert.That(c.Get("NoCrewLosses").Repeatable, Is.True, "conditional goals repeat by default");

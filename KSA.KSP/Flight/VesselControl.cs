@@ -73,6 +73,7 @@ namespace KSA.KSP.Flight
         private Vector3d? HoldTarget()
         {
             if (_v == null) return null;
+            if (_customDir != null) { try { return _customDir(); } catch { return null; } }
             switch (_mode)
             {
                 case VesselAutopilot.AutopilotMode.Prograde: return _surfaceMode ? _v.srf_velocity : _v.obt_velocity;
@@ -137,6 +138,7 @@ namespace KSA.KSP.Flight
         private void EndManualHold()
         {
             _manualHold = false;
+            _customDir = null;
         }
 
         public float Throttle
@@ -167,6 +169,16 @@ namespace KSA.KSP.Flight
                 if (_v.Autopilot != null) _v.Autopilot.SetMode(mode);
             }
             else BeginManualHold(mode); // rookie pilot or no probe core: fly it ourselves
+        }
+
+        private Func<Vector3d> _customDir;
+
+        /// <summary>Holds an arbitrary world direction with the manual attitude hold (KSA-65: kill relative velocity, close on a target).</summary>
+        public void PointAlong(Func<Vector3d> direction)
+        {
+            if (_v == null || direction == null) return;
+            BeginManualHold(VesselAutopilot.AutopilotMode.StabilityAssist);
+            _customDir = direction;
         }
 
         /// <summary>SAS off entirely (used for the ascent kick).</summary>

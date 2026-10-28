@@ -386,6 +386,7 @@ namespace KSA.Core
 
             MissionReport r = MissionSimulator.Resolve(p, input, day, Rng);
             r.MissionId = p.MissionId;
+            MaybeStrand(type, r); // KSA-65: survivors of a failure far from home may be stuck there
             ApplyReport(p, r, notices);
         }
 
@@ -393,6 +394,7 @@ namespace KSA.Core
         public void ApplyReport(Project p, MissionReport r, List<string> notices)
         {
             int day = r.Day;
+            if (r.Stranded.Count > 0) r.Achievements.RemoveAll(a => a.StartsWith("Recover", StringComparison.OrdinalIgnoreCase)); // nobody came home
             // Make sure the clock-based flight time matches the report: book a fixed duration instead.
             foreach (string id in r.Crew)
             {
@@ -412,6 +414,8 @@ namespace KSA.Core
                     notices.AddRange(EndMission(id, r.Outcome));
                 }
             }
+            if (r.Stranded.Count > 0) Strand(p, r, notices);
+            if (string.Equals(p.ModuleRole, "rescue", StringComparison.OrdinalIgnoreCase)) ApplyRescue(p, r, notices);
             DriftAfterMission(r);
             ClaimPlayerFirsts(notices); // a first is claimed the moment it is flown, not at year end
             AwardExperience(p, r, notices);
@@ -460,6 +464,12 @@ namespace KSA.Core
             if (type.Bodies.Count > 0 && !type.Bodies.Exists(b => string.Equals(b, body, StringComparison.OrdinalIgnoreCase)))
             {
                 message = type.Name + " cannot be built at " + body + ". Choose from: " + string.Join(", ", type.Bodies.ToArray()) + ".";
+                return null;
+            }
+            if (type.RequiresProgram.Length > 0 && ProgramAt(type.RequiresProgram, body, true) == null)
+            {
+                ProgramType req = Catalogs.ProgramTypes.Get(type.RequiresProgram);
+                message = type.Name + " needs a finished " + (req != null ? req.Name : type.RequiresProgram) + " at " + body + " first.";
                 return null;
             }
             var program = new Program
@@ -517,18 +527,22 @@ namespace KSA.Core
             if (type == null) return;
             if (string.Equals(p.ModuleRole, "resupply", StringComparison.OrdinalIgnoreCase)) { if (r != null) ApplyResupply(p, r, program); return; }
             if (p.Status == ProjectStatus.Complete && r != null && r.Mode == MissionMode.WatchLive) NoteCrewAboard(p, program);
+            if (p.Status == ProjectStatus.Complete) CountHardware(program, p, true); // KSA-64: what the module carried
 
             if (p.Status == ProjectStatus.Complete)
             {
                 if (program.NextModuleIndex >= type.Modules.Count)
                 {
+                    bool firstTime = program.Stage < ColonyStage.Base;
                     program.Status = ProgramStatus.Complete;
                     if (program.LastSuppliedDay < 0) program.LastSuppliedDay = CurrentDay;
                     // The whole program's crews share the Base:<body> achievement (station, base or cloud city).
                     foreach (string pid in program.ModuleProjectIds) { Project mp = GetProject(pid); if (mp == null) continue; foreach (string cid in mp.Crew) AddAchievements(cid, new[] { "Base:" + program.Body }); }
-                    Push(null, "Program " + program.Name + " complete.");
+                    Push(null, firstTime ? "Program " + program.Name + " complete." : program.Name + ": " + p.ModuleRole + " module delivered.");
+                    UpdateStage(program, null);
                     return;
                 }
+                UpdateStage(program, null);
                 string why;
                 Project next = StartNextModule(program, out why);
                 if (next == null)

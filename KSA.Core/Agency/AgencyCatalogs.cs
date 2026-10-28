@@ -57,6 +57,9 @@ namespace KSA.Core
         public string AgencyName { get; set; } = string.Empty;
         /// <summary>Lifetime Science credited to the game by the agency.</summary>
         public double ScienceEarned { get; set; }
+        /// <summary>Every world that can hold a colony holds one (KSA-64); announced once.</summary>
+        public bool SystemColonized { get; set; }
+        public int NextStrandingNumber { get; set; } = 1;
         public bool Started { get; set; }
         /// <summary>The fiscal year currently in progress (1-based). 0 before the agency starts.</summary>
         public int CurrentYear { get; set; }

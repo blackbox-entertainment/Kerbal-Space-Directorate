@@ -21,9 +21,11 @@ namespace KSA.KSP.Flight
             if (type == null) return "Unknown mission.";
             bool eve = string.Equals(type.Body, "Eve", StringComparison.OrdinalIgnoreCase);
             bool jool = string.Equals(type.Body, "Jool", StringComparison.OrdinalIgnoreCase);
-            if ((eve || jool) && (type.Profile == MissionProfile.Land || type.Profile == MissionProfile.Base)) return "The flight director has no " + type.Body + " atmospheric entry program; " + type.Name + " is simulated.";
-            bool baseBody = string.Equals(type.Body, "Mun", StringComparison.OrdinalIgnoreCase) || string.Equals(type.Body, "Minmus", StringComparison.OrdinalIgnoreCase) || string.Equals(type.Body, "Duna", StringComparison.OrdinalIgnoreCase);
-            if (type.Profile == MissionProfile.Base && !baseBody) return "Base modules fly live only to Mun, Minmus and Duna; " + type.Name + " is simulated.";
+            if (type.Floating) return type.Name + " floats in the clouds; the flight director has no airship program, so it is simulated.";
+            if (jool && (type.Profile == MissionProfile.Land || type.Profile == MissionProfile.Base)) return "Jool has no surface; " + type.Name + " is simulated.";
+            // Eve: getting down is parachutes and a short burn (flown live, KSA-64); getting back up is not, so a
+            // round-trip landing stays simulated while one-way base deliveries fly.
+            if (eve && type.Profile == MissionProfile.Land) return "Lifting off Eve takes a rocket the flight director cannot fly yet; " + type.Name + " is simulated.";
             return null;
         }
 

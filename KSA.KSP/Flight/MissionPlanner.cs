@@ -61,6 +61,23 @@ namespace KSA.KSP.Flight
             double floor = target.atmosphere ? target.atmosphereDepth + 10000 : 0;
             double orbitAlt = Math.Max(ctx.TargetOrbitAltitude, floor + 10000);
 
+            if (type != null && type.IsRescue && (profile == MissionProfile.Orbit || profile == MissionProfile.OrbitBody))
+            {
+                // KSA-65: meet the stranded vessel, bring the crew across, come home. Surface rescues are simulated.
+                if (target == home)
+                {
+                    prog.Add(new AscentLeg(Math.Max(75000, ctx.ParkingAltitude - 15000), true)).Add(new RendezvousLeg()).Add(new RescueTransferLeg()).Add(new ReentryLeg(pe));
+                }
+                else
+                {
+                    prog.Add(new AscentLeg(ctx.ParkingAltitude, true));
+                    Outbound(prog, ctx, target, interplanetary, Math.Max(20000, floor), Math.Max(80000, floor + 50000));
+                    prog.Add(new CaptureLeg(target, orbitAlt)).Add(new RendezvousLeg()).Add(new RescueTransferLeg());
+                    Homebound(prog, ctx, target, interplanetary, true, peLo, peHi);
+                }
+                return prog;
+            }
+
             switch (profile)
             {
                 case MissionProfile.Suborbital:

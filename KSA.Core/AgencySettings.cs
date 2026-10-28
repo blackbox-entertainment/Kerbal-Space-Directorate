@@ -46,6 +46,10 @@ namespace KSA.Core
         public string LiveFlightScope { get; set; } = "All";
         /// <summary>How crew competence shapes live flights (FLIGHT_CREW block).</summary>
         public KSA.Core.Flight.FlightCrewRules FlightCrew { get; set; } = new KSA.Core.Flight.FlightCrewRules();
+        /// <summary>Base growth into settlements and colonies (COLONY block, KSA-64).</summary>
+        public KSA.Core.Projects.ColonyRules Colony { get; set; } = new KSA.Core.Projects.ColonyRules();
+        /// <summary>Stranded crews and rescue missions (RESCUE block, KSA-65).</summary>
+        public KSA.Core.Projects.RescueRules Rescue { get; set; } = new KSA.Core.Projects.RescueRules();
         /// <summary>Mission experience and the star ladder (EXPERIENCE block, KSA-63).</summary>
         public KSA.Core.Personnel.ExperienceRules Experience { get; set; } = new KSA.Core.Personnel.ExperienceRules();
         /// <summary>What the personality tags do (PERSONALITY block).</summary>
@@ -96,6 +100,8 @@ namespace KSA.Core
             s.FlightCrew = KSA.Core.Flight.FlightCrewRules.Parse(node.GetChild(KSA.Core.Flight.FlightCrewRules.NodeName));
             s.Personality = KSA.Core.Personnel.PersonalityRules.Parse(node.GetChild(KSA.Core.Personnel.PersonalityRules.NodeName));
             s.Experience = KSA.Core.Personnel.ExperienceRules.Parse(node.GetChild(KSA.Core.Personnel.ExperienceRules.NodeName));
+            s.Colony = KSA.Core.Projects.ColonyRules.Parse(node.GetChild(KSA.Core.Projects.ColonyRules.NodeName));
+            s.Rescue = KSA.Core.Projects.RescueRules.Parse(node.GetChild(KSA.Core.Projects.RescueRules.NodeName));
             s.CrewDecisions = node.GetValue("crewDecisions", s.CrewDecisions);
             s.Departments = DepartmentRules.Parse(node.GetChild(DepartmentRules.NodeName));
             s.StockContracts = node.GetBool("stockContracts", s.StockContracts);

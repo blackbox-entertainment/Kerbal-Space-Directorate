@@ -118,6 +118,7 @@ namespace KSA.KSP.Events
                 if (pcm == null) continue;
                 Agency.AddAchievements(pcm.name, KspRosterSource.Achievements(pcm));
                 Core.Personnel.CrewProfile profile = Agency.Crew.Get(pcm.name);
+                if (Agency.RecoverStranded(pcm.name)) { KsaCore.Log.Info("Recovered " + pcm.name + ": stranded crew brought home"); continue; } // KSA-65
                 if (profile != null && profile.Record.CurrentMission == null) { Agency.ReturnFromStation(pcm.name); KsaCore.Log.Info("Recovered " + pcm.name + " (no open mission: station crew coming home)"); continue; }
                 MissionOutcome outcome = HadCrashThisMission(pcm.name) ? MissionOutcome.PartialSuccess : MissionOutcome.Success;
                 List<string> notices = Agency.EndMission(pcm.name, outcome);

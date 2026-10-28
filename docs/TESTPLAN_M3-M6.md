@@ -121,3 +121,26 @@ The flight director runs a list of legs (shown on the HUD as "Leg: name (n/total
 3. Repeat the hop: +3 each, no First bonus the second time.
 4. A simulated mission now also writes its achievements into the stock flight log, so the Astronaut Complex shows the same stars after a scene change.
 5. A Director-flown flight pays half; a failed mission the crew survived pays a quarter; dead crew earn nothing.
+
+## A4. Colonies (added 2026-10-27, KSA-64)
+
+1. Programs window, new program: there are now bases for Ike, Moho, Dres, Laythe, Vall, Tylo, Bop, Eeloo and the Eve surface. Every base and cloud city lists a fifth "return" module: the rocket that stays.
+2. Pick the Eve surface base: the window says it needs a finished Eve cloud city first, and Start refuses until there is one.
+3. An existing finished base from an older save shows an "Add return module" button. Press it; the rocket module runs like any other module and the base shows "rocket on site: yes" when it lands.
+4. Each base row shows Stage (outpost, base, settlement, colony), residents (crew plus settled men and women), room, resupplies, and hardware (drills, ore converters, power) counted from the delivered craft. The italic line says what the next stage needs.
+5. Resupply a finished base a few times: each success adds 2 room and up to 2 settlers. After 3 resupplies with 4+ residents and the rocket, it becomes a settlement and its supply interval doubles.
+6. With a drill, an ore converter and power delivered, 6 resupplies and 8+ residents it becomes a colony: notice "+5 prestige", the crew aboard get the Colony Founder medal, supplies read "no supply needed".
+7. At the year end each settlement or colony returns Science and funds; a self-sufficient one with a man and a woman and free room gains residents. A colony of 6+ colonists sometimes sends a colony-born walk-in applicant.
+8. Evacuate crew: everyone aboard comes home (from the Eve surface they go up to the cloud city and wait there for its rocket).
+9. Campaign window: new Colony column ("-" where no colony is possible) and a line "Colonies: n of 14 worlds".
+10. Live: base modules now fly live to every solid world, including the Eve surface (parachutes plus a short burn). Cloud cities and Jool stay simulated.
+
+## C5. Rescues (added 2026-10-27, KSA-65)
+
+1. Live: get a crewed craft into a bad orbit or onto another body with no way home. Take control (or let the program fail): the Flight Director window shows "Crew stranded: call for a rescue". Press it. The project ends; the crew stays in the craft.
+2. Simulated: a failed mission beyond Kerbin strands the survivors 35% of the time (15% in Kerbin orbit). The report says so.
+3. Projects window, top: "Stranded crews" lists who, where, since when and how many days until they are given up for lost (852 by default). Their Service Record says "stranded in orbit of ...".
+4. Launch rescue (simulated) or Rescue (Watch Live). Live works for orbit strandings with a live vessel: ascent, rendezvous, close to about 100 m, the crew moves across automatically; if the game refuses, bring them over by EVA and the pilot waits. Then home.
+5. On success the rescued get the Lifesaver medal, the rescuers too, +3 prestige. A live rescue that comes home without them does not count.
+6. A stranded crew you fetch yourself in any craft and recover counts as rescued.
+7. Each year stranded: -10 morale for them and -3 prestige. After lostAfterDays they are declared lost (agency.cfg RESCUE).

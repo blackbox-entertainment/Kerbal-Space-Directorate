@@ -135,6 +135,18 @@ namespace KSA.KSP.UI
                         : supply.StartsWith("supplied", StringComparison.Ordinal) ? "#8be28b" : "#aaaaaa";
                     Line(items, "Supplies: <color=" + colour + ">" + supply + "</color>" + (inFlight ? "  |  <color=#8be28b>resupply in flight</color>" : "")
                         + "  |  Crew aboard: " + Names(g.CrewAboard), textWidth);
+                    // Growth (KSA-64).
+                    if (type != null && type.Kind != ProgramKind.OrbitalStation)
+                    {
+                        string stage = Agency.StageText(g.Stage);
+                        string stageColour = g.Stage == ColonyStage.Colony ? "#8be28b" : g.Stage == ColonyStage.Settlement ? "#ffd27f" : "#cccccc";
+                        Line(items, "Stage: <color=" + stageColour + "><b>" + stage + "</b></color>  |  residents " + g.Residents + " (" + g.CrewAboard.Count + " crew, " + g.ColonistsMale + " men and " + g.ColonistsFemale + " women settled)  |  room " + g.Room
+                            + "  |  resupplies " + g.ResuppliesDelivered, textWidth);
+                        Line(items, "Hardware: " + g.Drills + " drill" + (g.Drills == 1 ? "" : "s") + ", " + g.Isru + " ore converter" + (g.Isru == 1 ? "" : "s") + ", " + g.Power + " power  |  rocket on site: "
+                            + (g.HasRocket ? "<color=#8be28b>yes</color>" : "<color=#ff8080>no</color>") + (_agency.IsSelfSufficient(g) ? "  |  <color=#8be28b>self-sufficient</color>" : string.Empty), textWidth);
+                        string hint = _agency.NextStageHint(g);
+                        if (hint.Length > 0) Line(items, "<i>" + hint + "</i>", textWidth);
+                    }
                 }
 
                 var buttons = new List<DialogGUIBase>();
@@ -144,6 +156,10 @@ namespace KSA.KSP.UI
                     buttons.Add(new DialogGUIButton("Send resupply", () => OnResupply(id, null), 130f, ButtonHeight, false));
                     buttons.Add(new DialogGUIButton("Resupply (Watch Live)", () => OnResupply(id, MissionMode.WatchLive), 170f, ButtonHeight, false));
                 }
+                if (_agency.CanExtend(g))
+                    buttons.Add(new DialogGUIButton("Add " + _agency.NextModuleRole(g) + " module", () => OnExtend(id), 170f, ButtonHeight, false));
+                if (g.HasRocket && g.CrewAboard.Count > 0)
+                    buttons.Add(new DialogGUIButton("Evacuate crew", () => OnEvacuate(id), 130f, ButtonHeight, false));
                 if (g.Status == ProgramStatus.Stalled)
                     buttons.Add(new DialogGUIButton("Resume", () => OnResume(id), 110f, ButtonHeight, false));
                 if (g.Status == ProgramStatus.Active || g.Status == ProgramStatus.Stalled)
@@ -194,6 +210,12 @@ namespace KSA.KSP.UI
             }
             Line(items, "Modules: " + string.Join(", ", recipe.ToArray()), textWidth);
             Line(items, "Estimated total " + Agency.Money(totalCost) + " across " + selected.Modules.Count + " module project" + (selected.Modules.Count == 1 ? "" : "s") + ", each charged when it starts.", textWidth);
+            if (selected.RequiresProgram.Length > 0)
+            {
+                ProgramType req = _agency.Catalogs.ProgramTypes.Get(selected.RequiresProgram);
+                bool have = selected.Bodies.Count > 0 && _agency.ProgramAt(selected.RequiresProgram, selected.Bodies[0], true) != null;
+                Line(items, "<color=" + (have ? "#8be28b" : "#ffd27f") + ">Needs a finished " + (req != null ? req.Name : selected.RequiresProgram) + " there first" + (have ? " (done)." : ".") + "</color>", textWidth);
+            }
 
             // Body.
             List<string> bodies = selected.Bodies;
@@ -221,6 +243,20 @@ namespace KSA.KSP.UI
         }
 
         // --- Director actions: call the Agency, remember its message, rebuild ---
+
+        private void OnExtend(string programId)
+        {
+            string message;
+            bool ok = _agency.ExtendProgram(programId, out message);
+            Report(ok, message);
+        }
+
+        private void OnEvacuate(string programId)
+        {
+            string message;
+            bool ok = _agency.Evacuate(programId, out message);
+            Report(ok, message);
+        }
 
         private void OnResume(string programId)
         {
