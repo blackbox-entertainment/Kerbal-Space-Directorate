@@ -298,16 +298,18 @@ namespace KSA.KSP.UI
         private void SizeRow(List<DialogGUIBase> items, float textWidth)
         {
             string best = RecommendedLocalModel();
-            var row = new List<DialogGUIBase> { new DialogGUISpace(16f) };
             foreach (LocalSize s in Sizes)
             {
                 string model = s.Model;
                 bool fits = SystemInfo.graphicsMemorySize >= s.MinVram;
                 bool have = HasDiscovered(model);
-                string text = s.Label + " (" + s.Size + (have ? ", on this PC" : "") + ")" + (model == best ? "  <- fits this PC" : fits ? "" : "  (too big for this card)");
-                row.Add(new DialogGUIButton(text, () => EnsureAndUse(model), 230f, ButtonHeight, false));
+                string text = (model == best ? "> " : "") + s.Label + " (" + s.Size + ")";
+                string note = (have ? "on this PC. " : "") + (model == best ? "Fits this PC." : fits ? "" : "Too big for this card.");
+                items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                    new DialogGUISpace(16f),
+                    new DialogGUIButton(text, () => EnsureAndUse(model), 190f, ButtonHeight, false),
+                    new DialogGUILabel(s.Model + "  " + note, textWidth - 220f, LineHeight)));
             }
-            items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft, row.ToArray()));
             Line(items, "Graphics memory on this PC: " + SystemInfo.graphicsMemorySize + " MB. The game keeps 2 to 3 GB of it; the rest is for the model.", textWidth);
         }
 
