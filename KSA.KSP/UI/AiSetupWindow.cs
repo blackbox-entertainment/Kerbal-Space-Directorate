@@ -201,11 +201,8 @@ namespace KSA.KSP.UI
             }
             else if (_discovered.Count == 0)
             {
-                Line(items, Green("Ollama is running.") + " Step 2: download a model. One click, " + size + ", nothing to type.", textWidth);
-                items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
-                    new DialogGUISpace(16f),
-                    new DialogGUIButton("Set up local AI (" + model + ")", () => PullModel(model, true), 260f, ButtonHeight, false),
-                    new DialogGUILabel("Picked for this PC's graphics memory (" + SystemInfo.graphicsMemorySize + " MB). It is tested and saved for you when the download ends.", textWidth - 290f, 2 * LineHeight)));
+                Line(items, Green("Ollama is running.") + " Step 2: pick a size. One press downloads it, tests it and saves it; nothing to type.", textWidth);
+                SizeRow(items, textWidth);
             }
             else
             {
@@ -216,7 +213,8 @@ namespace KSA.KSP.UI
                     new DialogGUISpace(16f),
                     new DialogGUIButton("Use it", () => UseLocal(current), 110f, ButtonHeight, false),
                     new DialogGUIButton("Check again", ProbeLocal, 110f, ButtonHeight, false),
-                    haveRecommended ? (DialogGUIBase)new DialogGUILabel("Ready.", 120f, LineHeight) : new DialogGUIButton("Download " + model + " (" + size + ")", () => PullModel(model, true), 260f, ButtonHeight, false)));
+                    new DialogGUILabel("Or switch size (downloads if needed, then tests and saves):", textWidth - 250f, LineHeight)));
+                SizeRow(items, textWidth);
                 if (_discovered.Count > 1)
                 {
                     Line(items, "Models on this PC (click to switch):", textWidth);
@@ -288,9 +286,39 @@ namespace KSA.KSP.UI
             return false;
         }
 
+        private sealed class LocalSize { public string Label, Model, Size; public int MinVram; }
+        private static readonly LocalSize[] Sizes =
+        {
+            new LocalSize { Label = "Tiny", Model = "gemma3:1b", Size = "0.8 GB", MinVram = 0 },
+            new LocalSize { Label = "Small", Model = "gemma3:4b", Size = "3.3 GB", MinVram = 6000 },
+            new LocalSize { Label = "Standard", Model = "qwen2.5:7b", Size = "4.7 GB", MinVram = 11000 }
+        };
+
+        /// <summary>One button per model size: the one that fits this card is marked; pressing downloads if needed, then tests and saves.</summary>
+        private void SizeRow(List<DialogGUIBase> items, float textWidth)
+        {
+            string best = RecommendedLocalModel();
+            var row = new List<DialogGUIBase> { new DialogGUISpace(16f) };
+            foreach (LocalSize s in Sizes)
+            {
+                string model = s.Model;
+                bool fits = SystemInfo.graphicsMemorySize >= s.MinVram;
+                bool have = HasDiscovered(model);
+                string text = s.Label + " (" + s.Size + (have ? ", on this PC" : "") + ")" + (model == best ? "  <- fits this PC" : fits ? "" : "  (too big for this card)");
+                row.Add(new DialogGUIButton(text, () => EnsureAndUse(model), 230f, ButtonHeight, false));
+            }
+            items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft, row.ToArray()));
+            Line(items, "Graphics memory on this PC: " + SystemInfo.graphicsMemorySize + " MB. The game keeps 2 to 3 GB of it; the rest is for the model.", textWidth);
+        }
+
+        private void EnsureAndUse(string model)
+        {
+            if (HasDiscovered(model)) UseLocal(model); else PullModel(model, true);
+        }
+
         /// <summary>KSP itself holds 2 to 3 GB of graphics memory while running, and a 7B model wants 6 GB beside it: only cards of 11 GB and up get the 7B, the rest the 4B.</summary>
-        private static string RecommendedLocalModel() { return SystemInfo.graphicsMemorySize >= 11000 ? "qwen2.5:7b" : "gemma3:4b"; }
-        private static string RecommendedLocalSize() { return SystemInfo.graphicsMemorySize >= 11000 ? "about 4.7 GB" : "about 3.3 GB"; }
+        private static string RecommendedLocalModel() { return SystemInfo.graphicsMemorySize >= 11000 ? "qwen2.5:7b" : SystemInfo.graphicsMemorySize >= 6000 ? "gemma3:4b" : "gemma3:1b"; }
+        private static string RecommendedLocalSize() { return SystemInfo.graphicsMemorySize >= 11000 ? "about 4.7 GB" : SystemInfo.graphicsMemorySize >= 6000 ? "about 3.3 GB" : "about 0.8 GB"; }
 
         private string LocalBase()
         {
