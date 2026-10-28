@@ -294,6 +294,7 @@ namespace KSA.KSP.Flight
             double speed = _vessel.srfSpeed;
             if (alt > Live.MaxAltitude) Live.MaxAltitude = alt;
             if (speed > Live.MaxSpeed) Live.MaxSpeed = speed;
+            if (_vessel.state == Vessel.State.DEAD) { Log("Vessel destroyed.", null); Resolve(false); return; }
             if (Live.AutopilotOn && _program != null)
             {
                 string line = _program.Step();
@@ -402,6 +403,10 @@ namespace KSA.KSP.Flight
             if (!Live.Deaths.Contains(report.sender)) Live.Deaths.Add(report.sender);
             Live.Crashed = true;
             Log(report.sender + " was killed" + (string.IsNullOrEmpty(report.msg) ? "." : ": " + report.msg), null);
+            // Everyone aboard is dead: the mission is over now, whatever is left of the vessel.
+            bool allDead = true;
+            foreach (string id in p.Crew) if (!Live.Deaths.Contains(id)) { allDead = false; break; }
+            if (allDead) { Log("All crew lost.", null); Resolve(false); }
         }
 
         public static void NoteCrash(Vessel v, string detail)

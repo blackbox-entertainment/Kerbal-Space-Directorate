@@ -52,6 +52,91 @@ namespace KSA.KSP.Flight
             if (TransX != 0) s.X = TransX;
             if (TransY != 0) s.Y = TransY;
             if (TransZ != 0) s.Z = TransZ;
+            if (_manualHold && Yaw == 0 && Pitch == 0) ManualHold(s);
+        }
+
+        // ------------------------------------------------------------------ manual attitude hold
+        // Stock SAS only offers prograde/retrograde/maneuver holds to pilots with at least one star (or a capable probe core).
+        // A rookie's flight director has to fly the attitude itself: a proportional-derivative hold on the target direction,
+        // convention-free (the error is measured from the vessel's own axes, the sign is learned in flight).
+
+        private VesselAutopilot.AutopilotMode _mode = VesselAutopilot.AutopilotMode.StabilityAssist;
+        private bool _surfaceMode;
+        private bool _manualHold;
+        private double _prevPitchErr, _prevYawErr, _prevTime = -1;
+        private float _pitchSign = 1f, _yawSign = 1f;
+        private double _signCheckAt = -1, _signCheckErr;
+
+        /// <summary>True when the flight director is holding attitude itself because SAS cannot.</summary>
+        public bool ManualAttitude { get { return _manualHold; } }
+
+        private Vector3d? HoldTarget()
+        {
+            if (_v == null) return null;
+            switch (_mode)
+            {
+                case VesselAutopilot.AutopilotMode.Prograde: return _surfaceMode ? _v.srf_velocity : _v.obt_velocity;
+                case VesselAutopilot.AutopilotMode.Retrograde: return -(_surfaceMode ? _v.srf_velocity : _v.obt_velocity);
+                case VesselAutopilot.AutopilotMode.RadialOut: return (Vector3d)_v.upAxis;
+                case VesselAutopilot.AutopilotMode.RadialIn: return -(Vector3d)_v.upAxis;
+                case VesselAutopilot.AutopilotMode.Normal: return Vector3d.Cross(_v.obt_velocity, (Vector3d)_v.upAxis).normalized;
+                case VesselAutopilot.AutopilotMode.Antinormal: return -Vector3d.Cross(_v.obt_velocity, (Vector3d)_v.upAxis).normalized;
+                case VesselAutopilot.AutopilotMode.Maneuver:
+                    if (_v.patchedConicSolver != null && _v.patchedConicSolver.maneuverNodes.Count > 0) return _v.patchedConicSolver.maneuverNodes[0].GetBurnVector(_v.orbit);
+                    return null;
+                case VesselAutopilot.AutopilotMode.Target:
+                    ITargetable t = FlightGlobals.fetch != null ? FlightGlobals.fetch.VesselTarget : null;
+                    if (t == null || t.GetTransform() == null) return null;
+                    return (Vector3d)(t.GetTransform().position - _v.ReferenceTransform.position);
+                default: return null;
+            }
+        }
+
+        private void ManualHold(FlightCtrlState s)
+        {
+            Vector3d? target = HoldTarget();
+            Transform rt = _v.ReferenceTransform;
+            if (target == null || rt == null || target.Value.magnitude < 1e-6) return;
+            Vector3 local = rt.InverseTransformDirection((Vector3)target.Value.normalized);
+            // The control point's thrust axis is transform.up; x is right (yaw), z is dorsal (pitch).
+            double yawErr = Math.Atan2(local.x, Math.Max(0.0001f, local.y));
+            double pitchErr = Math.Atan2(local.z, Math.Max(0.0001f, local.y));
+            if (local.y < 0) { yawErr = yawErr >= 0 ? Math.PI / 2 : -Math.PI / 2; pitchErr = pitchErr >= 0 ? Math.PI / 2 : -Math.PI / 2; }
+            double now = Now;
+            double dt = _prevTime > 0 ? Math.Max(0.01, now - _prevTime) : 0.02;
+            double dYaw = _prevTime > 0 ? (yawErr - _prevYawErr) / dt : 0;
+            double dPitch = _prevTime > 0 ? (pitchErr - _prevPitchErr) / dt : 0;
+            _prevYawErr = yawErr; _prevPitchErr = pitchErr; _prevTime = now;
+            const double kp = 1.6, kd = 0.9;
+            float yaw = (float)Math.Max(-1, Math.Min(1, (kp * yawErr + kd * dYaw))) * _yawSign;
+            float pitch = (float)Math.Max(-1, Math.Min(1, (kp * pitchErr + kd * dPitch))) * _pitchSign;
+            s.yaw = yaw;
+            s.pitch = pitch;
+            // Learn the sign: if a steady command made the total error grow over a second, the axis is wired the other way.
+            double err = Math.Sqrt(yawErr * yawErr + pitchErr * pitchErr);
+            if (_signCheckAt < 0) { _signCheckAt = now; _signCheckErr = err; }
+            else if (now - _signCheckAt > 1.0)
+            {
+                if (err > _signCheckErr + 0.1 && err > 0.3)
+                {
+                    if (Math.Abs(yawErr) > Math.Abs(pitchErr)) _yawSign = -_yawSign; else _pitchSign = -_pitchSign;
+                    KsaCore.Log.Info("Manual attitude hold: flipped " + (Math.Abs(yawErr) > Math.Abs(pitchErr) ? "yaw" : "pitch") + " sign");
+                }
+                _signCheckAt = now; _signCheckErr = err;
+            }
+        }
+
+        private void BeginManualHold(VesselAutopilot.AutopilotMode mode)
+        {
+            if (!_manualHold || _mode != mode) { _prevTime = -1; _signCheckAt = -1; }
+            _manualHold = true;
+            _mode = mode;
+            if (_v != null) _v.ActionGroups.SetGroup(KSPActionGroup.SAS, false); // stock SAS would fight the hold
+        }
+
+        private void EndManualHold()
+        {
+            _manualHold = false;
         }
 
         public float Throttle
@@ -72,11 +157,20 @@ namespace KSA.KSP.Flight
         public void Sas(VesselAutopilot.AutopilotMode mode, bool surfaceMode)
         {
             if (_v == null) return;
-            _v.ActionGroups.SetGroup(KSPActionGroup.SAS, true);
+            _surfaceMode = surfaceMode;
             FlightGlobals.SetSpeedMode(surfaceMode ? FlightGlobals.SpeedDisplayModes.Surface : FlightGlobals.SpeedDisplayModes.Orbit);
-            if (_v.Autopilot != null && _v.Autopilot.CanSetMode(mode)) _v.Autopilot.SetMode(mode);
-            else if (_v.Autopilot != null && mode != VesselAutopilot.AutopilotMode.StabilityAssist) _v.Autopilot.SetMode(VesselAutopilot.AutopilotMode.StabilityAssist);
+            if (mode == VesselAutopilot.AutopilotMode.StabilityAssist || (_v.Autopilot != null && _v.Autopilot.CanSetMode(mode)))
+            {
+                EndManualHold();
+                _mode = mode;
+                _v.ActionGroups.SetGroup(KSPActionGroup.SAS, true);
+                if (_v.Autopilot != null) _v.Autopilot.SetMode(mode);
+            }
+            else BeginManualHold(mode); // rookie pilot or no probe core: fly it ourselves
         }
+
+        /// <summary>SAS off entirely (used for the ascent kick).</summary>
+        public void SasOffForKick() { EndManualHold(); SasOff(); }
 
         /// <summary>SAS off, so an injected yaw/pitch input is not fought (used for the ascent kick).</summary>
         public void SasOff() { if (_v != null) _v.ActionGroups.SetGroup(KSPActionGroup.SAS, false); }
@@ -256,15 +350,19 @@ namespace KSA.KSP.Flight
 
         // ------------------------------------------------------------------ misc hardware
 
-        public void DeployChutes(ref string line)
+        public void DeployChutes(ref string line) { DeployChutes(ref line, false); }
+
+        /// <summary>Pops stowed chutes that report safe; with <paramref name="force"/> also the risky and unsafe ones (better a torn chute than a crater).</summary>
+        public void DeployChutes(ref string line, bool force)
         {
             if (_v == null) return;
             foreach (ModuleParachute chute in _v.FindPartModulesImplementing<ModuleParachute>())
             {
                 if (chute.deploymentState != ModuleParachute.deploymentStates.STOWED) continue;
-                if (chute.deploymentSafeState != ModuleParachute.deploymentSafeStates.SAFE) continue;
+                bool safe = chute.deploymentSafeState == ModuleParachute.deploymentSafeStates.SAFE;
+                if (!safe && !force) continue;
                 chute.Deploy();
-                line = "Parachutes deployed at " + Math.Round(_v.altitude) + " m.";
+                line = "Parachutes deployed at " + Math.Round(_v.altitude) + " m" + (safe ? "." : " (risky: too fast, no choice).");
             }
         }
 

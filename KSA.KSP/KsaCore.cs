@@ -177,6 +177,24 @@ namespace KSA.KSP
                 if (uint.TryParse(p.VesselId, out id)) foreach (Vessel v in FlightGlobals.Vessels) if (v != null && v.persistentId == id) { found = true; break; }
                 if (found) continue;
                 if (Flight.KsaFlightDirector.Live != null && Flight.KsaFlightDirector.Live.ProjectId == p.Id) continue;
+                // Dead or missing crew on the game roster: the flight ended badly without us seeing it. Close it as a loss.
+                var lost = new List<string>();
+                KerbalRoster roster = HighLogic.CurrentGame != null ? HighLogic.CurrentGame.CrewRoster : null;
+                foreach (string cid in p.Crew)
+                {
+                    ProtoCrewMember pcm = roster != null && roster.Exists(cid) ? roster[cid] : null;
+                    if (pcm != null && (pcm.rosterStatus == ProtoCrewMember.RosterStatus.Dead || pcm.rosterStatus == ProtoCrewMember.RosterStatus.Missing)) lost.Add(cid);
+                }
+                if (lost.Count > 0)
+                {
+                    var result = new Core.Flight.LiveFlightResult { Crashed = true };
+                    result.Deaths.AddRange(lost);
+                    Core.Projects.MissionReport r = Agency.ResolveLive(p.Id, result);
+                    foreach (string cid in lost) Agency.RecordDeath(cid, "Lost on " + p.Name);
+                    Log.Warn("Live project " + p.Name + " closed as loss of crew: " + string.Join(", ", lost.ToArray()));
+                    ScreenMessages.PostScreenMessage("[KSA] " + p.Name + ": " + (r != null ? Agency.OutcomeText(r.Outcome) : "loss of crew"), 8f, ScreenMessageStyle.UPPER_CENTER);
+                    return;
+                }
                 string msg;
                 if (Agency.ReturnToPad(p.Id, out msg))
                 {

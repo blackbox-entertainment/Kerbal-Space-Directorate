@@ -860,7 +860,7 @@ namespace KSA.KSP.Flight
                         if (above > verticalUntil || v.srfSpeed > 80)
                         {
                             _kickSign = KickSign(v);
-                            c.SasOff();
+                            c.SasOffForKick();
                             c.Yaw = _kickSign;
                             _phase = Phases.Kick; _phaseStart = ctx.Now;
                             Status = "Pitching east.";
