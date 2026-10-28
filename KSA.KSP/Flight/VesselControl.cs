@@ -220,7 +220,8 @@ namespace KSA.KSP.Flight
                 if (e.finalThrust > 0.1f) anyThrust = true;
             }
             // Stage on burnout, or when lit engines give nothing; never to fire a stage that holds only parachutes.
-            if (anyActive && (anyFlamedOut || !anyThrust) && NextStageIsWorthFiring())
+            // Burnout, dead thrust, or nothing lit at all with stages left: keep going down the stack (never into a chute-only stage).
+            if ((anyActive && (anyFlamedOut || !anyThrust)) || (!anyActive && HasStagesLeft)) if (NextStageIsWorthFiring())
             {
                 Stage();
                 line = "Staging (" + (anyFlamedOut ? "burnout" : "no thrust") + "), stage " + _v.currentStage + ".";
@@ -232,16 +233,15 @@ namespace KSA.KSP.Flight
         {
             if (_v == null || _v.currentStage <= 0) return false;
             int next = _v.currentStage - 1;
-            bool anyPart = false;
+            bool anyPart = false, allChutes = true;
             foreach (Part p in _v.parts)
             {
                 if (p.inverseStage != next) continue;
                 anyPart = true;
-                if (p.FindModuleImplementing<ModuleEngines>() != null) return true;
-                if (p.FindModuleImplementing<ModuleDecouple>() != null || p.FindModuleImplementing<ModuleAnchoredDecoupler>() != null) return true;
-                if (p.FindModuleImplementing<LaunchClamp>() != null) return true;
+                if (p.FindModuleImplementing<ModuleParachute>() == null) allChutes = false;
             }
-            return !anyPart; // an empty stage is harmless to pop
+            // Only a stage made of nothing but parachutes is off limits; empty stages and anything with engines or decouplers are fine.
+            return !(anyPart && allChutes);
         }
 
         /// <summary>True when nothing is burning and staging will not help (or has just been tried).</summary>
