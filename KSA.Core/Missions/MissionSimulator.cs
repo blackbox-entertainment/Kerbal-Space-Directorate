@@ -20,6 +20,8 @@ namespace KSA.Core.Missions
         public double? DesignOverride { get; set; }
         /// <summary>Absolute success-chance bonus from the Head of Science (department heads).</summary>
         public double SuccessBonus { get; set; }
+        /// <summary>Lead engineer personality: added to the design score.</summary>
+        public double LeadDesignBonus { get; set; }
 
         public SimulationInput() { LeadEngineerRung = -1; SiteSlope = -1; }
     }
@@ -45,6 +47,7 @@ namespace KSA.Core.Missions
             if (input.DesignOverride.HasValue) score = input.DesignOverride.Value; // an approved AI design replaces the template's figure
             if (input.LeadEngineerRung > 0) score += Math.Min(0.15, 0.05 * input.LeadEngineerRung);
             if (input.HasProgramManager) score += 0.03;
+            score += input.LeadDesignBonus;
             return Clamp01(score);
         }
 

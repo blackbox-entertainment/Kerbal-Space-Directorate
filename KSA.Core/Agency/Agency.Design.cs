@@ -104,6 +104,7 @@ namespace KSA.Core
             }
             if (Parts != null) req.AllowedParts.AddRange(PartFilter.ForJob(Parts, JobFor(type), AllowDlcParts));
             req.Lessons.AddRange(Lessons(type, 8));
+            req.PriorDesigns = MissionsCompleted(type.Id);
             return req;
         }
 
@@ -143,7 +144,7 @@ namespace KSA.Core
             DesignRequest request = BuildDesignRequest(p);
             if (request.AllowedParts.Count == 0) { p.Notes.Add("AI design skipped: no parts available for this job."); return false; }
             CrewProfile lead = Crew.Get(p.LeadEngineer);
-            int passes = PromptBuilder.RevisionPasses(lead, RankRung(lead));
+            int passes = Math.Min(5, PromptBuilder.RevisionPasses(lead, RankRung(lead), false) + Personality.DesignPasses(lead));
 
             var session = new DesignSession(new LlmClient(Transport, Log), endpoint, Parts, Log, LaunchGravity);
             _designsInFlight.Add(p.Id);

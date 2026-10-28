@@ -167,7 +167,8 @@ namespace KSA.Core.Design
         private void Pass(DesignRequest request, string system, DesignRecord record, StagePlan previous, string feedback, Action<DesignRecord> done)
         {
             string user = PromptBuilder.UserPrompt(request, previous, feedback);
-            _client.Chat(_endpoint, system, user, 0.4, true, result =>
+            double temperature = Math.Min(0.8, 0.4 + 0.1 * Math.Min(4, request.PriorDesigns)); // the fifth lander of a type should not be a carbon copy
+            _client.Chat(_endpoint, system, user, temperature, true, result =>
             {
                 record.PassesUsed++;
                 if (!result.Ok)

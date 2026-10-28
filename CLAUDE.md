@@ -158,6 +158,7 @@ GameData/KSA/
 | Custom missions | Built 2026-10-27 (KSA-59): CustomMissionSpec → synthetic MissionType (IsCustom, Orbits, SurfaceDays) saved as CUSTOM_MISSION; templates by shape (Agency.TemplatesFor). |
 | Exploration medals | Built 2026-10-27 (KSA-60): FarthestKm / DaysOnOtherWorlds / WorldsVisited / LongestMissionDays on the record; medal triggers FarthestDistance, DaysOnOtherWorlds, WorldsVisited, LongestMission. |
 | Resupply and campaign ladder | Built 2026-10-27 (KSA-61): programs.cfg supplyIntervalDays/resupplyMissionType, Agency.CreateResupply, crew rotation, Base:/Resupply: achievements, goals.cfg `requires`, Campaign window. |
+| Personality effects | Built 2026-10-27: PersonalityRules (agency.cfg PERSONALITY, TAG nodes) feed flight profile, morale scaling, idle immunity, prestige, science, design passes/score/time. |
 
 **Candidate supported mod set (not final):** ReStock/ReStock+, Near Future series, SSPXr (inflatables), KPBS (surface bases), Outer Planets Mod, Hooligan Labs Airships (Eve cloud city), Extraplanetary Launchpads. Required: ModuleManager. Optional: MechJeb2 (future bridge for missions beyond Kerbin orbit), kOS.
 

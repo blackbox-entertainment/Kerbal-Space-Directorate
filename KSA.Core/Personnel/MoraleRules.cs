@@ -82,15 +82,25 @@ namespace KSA.Core.Personnel
         }
 
         /// <summary>Applies an event to a profile, clamping 0..100. Returns the new morale.</summary>
+        /// <summary>Optional: personality scaling of every morale change (Steady halves losses, Showboat amplifies gains).</summary>
+        public PersonalityRules Personality { get; set; }
+
         public int Apply(CrewProfile p, MoraleEvent e)
         {
-            return ApplyDelta(p, Delta(e));
+            return ApplyDelta(p, Scale(p, Delta(e)));
+        }
+
+        private int Scale(CrewProfile p, int delta)
+        {
+            if (Personality == null || p == null || delta == 0) return delta;
+            double f = Personality.MoraleFactor(p, delta < 0);
+            return (int)Math.Round(delta * f, MidpointRounding.AwayFromZero);
         }
 
         /// <summary>Applies a roster-scaled event (a colleague lost). Returns the new morale.</summary>
         public int ApplyScaled(CrewProfile p, MoraleEvent e, int remaining)
         {
-            return ApplyDelta(p, ScaledDelta(e, remaining));
+            return ApplyDelta(p, Scale(p, ScaledDelta(e, remaining)));
         }
 
         private static int ApplyDelta(CrewProfile p, int delta)

@@ -76,6 +76,7 @@ namespace KSA.Core
             Crew = new CrewRegistry();
             Promotions = new PromotionEngine(catalogs.Careers, Crew);
             MedalRules = new MedalEvaluator(catalogs.Medals, Crew);
+            catalogs.Morale.Personality = catalogs.Settings != null ? catalogs.Settings.Personality : null;
             Ledger = new Ledger();
             Calendar = new FiscalCalendar(clock.DaysPerYear);
             State = new AgencyState { Prestige = catalogs.Settings.StartingPrestige };
@@ -211,7 +212,7 @@ namespace KSA.Core
             foreach (CrewProfile p in Crew.Active)
             {
                 if (yearEvent != MoraleEvent.Idle) Catalogs.Morale.Apply(p, yearEvent);
-                if (p.LastMissionYear != year && !p.IsFlying) { Catalogs.Morale.Apply(p, MoraleEvent.Idle); DriftAfterIdleYear(p); }
+                if (p.LastMissionYear != year && !p.IsFlying) { if (!Personality.IgnoresIdle(p)) Catalogs.Morale.Apply(p, MoraleEvent.Idle); DriftAfterIdleYear(p); }
                 if (Promotions.PendingSelection(p) != null)
                 {
                     Catalogs.Morale.Apply(p, MoraleEvent.PassedOver);
@@ -422,6 +423,8 @@ namespace KSA.Core
             else if (outcome == MissionOutcome.Abort || outcome == MissionOutcome.LossOfVehicle)
             {
                 Catalogs.Morale.Apply(p, MoraleEvent.MissionFailure);
+                int extraHit = Personality.MoraleOnFailure(p);
+                if (extraHit != 0) p.Morale = Math.Max(0, Math.Min(100, p.Morale + extraHit));
             }
 
             EvaluateProgress(p, m != null ? m.MissionId : null, notices);

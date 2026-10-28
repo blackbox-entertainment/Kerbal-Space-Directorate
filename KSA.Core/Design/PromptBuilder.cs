@@ -21,6 +21,8 @@ namespace KSA.Core.Design
         public double Budget { get; set; }
         public int CrewSize { get; set; }
         public string ProjectName { get; set; }
+        /// <summary>How many projects of this mission type the agency has flown before: later designs are asked to differ.</summary>
+        public int PriorDesigns { get; set; }
         /// <summary>Rank names for the engineers, by crew id (the catalog lives in the agency).</summary>
         public Dictionary<string, string> RankNames { get; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
@@ -147,10 +149,13 @@ namespace KSA.Core.Design
         }
 
         /// <summary>Revision passes allowed: 1 + lead rung, +2 for a Perfectionist lead, capped at 5 (GDD 5.3).</summary>
-        public static int RevisionPasses(CrewProfile lead, int leadRung)
+        public static int RevisionPasses(CrewProfile lead, int leadRung) { return RevisionPasses(lead, leadRung, true); }
+
+        /// <param name="perfectionistBonus">False when the caller adds personality passes itself (PersonalityRules).</param>
+        public static int RevisionPasses(CrewProfile lead, int leadRung, bool perfectionistBonus)
         {
             int passes = 2 + Math.Max(0, leadRung); // at least one chance to fix what the validator rejects
-            if (lead != null && lead.PersonalityTags.Exists(t => string.Equals(t, "Perfectionist", StringComparison.OrdinalIgnoreCase))) passes += 2;
+            if (perfectionistBonus && lead != null && lead.PersonalityTags.Exists(t => string.Equals(t, "Perfectionist", StringComparison.OrdinalIgnoreCase))) passes += 2;
             return Math.Min(5, passes);
         }
     }

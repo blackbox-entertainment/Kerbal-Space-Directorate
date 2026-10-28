@@ -132,8 +132,15 @@ namespace KSA.KSP.UI
         private void BuildApiSection(List<DialogGUIBase> items, float textWidth)
         {
             Section(items, "Cloud API (OpenRouter)", textWidth);
-            items.Add(Input("API key", _settings.ApiKey, textWidth, v => { _settings.ApiKey = (v ?? string.Empty).Trim(); return _settings.ApiKey; },
-                _settings.HasApiKey ? "stored: " + MaskKey(_settings.ApiKey) : "no key"));
+            if (_settings.HasApiKey && !_editingKey)
+                items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                    new DialogGUILabel("API key", LabelWidth, LineHeight),
+                    new DialogGUILabel(MaskKey(_settings.ApiKey) + "  (stored encrypted)", 260f, LineHeight),
+                    new DialogGUIButton("Change key", () => { _editingKey = true; Refresh(); }, 110f, ButtonHeight, false),
+                    new DialogGUIButton("Remove key", () => { _settings.ApiKey = string.Empty; _status = "API key removed (not saved yet)."; Refresh(); }, 110f, ButtonHeight, false)));
+            else
+                items.Add(Input("API key", _editingKey ? string.Empty : _settings.ApiKey, textWidth, v => { string k = (v ?? string.Empty).Trim(); if (k.Length > 0) _settings.ApiKey = k; return k; },
+                    _editingKey ? "paste the new key; the old one stays until you Save" : "no key"));
             items.Add(Input("Endpoint", _settings.ApiEndpoint, textWidth, v => { _settings.ApiEndpoint = (v ?? string.Empty).Trim(); return _settings.ApiEndpoint; }, null));
 
             Line(items, "Design model (" + (_settings.DesignModel.Length > 0 ? _settings.DesignModel : "none") + "):", textWidth);
@@ -275,6 +282,7 @@ namespace KSA.KSP.UI
         private bool _probeDone;
         private bool _probeOk;
         private bool _saveAfterTest;
+        private bool _editingKey;
 
         private static string Green(string s) { return "<color=#8be28b>" + s + "</color>"; }
         private static string Amber(string s) { return "<color=#ffd27f>" + s + "</color>"; }

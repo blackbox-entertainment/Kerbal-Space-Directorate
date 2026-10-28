@@ -43,7 +43,7 @@ namespace KSA.Core
         private double LabOutput(CrewProfile c)
         {
             double perStar = c.Role == CrewRole.Scientist ? Settings.LabSciencePerStar : Settings.LabSciencePerStar * 0.5;
-            return Settings.LabScienceBase + perStar * c.Stars;
+            return (Settings.LabScienceBase + perStar * c.Stars) * Personality.ScienceFactor(c);
         }
 
         /// <summary>Puts a kerbal in (or takes them out of) the research lab. Lab staff are not available for missions.</summary>
@@ -149,7 +149,9 @@ namespace KSA.Core
                 else m += 0.05;
             }
             if (scientist) m += 1.0 + 0.2 * bestStars;
-            return m;
+            double curiosity = 1;
+            if (crewIds != null) foreach (string id in crewIds) { CrewProfile c = Crew.Get(id); if (c != null) curiosity *= Personality.ScienceFactor(c); }
+            return m * curiosity;
         }
 
         private void AwardMissionScience(MissionReport r, MissionType type, List<string> notices)

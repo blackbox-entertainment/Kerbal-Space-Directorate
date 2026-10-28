@@ -86,7 +86,9 @@ namespace KSA.Core.Flight
         /// <summary>A neutral profile for flights with no crew data (or the feature switched off).</summary>
         public static CrewFlightProfile Neutral() { return new CrewFlightProfile(); }
 
-        public static CrewFlightProfile Build(IList<CrewProfile> crew, FlightCrewRules rules)
+        public static CrewFlightProfile Build(IList<CrewProfile> crew, FlightCrewRules rules) { return Build(crew, rules, null); }
+
+        public static CrewFlightProfile Build(IList<CrewProfile> crew, FlightCrewRules rules, PersonalityRules personality)
         {
             if (rules == null) rules = new FlightCrewRules();
             if (!rules.Enabled || crew == null || crew.Count == 0) return Neutral();
@@ -99,13 +101,14 @@ namespace KSA.Core.Flight
                 if (better) pilot = c;
             }
             if (pilot == null) return Neutral();
-            var p = new CrewFlightProfile { Enabled = true, PilotName = pilot.Name, PilotId = pilot.Id, PilotStars = pilot.Stars, Nerve = Clamp01(pilot.Courage), LateIgnitionMax = rules.LateIgnitionMax };
+            var p = new CrewFlightProfile { Enabled = true, PilotName = pilot.Name, PilotId = pilot.Id, PilotStars = pilot.Stars, Nerve = Clamp01(pilot.Courage + (personality != null ? personality.Nerve(pilot) : 0)), LateIgnitionMax = rules.LateIgnitionMax };
             double stars = Math.Max(0, Math.Min(5, pilot.Stars)) / 5.0;
             double morale = Math.Max(0, Math.Min(100, pilot.Morale)) / 100.0;
             double nonPilot = pilot.Role == CrewRole.Pilot ? 0 : 0.2;
-            p.Precision = Clamp01(0.35 + 0.45 * stars + 0.2 * morale - nonPilot);
+            p.Precision = Clamp01(0.35 + 0.45 * stars + 0.2 * morale - nonPilot + (personality != null ? personality.Precision(pilot) : 0));
             double mistake = rules.MistakeBase + rules.MistakeStupidity * Clamp01(pilot.Stupidity) - rules.MistakePerStar * pilot.Stars + nonPilot * 0.5;
             if (pilot.Morale < 40) mistake += rules.MistakeLowMorale;
+            if (personality != null) mistake *= personality.MistakeFactor(pilot);
             p.MistakeChance = Math.Max(0, Math.Min(rules.MistakeMax, mistake));
             p.MarginFactor = rules.MarginCautious + (rules.MarginBrave - rules.MarginCautious) * p.Nerve;
             p.ApproachFactor = rules.ApproachWorst + (rules.ApproachBest - rules.ApproachWorst) * p.Precision;

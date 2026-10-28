@@ -90,6 +90,7 @@ namespace KSA.KSP.UI
             items.Add(Field("Status", RosterView.StatusText(p.Status) + (p.Departed ? " (left the agency)" : string.Empty), textWidth));
             items.Add(Field("Age", age + "  |  hired day " + p.HiredDay, textWidth));
             items.Add(Field("Morale", p.Morale + " / 100  |  salary " + p.Salary + " / yr", textWidth));
+            foreach (string tag in p.PersonalityTags) Line(items, "    <color=#aaaaaa>" + _agency.Settings.Personality.Describe(tag) + "</color>", textWidth);
             items.Add(Field("Traits", "courage " + Percent(p.Courage) + ", stupidity " + Percent(p.Stupidity)
                 + (p.PersonalityTags.Count > 0 ? "  |  " + string.Join(", ", p.PersonalityTags.ToArray()) : string.Empty), textWidth));
             items.Add(Field("In space", FormatDays(p.Record.DaysInSpace) + ", " + p.Record.CompletedMissionCount + " missions completed", textWidth));

@@ -223,7 +223,7 @@ namespace KSA.Core
             int rung = RankRung(Crew.Get(project.LeadEngineer));
             if (rung > 0) days *= 1 - Math.Min(0.4, 0.1 * rung);
             if (project.ProgramManager.Length > 0) days *= 0.9;
-            days *= BuildTimeFactor();
+            days *= BuildTimeFactor() * LeadTimeFactorFor(project);
             return Math.Max(1, (int)Math.Round(days));
         }
 
@@ -231,7 +231,7 @@ namespace KSA.Core
         {
             double days = Settings.BuildBaseDays + cost / 10000.0;
             if (project.ProgramManager.Length > 0) days *= 0.9;
-            days *= BuildTimeFactor();
+            days *= BuildTimeFactor() * LeadTimeFactorFor(project);
             return Math.Max(1, (int)Math.Round(days));
         }
 
@@ -378,6 +378,7 @@ namespace KSA.Core
             var input = new SimulationInput { Type = type, Template = Catalogs.Templates.Get(p.TemplateId), HasProgramManager = p.ProgramManager.Length > 0 };
             foreach (string id in p.Crew) { CrewProfile c = Crew.Get(id); if (c != null) input.Crew.Add(c); }
             input.LeadEngineerRung = RankRung(Crew.Get(p.LeadEngineer));
+            input.LeadDesignBonus = LeadDesignBonusFor(p);
             input.DesignOverride = DesignOverride(p);
             Program program = p.ProgramId.Length > 0 ? GetProgram(p.ProgramId) : null;
             if (program != null && type.IsLanding) input.SiteSlope = program.SiteSlope;
@@ -413,6 +414,7 @@ namespace KSA.Core
             }
             DriftAfterMission(r);
             ClaimPlayerFirsts(notices); // a first is claimed the moment it is flown, not at year end
+            ApplyPersonalityAfterMission(p, r, notices);
             AwardMissionScience(r, Catalogs.Missions.Get(p.MissionTypeId), notices);
             p.Report = r;
             p.EndDay = day;

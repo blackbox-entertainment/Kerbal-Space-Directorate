@@ -133,7 +133,7 @@ namespace KSA.Core
             if (p == null) return CrewFlightProfile.Neutral();
             var crew = new List<CrewProfile>();
             foreach (string id in p.Crew) { CrewProfile c = Crew.Get(id); if (c != null) crew.Add(c); }
-            return CrewFlightProfile.Build(crew, Settings.FlightCrew);
+            return CrewFlightProfile.Build(crew, Settings.FlightCrew, Settings.Personality);
         }
 
         /// <summary>
@@ -258,6 +258,7 @@ namespace KSA.Core
             var input = new SimulationInput { Type = type, Template = Catalogs.Templates.Get(p.TemplateId), HasProgramManager = p.ProgramManager.Length > 0 };
             foreach (string id in p.Crew) { CrewProfile c = Crew.Get(id); if (c != null) input.Crew.Add(c); }
             input.LeadEngineerRung = RankRung(Crew.Get(p.LeadEngineer));
+            input.LeadDesignBonus = LeadDesignBonusFor(p);
             input.DesignOverride = DesignOverride(p);
 
             MissionReport r = LiveFlightResolver.Resolve(p, type, p.Crew, result, CurrentDay, MissionSimulator.DesignScore(input), MissionSimulator.CrewScore(input));
