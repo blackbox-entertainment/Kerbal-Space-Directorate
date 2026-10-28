@@ -103,6 +103,45 @@ namespace KSA.Core
             return "needs research: " + string.Join(", ", missing.ToArray());
         }
 
+        /// <summary>
+        /// Why a program type cannot start yet, or null (KSA-66). Every module must be buildable with what is researched,
+        /// so a program never starts and then stalls halfway for lack of parts. A missing prerequisite program counts too.
+        /// </summary>
+        public string ProgramBlocker(ProgramType t, string body)
+        {
+            if (t == null) return "Unknown program.";
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (ModuleRecipe m in t.Modules)
+            {
+                if (!seen.Add(m.MissionTypeId)) continue;
+                MissionType mt = Catalogs.Missions.Get(m.MissionTypeId);
+                if (mt == null) return "the " + m.Role + " module's mission (" + m.MissionTypeId + ") is missing from missions.cfg";
+                string why = MissionBlocker(mt);
+                if (why != null) return "the " + m.Role + " module " + why;
+            }
+            if (t.RequiresProgram.Length > 0 && !string.IsNullOrEmpty(body) && ProgramAt(t.RequiresProgram, body, true) == null)
+            {
+                ProgramType req = Catalogs.ProgramTypes.Get(t.RequiresProgram);
+                return "needs a finished " + (req != null ? req.Name : t.RequiresProgram) + " at " + body + " first";
+            }
+            return null;
+        }
+
+        /// <summary>Why a program's resupply cannot fly yet, or null.</summary>
+        public string ResupplyBlocker(Program g)
+        {
+            ProgramType t = g != null ? Catalogs.ProgramTypes.Get(g.ProgramTypeId) : null;
+            if (t == null || t.ResupplyMissionType.Length == 0) return "it cannot be resupplied";
+            MissionType mt = Catalogs.Missions.Get(t.ResupplyMissionType);
+            return mt == null ? "its resupply mission is missing" : MissionBlocker(mt);
+        }
+
+        /// <summary>Why a rescue for this stranding cannot fly yet, or null.</summary>
+        public string RescueBlocker(Stranding s)
+        {
+            return s == null ? "nobody to rescue" : MissionBlocker(RescueMissionFor(s, 1));
+        }
+
         private static bool PatternMatches(string achievement, string pattern)
         {
             if (string.IsNullOrEmpty(achievement) || string.IsNullOrEmpty(pattern)) return false;

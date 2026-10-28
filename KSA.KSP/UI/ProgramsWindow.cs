@@ -153,8 +153,12 @@ namespace KSA.KSP.UI
                 buttons.Add(new DialogGUISpace(16f));
                 if (!inFlight && IsResupplyTarget(g.Id))
                 {
-                    buttons.Add(new DialogGUIButton("Send resupply", () => OnResupply(id, null), 130f, ButtonHeight, false));
-                    buttons.Add(new DialogGUIButton("Resupply (Watch Live)", () => OnResupply(id, MissionMode.WatchLive), 170f, ButtonHeight, false));
+                    string supplyLocked = _agency.ResupplyBlocker(g);
+                    var send = new DialogGUIButton(supplyLocked != null ? "<color=#888888>Send resupply</color>" : "Send resupply", () => OnResupply(id, null), 130f, ButtonHeight, false);
+                    var sendLive = new DialogGUIButton(supplyLocked != null ? "<color=#888888>Resupply (Watch Live)</color>" : "Resupply (Watch Live)", () => OnResupply(id, MissionMode.WatchLive), 170f, ButtonHeight, false);
+                    if (supplyLocked != null) { send.OptionInteractableCondition = () => false; sendLive.OptionInteractableCondition = () => false; Line(items, "<color=#888888>Resupply " + supplyLocked + ".</color>", textWidth); }
+                    buttons.Add(send);
+                    buttons.Add(sendLive);
                 }
                 if (_agency.CanExtend(g))
                     buttons.Add(new DialogGUIButton("Add " + _agency.NextModuleRole(g) + " module", () => OnExtend(id), 170f, ButtonHeight, false));
@@ -189,7 +193,9 @@ namespace KSA.KSP.UI
                 string tid = t.Id;
                 bool isSel = selected != null && string.Equals(selected.Id, tid, StringComparison.OrdinalIgnoreCase);
                 int done = _agency.ProgramsCompleted(t.Id);
-                string text = done > 0 ? "<color=#8be28b>" + t.Name + " (done" + (done > 1 ? " x" + done : "") + ")</color>" : t.Name;
+                string locked = _agency.ProgramBlocker(t, t.Bodies.Count > 0 ? t.Bodies[0] : string.Empty);
+                string text = locked != null ? "<color=#888888>" + t.Name + (locked.Contains("research") ? " (research)" : " (locked)") + "</color>"
+                    : done > 0 ? "<color=#8be28b>" + t.Name + " (done" + (done > 1 ? " x" + done : "") + ")</color>" : t.Name;
                 return new DialogGUIButton((isSel ? "> " : "") + text, () => OnSelectType(tid), 200f, ButtonHeight, false);
             });
             if (selected == null)
@@ -236,10 +242,14 @@ namespace KSA.KSP.UI
                 return new DialogGUIButton((isSel ? "> " : "") + body, () => OnSelectBody(body), 130f, ButtonHeight, false);
             });
 
+            string programLocked = _agency.ProgramBlocker(selected, _selectedBody);
+            if (programLocked != null) Line(items, "<color=#ffd27f>Locked: " + programLocked + ".</color>", textWidth);
+            var start = new DialogGUIButton(programLocked != null ? "<color=#888888>Start program</color>" : "Start program", OnStartProgram, 180f, 30f, false);
+            if (programLocked != null) start.OptionInteractableCondition = () => false; // KSA-66: greyed until researched
             items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 4, 0), TextAnchor.MiddleLeft,
                 new DialogGUISpace(16f),
-                new DialogGUIButton("Start program", OnStartProgram, 180f, 30f, false),
-                new DialogGUILabel("Starts " + selected.Name + " " + _selectedBody + "; the first module is auto-staffed.", textWidth - 210f, LineHeight)));
+                start,
+                new DialogGUILabel(programLocked != null ? "<color=#888888>Unlock the parts first.</color>" : "Starts " + selected.Name + " " + _selectedBody + "; the first module is auto-staffed.", textWidth - 210f, LineHeight)));
         }
 
         // --- Director actions: call the Agency, remember its message, rebuild ---

@@ -10,6 +10,8 @@ namespace KSA.Core
     /// <summary>Every data-driven catalog the agency runs on, loaded once by the host from config.</summary>
     public sealed class AgencyCatalogs
     {
+        /// <summary>Applicant names (names.cfg, KSA-66). Empty means the host's own generator.</summary>
+        public KSA.Core.Recruiting.NameCatalog Names { get; set; } = new KSA.Core.Recruiting.NameCatalog();
         public CareerCatalog Careers { get; set; }
         public MedalCatalog Medals { get; set; }
         public GoalCatalog Goals { get; set; }

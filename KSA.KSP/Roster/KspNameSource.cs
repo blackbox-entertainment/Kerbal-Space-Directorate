@@ -10,11 +10,22 @@ namespace KSA.KSP.Roster
             new Dictionary<string, ProtoCrewMember.Gender>(System.StringComparer.OrdinalIgnoreCase);
 
         private readonly System.Random _rng = new System.Random();
+        private readonly NameCatalog _names;
+
+        public KspNameSource() : this(null) { }
+
+        /// <summary>KSA-66: names come from names.cfg when it has any; else the game's own generator.</summary>
+        public KspNameSource(NameCatalog names) { _names = names; }
 
         public string NextName()
         {
             ProtoCrewMember.Gender gender = _rng.Next(2) == 0 ? ProtoCrewMember.Gender.Male : ProtoCrewMember.Gender.Female;
             string name = null;
+            if (_names != null && !_names.IsEmpty)
+            {
+                name = _names.Pick(_rng, gender == ProtoCrewMember.Gender.Female, n => RosterAccepts(n) && !Genders.ContainsKey(n));
+                if (name != null) { Genders[name] = gender; return name; }
+            }
             for (int attempt = 0; attempt < 30; attempt++)
             {
                 try { name = CrewGenerator.GetRandomName(gender, _rng); }

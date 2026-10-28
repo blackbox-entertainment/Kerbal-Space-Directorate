@@ -44,7 +44,8 @@ namespace KSA.KSP
                 Missions = MissionCatalog.Parse(Nodes(MissionCatalog.NodeName), warnings),
                 Templates = TemplateCatalog.Parse(Nodes(TemplateCatalog.NodeName), warnings),
                 ProgramTypes = ProgramCatalog.Parse(Nodes(ProgramCatalog.NodeName), warnings),
-                Rivals = Core.Rivals.RivalDefinition.Parse(Nodes(Core.Rivals.RivalDefinition.NodeName), warnings)
+                Rivals = Core.Rivals.RivalDefinition.Parse(Nodes(Core.Rivals.RivalDefinition.NodeName), warnings),
+                Names = Core.Recruiting.NameCatalog.Parse(Nodes(Core.Recruiting.NameCatalog.NodeName), warnings)
             };
             List<DataNode> settingsNodes = Nodes(AgencySettings.NodeName);
             c.Settings = AgencySettings.Parse(settingsNodes.Count > 0 ? settingsNodes[0] : null);
@@ -60,6 +61,7 @@ namespace KSA.KSP
             foreach (MedalDefinition m in c.Medals.Medals) medalNames.Add(m.Name);
             Log.Info("Medals (" + c.Medals.Count + "): " + string.Join(", ", medalNames.ToArray()));
             Log.Info("Rivals: " + c.Rivals.Count);
+            Log.Info("Names: " + c.Names.Male.Count + " male, " + c.Names.Female.Count + " female, " + c.Names.Family.Count + " family");
             Log.Info("Missions: " + c.Missions.Count + ", templates: " + c.Templates.Count + ", program types: " + c.ProgramTypes.Count);
             Log.Info("Goals: " + c.Goals.Count + ", recruitment sources: " + c.Recruiting.Count + ", base grant " + Agency.Money(c.Settings.BaseGrant)
                      + ", " + c.Settings.GoalsPerYear + " goals/year" + (settingsNodes.Count == 0 ? " (defaults; no KSA_AGENCY_SETTINGS node found)" : string.Empty));
@@ -71,7 +73,7 @@ namespace KSA.KSP
         {
             if (!CatalogsLoaded) LoadCatalogs();
             ClearAgency();
-            var a = new Agency(Catalogs, Clock, Log) { Names = new KspNameSource() };
+            var a = new Agency(Catalogs, Clock, Log) { Names = new KspNameSource(Catalogs.Names) };
             a.Ledger.Mirror = new KspFunds();
             foreach (AssemblyLoader.LoadedAssembly la in AssemblyLoader.loadedAssemblies) if (la != null && !string.IsNullOrEmpty(la.name)) a.InstalledMods.Add(la.name);
             a.LiveFlightAvailable = true; // M5: built-in flight director for Kerbin missions

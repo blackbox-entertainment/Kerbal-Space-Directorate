@@ -172,6 +172,12 @@ namespace KSA.KSP.UI
                 Line(items, "<b>" + string.Join(", ", names.ToArray()) + "</b> stranded " + s.Where + " since day " + s.Day + " (" + _agency.DaysStranded(s) + " days, after " + s.Cause + ")" + clock, textWidth);
                 if (rescue != null && rescue.IsActive) { Line(items, "    Rescue under way: " + rescue.Name + " (" + rescue.Status + ")", textWidth); continue; }
                 string live = s.OnSurface ? "surface rescues fly simulated" : (s.VesselId.Length == 0 ? "no live vessel to meet; flies simulated" : "can be flown live");
+                string rescueLocked = _agency.RescueBlocker(s);
+                if (rescueLocked != null)
+                {
+                    Line(items, "    <color=#888888>A rescue " + rescueLocked + ".</color>", textWidth);
+                    continue;
+                }
                 items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
                     new DialogGUISpace(16f),
                     new DialogGUIButton("Launch rescue", () => OnRescue(id, MissionMode.Simulate), 140f, ButtonHeight, false),
@@ -238,6 +244,8 @@ namespace KSA.KSP.UI
             Line(items, "Crew " + selected.CrewSize + "  |  min stars " + selected.MinStars + "  |  " + selected.DurationDays + " day"
                 + (selected.DurationDays == 1 ? "" : "s") + "  |  difficulty " + Percent(selected.Difficulty) + "  |  " + selected.Body
                 + (selected.IsFirst ? "  |  a First" : ""), textWidth);
+            string missionLocked = _agency.MissionBlocker(selected);
+            if (missionLocked != null) Line(items, "<color=#ffd27f>Locked: " + selected.Name + " " + missionLocked + ". Put scientists in the lab or fly missions to earn Science, then unlock the parts in R&D.</color>", textWidth);
 
             // Templates.
             List<Template> templates = _agency.TemplatesFor(selected);
@@ -302,10 +310,12 @@ namespace KSA.KSP.UI
                 new DialogGUILabel(_agency.LiveFlightAvailable ? "" : "Live flight arrives in M5; will simulate", textWidth - 370f, LineHeight)));
 
             double cost = _agency.ProjectCost(selected, selectedTemplate);
+            var start = new DialogGUIButton(missionLocked != null ? "<color=#888888>Start project (research)</color>" : "Start project (" + Agency.Money(cost) + ")", OnStartProject, 240f, 30f, false);
+            if (missionLocked != null) start.OptionInteractableCondition = () => false; // KSA-66: greyed until researched
             items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 4, 0), TextAnchor.MiddleLeft,
                 new DialogGUISpace(16f),
-                new DialogGUIButton("Start project (" + Agency.Money(cost) + ")", OnStartProject, 240f, 30f, false),
-                new DialogGUILabel(_agency.Ledger.Balance < cost ? "<color=#ffd27f>Not enough funds.</color>" : "Charged to the budget on start.", textWidth - 270f, LineHeight)));
+                start,
+                new DialogGUILabel(missionLocked != null ? "<color=#888888>Unlock the parts first.</color>" : _agency.Ledger.Balance < cost ? "<color=#ffd27f>Not enough funds.</color>" : "Charged to the budget on start.", textWidth - 270f, LineHeight)));
         }
 
         // --- Custom mission builder (KSA-59) ---

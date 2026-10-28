@@ -144,3 +144,13 @@ The flight director runs a list of legs (shown on the HUD as "Leg: name (n/total
 5. On success the rescued get the Lifesaver medal, the rescuers too, +3 prestige. A live rescue that comes home without them does not count.
 6. A stranded crew you fetch yourself in any craft and recover counts as rescued.
 7. Each year stranded: -10 morale for them and -3 prestige. After lostAfterDays they are declared lost (agency.cfg RESCUE).
+
+## A5. Names and research locks (added 2026-10-28, KSA-66)
+
+1. KSP.log at start: a line "[KSA] Names: 160 male, 150 female, 120 family".
+2. Recruiting: new applicants have names from names.cfg; about a third keep the family name Kerman, the rest have family names like Thrustwell or Moonbrook. A woman's name gets a female kerbal (portrait in the Astronaut Complex).
+3. Hire one: they appear on the stock roster with the same name (no ghost hires).
+4. Projects window, early career: unresearched missions are grey "(research)". Select one: an amber "Locked:" line says which parts are missing, and Start project is grey and does nothing.
+5. Programs window: program types whose modules cannot be built yet are grey "(research)"; the Eve surface base without a finished cloud city is grey "(locked)". Start program is grey with the reason.
+6. A finished base whose resupply mission is not researched shows grey resupply buttons with the reason. Stranded crews whose rescue cannot be built yet show a grey line instead of the rescue buttons.
+7. Research the parts in R&D, reopen the window: the entries turn white and work.

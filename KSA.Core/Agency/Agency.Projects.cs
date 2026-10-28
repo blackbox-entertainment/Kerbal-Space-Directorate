@@ -466,10 +466,10 @@ namespace KSA.Core
                 message = type.Name + " cannot be built at " + body + ". Choose from: " + string.Join(", ", type.Bodies.ToArray()) + ".";
                 return null;
             }
-            if (type.RequiresProgram.Length > 0 && ProgramAt(type.RequiresProgram, body, true) == null)
+            string blockedBy = ProgramBlocker(type, body);
+            if (blockedBy != null)
             {
-                ProgramType req = Catalogs.ProgramTypes.Get(type.RequiresProgram);
-                message = type.Name + " needs a finished " + (req != null ? req.Name : type.RequiresProgram) + " at " + body + " first.";
+                message = type.Name + ": " + blockedBy + ".";
                 return null;
             }
             var program = new Program
