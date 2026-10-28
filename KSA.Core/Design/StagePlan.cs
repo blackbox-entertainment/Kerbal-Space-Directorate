@@ -166,6 +166,33 @@ namespace KSA.Core.Design
     {
         private static readonly int[] AllowedSymmetry = { 1, 2, 3, 4, 6, 8 };
 
+        /// <summary>
+        /// Drops non-essential parts the team was not offered (a decoupler on a single-stage plan, an extra) instead of
+        /// failing the whole plan on them. Returns one note per removal; essential parts (command, cores, engines) are left
+        /// for <see cref="Validate"/> to reject.
+        /// </summary>
+        public static List<string> Repair(StagePlan plan, ICollection<string> allowedNames)
+        {
+            var notes = new List<string>();
+            if (plan == null || allowedNames == null) return notes;
+            for (int i = 0; i < plan.Stages.Count; i++)
+            {
+                PlanStage s = plan.Stages[i];
+                bool last = i == plan.Stages.Count - 1;
+                if (s.Decoupler.Length > 0 && !allowedNames.Contains(s.Decoupler) && last)
+                {
+                    notes.Add("Dropped '" + s.Decoupler + "': not researched, and the top stage needs no decoupler.");
+                    s.Decoupler = string.Empty;
+                }
+            }
+            for (int i = plan.Payload.Extras.Count - 1; i >= 0; i--)
+            {
+                string e = plan.Payload.Extras[i];
+                if (!allowedNames.Contains(e)) { notes.Add("Dropped extra '" + e + "': not researched."); plan.Payload.Extras.RemoveAt(i); }
+            }
+            return notes;
+        }
+
         public static List<string> Validate(StagePlan plan, IPartCatalog catalog, ICollection<string> allowedNames)
         {
             var problems = new List<string>();

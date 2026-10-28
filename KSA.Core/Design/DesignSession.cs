@@ -184,6 +184,8 @@ namespace KSA.Core.Design
                 }
                 else
                 {
+                    List<string> repairs = StagePlanValidator.Repair(plan, allowed);
+                    foreach (string note in repairs) record.Feedback.Add("Pass " + record.PassesUsed + ": " + note);
                     List<string> problems = StagePlanValidator.Validate(plan, _catalog, allowed);
                     DesignAnalysis analysis = StageAnalyzer.Analyze(plan, _catalog, request.Requirement, _surfaceGravity);
                     foreach (string p in problems) analysis.Problems.Add(p);

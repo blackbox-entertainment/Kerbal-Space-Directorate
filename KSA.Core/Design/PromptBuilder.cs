@@ -149,7 +149,7 @@ namespace KSA.Core.Design
         /// <summary>Revision passes allowed: 1 + lead rung, +2 for a Perfectionist lead, capped at 5 (GDD 5.3).</summary>
         public static int RevisionPasses(CrewProfile lead, int leadRung)
         {
-            int passes = 1 + Math.Max(0, leadRung);
+            int passes = 2 + Math.Max(0, leadRung); // at least one chance to fix what the validator rejects
             if (lead != null && lead.PersonalityTags.Exists(t => string.Equals(t, "Perfectionist", StringComparison.OrdinalIgnoreCase))) passes += 2;
             return Math.Min(5, passes);
         }

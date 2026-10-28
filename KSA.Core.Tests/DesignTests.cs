@@ -174,7 +174,7 @@ namespace KSA.Core.Tests
             Assert.That(user, Does.Contain("LESSONS LEARNED"));
             Assert.That(user, Does.Contain("3600"));
             Assert.That(user, Does.Not.Contain("stationHab"));
-            Assert.That(PromptBuilder.RevisionPasses(req.Engineers[0], 2), Is.EqualTo(3));
+            Assert.That(PromptBuilder.RevisionPasses(req.Engineers[0], 2), Is.EqualTo(4));
             req.Engineers[0].PersonalityTags.Add("Perfectionist");
             Assert.That(PromptBuilder.RevisionPasses(req.Engineers[0], 4), Is.EqualTo(5));
         }
@@ -237,6 +237,24 @@ namespace KSA.Core.Tests
             Assert.That(result.Error, Does.Contain("bad key"));
             Assert.That(transport.Sent[1].DelaySeconds, Is.GreaterThan(0));
             Assert.That(transport.Sent[0].Body, Does.Contain("json_object"));
+        }
+
+        [Test]
+        public void RepairDropsUnresearchedDecouplerAndExtras()
+        {
+            var plan = new StagePlan { DesignName = "Flea" };
+            plan.Payload.Command = "mk1pod_v2";
+            plan.Payload.Extras.Add("parachuteSingle");
+            plan.Payload.Extras.Add("ladder");
+            var s = new PlanStage { Stage = 0, Role = "launch", Decoupler = "mk2Decoupler" };
+            s.Core.Add(new PlanPart { Part = "solidBooster_sm_v2", Count = 1 });
+            plan.Stages.Add(s);
+            var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "mk1pod_v2", "parachuteSingle", "solidBooster_sm_v2" };
+            List<string> notes = StagePlanValidator.Repair(plan, allowed);
+            Assert.That(notes.Count, Is.EqualTo(2));
+            Assert.That(plan.Stages[0].Decoupler, Is.Empty);
+            Assert.That(plan.Payload.Extras, Is.EqualTo(new[] { "parachuteSingle" }));
+            Assert.That(StagePlanValidator.Validate(plan, null, allowed), Is.Empty);
         }
     }
 }
