@@ -95,8 +95,9 @@ namespace KSA.KSP.UI
                 new DialogGUITextInput(_pendingName, false, 48, v => { _pendingName = v ?? string.Empty; return _pendingName; }, LineHeight + 4f),
                 new DialogGUIButton("Rename", OnRename, 90f, 26f, false),
                 new DialogGUILabel("Your space agency's name: press releases, the league table and rivals use it.", textWidth - LabelWidth - 330f, LineHeight)));
-            items.Add(Field("Fiscal year", _agency.CurrentYear + ", day " + _agency.DayOfYear + " of " + _agency.Calendar.DaysPerYear
-                + "  (" + _agency.Calendar.DaysLeftInYear(_agency.CurrentDay) + " days to the review)", textWidth));
+            items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                new DialogGUILabel("Fiscal year", LabelWidth, LineHeight),
+                new DialogGUILabel(() => _agency.CurrentYear + ", day " + _agency.DayOfYear + " of " + _agency.Calendar.DaysPerYear + "  (" + _agency.Calendar.DaysLeftInYear(_agency.CurrentDay) + " days to the review)", textWidth - LabelWidth - 10f, LineHeight)));
             items.Add(Field("Balance", Agency.Money(_agency.Ledger.Balance)
                 + (_agency.Ledger.Mirror != null && _agency.Ledger.Mirror.IsActive ? "  (stock Funds)" : "  (agency account)"), textWidth));
             items.Add(Field("This year", "income " + Agency.Money(_agency.Ledger.IncomeFor(_agency.CurrentYear))

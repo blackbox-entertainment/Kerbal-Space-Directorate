@@ -53,6 +53,7 @@ namespace KSA.KSP.UI
         public void Open()
         {
             if (_dialog != null) return;
+            _agency.ProjectChanged += OnProjectChanged;
             Spawn();
         }
 
@@ -118,11 +119,12 @@ namespace KSA.KSP.UI
                 string id = p.Id;
                 MissionType type = _agency.Catalogs.Missions.Get(p.MissionTypeId);
                 string typeName = type != null ? type.Name : p.MissionTypeId;
-                int daysLeft = p.DaysRemaining(_agency.CurrentDay, type != null ? type.DurationDays : 0);
-
+                int duration = type != null ? type.DurationDays : 0;
+                Project live = p;
+                // Dynamic label: re-evaluated every frame, so the countdown moves under time warp without reopening the window.
                 items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 4, 0), TextAnchor.MiddleLeft,
                     new DialogGUILabel("<b>" + p.Name + "</b>  (" + p.Id + ")", 260f, LineHeight),
-                    new DialogGUILabel(typeName + "  |  " + StatusText(p.Status) + "  |  " + daysLeft + " day" + (daysLeft == 1 ? "" : "s") + " left", textWidth - 266f, LineHeight)));
+                    new DialogGUILabel(() => { int d = live.DaysRemaining(_agency.CurrentDay, duration); return typeName + "  |  " + StatusText(live.Status) + "  |  " + d + " day" + (d == 1 ? "" : "s") + " left"; }, textWidth - 266f, LineHeight)));
                 Line(items, "Mode " + ModeText(p.Mode) + "  |  budget " + Agency.Money(p.Budget) + "  |  design " + _agency.Catalogs.Templates.NameOf(p.TemplateId), textWidth);
                 Line(items, "Crew: " + Names(p.Crew) + "  |  lead engineer: " + NameOf(p.LeadEngineer), textWidth);
                 Line(items, DesignLine(p), textWidth);
@@ -409,6 +411,7 @@ namespace KSA.KSP.UI
 
         private void OnCloseClicked()
         {
+            _agency.ProjectChanged -= OnProjectChanged;
             CloseChildren();
             _dialog = null;
             if (_onClosed != null) _onClosed();
@@ -445,6 +448,8 @@ namespace KSA.KSP.UI
         {
             return m == MissionMode.WatchLive ? "Watch Live" : "Simulate";
         }
+
+        private void OnProjectChanged(Project p) { if (_dialog != null) Refresh(); }
 
         private static string StatusText(ProjectStatus s)
         {
