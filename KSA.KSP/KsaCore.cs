@@ -240,7 +240,6 @@ namespace KSA.KSP
             if (!_reassembled) { _reassembled = true; CraftWriter.ReassembleStale(Agency); }
             int wait = Agency.Settings.AutoRolloutSeconds;
             if (wait <= 0 && Agency.DirectorOn) wait = 20; // KSA-68: the AI Director needs its flights to roll out
-            if (wait <= 0) return;
             double now = UnityEngine.Time.realtimeSinceStartup;
             foreach (Project p in Agency.Projects)
             {
@@ -249,9 +248,14 @@ namespace KSA.KSP
                 if (!ReadySince.TryGetValue(p.Id, out since))
                 {
                     ReadySince[p.Id] = now;
-                    ScreenMessages.PostScreenMessage("[KSA] " + p.Name + " is ready: rolling out to the pad in " + wait + " s (open Mission Control to hold)", 8f, ScreenMessageStyle.UPPER_CENTER);
+                    // A live flight is ready: drop out of time warp so the Director can watch it (asked for 2026-10-28).
+                    bool warping = TimeWarp.CurrentRate > 1.01f;
+                    if (warping) TimeWarp.SetRate(0, true);
+                    string when = wait > 0 ? "rolling out to the pad in " + wait + " s (open Mission Control to hold)" : "launch it from Mission Control";
+                    ScreenMessages.PostScreenMessage("[KSA] " + p.Name + " is ready: " + when + (warping ? ". Time warp stopped." : string.Empty), 8f, ScreenMessageStyle.UPPER_CENTER);
                     continue;
                 }
+                if (wait <= 0) continue;
                 if (RolloutHold) { ReadySince[p.Id] = now; continue; }
                 if (now - since < wait) continue;
                 ReadySince.Remove(p.Id);

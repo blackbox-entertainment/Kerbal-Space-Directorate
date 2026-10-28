@@ -22,7 +22,9 @@ namespace KSA.KSP.Roster
             }
 
             ProtoCrewMember pcm = CrewGenerator.RandomCrewMemberPrototype(ProtoCrewMember.KerbalType.Crew);
-            pcm.ChangeName(applicant.Name);
+            // The game renames only kerbals already in its roster; a new prototype is not, so ChangeName fails silently
+            // and the random name sticks (the hire then vanished as "dismissed"). Name it before it joins the roster.
+            SetName(pcm, applicant.Name);
             pcm.gender = KspNameSource.GenderFor(applicant.Name);
             KerbalRoster.SetExperienceTrait(pcm, TraitName(applicant.Role));
             pcm.courage = applicant.Courage;
@@ -49,8 +51,37 @@ namespace KSA.KSP.Roster
                 ScreenMessages.PostScreenMessage("[KSA] The roster refused " + applicant.Name + " (name clash); please recruit someone else.", 8f, ScreenMessageStyle.UPPER_CENTER);
                 return null;
             }
+            if (pcm.name != applicant.Name && !pcm.ChangeName(applicant.Name))
+                KsaCore.Log.Error("Hire: " + applicant.Name + " joined the roster as " + pcm.name + " and could not be renamed.");
             KsaCore.Log.Info("Hire: added " + pcm.name + " (" + pcm.trait + ", level " + pcm.experienceLevel + ") to the roster");
             return pcm;
+        }
+
+        private static readonly System.Reflection.FieldInfo NameField =
+            typeof(ProtoCrewMember).GetField("_name", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+
+        /// <summary>Sets the name of a kerbal that is not in the roster yet (ProtoCrewMember._name).</summary>
+        private static void SetName(ProtoCrewMember pcm, string name)
+        {
+            if (NameField != null) { NameField.SetValue(pcm, name); return; }
+            pcm.ChangeName(name); // fallback; the caller renames again once the kerbal is in the roster
+        }
+
+        /// <summary>
+        /// Save repair: gives hires that reached the roster under a random name (before 2026-10-28) their own names back,
+        /// so the next sync revives their records. Run before the first roster sync of a scene.
+        /// </summary>
+        public static void RepairMisnamedHires(KSA.Core.Agency agency)
+        {
+            KerbalRoster roster = HighLogic.CurrentGame != null ? HighLogic.CurrentGame.CrewRoster : null;
+            if (agency == null || roster == null) return;
+            foreach (System.Collections.Generic.KeyValuePair<string, string> pair in agency.MisnamedHires(new KspRosterSource().GetSnapshots()))
+            {
+                if (roster.Exists(pair.Value) || !roster.Exists(pair.Key)) continue;
+                if (!roster.ChangeName(pair.Key, pair.Value)) { KsaCore.Log.Warn("Roster repair: could not rename " + pair.Key + " to " + pair.Value); continue; }
+                agency.ForgetMisnamedHire(pair.Key, pair.Value);
+                ScreenMessages.PostScreenMessage("[KSA] Roster repaired: " + pair.Key + " is " + pair.Value + " again.", 8f, ScreenMessageStyle.UPPER_CENTER);
+            }
         }
 
         /// <summary>Removes a crew member who quit, retired, or was fired. The agency keeps their record.</summary>

@@ -405,7 +405,9 @@ namespace KSA.Core
             sb.AppendLine("research the parts that unlock the next missions, and climb the ladder: suborbital, orbit, Mun and Minmus, planets, then bases, settlements and colonies. Rescue anyone stranded.");
             sb.AppendLine("Rules: use only ids and names that appear in the briefing. Locked missions and programs cannot start until their parts are researched. Do not start what you cannot afford; keep a reserve.");
             sb.AppendLine("Crews come from available kerbals; leave crew and engineers out and the agency staffs the project itself. Pilots fly better with more stars. Scientists in the lab earn Science each year.");
-            sb.AppendLine("Do little when little is needed: waiting is a fine answer. Learn from the results of your last turn.");
+            sb.AppendLine("Flights are how the agency meets its goals and earns prestige and Science: unless money is short or nobody can fly, keep at least one project in design, build or flight.");
+            sb.AppendLine("A failure is a lesson, not a reason to stop: fly the cheapest safe mission that moves a goal forward. Do not spend turn after turn only on interviews and drives.");
+            sb.AppendLine("Waiting is right only when projects are already under way and nothing needs deciding. Learn from the results of your last turn.");
             sb.AppendLine("Answer with ONE JSON object and nothing else:");
             sb.AppendLine("{\"thoughts\": \"one or two sentences, in character\", \"plan\": \"your standing strategy in under 60 words (kept for next turn)\", \"actions\": [ {\"do\": \"...\", ...params, \"why\": \"short reason\"} ]}");
             sb.AppendLine("Actions:");
@@ -476,7 +478,7 @@ namespace KSA.Core
                 MissionType t = Catalogs.Missions.Get(p.MissionTypeId);
                 sb.AppendLine("  " + p.Id + " | " + p.Name + " | " + p.Status + (t != null ? ", " + p.DaysRemaining(CurrentDay, t.DurationDays) + " days left" : string.Empty) + " | " + (p.Mode == MissionMode.WatchLive ? "live" : "simulated"));
             }
-            if (active == 0) sb.AppendLine("  none");
+            if (active == 0) sb.AppendLine("  none: the agency is flying nothing. Start a mission this turn unless you cannot afford one or have no crew.");
 
             sb.AppendLine("MISSIONS YOU CAN START (id | name | cost | crew | min stars | days | done):");
             var locked = new List<string>();
