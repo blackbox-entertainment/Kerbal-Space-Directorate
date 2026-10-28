@@ -197,8 +197,10 @@ namespace KSA.KSP
 
         private static void OnBuildRequested(Project p, Core.Design.DesignRecord record)
         {
-            if (record == null || record.Plan == null) return;
-            CraftWriter.Result r = CraftWriter.Write(record.Plan, Agency.Parts, record.DesignName, "KSA " + p.Id + " " + p.Name);
+            if (record == null) return;
+            if (record.Plan == null && !string.IsNullOrEmpty(record.PlanJson)) { Core.Design.StagePlan rebuilt; string err; if (Core.Design.StagePlan.TryParse(record.PlanJson, out rebuilt, out err)) record.Plan = rebuilt; else Log.Warn("Stored plan unreadable: " + err); }
+            if (record.Plan == null) { p.Notes.Add("Vehicle assembly skipped: the approved plan was lost; the template flies instead."); Log.Warn("Build requested for " + p.Name + " but the design has no plan"); return; }
+            CraftWriter.Result r = CraftWriter.Write(record.Plan, Agency.Parts, "KSA " + p.Id + " " + record.DesignName, "KSA " + p.Id + " " + p.Name);
             if (r.Ok)
             {
                 record.CraftPath = r.Path;

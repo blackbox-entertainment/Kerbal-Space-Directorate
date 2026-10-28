@@ -113,7 +113,6 @@ PART
 	link = basicFin_4294900006
 	link = basicFin_4294900007
 	attN = top,mk1pod.v2_4294900001_0|0.7575|0
-	attN = bottom,Null_0|-0.9975|0
 	EVENTS
 	{
 	}

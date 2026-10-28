@@ -181,6 +181,33 @@ namespace KSA.Core
             return fee;
         }
 
+        /// <summary>
+        /// The Director rolled a Ready project's craft out from the VAB by hand: start the mission on the vessel that is
+        /// actually on the pad, with the agency crew who are actually aboard (the planned crew is replaced).
+        /// </summary>
+        public bool AdoptManualLaunch(string projectId, string vesselId, IList<string> crewNamesAboard, out string message)
+        {
+            Project p = GetProject(projectId);
+            if (p == null) { message = "No such project."; return false; }
+            if (p.Status != ProjectStatus.Ready) { message = p.Name + " is not ready to launch."; return false; }
+            MissionType type = Catalogs.Missions.Get(p.MissionTypeId);
+            var aboard = new List<string>();
+            if (crewNamesAboard != null) foreach (string n in crewNamesAboard) { CrewProfile c = Crew.Get(n); if (c != null && !c.Departed) aboard.Add(c.Id); }
+            if (aboard.Count > 0) { p.Crew.Clear(); p.Crew.AddRange(aboard); }
+            p.Mode = MissionMode.WatchLive;
+            var notices = new List<string>();
+            Launch(p, type, CurrentDay, notices);
+            p.LaunchUT = Clock.UniversalTime;
+            p.FlightLog.Clear();
+            p.FlightAchievements.Clear();
+            p.DirectorFlown = false;
+            p.VesselId = vesselId ?? string.Empty;
+            p.Notes.Add("Rolled out from the VAB by the Director on day " + CurrentDay + ".");
+            RaiseProjectChanged(p);
+            message = p.Name + " is on the pad; the crew has the vehicle.";
+            return true;
+        }
+
         /// <summary>The host tells us which vessel flies the project (so recovery and crashes can be matched).</summary>
         public void BindVessel(string projectId, string vesselId)
         {

@@ -66,7 +66,7 @@ namespace KSA.Core.Design
             n.AddValue("verdict", Verdict.ToString());
             n.AddValue("name", DesignName);
             n.AddValue("rationale", Rationale);
-            n.AddValue("plan", PlanJson);
+            n.AddValue("planB64", PlanJson.Length > 0 ? Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(PlanJson)) : string.Empty); // JSON braces would break the config format
             n.AddValue("totalDeltaV", TotalDeltaV);
             n.AddValue("requiredDeltaV", RequiredDeltaV);
             n.AddValue("liftoffTwr", LiftoffTwr);
@@ -85,6 +85,13 @@ namespace KSA.Core.Design
             return n;
         }
 
+        private static string DecodePlan(DataNode n)
+        {
+            string b64 = n.GetValue("planB64", string.Empty);
+            if (b64.Length > 0) { try { return System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(b64)); } catch { return string.Empty; } }
+            return n.GetValue("plan", string.Empty);
+        }
+
         public static DesignRecord FromDataNode(DataNode n)
         {
             if (n == null) return null;
@@ -92,7 +99,7 @@ namespace KSA.Core.Design
             {
                 DesignName = n.GetValue("name", string.Empty),
                 Rationale = n.GetValue("rationale", string.Empty),
-                PlanJson = n.GetValue("plan", string.Empty),
+                PlanJson = DecodePlan(n),
                 TotalDeltaV = n.GetDouble("totalDeltaV", 0),
                 RequiredDeltaV = n.GetDouble("requiredDeltaV", 0),
                 LiftoffTwr = n.GetDouble("liftoffTwr", 0),

@@ -110,6 +110,7 @@ namespace KSA.KSP.Flight
             {
                 // Resuming after a scene change or reload: is this vessel a live project?
                 Project p = agency.ProjectForVessel(v.persistentId.ToString());
+                if (p == null && v.situation == Vessel.Situations.PRELAUNCH) p = AdoptFromVab(agency, v);
                 if (p == null) return;
                 project = p;
                 MissionType t = agency.Catalogs.Missions.Get(p.MissionTypeId);
@@ -144,6 +145,31 @@ namespace KSA.KSP.Flight
             GameEvents.onVesselChange.Add(OnVesselChange);
             GameEvents.onCrewOnEva.Add(OnCrewOnEva);
             GameEvents.onPartCouple.Add(OnPartCouple);
+        }
+
+        /// <summary>
+        /// The Director loaded a Ready project's craft in the VAB and pressed Launch: the vessel name matches the
+        /// approved design (or carries the "KSA P#" stem), so the project adopts it and the crew flies it.
+        /// </summary>
+        private static Project AdoptFromVab(Agency agency, Vessel v)
+        {
+            string name = v.vesselName ?? string.Empty;
+            foreach (Project p in agency.Projects)
+            {
+                if (p.Status != ProjectStatus.Ready) continue;
+                bool byDesign = p.Design != null && p.Design.DesignName.Length > 0 && string.Equals(name, p.Design.DesignName, StringComparison.OrdinalIgnoreCase);
+                bool byStem = name.StartsWith("KSA " + p.Id + " ", StringComparison.OrdinalIgnoreCase);
+                bool byTemplate = string.Equals(name, "KSA " + p.Name, StringComparison.OrdinalIgnoreCase);
+                if (!byDesign && !byStem && !byTemplate) continue;
+                var aboard = new List<string>();
+                foreach (ProtoCrewMember pcm in v.GetVesselCrew()) aboard.Add(pcm.name);
+                string msg;
+                if (!agency.AdoptManualLaunch(p.Id, v.persistentId.ToString(), aboard, out msg)) continue;
+                KsaCore.Log.Info("Flight director adopted " + name + " rolled out from the VAB for " + p.Name + " (" + aboard.Count + " crew aboard)");
+                ScreenMessages.PostScreenMessage("[KSA] " + msg, 6f, ScreenMessageStyle.UPPER_CENTER);
+                return p;
+            }
+            return null;
         }
 
         private void BuildProgram(Agency agency, Project project, bool resuming)
