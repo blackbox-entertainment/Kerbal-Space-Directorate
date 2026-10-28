@@ -288,9 +288,9 @@ namespace KSA.KSP.UI
             return false;
         }
 
-        /// <summary>A 7B model wants about 6 GB of graphics memory; smaller cards get the 4B model.</summary>
-        private static string RecommendedLocalModel() { return SystemInfo.graphicsMemorySize >= 7000 ? "qwen2.5:7b" : "gemma3:4b"; }
-        private static string RecommendedLocalSize() { return SystemInfo.graphicsMemorySize >= 7000 ? "about 4.7 GB" : "about 3.3 GB"; }
+        /// <summary>KSP itself holds 2 to 3 GB of graphics memory while running, and a 7B model wants 6 GB beside it: only cards of 11 GB and up get the 7B, the rest the 4B.</summary>
+        private static string RecommendedLocalModel() { return SystemInfo.graphicsMemorySize >= 11000 ? "qwen2.5:7b" : "gemma3:4b"; }
+        private static string RecommendedLocalSize() { return SystemInfo.graphicsMemorySize >= 11000 ? "about 4.7 GB" : "about 3.3 GB"; }
 
         private string LocalBase()
         {
