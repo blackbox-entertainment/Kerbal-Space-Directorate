@@ -60,6 +60,8 @@ namespace KSA.Core.Design
         {
             public MissionProfile Profile;
             public string Body;
+            /// <summary>Optional: applies to one mission type id only, beating the profile/body entry.</summary>
+            public string MissionType = string.Empty;
             public double DeltaV;
             public double MinTwr;
         }
@@ -106,6 +108,8 @@ namespace KSA.Core.Design
         {
             if (type == null) return new Entry { DeltaV = 3600, MinTwr = 1.2, Body = "Kerbin", Profile = MissionProfile.Orbit };
             foreach (Entry e in _entries)
+                if (e.MissionType.Length > 0 && string.Equals(e.MissionType, type.Id, StringComparison.OrdinalIgnoreCase)) return e;
+            foreach (Entry e in _entries)
                 if (e.Profile == type.Profile && string.Equals(e.Body, type.Body, StringComparison.OrdinalIgnoreCase)) return e;
             // Unknown body: scale from the Kerbin orbit figure by profile.
             double dv = 3600;
@@ -128,7 +132,9 @@ namespace KSA.Core.Design
                 if (n == null || !string.Equals(n.Name, NodeName, StringComparison.OrdinalIgnoreCase)) continue;
                 MissionProfile profile;
                 if (!Enum.TryParse(n.GetValue("profile", "Orbit"), true, out profile)) continue;
-                req.Add(profile, n.GetValue("body", "Kerbin"), n.GetDouble("deltaV", 3600), n.GetDouble("minTwr", 1.2));
+                string missionType = n.GetValue("missionType", string.Empty);
+                if (missionType.Length > 0) req._entries.Add(new Entry { MissionType = missionType, Profile = profile, Body = n.GetValue("body", "Kerbin"), DeltaV = n.GetDouble("deltaV", 3600), MinTwr = n.GetDouble("minTwr", 1.2) });
+                else req.Add(profile, n.GetValue("body", "Kerbin"), n.GetDouble("deltaV", 3600), n.GetDouble("minTwr", 1.2));
             }
             return req;
         }

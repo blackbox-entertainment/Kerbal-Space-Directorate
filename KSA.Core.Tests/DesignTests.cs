@@ -145,7 +145,7 @@ namespace KSA.Core.Tests
             foreach (MissionType t in ShippedConfigs.Missions().Types)
             {
                 MissionRequirements.Entry e = req.For(t);
-                Assert.That(e.DeltaV, Is.GreaterThan(1000), t.Id);
+                Assert.That(e.DeltaV, Is.GreaterThan(t.Id == "FleaHop" ? 300 : 1000), t.Id);
             }
             Assert.That(req.For(ShippedConfigs.Missions().Get("MunLanding")).DeltaV, Is.EqualTo(6500));
         }

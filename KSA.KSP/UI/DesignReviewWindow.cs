@@ -43,16 +43,24 @@ namespace KSA.KSP.UI
         public void Open()
         {
             if (_dialog != null) return;
+            _agency.DesignFinished += OnDesignChanged;
+            _agency.ProjectChanged += OnProjectChanged;
             Spawn();
         }
 
         public void Close()
         {
             if (_dialog == null) return;
+            Unhook();
             PopupDialog d = _dialog;
             _dialog = null;
             d.Dismiss();
         }
+
+        /// <summary>The team finished (or the project moved on) while the window is open: redraw it.</summary>
+        private void OnDesignChanged(KSA.Core.Projects.Project p, KSA.Core.Design.DesignRecord r) { if (p != null && p.Id == _projectId && _dialog != null) Refresh(); }
+        private void OnProjectChanged(KSA.Core.Projects.Project p) { if (p != null && p.Id == _projectId && _dialog != null) Refresh(); }
+        private void Unhook() { _agency.DesignFinished -= OnDesignChanged; _agency.ProjectChanged -= OnProjectChanged; }
 
         private void Refresh()
         {
@@ -261,6 +269,7 @@ namespace KSA.KSP.UI
 
         private void OnCloseClicked()
         {
+            Unhook();
             _dialog = null;
             if (_onClosed != null) _onClosed();
         }
