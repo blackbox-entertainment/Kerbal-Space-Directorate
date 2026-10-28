@@ -75,6 +75,38 @@ namespace KSA.KSP.Build
             catch (Exception e) { KsaCore.Log.Warn("Could not publish template craft: " + e.Message); }
         }
 
+        /// <summary>
+        /// Re-assembles craft written by an older build of the writer: a project that is built or waiting on the pad
+        /// whose craft file is missing or older than the running KSA.KSP.dll gets its file rewritten from the stored
+        /// plan. A craft the player edited and saved after the update is newer than the DLL, so it is left alone.
+        /// </summary>
+        public static void ReassembleStale(Core.Agency agency)
+        {
+            if (agency == null) return;
+            DateTime writerTime;
+            try { writerTime = File.GetLastWriteTimeUtc(typeof(CraftWriter).Assembly.Location); }
+            catch { return; }
+            foreach (Core.Projects.Project p in agency.Projects)
+            {
+                if (p.Status != Core.Projects.ProjectStatus.Build && p.Status != Core.Projects.ProjectStatus.Ready) continue;
+                DesignRecord d = p.Design;
+                if (d == null || !d.IsAi || d.Verdict != DesignVerdict.Approved) continue;
+                if (d.Plan == null && !string.IsNullOrEmpty(d.PlanJson)) { StagePlan plan; string err; if (StagePlan.TryParse(d.PlanJson, out plan, out err)) d.Plan = plan; }
+                if (d.Plan == null) continue;
+                string path = Path.Combine(CraftFolder, SafeFileName("KSA " + p.Id + " " + p.Name) + ".craft");
+                bool stale;
+                try { stale = !File.Exists(path) || File.GetLastWriteTimeUtc(path) < writerTime; }
+                catch { continue; }
+                if (!stale) continue;
+                Result r = Write(d.Plan, agency.Parts, "KSA " + p.Id + " " + d.DesignName, "KSA " + p.Id + " " + p.Name);
+                if (!r.Ok) continue;
+                d.CraftPath = r.Path;
+                p.Notes.Add("Vehicle re-assembled after a mod update: " + r.Parts + " parts, saved to the VAB as \"KSA " + p.Id + " " + p.Name + "\".");
+                foreach (string w in r.Warnings) p.Notes.Add("Assembly note: " + w);
+                KsaCore.Log.Info("Re-assembled stale craft for " + p.Name);
+            }
+        }
+
         public static Result Write(StagePlan plan, IPartCatalog catalog, string shipName, string fileStem)
         {
             var result = new Result();
@@ -300,9 +332,11 @@ namespace KSA.KSP.Build
                 throw new InvalidOperationException(child.Ap.name + " cannot be surface-attached.");
             float hostRadius = Radius(host);
             var dir = new Vector3((float)Math.Cos(angle), 0, (float)Math.Sin(angle));
-            // Rotate the child so its attach direction points back at the host.
-            Vector3 orient = srf.orientation.sqrMagnitude > 0 ? srf.orientation.normalized : new Vector3(-1, 0, 0);
-            Quaternion rot = Quaternion.FromToRotation(orient, -dir);
+            // KSP convention (checked against stock craft): a surface node's orientation points AWAY from the host in
+            // world space, along the host's surface normal, and the node's position is where the part touches the host.
+            // The Flea's node sits 0.625 m off its axis, so the sign matters: the wrong one buries the booster in its host.
+            Vector3 orient = srf.orientation.sqrMagnitude > 0 ? srf.orientation.normalized : new Vector3(1, 0, 0);
+            Quaternion rot = Quaternion.FromToRotation(orient, dir);
             // Keep the part upright: FromToRotation may roll it; re-level by projecting its up axis.
             Vector3 up = rot * Vector3.up;
             if (Vector3.Dot(up, Vector3.up) < 0.999f) rot = Quaternion.FromToRotation(up, Vector3.up) * rot;

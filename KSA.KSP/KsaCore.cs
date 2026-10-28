@@ -158,6 +158,8 @@ namespace KSA.KSP
 
         /// <summary>Set while Mission Control is open: the Director is looking, so nothing rolls out on its own.</summary>
         public static bool RolloutHold;
+        /// <summary>Craft written by an older build of the writer are re-assembled once per game session.</summary>
+        private static bool _reassembled;
         private static readonly Dictionary<string, double> ReadySince = new Dictionary<string, double>();
 
         private static double _lastStrandCheck;
@@ -210,6 +212,7 @@ namespace KSA.KSP
         {
             if (Agency == null || HighLogic.LoadedScene != GameScenes.SPACECENTER) return;
             ScrubStrandedFlights();
+            if (!_reassembled) { _reassembled = true; CraftWriter.ReassembleStale(Agency); }
             int wait = Agency.Settings.AutoRolloutSeconds;
             if (wait <= 0) return;
             double now = UnityEngine.Time.realtimeSinceStartup;
