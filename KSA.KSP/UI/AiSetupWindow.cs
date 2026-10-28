@@ -564,7 +564,7 @@ namespace KSA.KSP.UI
 
         private static string ModelLabel(ModelOption m)
         {
-            return m.Label + " (" + m.Tier + ", ≈$" + (m.CostPer1k * 7.0).ToString("0.000") + "/design)";
+            return m.Label + " (" + m.Tier + ", about $" + (m.CostPer1k * 7.0).ToString("0.000") + "/design)";
         }
 
         private static string MaskKey(string key)
