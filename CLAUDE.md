@@ -154,6 +154,7 @@ GameData/KSA/
 | Department heads | Built 2026-10-27: Management-track kerbals hold Finances / Science / PR / Operations (Departments window); rank-scaled bonuses from agency.cfg DEPARTMENTS. Stock strategies untouched. |
 | Stock contracts and hiring | Off by default in KSA games (agency.cfg stockContracts, stockHiring): offered contracts withdrawn, stock applicant list emptied. Decided 2026-10-27. |
 | Research and tech gating | Built 2026-10-27: templates and mission types gated on researched parts (MissionBlocker/TemplateBlocker), goals only when feasible; lab scientists and successful missions credit stock Science (agency.cfg RESEARCH); Flea test hop for day one. |
+| Science missions | Built 2026-10-27 (KSA-58): purpose = Science mission types with scienceYield, Science:<body> achievement, crew multiplier, live experiments via ScienceRunner/ScienceSweepLeg. |
 
 **Candidate supported mod set (not final):** ReStock/ReStock+, Near Future series, SSPXr (inflatables), KPBS (surface bases), Outer Planets Mod, Hooligan Labs Airships (Eve cloud city), Extraplanetary Launchpads. Required: ModuleManager. Optional: MechJeb2 (future bridge for missions beyond Kerbin orbit), kOS.
 

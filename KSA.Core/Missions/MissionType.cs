@@ -35,10 +35,15 @@ namespace KSA.Core.Missions
         public bool IsFirst { get; set; }
         /// <summary>Non-empty for program module missions (core, hab, power, lab, docking ...).</summary>
         public string ModuleRole { get; set; }
+        /// <summary>"Science" for missions whose point is the data they bring home; empty for everything else.</summary>
+        public string Purpose { get; set; }
+        /// <summary>Science missions: the points a textbook flight returns before crew and department multipliers.</summary>
+        public double ScienceYield { get; set; }
+        public bool IsScience { get { return string.Equals(Purpose, "Science", StringComparison.OrdinalIgnoreCase); } }
 
         public MissionType()
         {
-            Id = string.Empty; Name = string.Empty; Description = string.Empty; Body = "Kerbin"; ModuleRole = string.Empty;
+            Id = string.Empty; Name = string.Empty; Description = string.Empty; Body = "Kerbin"; ModuleRole = string.Empty; Purpose = string.Empty;
             CrewSize = 1; DurationDays = 1; BaseCost = 10000; Difficulty = 0.3;
         }
 
@@ -108,7 +113,9 @@ namespace KSA.Core.Missions
                     BaseCost = node.GetDouble("baseCost", 10000),
                     Difficulty = Clamp01(node.GetDouble("difficulty", 0.3)),
                     IsFirst = node.GetBool("first", false),
-                    ModuleRole = node.GetValue("moduleRole", string.Empty)
+                    ModuleRole = node.GetValue("moduleRole", string.Empty),
+                    Purpose = node.GetValue("purpose", string.Empty),
+                    ScienceYield = node.GetDouble("scienceYield", 0)
                 };
                 t.Achievements.AddRange(node.GetList("achievements"));
                 catalog.Add(t);

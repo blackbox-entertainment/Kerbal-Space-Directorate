@@ -136,10 +136,28 @@ namespace KSA.Core
             if (h != null) h(points, "Research lab, year " + CurrentYear);
         }
 
+        /// <summary>Science missions pay for who flew them: a scientist aboard doubles the yield, each of their stars adds 20%, anyone else adds 5%.</summary>
+        public double ScienceCrewMultiplier(IList<string> crewIds)
+        {
+            double m = 1.0;
+            bool scientist = false;
+            int bestStars = 0;
+            if (crewIds != null) foreach (string id in crewIds)
+            {
+                CrewProfile c = Crew.Get(id);
+                if (c == null) continue;
+                if (c.Role == CrewRole.Scientist) { scientist = true; if (c.Stars > bestStars) bestStars = c.Stars; }
+                else m += 0.05;
+            }
+            if (scientist) m += 1.0 + 0.2 * bestStars;
+            return m;
+        }
+
         private void AwardMissionScience(MissionReport r, MissionType type, List<string> notices)
         {
             if (r == null || type == null || !r.IsSuccess) return;
             double points = type.Tier == MissionTier.Late ? Settings.MissionScienceLate : type.Tier == MissionTier.Mid ? Settings.MissionScienceMid : Settings.MissionScienceEarly;
+            if (type.IsScience && type.ScienceYield > 0) points = type.ScienceYield * ScienceCrewMultiplier(r.Crew);
             if (r.Outcome == MissionOutcome.PartialSuccess) points *= 0.5;
             points = Math.Round(points * (1 + DepartmentRung(Department.Science) * Settings.LabScienceHeadBonus), 1);
             if (points <= 0) return;

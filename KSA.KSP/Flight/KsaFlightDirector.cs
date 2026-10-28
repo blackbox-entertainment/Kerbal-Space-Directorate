@@ -42,9 +42,12 @@ namespace KSA.KSP.Flight
             public string DockTargetVesselId = string.Empty;
             public string ProgramId = string.Empty;
             public HashSet<string> Logged = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            public double SciencePoints;
+            public bool ScienceMission;
         }
 
         private MissionProgram _program;
+        private ScienceRunner _science;
         private FlightContext _ctx;
         private Rect _hud = new Rect(Screen.width - 350, 120, 340, 210);
         private string _status = "Standing by.";
@@ -230,6 +233,8 @@ namespace KSA.KSP.Flight
             uint dockId;
             if (uint.TryParse(Live.DockTargetVesselId, out dockId)) _ctx.DockTargetId = dockId;
             _program = MissionPlanner.Build(_ctx, type);
+            Live.ScienceMission = type != null && type.IsScience;
+            _science = Live.ScienceMission ? new ScienceRunner(_ctx) : null;
             if (resuming) MissionPlanner.Resume(_program, _ctx, key => Live.Logged.Contains(key));
             var names = new List<string>();
             foreach (IFlightLeg l in _program.Legs) names.Add(l.Name);
@@ -295,6 +300,12 @@ namespace KSA.KSP.Flight
             if (alt > Live.MaxAltitude) Live.MaxAltitude = alt;
             if (speed > Live.MaxSpeed) Live.MaxSpeed = speed;
             if (_vessel.state == Vessel.State.DEAD) { Log("Vessel destroyed.", null); Resolve(false); return; }
+            if (Live.ScienceMission && _science != null)
+            {
+                string sline = _science.Step();
+                if (sline != null) Log(sline, null);
+                Live.SciencePoints = _science.PointsCollected;
+            }
             if (Live.AutopilotOn && _program != null)
             {
                 string line = _program.Step();
@@ -449,6 +460,7 @@ namespace KSA.KSP.Flight
                 DirectorFlown = Live.DirectorFlown,
                 MaxAltitude = Live.MaxAltitude,
                 MaxSpeed = Live.MaxSpeed,
+                SciencePoints = Live.SciencePoints,
                 DaysInSpace = Math.Max(0.02, (Planetarium.GetUniversalTime() - Live.LaunchUT) / KsaCore.Clock.SecondsPerDay)
             };
             result.Deaths.AddRange(Live.Deaths);
@@ -543,6 +555,7 @@ namespace KSA.KSP.Flight
             }
             else GUILayout.Label("Leg: " + phase);
             GUILayout.Label(_status);
+            if (Live.ScienceMission) GUILayout.Label("Science aboard: " + Live.SciencePoints.ToString("0.#") + " (" + (_science != null ? _science.ExperimentsRun : 0) + " experiments run)");
             GUILayout.Label("Alt " + LiveFlightResolver.FormatKm(_vessel.altitude) + "   Ap " + LiveFlightResolver.FormatKm(_vessel.orbit != null ? _vessel.orbit.ApA : 0) + "   Pe " + LiveFlightResolver.FormatKm(_vessel.orbit != null ? _vessel.orbit.PeA : 0));
             GUILayout.Label("Speed " + Math.Round(_vessel.srfSpeed) + " m/s   Stage " + _vessel.currentStage + "   " + (_vessel.mainBody != null ? _vessel.mainBody.bodyName : "") + "   " + Stamp());
             GUILayout.BeginHorizontal();

@@ -68,6 +68,7 @@ namespace KSA.KSP.Flight
                     break;
                 case MissionProfile.Orbit:
                     prog.Add(new AscentLeg(ctx.ParkingAltitude, true)).Add(new HoldOrbitLeg(WantsEva(type) ? 120 : 600));
+                    if (type != null && type.IsScience) prog.Add(new ScienceSweepLeg(1800));
                     if (WantsEva(type)) prog.Add(new SurfaceOpsLeg(40, false, true));
                     prog.Add(new ReentryLeg(pe));
                     break;
@@ -85,6 +86,7 @@ namespace KSA.KSP.Flight
                     prog.Add(new AscentLeg(ctx.ParkingAltitude, true));
                     Outbound(prog, ctx, target, interplanetary, Math.Max(20000, floor), Math.Max(80000, floor + 50000));
                     prog.Add(new CaptureLeg(target, orbitAlt)).Add(new HoldOrbitLeg(600));
+                    if (type != null && type.IsScience) prog.Add(new ScienceSweepLeg(1800));
                     Homebound(prog, ctx, target, interplanetary, true, peLo, peHi);
                     break;
                 case MissionProfile.Land:
@@ -93,7 +95,7 @@ namespace KSA.KSP.Flight
                     Outbound(prog, ctx, target, interplanetary, Math.Max(15000, floor), Math.Max(60000, floor + 40000));
                     prog.Add(new CaptureLeg(target, orbitAlt)).Add(new LandingLeg(ctx.MaxSiteSlope));
                     if (profile == MissionProfile.Base) { prog.Add(new DeliverLeg("Base module")); break; }
-                    prog.Add(new SurfaceOpsLeg(45)).Add(new AirlessAscentLeg(orbitAlt));
+                    prog.Add(new SurfaceOpsLeg(type != null && type.IsScience ? 120 : 45)).Add(new AirlessAscentLeg(orbitAlt));
                     Homebound(prog, ctx, target, interplanetary, true, peLo, peHi);
                     break;
             }

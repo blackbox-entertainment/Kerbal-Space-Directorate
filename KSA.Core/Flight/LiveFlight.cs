@@ -23,6 +23,8 @@ namespace KSA.Core.Flight
         public List<string> Events { get; } = new List<string>();
         public double MaxAltitude { get; set; }
         public double MaxSpeed { get; set; }
+        /// <summary>Science missions: points the experiments collected aboard (the host counts them); the primary is earned when > 0.</summary>
+        public double SciencePoints { get; set; }
     }
 
     /// <summary>Turns a live flight's facts into a MissionReport the agency can apply like a simulated one.</summary>
@@ -50,6 +52,7 @@ namespace KSA.Core.Flight
             // Achievements: what the flight actually logged, filtered to what the mission asked for plus any firsts.
             var earned = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (string a in result.Achievements) if (!string.IsNullOrEmpty(a)) earned.Add(a);
+            if (type != null && type.IsScience && result.SciencePoints > 0 && (result.Recovered || result.Delivered)) earned.Add("Science:" + type.Body);
             List<string> wanted = type != null ? type.Achievements : new List<string>();
             foreach (string w in wanted) if (Matches(earned, w)) r.Achievements.Add(w);
             foreach (string a in earned) if (!r.Achievements.Exists(x => string.Equals(x, a, StringComparison.OrdinalIgnoreCase)) && !a.StartsWith("Recover", StringComparison.OrdinalIgnoreCase)) r.Achievements.Add(a);

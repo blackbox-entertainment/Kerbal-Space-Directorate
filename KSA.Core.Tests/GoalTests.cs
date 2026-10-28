@@ -14,7 +14,7 @@ namespace KSA.Core.Tests
             var warnings = new List<string>();
             GoalCatalog c = ShippedConfigs.Goals(warnings);
             Assert.That(warnings, Is.Empty, string.Join(" | ", warnings));
-            Assert.That(c.Count, Is.EqualTo(15));
+            Assert.That(c.Count, Is.EqualTo(18));
             Assert.That(c.Get("AchieveOrbit").Pattern, Is.EqualTo("Orbit:Kerbin"));
             Assert.That(c.Get("AchieveOrbit").Repeatable, Is.False, "firsts are not repeatable by default");
             Assert.That(c.Get("NoCrewLosses").Repeatable, Is.True, "conditional goals repeat by default");
@@ -56,7 +56,7 @@ namespace KSA.Core.Tests
         public void Selector_MovesUpTiers_WhenEarlyIsExhausted()
         {
             GoalCatalog c = ShippedConfigs.Goals();
-            var met = new HashSet<string> { "ReachSpace", "AchieveOrbit", "FirstEVA", "ReturnSafely" };
+            var met = new HashSet<string> { "ReachSpace", "AchieveOrbit", "FirstEVA", "ReturnSafely", "ScienceReturnKerbin" };
             List<GoalDefinition> picked = GoalSelector.Pick(c, 3, p => false, met, new HashSet<string>(), new Random(1));
             Assert.That(picked.Count, Is.EqualTo(3));
             foreach (GoalDefinition g in picked)
