@@ -37,6 +37,7 @@ namespace KSA.KSP
             if (!_loaded) KsaCore.CreateAgency();
             KsaCore.SyncRoster("scene start");
             KsaCore.TickAgency("scene start");
+            Build.CraftWriter.PublishTemplates();
         }
 
         public void OnDestroy()

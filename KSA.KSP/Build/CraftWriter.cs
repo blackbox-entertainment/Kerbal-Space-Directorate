@@ -53,6 +53,28 @@ namespace KSA.KSP.Build
             }
         }
 
+        /// <summary>Copies the mod's template craft into the save's VAB under "KSA Templates" so the player can open them in the editor.</summary>
+        public static void PublishTemplates()
+        {
+            try
+            {
+                string source = Path.Combine(KSPUtil.ApplicationRootPath, Path.Combine("GameData", Path.Combine("KSA", "Templates")));
+                if (!Directory.Exists(source)) return;
+                string target = Path.Combine(CraftFolder, "KSA Templates");
+                Directory.CreateDirectory(target);
+                int copied = 0;
+                foreach (string file in Directory.GetFiles(source, "*.craft"))
+                {
+                    string dest = Path.Combine(target, Path.GetFileName(file));
+                    if (File.Exists(dest) && File.GetLastWriteTimeUtc(dest) >= File.GetLastWriteTimeUtc(file)) continue;
+                    File.Copy(file, dest, true);
+                    copied++;
+                }
+                if (copied > 0) KsaCore.Log.Info("Published " + copied + " template craft to " + target);
+            }
+            catch (Exception e) { KsaCore.Log.Warn("Could not publish template craft: " + e.Message); }
+        }
+
         public static Result Write(StagePlan plan, IPartCatalog catalog, string shipName, string fileStem)
         {
             var result = new Result();
