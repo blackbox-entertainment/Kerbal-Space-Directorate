@@ -87,8 +87,14 @@ namespace KSA.Core.Recruiting
                     a.Tags.Add(tagPool[rng.Next(tagPool.Count)]);
                     if (rng.NextDouble() < 0.3)
                     {
-                        string second = tagPool[rng.Next(tagPool.Count)];
-                        if (!a.Tags.Contains(second)) a.Tags.Add(second);
+                        // A second tag must not contradict the first (no Reckless + Steady, no Cautious + Showboat).
+                        for (int tries = 0; tries < 8; tries++)
+                        {
+                            string second = tagPool[rng.Next(tagPool.Count)];
+                            if (a.Tags.Contains(second) || Conflicts(a.Tags[0], second)) continue;
+                            a.Tags.Add(second);
+                            break;
+                        }
                     }
                 }
                 Applicants.Add(a);
@@ -96,6 +102,21 @@ namespace KSA.Core.Recruiting
                 if (takenNames != null) takenNames.Add(name);
             }
             return made;
+        }
+
+        private static readonly string[][] Opposites =
+        {
+            new[] { "Reckless", "Cautious" }, new[] { "Reckless", "Steady" }, new[] { "Reckless", "Perfectionist" },
+            new[] { "Showboat", "Cautious" }, new[] { "Showboat", "Steady" }, new[] { "Curious", "Steady" }
+        };
+
+        /// <summary>True when two personality tags describe opposite temperaments.</summary>
+        public static bool Conflicts(string a, string b)
+        {
+            foreach (string[] pair in Opposites)
+                if ((string.Equals(pair[0], a, StringComparison.OrdinalIgnoreCase) && string.Equals(pair[1], b, StringComparison.OrdinalIgnoreCase)) ||
+                    (string.Equals(pair[1], a, StringComparison.OrdinalIgnoreCase) && string.Equals(pair[0], b, StringComparison.OrdinalIgnoreCase))) return true;
+            return false;
         }
 
         /// <summary>
