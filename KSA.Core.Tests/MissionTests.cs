@@ -20,7 +20,7 @@ namespace KSA.Core.Tests
 
             Assert.That(warnings, Is.Empty, string.Join(" | ", warnings));
             Assert.That(missions.Count, Is.EqualTo(46));
-            Assert.That(templates.Count, Is.EqualTo(13));
+            Assert.That(templates.Count, Is.EqualTo(14));
             Assert.That(programs.Count, Is.EqualTo(6));
 
             foreach (MissionType t in missions.Types)

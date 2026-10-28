@@ -76,6 +76,7 @@ namespace KSA.KSP
             foreach (AssemblyLoader.LoadedAssembly la in AssemblyLoader.loadedAssemblies) if (la != null && !string.IsNullOrEmpty(la.name)) a.InstalledMods.Add(la.name);
             a.LiveFlightAvailable = true; // M5: built-in flight director for Kerbin missions
             a.LiveFlightCheck = Flight.LiveFlightLauncher.Check;
+            a.TemplateCheck = Parts.KspTemplateCheck.Blocker; // career: a template needs every part researched and bought
             a.LiveLaunchRequested += Flight.LiveFlightLauncher.OnLaunchRequested;
             a.ReportUpdated += OnReportUpdated;
             WireAi(a);

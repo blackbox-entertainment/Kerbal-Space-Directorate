@@ -42,7 +42,13 @@ namespace KSA.KSP.Roster
             }
             pcm.UpdateExperience();
 
-            roster.AddCrewMember(pcm);
+            if (!roster.AddCrewMember(pcm))
+            {
+                // The game refuses a first name it already holds inside another name; the profile would vanish at the next sync.
+                KsaCore.Log.Error("Hire: the game refused to add " + pcm.name + " to the roster (name clash with an existing kerbal). " + applicant.Name + " could not join.");
+                ScreenMessages.PostScreenMessage("[KSA] The roster refused " + applicant.Name + " (name clash); please recruit someone else.", 8f, ScreenMessageStyle.UPPER_CENTER);
+                return null;
+            }
             KsaCore.Log.Info("Hire: added " + pcm.name + " (" + pcm.trait + ", level " + pcm.experienceLevel + ") to the roster");
             return pcm;
         }

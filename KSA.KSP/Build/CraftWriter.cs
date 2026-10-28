@@ -332,14 +332,12 @@ namespace KSA.KSP.Build
                 throw new InvalidOperationException(child.Ap.name + " cannot be surface-attached.");
             float hostRadius = Radius(host);
             var dir = new Vector3((float)Math.Cos(angle), 0, (float)Math.Sin(angle));
-            // KSP convention (checked against stock craft): a surface node's orientation points AWAY from the host in
-            // world space, along the host's surface normal, and the node's position is where the part touches the host.
-            // The Flea's node sits 0.625 m off its axis, so the sign matters: the wrong one buries the booster in its host.
+            // Exactly what the stock editor does on a surface attach (EditorLogic, decompiled):
+            //   rotation = LookRotation(surfaceNormal, hostUp) * LookRotation(node.orientation, up)
+            //   position = hitPoint - rotation * node.position
+            // Checked against the stock Kerbal 1 (Hammers on TT-38Ks) and Jumping Flea (fins on a Flea).
             Vector3 orient = srf.orientation.sqrMagnitude > 0 ? srf.orientation.normalized : new Vector3(1, 0, 0);
-            Quaternion rot = Quaternion.FromToRotation(orient, dir);
-            // Keep the part upright: FromToRotation may roll it; re-level by projecting its up axis.
-            Vector3 up = rot * Vector3.up;
-            if (Vector3.Dot(up, Vector3.up) < 0.999f) rot = Quaternion.FromToRotation(up, Vector3.up) * rot;
+            Quaternion rot = Quaternion.LookRotation(dir, Vector3.up) * Quaternion.LookRotation(orient, Vector3.up);
             child.Rot = rot;
             // Attach point on the host surface: level with the host's top node (or centre), out along dir.
             AttachNode hostTop = Node(host.Ap, "top");

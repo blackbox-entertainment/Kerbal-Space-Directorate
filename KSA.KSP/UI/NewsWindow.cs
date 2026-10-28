@@ -88,7 +88,7 @@ namespace KSA.KSP.UI
                 string prefix = _newIds.Contains(n.Id) ? "<color=#ffe066>NEW</color> " : string.Empty;
                 items.Add(new DialogGUILabel(prefix + "<b>" + n.Headline + "</b>", textWidth, KsaUi.LabelHeight(n.Headline, textWidth, LineHeight)));
                 items.Add(new DialogGUILabel("<color=#aaaaaa>Day " + n.Day + ", year " + n.Year + " · " + KindText(n.Kind)
-                    + (string.IsNullOrEmpty(n.Byline) ? string.Empty : " · " + n.Byline) + " · " + n.Source + "</color>", textWidth, LineHeight));
+                    + (string.IsNullOrEmpty(n.Byline) ? string.Empty : " · " + n.Byline) + "</color>", textWidth, LineHeight));
                 foreach (string line in Wrap(n.Body, WrapWidth))
                     items.Add(new DialogGUILabel(line, textWidth, KsaUi.LabelHeight(line, textWidth, LineHeight)));
                 items.Add(new DialogGUISpace(ItemGap));
