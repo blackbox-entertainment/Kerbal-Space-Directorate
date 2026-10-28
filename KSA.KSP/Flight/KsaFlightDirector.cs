@@ -53,7 +53,10 @@ namespace KSA.KSP.Flight
         private MissionProgram _program;
         private ScienceRunner _science;
         private FlightContext _ctx;
-        private Rect _hud = new Rect(Screen.width - 350, 120, 340, 210);
+        // Top right, clear of the stock app toolbar down the right edge. Where the Director drags it is remembered
+        // for the rest of the session, so every flight opens it in the same place.
+        private static Vector2? _hudPlace;
+        private Rect _hud = new Rect(_hudPlace.HasValue ? _hudPlace.Value.x : Screen.width - 400, _hudPlace.HasValue ? _hudPlace.Value.y : 36, 340, 210);
         private string _status = "Standing by.";
         private Vessel _vessel;
         private double _nextSample;
@@ -795,10 +798,22 @@ namespace KSA.KSP.Flight
             if (_offering && _offerVessel != null && KsaCore.Agency != null)
             {
                 _hud = GUILayout.Window(GetInstanceID(), _hud, DrawOffer, "KSA Flight Director");
+                KeepOnScreen();
                 return;
             }
             if (Live == null || _vessel == null || KsaCore.Agency == null) return;
             _hud = GUILayout.Window(GetInstanceID(), _hud, DrawHud, "KSA Flight Director");
+            KeepOnScreen();
+        }
+
+        /// <summary>Keeps the HUD inside the screen and left of the stock app toolbar, and remembers where it is.</summary>
+        private void KeepOnScreen()
+        {
+            float maxX = Mathf.Max(0f, Screen.width - _hud.width - 46f);
+            float maxY = Mathf.Max(0f, Screen.height - _hud.height);
+            _hud.x = Mathf.Clamp(_hud.x, 0f, maxX);
+            _hud.y = Mathf.Clamp(_hud.y, 0f, maxY);
+            _hudPlace = _hud.position;
         }
 
         private void DrawHud(int id)
