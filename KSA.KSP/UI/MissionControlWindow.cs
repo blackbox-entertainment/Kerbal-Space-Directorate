@@ -120,7 +120,9 @@ namespace KSA.KSP.UI
                 if (flyingNow) action = new DialogGUILabel("<color=#8be28b>flying now</color>", 150f, LineHeight);
                 else if (string.Equals(_confirmResolve, id, StringComparison.OrdinalIgnoreCase))
                     action = new DialogGUIButton("Confirm resolve?", () => OnConfirmResolve(id), 150f, ButtonHeight, false);
-                else action = new DialogGUIButton("Resolve as simulated", () => OnAskResolve(id), 150f, ButtonHeight, false);
+                else action = new DialogGUIHorizontalLayout(false, false, 4f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                    new DialogGUIButton("Back to pad", () => { string m; _agency.ReturnToPad(id, out m); _status = m; Refresh(); }, 100f, ButtonHeight, false),
+                    new DialogGUIButton("Resolve as simulated", () => OnAskResolve(id), 150f, ButtonHeight, false));
                 items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 4, 0), TextAnchor.MiddleLeft,
                     action,
                     new DialogGUILabel("<b>" + p.Name + "</b>", 260f, LineHeight),

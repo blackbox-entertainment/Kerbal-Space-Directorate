@@ -60,10 +60,27 @@ namespace KSA.KSP.Flight
             TryAdopt();
         }
 
+        private float _waited;
+
         private void Update()
         {
             // The active vessel may not exist yet in Start right after a launch; keep trying until the flight is ready.
-            if (!_adopted && FlightGlobals.ready && FlightGlobals.ActiveVessel != null) TryAdopt();
+            if (_adopted) return;
+            if (FlightGlobals.ready && FlightGlobals.ActiveVessel != null) { TryAdopt(); return; }
+            _waited += UnityEngine.Time.unscaledDeltaTime;
+            if (_waited < 8f) return;
+            // Eight seconds in the flight scene with no vessel: the craft never loaded. Scrub the launch and go home.
+            _adopted = true;
+            LaunchSpec pending = LiveFlightLauncher.Pending;
+            LiveFlightLauncher.ClearPending();
+            if (pending != null && KsaCore.Agency != null)
+            {
+                string msg;
+                KsaCore.Agency.ReturnToPad(pending.Project.Id, out msg);
+                KsaCore.Log.Error("Launch of " + pending.Project.Name + " produced no vessel (craft file failed to load); " + msg);
+                ScreenMessages.PostScreenMessage("[KSA] The craft failed to load; " + msg + " Returning to the Space Center.", 10f, ScreenMessageStyle.UPPER_CENTER);
+            }
+            HighLogic.LoadScene(GameScenes.SPACECENTER);
         }
 
         private void TryAdopt()

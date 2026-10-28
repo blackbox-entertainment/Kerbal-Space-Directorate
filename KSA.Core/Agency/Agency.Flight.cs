@@ -282,6 +282,37 @@ namespace KSA.Core
             Push(null, c.Name + " has returned from station duty");
         }
 
+        /// <summary>
+        /// The launch never produced a vessel (bad craft file, scene failure): put the project back on the pad as Ready
+        /// and release the crew, so it can be launched again instead of being written off.
+        /// </summary>
+        public bool ReturnToPad(string projectId, out string message)
+        {
+            Project p = GetProject(projectId);
+            if (p == null) { message = "No such project."; return false; }
+            if (p.Status != ProjectStatus.InFlight) { message = p.Name + " is not in flight."; return false; }
+            foreach (string id in p.Crew)
+            {
+                CrewProfile c = Crew.Get(id);
+                if (c == null) continue;
+                MissionEntry m = c.Record.CurrentMission;
+                if (m != null && m.MissionId == p.MissionId) c.Record.Missions.Remove(m);
+                c.InFlightSinceUT = -1;
+                if (c.Status == CrewStatus.Assigned) c.Status = CrewStatus.Available;
+            }
+            p.Status = ProjectStatus.Ready;
+            p.MissionId = string.Empty;
+            p.VesselId = string.Empty;
+            p.LaunchUT = -1;
+            p.FlightLog.Clear();
+            p.FlightAchievements.Clear();
+            p.Notes.Add("Launch scrubbed on day " + CurrentDay + "; back on the pad.");
+            message = p.Name + " is back on the pad.";
+            Push(null, message);
+            RaiseProjectChanged(p);
+            return true;
+        }
+
         /// <summary>The flight never happened (vessel lost to a save reload, player gave up): resolve it as a simulation.</summary>
         public bool SimulateInstead(string projectId, out string message)
         {
