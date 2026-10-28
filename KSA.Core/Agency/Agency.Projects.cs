@@ -429,6 +429,7 @@ namespace KSA.Core
             if (Reports.Count > MaxReports) Reports.RemoveRange(0, Reports.Count - MaxReports);
             Push(notices, p.Name + ": " + OutcomeText(r.Outcome));
             RaiseProjectChanged(p);
+            RequestDirectorTurn(p.Name + " ended: " + OutcomeText(r.Outcome));
             Action<MissionReport> handler = MissionResolved;
             if (handler != null) handler(r);
             UpdateProgramFor(p, r);

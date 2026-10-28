@@ -61,6 +61,9 @@ namespace KSA.Core
         public double ScienceEarned { get; set; }
         /// <summary>Every world that can hold a colony holds one (KSA-64); announced once.</summary>
         public bool SystemColonized { get; set; }
+        /// <summary>The AI runs the agency (KSA-68).</summary>
+        public bool AiDirector { get; set; }
+        public KSA.Core.Ai.DirectorFlights DirectorFlights { get; set; } = KSA.Core.Ai.DirectorFlights.Firsts;
         public int NextStrandingNumber { get; set; } = 1;
         public bool Started { get; set; }
         /// <summary>The fiscal year currently in progress (1-based). 0 before the agency starts.</summary>

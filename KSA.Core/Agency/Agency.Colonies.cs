@@ -116,6 +116,7 @@ namespace KSA.Core
             }
             if (g.Stage == before) return;
             g.Notes.Add("Now a " + StageText(g.Stage) + " (day " + CurrentDay + ", " + g.Residents + " residents).");
+            RequestDirectorTurn(g.Name + " became a " + StageText(g.Stage));
             if (g.Stage == ColonyStage.Settlement) Push(notices, g.Name + " is now a settlement: " + g.Residents + " residents, supplies last twice as long");
             if (g.Stage == ColonyStage.Colony)
             {

@@ -18,6 +18,7 @@ namespace KSA.KSP.UI
         private ProgramsWindow _programs;
         private AnalyticsWindow _analytics;
         private DepartmentsWindow _departments;
+        private AiDirectorWindow _aiDirector;
         private CampaignWindow _campaign;
         private RecruitingWindow _recruiting;
         private RosterWindow _roster;
@@ -64,7 +65,7 @@ namespace KSA.KSP.UI
             try
             {
                 const float h = 60f;
-                float w = _open == Facility.Administration ? 420f : 250f;
+                float w = _open == Facility.Administration ? 530f : 250f;
                 GUILayout.BeginArea(new Rect(Screen.width - w - 24f, Screen.height - h - 70f, w, h), "KSA", GUI.skin.window);
                 GUILayout.BeginHorizontal();
                 switch (_open)
@@ -74,6 +75,7 @@ namespace KSA.KSP.UI
                         if (GUILayout.Button("Analytics")) ToggleWindow(ref _analytics, () => new AnalyticsWindow(KsaCore.Agency, () => { _analytics = null; }), wnd => wnd.Open(), wnd => wnd.Close());
                         if (GUILayout.Button("Departments")) ToggleWindow(ref _departments, () => new DepartmentsWindow(KsaCore.Agency, () => { _departments = null; }), wnd => wnd.Open(), wnd => wnd.Close());
                         if (GUILayout.Button("Campaign")) ToggleWindow(ref _campaign, () => new CampaignWindow(KsaCore.Agency, () => { _campaign = null; }), wnd => wnd.Open(), wnd => wnd.Close());
+                        if (GUILayout.Button(KsaCore.Agency.DirectorOn ? "AI Director (on)" : "AI Director")) ToggleWindow(ref _aiDirector, () => new AiDirectorWindow(KsaCore.Agency, () => { _aiDirector = null; }), wnd => wnd.Open(), wnd => wnd.Close());
                         break;
                     case Facility.AstronautComplex:
                         if (GUILayout.Button("Recruiting")) ToggleWindow(ref _recruiting, () => new RecruitingWindow(KsaCore.Agency, () => { _recruiting = null; }), wnd => wnd.Open(), wnd => wnd.Close());
@@ -102,6 +104,7 @@ namespace KSA.KSP.UI
             if (_analytics != null) { _analytics.Close(); _analytics = null; }
             if (_departments != null) { _departments.Close(); _departments = null; }
             if (_campaign != null) { _campaign.Close(); _campaign = null; }
+            if (_aiDirector != null) { _aiDirector.Close(); _aiDirector = null; }
             if (_recruiting != null) { _recruiting.Close(); _recruiting = null; }
             if (_roster != null) { _roster.Close(); _roster = null; }
             if (_missionControl != null) { _missionControl.Close(); _missionControl = null; }

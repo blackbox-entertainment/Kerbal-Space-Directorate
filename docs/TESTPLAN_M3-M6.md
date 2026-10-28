@@ -154,3 +154,18 @@ The flight director runs a list of legs (shown on the HUD as "Leg: name (n/total
 5. Programs window: program types whose modules cannot be built yet are grey "(research)"; the Eve surface base without a finished cloud city is grey "(locked)". Start program is grey with the reason.
 6. A finished base whose resupply mission is not researched shows grey resupply buttons with the reason. Stranded crews whose rescue cannot be built yet show a grey line instead of the rescue buttons.
 7. Research the parts in R&D, reopen the window: the entries turn white and work.
+
+## E. AI Director (added 2026-10-28, KSA-68)
+
+Needs an OpenRouter key in AI Setup (already there if AI design works).
+
+1. Director's Office (or the Administration bar at the Space Center): press **AI Director**. The window shows the model (Claude Haiku 5.5 by default), the flight setting and an empty log.
+2. Pick a model preset if you like (it saves to ksa_settings.cfg). Pick **Flights**: Simulate everything, Firsts live, or Everything live.
+3. Press **Hand the agency to the AI**, then **Think now**. Within a few seconds press **Refresh**: the log shows its thought, its plan and each action in green (or red with the reason it was refused). KSP.log has "[KSA] AI Director turn on day ...".
+4. Leave the game at the Space Center with time warp on. Every 30 game days (sooner after a mission, a walk-in, the year end or a stranding) it takes another turn. Screen messages start "[KSA] AI Director: ...".
+5. Check it really acts: kerbals in the lab, projects in the Projects window, research bought in R&D (Science goes down, parts appear in the VAB), applicants hired.
+6. Live flights (Firsts live or Everything live): when a live project is Ready, it rolls out by itself, the HUD says "AI Director: launching in 10 s", the crew flies, the vessel is recovered and the game returns to the Space Center. A delivered module, a crash or a stranding also returns to the Space Center after 15 s. Touch the controls during a flight to take over that flight.
+7. **Show the briefing** shows exactly what the AI reads this turn.
+8. **Take over** hands the agency back: no more turns, nothing else changes.
+9. Save, quit, reload: the Director is still on, with its plan and log.
+10. Spend: the window shows the last 30 days' spend; the AI Setup monthly cap stops turns when reached.

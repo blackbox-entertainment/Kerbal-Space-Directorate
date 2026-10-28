@@ -79,6 +79,7 @@ namespace KSA.KSP.Flight
 
         private void Update()
         {
+            DirectorAutomation(); // KSA-68: the AI Director gives the go and brings the game home
             if (Live != null && _vessel != null && _adopted && !_offering) WatchForDirectorInput();
             // The active vessel may not exist yet in Start right after a launch; keep trying until the flight is ready.
             if (_adopted) return;
@@ -610,6 +611,7 @@ namespace KSA.KSP.Flight
         public static void Resolve(bool recovered, bool delivered)
         {
             if (Live == null || KsaCore.Agency == null) return;
+            if (!recovered) ScheduleReturn(); // recovery returns to the Space Center by itself
             var result = new LiveFlightResult
             {
                 Recovered = recovered,
@@ -644,6 +646,40 @@ namespace KSA.KSP.Flight
             if (r != null) KsaCore.Log.Info("Live flight resolved: " + r.ProjectName + " " + Agency.OutcomeText(r.Outcome));
             if (Instance != null && Instance._program != null) Instance._program.Disengage();
             if (delivered) ScreenMessages.PostScreenMessage("[KSA] " + (r != null ? r.ProjectName : "Module") + " delivered; the crew stays aboard.", 8f, ScreenMessageStyle.UPPER_CENTER);
+        }
+
+        // ------------------------------------------------------------------ KSA-68: AI Director automation
+
+        private float _goAt = -1f;
+        private float _returnAt = -1f;
+
+        /// <summary>Hands-off flying under the AI Director: count down and give the go on the pad; after a flight that
+        /// ended without a recovery (a delivered module, a loss, a stranding), save and go back to the Space Center.</summary>
+        private void DirectorAutomation()
+        {
+            Agency agency = KsaCore.Agency;
+            if (agency == null || !agency.DirectorOn) { _goAt = -1f; _returnAt = -1f; return; }
+            float now = UnityEngine.Time.realtimeSinceStartup;
+            if (_holdForLaunch && Live != null)
+            {
+                if (_goAt < 0f) _goAt = now + Math.Max(1, agency.Settings.Director.GoSeconds);
+                if (now >= _goAt) { _goAt = -1f; Log("The AI Director gave the go.", null); GoForLaunch(); }
+            }
+            else _goAt = -1f;
+            if (_returnAt > 0f && Live == null && now >= _returnAt && HighLogic.LoadedScene == GameScenes.FLIGHT)
+            {
+                _returnAt = -1f;
+                KsaCore.Log.Info("AI Director: flight over, returning to the Space Center");
+                try { GamePersistence.SaveGame("persistent", HighLogic.SaveFolder, SaveMode.OVERWRITE); } catch (Exception e) { KsaCore.Log.Warn("Save before returning failed: " + e.Message); }
+                HighLogic.LoadScene(GameScenes.SPACECENTER);
+            }
+        }
+
+        private static void ScheduleReturn()
+        {
+            if (Instance == null || KsaCore.Agency == null || !KsaCore.Agency.DirectorOn) return;
+            Instance._returnAt = UnityEngine.Time.realtimeSinceStartup + Math.Max(3, KsaCore.Agency.Settings.Director.ReturnSeconds);
+            ScreenMessages.PostScreenMessage("[KSA] AI Director: back to the Space Center in " + KsaCore.Agency.Settings.Director.ReturnSeconds + " s.", 6f, ScreenMessageStyle.UPPER_CENTER);
         }
 
         /// <summary>KSA-65: anyone aboard at the end who is not the project crew (a rescued crew) rides home as a passenger.</summary>
@@ -682,6 +718,7 @@ namespace KSA.KSP.Flight
             };
             result.Deaths.AddRange(Live.Deaths);
             foreach (string a in Live.Logged) result.Achievements.Add(a);
+            ScheduleReturn();
             string pid = Live.ProjectId;
             Live = null;
             RescueTransferLeg.Aboard.Clear();
@@ -772,6 +809,7 @@ namespace KSA.KSP.Flight
             if (_holdForLaunch)
             {
                 GUILayout.Label("<b>Holding on the pad.</b> The crew is ready.");
+                if (_goAt > 0f) GUILayout.Label("AI Director: launching in " + Mathf.CeilToInt(_goAt - UnityEngine.Time.realtimeSinceStartup) + " s.");
                 if (GUILayout.Button("LAUNCH", GUILayout.Height(36f))) GoForLaunch();
             }
             else GUILayout.Label("Leg: " + phase);

@@ -92,6 +92,7 @@ namespace KSA.Core
             }
             if (s.Crew.Count == 0) return;
             Strandings.Add(s);
+            RequestDirectorTurn(CrewNames(s.Crew) + " stranded " + s.Where);
             State.Prestige = Math.Max(0, State.Prestige - 2);
             Push(notices, CrewNames(s.Crew) + " stranded " + s.Where + ". Launch a rescue from the Projects window.");
         }

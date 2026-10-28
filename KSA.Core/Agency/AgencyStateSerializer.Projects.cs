@@ -48,6 +48,16 @@ namespace KSA.Core
                 if (p.Design != null) n.AddChild(p.Design.ToDataNode());
             }
             root.AddChild(agency.Costs.ToDataNode());
+            DataNode dir = root.AddChild("DIRECTOR"); // KSA-68
+            dir.AddValue("enabled", agency.State.AiDirector);
+            dir.AddValue("flights", agency.State.DirectorFlights.ToString());
+            dir.AddValue("plan", Agency.Clean(agency.DirectorPlan));
+            dir.AddValue("lastTurnDay", agency.DirectorLastTurnDay);
+            foreach (KSA.Core.Ai.DirectorLogEntry e in agency.DirectorLog)
+            {
+                DataNode en = dir.AddChild("ENTRY");
+                en.AddValue("day", e.Day); en.AddValue("year", e.Year); en.AddValue("kind", e.Kind); en.AddValue("text", Agency.Clean(e.Text));
+            }
             root.AddChild(agency.News.ToDataNode());
             foreach (KSA.Core.Rivals.RivalAgency rv in agency.Rivals) root.AddChild(rv.ToDataNode());
             foreach (KSA.Core.Analytics.YearSummary ys in agency.YearHistory) root.AddChild(ys.ToDataNode());
@@ -186,6 +196,16 @@ namespace KSA.Core
                 agency.Projects.Add(p);
             }
             agency.Costs.Load(root.GetChild("COST_GUARD"));
+            DataNode dirNode = root.GetChild("DIRECTOR");
+            if (dirNode != null)
+            {
+                agency.State.AiDirector = dirNode.GetBool("enabled", false);
+                agency.State.DirectorFlights = ParseEnum(dirNode.GetValue("flights"), KSA.Core.Ai.DirectorFlights.Firsts);
+                agency.DirectorPlan = dirNode.GetValue("plan", string.Empty);
+                agency.DirectorLastTurnDay = dirNode.GetInt("lastTurnDay", -1);
+                foreach (DataNode en in dirNode.GetChildren("ENTRY"))
+                    agency.DirectorLog.Add(new KSA.Core.Ai.DirectorLogEntry { Day = en.GetInt("day", 0), Year = en.GetInt("year", 0), Kind = en.GetValue("kind", "Note"), Text = en.GetValue("text", string.Empty) });
+            }
             agency.News.Load(root.GetChild("NEWSFEED"));
             agency.Rivals.Clear();
             foreach (DataNode rv in root.GetChildren("RIVAL")) agency.Rivals.Add(KSA.Core.Rivals.RivalAgency.FromDataNode(rv));

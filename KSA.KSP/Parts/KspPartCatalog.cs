@@ -135,7 +135,7 @@ namespace KSA.KSP.Parts
             return info;
         }
 
-        private static PartKind Classify(AvailablePart ap, Part p)
+        internal static PartKind Classify(AvailablePart ap, Part p)
         {
             PartModuleList mods = p.Modules;
             bool has(string moduleName) { return mods != null && mods.Contains(moduleName); }

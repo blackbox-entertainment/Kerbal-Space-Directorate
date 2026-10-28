@@ -46,6 +46,8 @@ namespace KSA.Core
         public string LiveFlightScope { get; set; } = "All";
         /// <summary>How crew competence shapes live flights (FLIGHT_CREW block).</summary>
         public KSA.Core.Flight.FlightCrewRules FlightCrew { get; set; } = new KSA.Core.Flight.FlightCrewRules();
+        /// <summary>How the AI Director runs (AI_DIRECTOR block, KSA-68).</summary>
+        public KSA.Core.Ai.DirectorRules Director { get; set; } = new KSA.Core.Ai.DirectorRules();
         /// <summary>Base growth into settlements and colonies (COLONY block, KSA-64).</summary>
         public KSA.Core.Projects.ColonyRules Colony { get; set; } = new KSA.Core.Projects.ColonyRules();
         /// <summary>Stranded crews and rescue missions (RESCUE block, KSA-65).</summary>
@@ -101,6 +103,7 @@ namespace KSA.Core
             s.Personality = KSA.Core.Personnel.PersonalityRules.Parse(node.GetChild(KSA.Core.Personnel.PersonalityRules.NodeName));
             s.Experience = KSA.Core.Personnel.ExperienceRules.Parse(node.GetChild(KSA.Core.Personnel.ExperienceRules.NodeName));
             s.Colony = KSA.Core.Projects.ColonyRules.Parse(node.GetChild(KSA.Core.Projects.ColonyRules.NodeName));
+            s.Director = KSA.Core.Ai.DirectorRules.Parse(node.GetChild(KSA.Core.Ai.DirectorRules.NodeName));
             s.Rescue = KSA.Core.Projects.RescueRules.Parse(node.GetChild(KSA.Core.Projects.RescueRules.NodeName));
             s.CrewDecisions = node.GetValue("crewDecisions", s.CrewDecisions);
             s.Departments = DepartmentRules.Parse(node.GetChild(DepartmentRules.NodeName));

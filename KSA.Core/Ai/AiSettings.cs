@@ -6,7 +6,7 @@ namespace KSA.Core.Ai
 {
     public enum DesignMode { Off = 0, Local = 1, Api = 2, Hybrid = 3 }
 
-    public enum AiTask { Design = 0, PostMortem = 1, Narrative = 2 }
+    public enum AiTask { Design = 0, PostMortem = 1, Narrative = 2, Director = 3 }
 
     /// <summary>
     /// The user-local AI configuration (GDD 6.5), read from PluginData/ksa_settings.cfg by the host.
@@ -24,6 +24,9 @@ namespace KSA.Core.Ai
         public string ApiKey { get; set; } = string.Empty;
         public string DesignModel { get; set; } = string.Empty;
         public string PostMortemModel { get; set; } = string.Empty;
+        /// <summary>OpenRouter model for the AI Director (KSA-68); empty = <see cref="DefaultDirectorModel"/>.</summary>
+        public string DirectorModel { get; set; } = string.Empty;
+        public const string DefaultDirectorModel = "anthropic/claude-haiku-5.5";
         public int MaxCallsPerDay { get; set; } = 50;
         public double MonthlySpendCapUsd { get; set; } = 5;
 
@@ -79,6 +82,18 @@ namespace KSA.Core.Ai
             }
         }
 
+        /// <summary>
+        /// Where the AI Director thinks (KSA-68): the API key and the director model when there is a key, whatever the design
+        /// mode; else the local model; else nowhere. Separate from <see cref="EndpointFor"/> so turning design AI off does not
+        /// stop a Director the player switched on.
+        /// </summary>
+        public LlmEndpoint DirectorEndpoint()
+        {
+            if (HasApiKey) return new LlmEndpoint { Url = ApiEndpoint, ApiKey = ApiKey, Model = DirectorModel.Length > 0 ? DirectorModel : DefaultDirectorModel, Provider = Provider, IsLocal = false };
+            if (LocalEnabled && LocalModel.Length > 0) return Local();
+            return null;
+        }
+
         private LlmEndpoint Api(AiTask task)
         {
             string model = task == AiTask.PostMortem && PostMortemModel.Length > 0 ? PostMortemModel : DesignModel;
@@ -120,6 +135,7 @@ namespace KSA.Core.Ai
                 s.ApiKey = api.GetValue("apiKey", string.Empty).Trim();
                 s.DesignModel = CleanModel(api.GetValue("designModel", string.Empty));
                 s.PostMortemModel = CleanModel(api.GetValue("postMortemModel", string.Empty));
+                s.DirectorModel = CleanModel(api.GetValue("directorModel", string.Empty));
                 s.MaxCallsPerDay = api.GetInt("maxCallsPerDay", s.MaxCallsPerDay);
                 s.MonthlySpendCapUsd = api.GetDouble("monthlySpendCapUSD", s.MonthlySpendCapUsd);
             }
@@ -160,6 +176,7 @@ namespace KSA.Core.Ai
             api.AddValue("apiKey", ApiKey);
             api.AddValue("designModel", DesignModel);
             api.AddValue("postMortemModel", PostMortemModel);
+            api.AddValue("directorModel", DirectorModel);
             api.AddValue("maxCallsPerDay", MaxCallsPerDay);
             api.AddValue("monthlySpendCapUSD", MonthlySpendCapUsd);
             DataNode local = n.AddChild("LOCAL");

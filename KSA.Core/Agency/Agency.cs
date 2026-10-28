@@ -126,6 +126,7 @@ namespace KSA.Core
                 RunYearEnd(notices);
             TickRecruiting(day, notices);
             TickProjects(day, notices);
+            DirectorTick(); // KSA-68: the AI Director takes a turn when one is due
             return notices;
         }
 
@@ -223,6 +224,7 @@ namespace KSA.Core
             }
             ClaimPlayerFirsts(notices);
             RecordYear(year, r);
+            RequestDirectorTurn("the budget review for year " + year + " just closed");
             TickRivals(year, notices);
             Push(notices, "Government Review, year " + year + ": " + r.BandText + " (" + met + "/" + issued + " goals). Budget " + (r.BudgetChangePercent >= 0 ? "+" : "") + r.BudgetChangePercent + "%");
             foreach (string e in r.Events) Push(notices, e);
@@ -725,6 +727,7 @@ namespace KSA.Core
             if (src == null) return;
             var made = Applicants.Generate(src, Settings.WalkInsPerQuarter, State.Prestige, day, Rng, Names, Settings.PersonalityTags, TakenNames());
             foreach (Applicant a in made) Push(notices, "Walk-in applicant: " + a.Name + " (" + RosterView.RoleText(a.Role) + ")");
+            if (made.Count > 0) RequestDirectorTurn("a walk-in applicant arrived");
         }
 
         private RecruitSource PickWalkInSource()

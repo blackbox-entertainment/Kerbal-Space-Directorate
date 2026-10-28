@@ -80,6 +80,7 @@ namespace KSA.KSP
             a.LiveFlightCheck = Flight.LiveFlightLauncher.Check;
             a.TemplateCheck = Parts.KspTemplateCheck.Blocker; // career: a template needs every part researched and bought
             a.ModuleHardwareCheck = Parts.KspHardwareCheck.For; // KSA-64: drills, converters, power and seats in delivered craft
+            a.ResearchHost = new Parts.KspResearchHost();       // KSA-68: the AI Director can spend Science in R&D
             a.LiveLaunchRequested += Flight.LiveFlightLauncher.OnLaunchRequested;
             a.ReportUpdated += OnReportUpdated;
             WireAi(a);
@@ -218,6 +219,7 @@ namespace KSA.KSP
             ScrubStrandedFlights();
             if (!_reassembled) { _reassembled = true; CraftWriter.ReassembleStale(Agency); }
             int wait = Agency.Settings.AutoRolloutSeconds;
+            if (wait <= 0 && Agency.DirectorOn) wait = 20; // KSA-68: the AI Director needs its flights to roll out
             if (wait <= 0) return;
             double now = UnityEngine.Time.realtimeSinceStartup;
             foreach (Project p in Agency.Projects)
