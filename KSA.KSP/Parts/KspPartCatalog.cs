@@ -161,6 +161,10 @@ namespace KSA.KSP.Parts
             if (has("ModuleProceduralFairing")) return PartKind.Fairing;
             if (has("ModuleDockingNode")) return PartKind.Docking;
             if (has("ModuleRCS") || has("ModuleRCSFX")) return PartKind.Rcs;
+            // KSA-67: drills and ore converters (stock and Kerbalism), and Kerbalism greenhouses and supply parts.
+            if (has("ModuleResourceHarvester") || has("Harvester") || n == "miniisru" || n == "isru" || n.StartsWith("kerbalism-chemicalplant")) return PartKind.Industry;
+            if (!has("Harvester") && HasOreConverter(p)) return PartKind.Industry;
+            if (has("Greenhouse") || n.StartsWith("kerbalism-container") || n.StartsWith("kerbalism-lifesupport")) return PartKind.LifeSupport;
             if (has("ModuleDeployableSolarPanel") || has("ModuleGenerator") || (ap.category == PartCategories.Electrical)) return PartKind.Power;
             if (has("ModuleDataTransmitter") && ap.category == PartCategories.Communication) return PartKind.Antenna;
             if (has("ModuleScienceLab") || has("ModuleScienceExperiment") || ap.category == PartCategories.Science) return PartKind.Science;
@@ -180,6 +184,17 @@ namespace KSA.KSP.Parts
             }
             if (ap.category == PartCategories.Payload && has("ModuleCargoBay")) return PartKind.Structural;
             return PartKind.Other;
+        }
+
+        private static bool HasOreConverter(Part p)
+        {
+            foreach (PartModule m in p.Modules)
+            {
+                var c = m as ModuleResourceConverter;
+                if (c == null || c.inputList == null) continue;
+                foreach (ResourceRatio r in c.inputList) if (r.ResourceName == "Ore") return true;
+            }
+            return false;
         }
 
         public static string ModOf(string partUrl)

@@ -19,6 +19,62 @@ namespace KSA.Core
 
         private ColonyRules Colony { get { return Settings.Colony ?? new ColonyRules(); } }
 
+        // --- Life support (KSA-67) ---
+
+        /// <summary>Host: the life support mod installed ("Kerbalism"), empty when there is none.</summary>
+        public string LifeSupportMod { get; set; } = string.Empty;
+
+        public LifeSupportRules LifeSupport { get { return Settings.LifeSupport ?? new LifeSupportRules(); } }
+
+        /// <summary>A life support mod is installed and agency.cfg lets KSA use it.</summary>
+        public bool LifeSupportOn { get { return !string.IsNullOrEmpty(LifeSupportMod) && LifeSupport.Enabled; } }
+
+        /// <summary>Drill, converter and power, plus (with life support) food, air and water for everyone living there and <paramref name="extra"/> more.</summary>
+        public bool HardwareReady(Program g, int extra = 0)
+        {
+            return g != null && g.HardwareSelfSufficient && LifeSupportShort(g, extra).Count == 0;
+        }
+
+        /// <summary>What a place lacks to feed, air and water its residents (plus <paramref name="extra"/>). Empty without life support.</summary>
+        public List<string> LifeSupportShort(Program g, int extra = 0)
+        {
+            var need = new List<string>();
+            if (!LifeSupportOn || g == null) return need;
+            LifeSupportRules ls = LifeSupport;
+            int people = g.Residents + Math.Max(0, extra);
+            int greenhouses = Math.Max(1, (people + ls.ResidentsPerGreenhouse - 1) / ls.ResidentsPerGreenhouse);
+            if (g.Greenhouses < greenhouses)
+            {
+                int more = greenhouses - g.Greenhouses;
+                need.Add(more + " more greenhouse" + (more == 1 ? "" : "s"));
+            }
+            if (ls.RequireRecyclers)
+            {
+                if (g.Scrubbers < people) need.Add("scrubbers for " + (people - g.Scrubbers) + " more");
+                if (g.WaterRecyclers < people) need.Add("water recyclers for " + (people - g.WaterRecyclers) + " more");
+            }
+            return need;
+        }
+
+        /// <summary>Mouths the place can still feed (int.MaxValue without life support).</summary>
+        public int FoodRoom(Program g)
+        {
+            if (!LifeSupportOn || g == null) return int.MaxValue;
+            LifeSupportRules ls = LifeSupport;
+            int room = g.Greenhouses * ls.ResidentsPerGreenhouse;
+            if (ls.RequireRecyclers) room = Math.Min(room, Math.Min(g.Scrubbers, g.WaterRecyclers));
+            return Math.Max(0, room - g.Residents);
+        }
+
+        /// <summary>One line on life support for the AI Director and the Programs window.</summary>
+        public string LifeSupportText()
+        {
+            if (!LifeSupportOn) return "none (stock rules: a colony needs a drill, an ore converter and power)";
+            LifeSupportRules ls = LifeSupport;
+            return LifeSupportMod + ": a colony also needs a greenhouse per " + ls.ResidentsPerGreenhouse + " residents" + (ls.RequireRecyclers ? " and scrubber and water recycler capacity for everyone" : string.Empty)
+                + "; live flights must carry food and water for their whole length; stranded crews last " + ls.StrandedLostAfterDays + " days";
+        }
+
         public static string StageText(ColonyStage s)
         {
             switch (s)
@@ -32,7 +88,7 @@ namespace KSA.Core
         }
 
         /// <summary>Self-sufficient: the hardware is there and the place is at least a settlement.</summary>
-        public bool IsSelfSufficient(Program g) { return g != null && g.Stage >= ColonyStage.Settlement && g.HardwareSelfSufficient; }
+        public bool IsSelfSufficient(Program g) { return g != null && g.Stage >= ColonyStage.Settlement && HardwareReady(g); }
 
         public int FreeRoom(Program g) { return g == null ? 0 : Math.Max(0, g.Room - g.Residents); }
 
@@ -57,10 +113,13 @@ namespace KSA.Core
                     if (g.Drills <= 0) need.Add("a drill");
                     if (g.Isru <= 0) need.Add("an ore converter (ISRU)");
                     if (g.Power <= 0) need.Add("power (solar, RTG or fuel cell)");
+                    need.AddRange(LifeSupportShort(g));
                     if (g.ResuppliesDelivered < c.ColonyResupplies) need.Add((c.ColonyResupplies - g.ResuppliesDelivered) + " more resupplies");
                     if (g.Residents < c.ColonyResidents) need.Add((c.ColonyResidents - g.Residents) + " more residents");
                     return need.Count == 0 ? string.Empty : "Colony needs " + string.Join(", ", need.ToArray()) + ".";
                 default:
+                    List<string> shortOf = LifeSupportShort(g);
+                    if (shortOf.Count > 0) return "The colony has outgrown its life support: it needs " + string.Join(", ", shortOf.ToArray()) + ". Until then it needs resupplies.";
                     return "Self-sufficient colony.";
             }
         }
@@ -78,9 +137,16 @@ namespace KSA.Core
             g.Drills += h.Drills;
             g.Isru += h.Isru;
             g.Power += h.Power;
-            if (seatsCount) g.Seats += Math.Max(0, h.Seats);
+            g.Greenhouses += Math.Max(0, h.Greenhouses);
+            if (seatsCount)
+            {
+                g.Seats += Math.Max(0, h.Seats);
+                // Scrubbers and recyclers sit in the crew parts: they count only when the craft stays.
+                g.Scrubbers += Math.Max(0, h.Scrubbers);
+                g.WaterRecyclers += Math.Max(0, h.WaterRecyclers);
+            }
             if (string.Equals(p.ModuleRole, "return", StringComparison.OrdinalIgnoreCase)) g.HasRocket = true;
-            if (h.Drills + h.Isru + h.Power + h.Seats > 0)
+            if (h.Drills + h.Isru + h.Power + h.Seats + h.Greenhouses > 0)
                 g.Notes.Add(p.Name + " delivered " + HardwareText(h) + ".");
         }
 
@@ -91,6 +157,7 @@ namespace KSA.Core
             if (h.Drills > 0) parts.Add(h.Drills + " drill" + (h.Drills == 1 ? "" : "s"));
             if (h.Isru > 0) parts.Add(h.Isru + " ore converter" + (h.Isru == 1 ? "" : "s"));
             if (h.Power > 0) parts.Add(h.Power + " power source" + (h.Power == 1 ? "" : "s"));
+            if (h.Greenhouses > 0) parts.Add(h.Greenhouses + " greenhouse" + (h.Greenhouses == 1 ? "" : "s"));
             return parts.Count == 0 ? "nothing of note" : string.Join(", ", parts.ToArray());
         }
 
@@ -108,7 +175,7 @@ namespace KSA.Core
             {
                 if (g.Stage == ColonyStage.Base && g.HasRocket && g.ResuppliesDelivered >= c.SettlementResupplies && g.Residents >= c.SettlementResidents)
                     g.Stage = ColonyStage.Settlement;
-                if (g.Stage == ColonyStage.Settlement && g.HardwareSelfSufficient && g.ResuppliesDelivered >= c.ColonyResupplies && g.Residents >= c.ColonyResidents)
+                if (g.Stage == ColonyStage.Settlement && HardwareReady(g) && g.ResuppliesDelivered >= c.ColonyResupplies && g.Residents >= c.ColonyResidents)
                 {
                     g.Stage = ColonyStage.Colony;
                     g.ColonyDay = CurrentDay;
@@ -180,6 +247,7 @@ namespace KSA.Core
                 if (g.Stage >= ColonyStage.Base)
                 {
                     int settlers = Math.Min(c.SettlersPerResupply, FreeRoom(g));
+                    if (g.Stage == ColonyStage.Colony) settlers = Math.Min(settlers, FoodRoom(g)); // a colony takes only those it can feed
                     for (int i = 0; i < settlers; i++) { if ((g.Colonists + i) % 2 == 0) g.ColonistsFemale++; else g.ColonistsMale++; }
                     if (settlers > 0) g.Notes.Add(settlers + " settler" + (settlers == 1 ? "" : "s") + " arrived with the resupply.");
                 }
@@ -191,8 +259,8 @@ namespace KSA.Core
         private int GrowthAdjustedInterval(Program g, int interval)
         {
             if (interval <= 0 || g == null) return interval;
-            if (g.Stage == ColonyStage.Colony || IsSelfSufficient(g)) return 0;
-            if (g.Stage == ColonyStage.Settlement) return (int)Math.Round(interval * Colony.SettlementSupplyFactor);
+            if (IsSelfSufficient(g)) return 0;
+            if (g.Stage >= ColonyStage.Settlement) return (int)Math.Round(interval * Colony.SettlementSupplyFactor);
             return interval;
         }
 
@@ -223,14 +291,26 @@ namespace KSA.Core
 
                 // A colony builds its own room.
                 if (g.Stage == ColonyStage.Colony)
-                    g.ExtraRoom += c.ColonyRoomPerYear + (c.ColonyRoomPerResidents > 0 ? g.Residents / c.ColonyRoomPerResidents : 0);
+                {
+                    int built = c.ColonyRoomPerYear + (c.ColonyRoomPerResidents > 0 ? g.Residents / c.ColonyRoomPerResidents : 0);
+                    g.ExtraRoom += built;
+                    // With life support a colony fits out what it builds and grows another greenhouse every few years,
+                    // but only while it is self-sufficient (its drills, converters and power keep the work going).
+                    if (LifeSupportOn && IsSelfSufficient(g))
+                    {
+                        g.Scrubbers += built;
+                        g.WaterRecyclers += built;
+                        int every = LifeSupport.ColonyGreenhouseEveryYears;
+                        if (every > 0 && CurrentYear % every == 0) { g.Greenhouses++; g.Notes.Add("Built a greenhouse in year " + CurrentYear + "."); }
+                    }
+                }
 
                 // Births: self-sufficient, a man and a woman, and room.
                 if (IsSelfSufficient(g) && HasCouple(g))
                 {
                     int births = 0;
                     int pairs = Pairs(g);
-                    for (int i = 0; i < pairs && FreeRoom(g) > 0; i++)
+                    for (int i = 0; i < pairs && FreeRoom(g) > 0 && FoodRoom(g) > 0; i++)
                     {
                         if (Rng.NextDouble() >= c.BirthChancePerPair) continue;
                         if (Rng.Next(2) == 0) g.ColonistsFemale++; else g.ColonistsMale++;
@@ -242,6 +322,7 @@ namespace KSA.Core
                         Push(notices, g.Name + ": " + births + " new resident" + (births == 1 ? "" : "s") + " born on " + g.Body + " (" + g.Residents + " now)");
                     }
                     else if (FreeRoom(g) <= 0) Push(notices, g.Name + " is full: send a resupply or let the colony build to make room");
+                    else if (FoodRoom(g) <= 0) Push(notices, g.Name + " cannot feed another mouth: deliver a greenhouse (and recyclers) to let it grow");
                 }
 
                 // Yields.

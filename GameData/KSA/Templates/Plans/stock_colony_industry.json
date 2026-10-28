@@ -1,0 +1,17 @@
+{
+  "design_name": "Directorate colony industry module",
+  "rationale": "KSA-67 template. The Duna lander layout carrying the hardware that makes a base self-sufficient: a Convert-O-Tron 125 under the Mk1-3 pod, two Drill-O-Matic Juniors and four OX-STAT panels on the X200-32 lander with a Poodle. It lands and stays. Transfer stage: two X200-32 and a Poodle. Launch: Mainsail on an X200-32 and two X200-64 with four Kickbacks.",
+  "stages": [
+    { "stage": 0, "role": "launch", "decoupler": "Decoupler.2",
+      "core": [ { "part": "Rockomax64.BW", "count": 2 }, { "part": "Rockomax32.BW", "count": 1 }, { "part": "liquidEngineMainsail.v2", "count": 1 } ],
+      "radial": [ { "part": "MassiveBooster", "count": 4, "symmetry": 4 } ] },
+    { "stage": 1, "role": "transfer", "decoupler": "Decoupler.2",
+      "core": [ { "part": "Rockomax32.BW", "count": 2 }, { "part": "liquidEngine2-2.v2", "count": 1 } ],
+      "radial": [] },
+    { "stage": 2, "role": "lander", "decoupler": "",
+      "core": [ { "part": "Rockomax32.BW", "count": 1 }, { "part": "MiniISRU", "count": 1 }, { "part": "liquidEngine2-2.v2", "count": 1 } ],
+      "radial": [ { "part": "landingLeg1-2", "count": 4, "symmetry": 4 }, { "part": "MiniDrill", "count": 2, "symmetry": 2 },
+                  { "part": "solarPanels5", "count": 4, "symmetry": 4 }, { "part": "parachuteRadial", "count": 2, "symmetry": 2 } ] }
+  ],
+  "payload": { "command": "mk1-3pod", "extras": [ "parachuteLarge" ] }
+}

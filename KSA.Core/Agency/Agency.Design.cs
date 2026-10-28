@@ -103,9 +103,29 @@ namespace KSA.Core
                 req.RankNames[e.Id] = Careers.RankName(e.Track, e.RankId);
             }
             if (Parts != null) req.AllowedParts.AddRange(PartFilter.ForJob(Parts, JobFor(type), AllowDlcParts));
+            AddMustCarry(p, type, req);
             req.Lessons.AddRange(Lessons(type, 8));
             req.PriorDesigns = MissionsCompleted(type.Id);
             return req;
+        }
+
+        /// <summary>KSA-67: what the module or flight must carry, and the parts to carry it with.</summary>
+        private void AddMustCarry(Project p, MissionType type, DesignRequest req)
+        {
+            if (type == null) return;
+            if (string.Equals(p.ModuleRole, "industry", StringComparison.OrdinalIgnoreCase))
+            {
+                req.MustCarry.Add("at least one drill and one ore converter (Industry parts) and a power source (solar panels or an RTG): this module makes the base self-sufficient, and it stays on the surface.");
+                if (LifeSupportOn) req.MustCarry.Add("at least one greenhouse (" + LifeSupportMod + " LifeSupport part) to grow food for the residents.");
+            }
+            if (!LifeSupportOn) return;
+            int crew = Math.Max(1, type.CrewSize);
+            int days = type.DurationDays + Math.Max(0, LifeSupport.MarginDays);
+            req.MustCarry.Add("food and water for " + crew + " crew for " + days + " days (" + LifeSupportMod + " is installed: a crew pod holds about 5 days; add supply containers, LifeSupport parts, for longer flights).");
+            if (Parts == null) return;
+            // Offer life support parts even to launch vehicles, whose part list leaves them out.
+            bool have = req.AllowedParts.Exists(x => x.Kind == PartKind.LifeSupport);
+            if (!have) foreach (PartInfo part in PartFilter.ForJob(Parts, PartJob.StationModule, AllowDlcParts)) if (part.Kind == PartKind.LifeSupport) req.AllowedParts.Add(part);
         }
 
         /// <summary>Post-mortem lines from earlier flights of the same body/profile, oldest first.</summary>

@@ -19,10 +19,26 @@ namespace KSA.Core.Missions
         /// <summary>Crew seats on the craft (0 = unknown). Shown in the design picker so "Kerbal 2" is not read as two crew.</summary>
         public int Seats { get; set; }
         public List<string> RequiredMods { get; } = new List<string>();
+        /// <summary>Program module roles this template is only for (KSA-67: "industry"). Empty = any mission it flies.</summary>
+        public List<string> Roles { get; } = new List<string>();
+        /// <summary>
+        /// GameData-relative stage plan (JSON) the host assembles into <see cref="Craft"/> with the game's own parts
+        /// (KSA-67). Empty = the craft file ships ready-made.
+        /// </summary>
+        public string PlanFile { get; set; }
+
+        /// <summary>True when the template may be used for a project in this program module role (null or empty = not a module).</summary>
+        public bool ServesRole(string role)
+        {
+            if (Roles.Count == 0) return true;
+            if (string.IsNullOrEmpty(role)) return false;
+            foreach (string r in Roles) if (string.Equals(r, role, StringComparison.OrdinalIgnoreCase)) return true;
+            return false;
+        }
 
         public Template()
         {
-            Id = string.Empty; Name = string.Empty; Craft = string.Empty; DesignScore = 0.5; CostMultiplier = 1.0; StockOnly = true;
+            Id = string.Empty; Name = string.Empty; Craft = string.Empty; PlanFile = string.Empty; DesignScore = 0.5; CostMultiplier = 1.0; StockOnly = true;
         }
 
         public bool Flies(string missionTypeId)
@@ -73,12 +89,12 @@ namespace KSA.Core.Missions
             return t != null ? t.Name : id;
         }
 
-        /// <summary>Every template that can fly the mission type with the mods installed, best design first.</summary>
-        public List<Template> For(string missionTypeId, ICollection<string> installedMods)
+        /// <summary>Every template that can fly the mission type with the mods installed, best design first. Role-only templates appear only for their role.</summary>
+        public List<Template> For(string missionTypeId, ICollection<string> installedMods, string role = null)
         {
             var list = new List<Template>();
             foreach (Template t in _templates)
-                if (t.Flies(missionTypeId) && t.IsAvailable(installedMods)) list.Add(t);
+                if (t.Flies(missionTypeId) && t.IsAvailable(installedMods) && t.ServesRole(role)) list.Add(t);
             list.Sort((a, b) => b.DesignScore.CompareTo(a.DesignScore));
             return list;
         }
@@ -106,8 +122,10 @@ namespace KSA.Core.Missions
                     DesignScore = Math.Max(0, Math.Min(1, node.GetDouble("designScore", 0.5))),
                     CostMultiplier = Math.Max(0.1, node.GetDouble("costMultiplier", 1.0)),
                     StockOnly = node.GetBool("stockOnly", true),
-                    Seats = Math.Max(0, node.GetInt("seats", 0))
+                    Seats = Math.Max(0, node.GetInt("seats", 0)),
+                    PlanFile = node.GetValue("planFile", string.Empty)
                 };
+                t.Roles.AddRange(node.GetList("roles"));
                 t.MissionTypes.AddRange(node.GetList("missionTypes"));
                 t.RequiredMods.AddRange(node.GetList("requiredMods"));
                 if (t.RequiredMods.Count > 0) t.StockOnly = false;

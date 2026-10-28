@@ -24,6 +24,15 @@ namespace KSA.Core.Projects
         public int Seats { get; set; }
         /// <summary>The craft can fly: a command part and an engine.</summary>
         public bool Rocket { get; set; }
+        /// <summary>Life support (KSA-67, only counted with Kerbalism): greenhouses that grow food.</summary>
+        public int Greenhouses { get; set; }
+        /// <summary>Crew whose air the craft's scrubbers can clean (Kerbalism capacity: 1 = one kerbal).</summary>
+        public int Scrubbers { get; set; }
+        /// <summary>Crew whose water the craft's recyclers can recover.</summary>
+        public int WaterRecyclers { get; set; }
+        /// <summary>Food and water the craft carries when full (Kerbalism units), for the live-flight supply check.</summary>
+        public double Food { get; set; }
+        public double Water { get; set; }
 
         public static ModuleHardware None() { return new ModuleHardware(); }
     }
@@ -32,6 +41,10 @@ namespace KSA.Core.Projects
     {
         public string Role { get; set; }
         public string MissionTypeId { get; set; }
+        /// <summary>Templates to try first for this module, best first (KSA-67: the colony industry module). Empty = the usual choice.</summary>
+        public List<string> Templates { get; } = new List<string>();
+        /// <summary>Not needed to finish the program: built later with "Add module" (KSA-67: the colony industry module). Optional modules come last.</summary>
+        public bool Optional { get; set; }
         public ModuleRecipe() { Role = string.Empty; MissionTypeId = string.Empty; }
     }
 
@@ -44,6 +57,16 @@ namespace KSA.Core.Projects
         public ProgramKind Kind { get; set; }
         public List<string> Bodies { get; } = new List<string>();
         public List<ModuleRecipe> Modules { get; } = new List<ModuleRecipe>();
+
+        /// <summary>Modules that finish the program: everything before the first optional one.</summary>
+        public int RequiredModuleCount
+        {
+            get
+            {
+                for (int i = 0; i < Modules.Count; i++) if (Modules[i].Optional) return i;
+                return Modules.Count;
+            }
+        }
         /// <summary>Days a finished program goes between resupplies before the crew aboard start to suffer (0 = never needs supply).</summary>
         public int SupplyIntervalDays { get; set; }
         /// <summary>Mission type id of a resupply flight to this program (empty = cannot be resupplied).</summary>
@@ -101,6 +124,8 @@ namespace KSA.Core.Projects
                 foreach (DataNode m in node.GetChildren(ModuleNodeName))
                 {
                     var r = new ModuleRecipe { Role = m.GetValue("role", "module"), MissionTypeId = m.GetValue("missionType", string.Empty) };
+                    r.Templates.AddRange(m.GetList("templates"));
+                    r.Optional = m.GetBool("optional", false);
                     if (r.MissionTypeId.Length == 0) { if (warnings != null) warnings.Add("Program type " + id + ": MODULE without missionType"); continue; }
                     t.Modules.Add(r);
                 }
@@ -149,6 +174,10 @@ namespace KSA.Core.Projects
         public int Drills { get; set; }
         public int Isru { get; set; }
         public int Power { get; set; }
+        /// <summary>Life support delivered (KSA-67, counted with Kerbalism): greenhouses, scrubber and water recycler capacity.</summary>
+        public int Greenhouses { get; set; }
+        public int Scrubbers { get; set; }
+        public int WaterRecyclers { get; set; }
         /// <summary>A rocket stays at the base (the "return" module): crews can rotate and evacuate.</summary>
         public bool HasRocket { get; set; }
         /// <summary>Room the base added itself: supply deliveries and, once a colony, its own building.</summary>

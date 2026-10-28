@@ -60,6 +60,25 @@ namespace KSA.Core
             return "OVERDUE by " + (since - interval) + " days";
         }
 
+        /// <summary>
+        /// KSA-67: crews living at a program that is supplied (not overdue) or self-sufficient. With a life support mod the
+        /// host keeps the food, water and air of their live vessels topped up: KSA's resupply flights stand in for the cargo.
+        /// An overdue program is left to the life support mod. Empty without life support.
+        /// </summary>
+        public HashSet<string> CrewKeptSupplied()
+        {
+            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (!LifeSupportOn || !LifeSupport.TopUpSuppliedVessels) return set;
+            foreach (Program g in Programs)
+            {
+                if (g.Status == ProgramStatus.Cancelled || g.CrewAboard.Count == 0) continue;
+                int interval = SupplyIntervalFor(g);
+                if (interval > 0 && DaysSinceSupplied(g) >= interval) continue; // overdue: on their own
+                foreach (string id in g.CrewAboard) set.Add(id);
+            }
+            return set;
+        }
+
         /// <summary>Starts a resupply project for a program. Null crew = auto-staffed.</summary>
         public Project CreateResupply(string programId, IList<string> crewIds, MissionMode? mode, out string message)
         {

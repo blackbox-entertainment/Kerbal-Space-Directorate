@@ -169,3 +169,24 @@ Needs an OpenRouter key in AI Setup (already there if AI design works).
 8. **Take over** hands the agency back: no more turns, nothing else changes.
 9. Save, quit, reload: the Director is still on, with its plan and log.
 10. Spend: the window shows the last 30 days' spend; the AI Setup monthly cap stops turns when reached.
+
+## F. Industry module and Kerbalism (added 2026-10-28, KSA-67)
+
+Part 1 runs on the current install (no Kerbalism). Part 2 needs Kerbalism, installed through CKAN.
+
+**Part 1: stock rules**
+1. Start KSP. KSP.log has "[KSA] Life support: none (stock rules)" and "[KSA] Template StockColonyIndustry assembled from its plan: N parts". The VAB load list has "KSA Templates" with the new industry craft. Open it and check that the converter sits under the pod, the drills and legs hang low on the lander tank, and the panels sit around it.
+2. Programs window, pick a base: the recipe ends with "Later, with Add module: industry".
+3. Finish a base (or use one from an older save). The row shows an **Add industry module** button. Before Drill-O-Matic Junior and Convert-O-Tron 125 are researched, pressing it says the module has no design it can build yet.
+4. Once the parts are researched, the industry module runs like any other module. On delivery the notes say it delivered drills, an ore converter and power, and the Hardware line counts them.
+5. A settlement with the industry module delivered, 6 resupplies and 8 residents becomes a colony, as before.
+
+**Part 2: with Kerbalism** (CKAN: tick Kerbalism, apply, start KSP)
+1. KSP.log has "[KSA] Life support: Kerbalism (colonies need greenhouses; live flights need supplies)" and "Template KerbalismColonyIndustry assembled". The Kerbalism industry craft has a greenhouse between the pod and the converter.
+2. Programs window: each base row has a "Life support (Kerbalism)" line with greenhouses, scrubbers and water recyclers. A settlement's hint names the missing greenhouse.
+3. Add the industry module: it uses the greenhouse design. After delivery the base counts 1 greenhouse.
+4. A Watch Live Mun landing with the stock template is switched to simulated. The note says the craft carries food and water for about 5 days.
+5. A short live flight, such as a Kerbin orbit, still flies live.
+6. Strand a live crew (Flight Director "Crew stranded" button). The Projects window says they have 20 days before they are given up for lost.
+7. A live-flown base or station that is supplied keeps its food and water full in the Kerbalism window, at any time warp. Let a resupply go overdue: the top-ups stop.
+8. Set `enabled = false` in agency.cfg LIFE_SUPPORT, restart: KSP.log says Kerbalism is installed but switched off, and the stock rules apply.

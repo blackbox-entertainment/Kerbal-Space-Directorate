@@ -17,6 +17,8 @@ namespace KSA.KSP.Parts
         public static string Blocker(Template t)
         {
             if (t == null) return null;
+            // KSA-67: a template built from a stage plan that could not be assembled (a part is not loaded).
+            if (!string.IsNullOrEmpty(t.PlanFile) && ResolvePath(t.Craft) == null) return "could not be assembled from its plan (a part it needs is not loaded; see KSP.log)";
             if (HighLogic.CurrentGame == null || HighLogic.CurrentGame.Mode == Game.Modes.SANDBOX || ResearchAndDevelopment.Instance == null) return null;
             string key = ResearchAndDevelopment.Instance.Science.ToString("0") + "/" + KspPartCatalog.TechVersion;
             if (key != _techKey) { Cache.Clear(); _techKey = key; }
@@ -26,6 +28,9 @@ namespace KSA.KSP.Parts
             Cache[t.Id] = result;
             return result.Length == 0 ? null : result;
         }
+
+        /// <summary>Drops the cached answer for a template whose craft was just rebuilt.</summary>
+        public static void Forget(string templateId) { if (templateId != null) Cache.Remove(templateId); }
 
         private static string Compute(Template t)
         {

@@ -52,6 +52,8 @@ namespace KSA.Core
         public KSA.Core.Projects.ColonyRules Colony { get; set; } = new KSA.Core.Projects.ColonyRules();
         /// <summary>Stranded crews and rescue missions (RESCUE block, KSA-65).</summary>
         public KSA.Core.Projects.RescueRules Rescue { get; set; } = new KSA.Core.Projects.RescueRules();
+        /// <summary>Life support with Kerbalism (LIFE_SUPPORT block, KSA-67).</summary>
+        public KSA.Core.Projects.LifeSupportRules LifeSupport { get; set; } = new KSA.Core.Projects.LifeSupportRules();
         /// <summary>Mission experience and the star ladder (EXPERIENCE block, KSA-63).</summary>
         public KSA.Core.Personnel.ExperienceRules Experience { get; set; } = new KSA.Core.Personnel.ExperienceRules();
         /// <summary>What the personality tags do (PERSONALITY block).</summary>
@@ -105,6 +107,7 @@ namespace KSA.Core
             s.Colony = KSA.Core.Projects.ColonyRules.Parse(node.GetChild(KSA.Core.Projects.ColonyRules.NodeName));
             s.Director = KSA.Core.Ai.DirectorRules.Parse(node.GetChild(KSA.Core.Ai.DirectorRules.NodeName));
             s.Rescue = KSA.Core.Projects.RescueRules.Parse(node.GetChild(KSA.Core.Projects.RescueRules.NodeName));
+            s.LifeSupport = KSA.Core.Projects.LifeSupportRules.Parse(node.GetChild(KSA.Core.Projects.LifeSupportRules.NodeName));
             s.CrewDecisions = node.GetValue("crewDecisions", s.CrewDecisions);
             s.Departments = DepartmentRules.Parse(node.GetChild(DepartmentRules.NodeName));
             s.StockContracts = node.GetBool("stockContracts", s.StockContracts);

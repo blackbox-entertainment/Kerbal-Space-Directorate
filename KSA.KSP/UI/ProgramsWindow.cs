@@ -103,7 +103,7 @@ namespace KSA.KSP.UI
                 string id = g.Id;
                 ProgramType type = _agency.Catalogs.ProgramTypes.Get(g.ProgramTypeId);
                 string typeName = type != null ? type.Name : g.ProgramTypeId;
-                int total = type != null ? type.Modules.Count : 0;
+                int total = type != null ? type.RequiredModuleCount : 0;
                 int done = 0;
                 foreach (string pid in g.ModuleProjectIds)
                 {
@@ -113,7 +113,7 @@ namespace KSA.KSP.UI
 
                 items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 4, 0), TextAnchor.MiddleLeft,
                     new DialogGUILabel("<b>" + g.Name + "</b>  (" + g.Id + ")", 260f, LineHeight),
-                    new DialogGUILabel(typeName + "  |  " + g.Body + "  |  " + StatusText(g.Status) + "  |  modules " + done + " / " + total, textWidth - 266f, LineHeight)));
+                    new DialogGUILabel(typeName + "  |  " + g.Body + "  |  " + StatusText(g.Status) + "  |  modules " + Math.Min(done, total) + " / " + total + (done > total ? " + " + (done - total) + " added" : string.Empty), textWidth - 266f, LineHeight)));
                 if (g.Site.Length > 0) Line(items, "Site: " + g.Site, textWidth);
                 foreach (string pid in g.ModuleProjectIds)
                 {
@@ -144,6 +144,9 @@ namespace KSA.KSP.UI
                             + "  |  resupplies " + g.ResuppliesDelivered, textWidth);
                         Line(items, "Hardware: " + g.Drills + " drill" + (g.Drills == 1 ? "" : "s") + ", " + g.Isru + " ore converter" + (g.Isru == 1 ? "" : "s") + ", " + g.Power + " power  |  rocket on site: "
                             + (g.HasRocket ? "<color=#8be28b>yes</color>" : "<color=#ff8080>no</color>") + (_agency.IsSelfSufficient(g) ? "  |  <color=#8be28b>self-sufficient</color>" : string.Empty), textWidth);
+                        if (_agency.LifeSupportOn)
+                            Line(items, "Life support (" + _agency.LifeSupportMod + "): " + g.Greenhouses + " greenhouse" + (g.Greenhouses == 1 ? "" : "s") + " (feed " + (g.Greenhouses * _agency.LifeSupport.ResidentsPerGreenhouse) + "), scrubbers for " + g.Scrubbers
+                                + ", water recyclers for " + g.WaterRecyclers + "  |  residents " + g.Residents, textWidth);
                         string hint = _agency.NextStageHint(g);
                         if (hint.Length > 0) Line(items, "<i>" + hint + "</i>", textWidth);
                     }
@@ -208,14 +211,20 @@ namespace KSA.KSP.UI
             // Recipe and cost.
             double totalCost = 0;
             var recipe = new List<string>();
-            foreach (ModuleRecipe m in selected.Modules)
+            int required = selected.RequiredModuleCount;
+            var optional = new List<string>();
+            for (int mi = 0; mi < selected.Modules.Count; mi++)
             {
+                ModuleRecipe m = selected.Modules[mi];
                 MissionType mt = _agency.Catalogs.Missions.Get(m.MissionTypeId);
+                if (mi >= required) { optional.Add(m.Role); continue; } // added later with Add module
                 recipe.Add(m.Role + " (" + (mt != null ? mt.Name : m.MissionTypeId) + ")");
                 if (mt != null) totalCost += _agency.ProjectCost(mt, _agency.Catalogs.Templates.Best(mt.Id, _agency.InstalledMods));
             }
             Line(items, "Modules: " + string.Join(", ", recipe.ToArray()), textWidth);
-            Line(items, "Estimated total " + Agency.Money(totalCost) + " across " + selected.Modules.Count + " module project" + (selected.Modules.Count == 1 ? "" : "s") + ", each charged when it starts.", textWidth);
+            Line(items, "Estimated total " + Agency.Money(totalCost) + " across " + required + " module project" + (required == 1 ? "" : "s") + ", each charged when it starts.", textWidth);
+            if (optional.Count > 0)
+                Line(items, "Later, with Add module: " + string.Join(", ", optional.ToArray()) + ". The industry module carries a drill, an ore converter and power" + (_agency.LifeSupportOn ? " and a greenhouse" : string.Empty) + ": a base needs it to become a colony.", textWidth);
             if (selected.RequiresProgram.Length > 0)
             {
                 ProgramType req = _agency.Catalogs.ProgramTypes.Get(selected.RequiresProgram);

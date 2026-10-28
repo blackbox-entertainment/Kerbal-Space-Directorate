@@ -491,6 +491,7 @@ namespace KSA.Core
             }
             if (locked.Count > 0) sb.AppendLine("NEXT LOCKED MISSIONS: " + string.Join("; ", locked.ToArray()));
 
+            sb.AppendLine("LIFE SUPPORT: " + LifeSupportText() + ". A base becomes a colony only once its optional industry module (extend_program) delivers a drill, an ore converter and power" + (LifeSupportOn ? " and a greenhouse" : string.Empty) + ".");
             sb.AppendLine("PROGRAMS (stations, bases, cloud cities):");
             foreach (Program g in Programs)
             {

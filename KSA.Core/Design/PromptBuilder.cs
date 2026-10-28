@@ -21,6 +21,8 @@ namespace KSA.Core.Design
         public double Budget { get; set; }
         public int CrewSize { get; set; }
         public string ProjectName { get; set; }
+        /// <summary>Hardware the craft must carry, one plain sentence each (KSA-67: industry modules, life support supplies).</summary>
+        public List<string> MustCarry { get; } = new List<string>();
         /// <summary>How many projects of this mission type the agency has flown before: later designs are asked to differ.</summary>
         public int PriorDesigns { get; set; }
         /// <summary>Rank names for the engineers, by crew id (the catalog lives in the agency).</summary>
@@ -80,6 +82,7 @@ namespace KSA.Core.Design
             sb.AppendLine("Crew: " + Math.Max(1, req.CrewSize) + ". Budget: " + Math.Round(req.Budget) + " funds.");
             if (req.Requirement != null)
                 sb.AppendLine("Requirements: at least " + Math.Round(req.Requirement.DeltaV) + " m/s total delta-v across all stages, liftoff thrust-to-weight at least " + req.Requirement.MinTwr.ToString("0.0", CultureInfo.InvariantCulture) + ". Aim for a 15-25% delta-v margin.");
+            foreach (string must in req.MustCarry) sb.AppendLine("Must carry: " + must);
             if (req.Lessons.Count > 0)
             {
                 sb.AppendLine();

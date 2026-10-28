@@ -126,6 +126,7 @@ namespace KSA.Core
                 RunYearEnd(notices);
             TickRecruiting(day, notices);
             TickProjects(day, notices);
+            if (LifeSupportOn) StrandedSuppliesTick(notices); // KSA-67: with life support the stranded run out in days, not years
             DirectorTick(); // KSA-68: the AI Director takes a turn when one is due
             return notices;
         }

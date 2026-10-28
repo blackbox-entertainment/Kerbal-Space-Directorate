@@ -167,7 +167,7 @@ namespace KSA.KSP.UI
                 var names = new List<string>();
                 foreach (string cid in s.Crew) { CrewProfile c = _agency.Crew.Get(cid); names.Add(c != null ? c.Name : cid); }
                 Project rescue = s.RescueProjectId.Length > 0 ? _agency.GetProject(s.RescueProjectId) : null;
-                int lostAfter = _agency.Settings.Rescue.LostAfterDays;
+                int lostAfter = _agency.LostAfterDays();
                 string clock = lostAfter > 0 ? "  |  " + Math.Max(0, lostAfter - _agency.DaysStranded(s)) + " days before they are given up for lost" : string.Empty;
                 Line(items, "<b>" + string.Join(", ", names.ToArray()) + "</b> stranded " + s.Where + " since day " + s.Day + " (" + _agency.DaysStranded(s) + " days, after " + s.Cause + ")" + clock, textWidth);
                 if (rescue != null && rescue.IsActive) { Line(items, "    Rescue under way: " + rescue.Name + " (" + rescue.Status + ")", textWidth); continue; }

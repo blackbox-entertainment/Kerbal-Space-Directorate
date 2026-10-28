@@ -57,7 +57,7 @@ namespace KSA.Core.Tests
             {
                 if (t.Kind == ProgramKind.OrbitalStation) { Assert.That(t.Colonize, Is.False, t.Id); continue; }
                 Assert.That(t.Colonize, Is.True, t.Id);
-                Assert.That(t.Modules[t.Modules.Count - 1].Role, Is.EqualTo("return"), t.Id + " ends with its rocket");
+                Assert.That(t.Modules[t.RequiredModuleCount - 1].Role, Is.EqualTo("return"), t.Id + " ends with its rocket (optional modules come after)");
             }
             ProgramType eve = programs.Get("EveSurfaceBase");
             Assert.That(eve, Is.Not.Null);

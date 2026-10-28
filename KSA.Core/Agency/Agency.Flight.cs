@@ -69,9 +69,31 @@ namespace KSA.Core
                 Program g = p.ProgramId.Length > 0 ? GetProgram(p.ProgramId) : null;
                 if (g == null || g.VesselId.Length == 0) return "The station core was not flown live, so there is nothing in orbit to dock with; this module is simulated.";
             }
+            string supplies = LifeSupportBlocker(p, type);
+            if (supplies != null) return supplies;
             Func<MissionType, string> check = LiveFlightCheck;
             string why = check != null ? check(type) : null;
             return why;
+        }
+
+        /// <summary>
+        /// KSA-67: with life support a live crew eats real food. The craft must carry food and water for the whole
+        /// mission plus a margin, or the flight is simulated. Null when it does (or nothing is known about the craft).
+        /// </summary>
+        public string LifeSupportBlocker(Project p, MissionType type)
+        {
+            if (!LifeSupportOn || p == null || type == null) return null;
+            Func<Project, ModuleHardware> check = ModuleHardwareCheck;
+            ModuleHardware h = null;
+            try { h = check != null ? check(p) : null; }
+            catch (Exception e) { Log.Warn("Supply check failed for " + p.Name + ": " + e.Message); }
+            if (h == null) return null;
+            int crew = Math.Max(1, p.Crew.Count > 0 ? p.Crew.Count : type.CrewSize);
+            double days = LifeSupport.SupplyDays(h.Food, h.Water, crew);
+            int need = type.DurationDays + Math.Max(0, LifeSupport.MarginDays);
+            if (days >= need) return null;
+            return "Life support (" + LifeSupportMod + "): the craft carries food and water for " + Math.Floor(days).ToString("0") + " days for " + crew + " crew, and "
+                + type.Name + " takes " + type.DurationDays + " days (+" + LifeSupport.MarginDays + " spare), so it is simulated. A design with supply containers can fly it live.";
         }
 
         private bool ProfileInScope(MissionType type)

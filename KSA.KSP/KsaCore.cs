@@ -76,6 +76,9 @@ namespace KSA.KSP
             var a = new Agency(Catalogs, Clock, Log) { Names = new KspNameSource(Catalogs.Names) };
             a.Ledger.Mirror = new KspFunds();
             foreach (AssemblyLoader.LoadedAssembly la in AssemblyLoader.loadedAssemblies) if (la != null && !string.IsNullOrEmpty(la.name)) a.InstalledMods.Add(la.name);
+            AddModFolders(a);
+            a.LifeSupportMod = Parts.KspLifeSupport.ModName; // KSA-67: Kerbalism, when installed
+            Log.Info("Life support: " + (a.LifeSupportMod.Length > 0 ? a.LifeSupportMod + (a.LifeSupportOn ? " (colonies need greenhouses; live flights need supplies)" : " installed but switched off in agency.cfg LIFE_SUPPORT") : "none (stock rules)"));
             a.LiveFlightAvailable = true; // M5: built-in flight director for Kerbin missions
             a.LiveFlightCheck = Flight.LiveFlightLauncher.Check;
             a.TemplateCheck = Parts.KspTemplateCheck.Blocker; // career: a template needs every part researched and bought
@@ -84,6 +87,7 @@ namespace KSA.KSP
             a.LiveLaunchRequested += Flight.LiveFlightLauncher.OnLaunchRequested;
             a.ReportUpdated += OnReportUpdated;
             WireAi(a);
+            Build.PlanTemplates.BuildAll(a); // KSA-67: templates shipped as stage plans are assembled with the loaded parts
             a.MissionResolved += OnMissionResolved;
             a.CrewDeparted += OnCrewDeparted;
             a.ApplicantHired += OnApplicantHired;
@@ -91,6 +95,22 @@ namespace KSA.KSP
             a.TraitsChanged += OnTraitsChanged;
             Agency = a;
             return a;
+        }
+
+        /// <summary>
+        /// Template requiredMods name a mod by its GameData folder or CKAN identifier, not only its DLL: adds every
+        /// top-level GameData folder, plus CKAN identifiers for folders whose name differs (KSA-67).
+        /// </summary>
+        private static void AddModFolders(Agency a)
+        {
+            try
+            {
+                string gameData = System.IO.Path.Combine(KSPUtil.ApplicationRootPath, "GameData");
+                foreach (string dir in System.IO.Directory.GetDirectories(gameData)) a.InstalledMods.Add(System.IO.Path.GetFileName(dir));
+            }
+            catch (System.Exception e) { Log.Warn("Could not list GameData folders: " + e.Message); }
+            if (a.InstalledMods.Contains("HLAirshipsCore") || a.InstalledMods.Contains("HooliganLabs")) a.InstalledMods.Add("HooliganLabsAirships");
+            if (a.InstalledMods.Contains("PlanetaryBaseInc")) a.InstalledMods.Add("KerbalPlanetaryBaseSystems");
         }
 
         public static void ClearAgency()

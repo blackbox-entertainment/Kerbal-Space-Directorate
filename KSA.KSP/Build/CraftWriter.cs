@@ -63,7 +63,10 @@ namespace KSA.KSP.Build
                 string target = Path.Combine(CraftFolder, "KSA Templates");
                 Directory.CreateDirectory(target);
                 int copied = 0;
-                foreach (string file in Directory.GetFiles(source, "*.craft"))
+                var files = new List<string>(Directory.GetFiles(source, "*.craft"));
+                string built = Path.Combine(KSPUtil.ApplicationRootPath, Path.Combine("GameData", Path.Combine("KSA", Path.Combine("PluginData", "Templates"))));
+                if (Directory.Exists(built)) files.AddRange(Directory.GetFiles(built, "*.craft")); // KSA-67: templates built from plans
+                foreach (string file in files)
                 {
                     string dest = Path.Combine(target, Path.GetFileName(file));
                     if (File.Exists(dest) && File.GetLastWriteTimeUtc(dest) >= File.GetLastWriteTimeUtc(file)) continue;
@@ -109,14 +112,19 @@ namespace KSA.KSP.Build
 
         public static Result Write(StagePlan plan, IPartCatalog catalog, string shipName, string fileStem)
         {
+            return WriteTo(plan, catalog, shipName, Path.Combine(CraftFolder, SafeFileName(fileStem) + ".craft"));
+        }
+
+        /// <summary>Assembles the plan and writes the craft to an exact path (KSA-67: templates built from a stage plan).</summary>
+        public static Result WriteTo(StagePlan plan, IPartCatalog catalog, string shipName, string path)
+        {
             var result = new Result();
             try
             {
                 List<Placed> placed = Layout(plan, catalog, result);
                 if (placed == null) { result.Ok = false; return result; }
                 string text = Serialize(placed, shipName);
-                Directory.CreateDirectory(CraftFolder);
-                string path = Path.Combine(CraftFolder, SafeFileName(fileStem) + ".craft");
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
                 File.WriteAllText(path, text);
                 result.Ok = true;
                 result.Path = path;
@@ -242,7 +250,9 @@ namespace KSA.KSP.Build
                 }
                 Placed anchor = firstTank ?? bottomMost;
 
-                // Radial parts around the anchor, in symmetry.
+                // Radial parts around the anchor, in symmetry. Each group is turned a little from the last so groups do
+                // not sit inside each other; legs and drills go low on the anchor, where they meet the ground (KSA-67).
+                int groupIndex = 0;
                 foreach (PlanPart rp in s.Radial)
                 {
                     int n = Math.Max(1, rp.Symmetry > 1 ? rp.Symmetry : rp.Count);
@@ -250,10 +260,14 @@ namespace KSA.KSP.Build
                     if (rap == null) { result.Warnings.Add("Radial '" + rp.Part + "' is not loaded; skipped."); continue; }
                     CorePart rinfo = catalog != null ? catalog.Get(rp.Part) : null;
                     bool thrusts = rinfo != null && (rinfo.Kind == PartKind.Engine || rinfo.Kind == PartKind.Booster);
+                    bool low = rinfo != null && (rinfo.Kind == PartKind.LandingLeg || rinfo.Kind == PartKind.Industry);
+                    AttachNode anchorBottom = Node(anchor.Ap, "bottom");
+                    float yOffset = low && anchorBottom != null ? anchorBottom.position.y * 0.8f : 0f;
+                    float turn = (float)(Math.PI / 8 * groupIndex++);
                     var group = new List<Placed>();
                     for (int k = 0; k < n; k++)
                     {
-                        float angle = (float)(2 * Math.PI * k / n);
+                        float angle = (float)(2 * Math.PI * k / n) + (thrusts ? 0f : turn);
                         Placed host = anchor;
                         if (thrusts && radialDecouplerName != null)
                         {
@@ -264,7 +278,7 @@ namespace KSA.KSP.Build
                         }
                         Placed booster = make(rp.Part);
                         booster.Stage = thrusts ? stageOf(engineSeq[i]) : -1;
-                        SurfaceAttach(host, booster, angle, 0f, result);
+                        SurfaceAttach(host, booster, angle, host == anchor ? yOffset : 0f, result);
                         group.Add(booster);
                     }
                     foreach (Placed g in group) foreach (Placed other in group) if (other != g) g.Symmetry.Add(other);

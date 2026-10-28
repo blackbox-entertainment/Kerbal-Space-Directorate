@@ -203,6 +203,32 @@ namespace KSA.Core
             return true;
         }
 
+        /// <summary>Days an unrescued crew lasts before being given up for lost (0 = never). With life support, the supplies they carry set it.</summary>
+        public int LostAfterDays()
+        {
+            int d = Rescue.LostAfterDays;
+            if (LifeSupportOn && LifeSupport.StrandedLostAfterDays > 0) d = d > 0 ? Math.Min(d, LifeSupport.StrandedLostAfterDays) : LifeSupport.StrandedLostAfterDays;
+            return d;
+        }
+
+        private bool DeclareLostIfDue(Stranding s, List<string> notices)
+        {
+            int lostAfter = LostAfterDays();
+            if (s.Resolved || lostAfter <= 0 || DaysStranded(s) < lostAfter) return false;
+            s.Resolved = true;
+            string why = LifeSupportOn ? "; their food and water ran out" : "; never recovered";
+            foreach (string id in s.Crew) notices.AddRange(RecordDeath(id, "Lost " + s.Where + " after " + DaysStranded(s) + " days stranded" + why));
+            Push(notices, CrewNames(s.Crew) + " were declared lost " + s.Where + " after " + DaysStranded(s) + " days");
+            return true;
+        }
+
+        /// <summary>Life support (KSA-67): checks the stranded every tick, since their supplies last days.</summary>
+        private void StrandedSuppliesTick(List<string> notices)
+        {
+            if (!Rescue.Enabled) return;
+            foreach (Stranding s in Strandings) if (!s.Resolved) DeclareLostIfDue(s, notices);
+        }
+
         /// <summary>Year end: the stranded lose heart, the public notices, and after long enough they are given up for lost.</summary>
         private void StrandedYearEnd(List<string> notices)
         {
@@ -211,13 +237,7 @@ namespace KSA.Core
             foreach (Stranding s in Strandings)
             {
                 if (s.Resolved) continue;
-                if (rules.LostAfterDays > 0 && DaysStranded(s) >= rules.LostAfterDays)
-                {
-                    s.Resolved = true;
-                    foreach (string id in s.Crew) notices.AddRange(RecordDeath(id, "Lost " + s.Where + " after " + DaysStranded(s) + " days stranded; never recovered"));
-                    Push(notices, CrewNames(s.Crew) + " were declared lost " + s.Where + " after " + DaysStranded(s) + " days");
-                    continue;
-                }
+                if (DeclareLostIfDue(s, notices)) continue;
                 foreach (string id in s.Crew) { CrewProfile c = Crew.Get(id); if (c != null && !c.Departed) c.Morale = Math.Max(0, c.Morale - rules.MoralePerYear); }
                 State.Prestige = Math.Max(0, State.Prestige - rules.PrestigePerYear);
                 Push(notices, CrewNames(s.Crew) + " are still stranded " + s.Where + " (" + DaysStranded(s) + " days); the public wants them home");

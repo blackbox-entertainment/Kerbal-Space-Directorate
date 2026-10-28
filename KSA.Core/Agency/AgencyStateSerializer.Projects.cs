@@ -98,6 +98,9 @@ namespace KSA.Core
                 n.AddValue("drills", g.Drills);
                 n.AddValue("isru", g.Isru);
                 n.AddValue("power", g.Power);
+                n.AddValue("greenhouses", g.Greenhouses);
+                n.AddValue("scrubbers", g.Scrubbers);
+                n.AddValue("waterRecyclers", g.WaterRecyclers);
                 n.AddValue("rocket", g.HasRocket);
                 n.AddValue("extraRoom", g.ExtraRoom);
                 n.AddValue("colonyDay", g.ColonyDay);
@@ -266,6 +269,9 @@ namespace KSA.Core
                 g.Drills = n.GetInt("drills", 0);
                 g.Isru = n.GetInt("isru", 0);
                 g.Power = n.GetInt("power", 0);
+                g.Greenhouses = n.GetInt("greenhouses", 0);
+                g.Scrubbers = n.GetInt("scrubbers", 0);
+                g.WaterRecyclers = n.GetInt("waterRecyclers", 0);
                 g.HasRocket = n.GetBool("rocket", false);
                 g.ExtraRoom = n.GetInt("extraRoom", 0);
                 g.ColonyDay = n.GetInt("colonyDay", -1);

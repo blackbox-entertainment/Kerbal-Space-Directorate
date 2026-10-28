@@ -113,6 +113,7 @@ namespace KSA.Core
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (ModuleRecipe m in t.Modules)
             {
+                if (m.Optional) continue; // added later with Add module; its own design is checked then
                 if (!seen.Add(m.MissionTypeId)) continue;
                 MissionType mt = Catalogs.Missions.Get(m.MissionTypeId);
                 if (mt == null) return "the " + m.Role + " module's mission (" + m.MissionTypeId + ") is missing from missions.cfg";

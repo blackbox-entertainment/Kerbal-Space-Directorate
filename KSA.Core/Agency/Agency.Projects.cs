@@ -129,14 +129,14 @@ namespace KSA.Core
         /// Creates a project. Pass null for crew or engineers to auto-staff. Charges the budget immediately.
         /// </summary>
         public Project CreateProject(string name, string missionTypeId, string templateId, IList<string> crewIds, IList<string> engineerIds,
-                                     string programManagerId, MissionMode? mode, out string message)
+                                     string programManagerId, MissionMode? mode, out string message, string moduleRole = null)
         {
             MissionType type = Catalogs.Missions.Get(missionTypeId);
             if (type == null) { message = "Unknown mission type."; return null; }
             string why = MissionBlocker(type);
             if (why != null) { message = type.Name + " " + why + ". Earn Science (lab, missions) and unlock parts in R&D first."; return null; }
             if (type == null) { message = "Unknown mission type."; return null; }
-            List<Template> able = TemplatesFor(type);
+            List<Template> able = TemplatesFor(type, moduleRole);
             Template template = string.IsNullOrEmpty(templateId) ? (able.Count > 0 ? able[0] : null) : Catalogs.Templates.Get(templateId);
             if (template == null) { message = "No design template can fly " + type.Name + " with the mods installed."; return null; }
             if (!able.Exists(x => x.Id == template.Id) || !template.IsAvailable(InstalledMods)) { message = template.Name + " cannot fly " + type.Name + " here."; return null; }
@@ -176,7 +176,8 @@ namespace KSA.Core
                 Status = ProjectStatus.Design,
                 CreatedDay = day,
                 PhaseStartDay = day,
-                ProgramManager = programManagerId ?? string.Empty
+                ProgramManager = programManagerId ?? string.Empty,
+                ModuleRole = moduleRole ?? string.Empty // set before the design starts, so the brief knows the role
             };
             project.Crew.AddRange(crew);
             project.Engineers.AddRange(engineers);
@@ -490,7 +491,7 @@ namespace KSA.Core
                 program.Notes.Add("Site survey: " + program.Site);
             }
             Programs.Add(program);
-            Push(null, "Program " + program.Name + " started (" + type.Modules.Count + " modules).");
+            Push(null, "Program " + program.Name + " started (" + type.RequiredModuleCount + " modules).");
 
             string why;
             Project first = StartNextModule(program, out why);
@@ -509,7 +510,28 @@ namespace KSA.Core
             if (program.NextModuleIndex >= type.Modules.Count) { reason = "All modules started."; return null; }
             ModuleRecipe recipe = type.Modules[program.NextModuleIndex];
             string moduleName = program.Name + ": " + recipe.Role + " module";
-            Project p = CreateProject(moduleName, recipe.MissionTypeId, null, null, null, program.ProgramManager, null, out reason);
+            string templateId = null;
+            if (recipe.Templates.Count > 0)
+            {
+                // KSA-67: a module with its own templates (the colony industry module) uses the first one that can be built.
+                MissionType mt = Catalogs.Missions.Get(recipe.MissionTypeId);
+                List<Template> able = TemplatesFor(mt, recipe.Role);
+                var why = new List<string>();
+                foreach (string id in recipe.Templates)
+                {
+                    Template t = able.Find(x => string.Equals(x.Id, id, StringComparison.OrdinalIgnoreCase));
+                    if (t == null) continue;
+                    string blocked = TemplateBlocker(t);
+                    if (blocked == null) { templateId = t.Id; break; }
+                    why.Add(t.Name + " " + blocked);
+                }
+                if (templateId == null)
+                {
+                    reason = "The " + recipe.Role + " module has no design it can build yet" + (why.Count > 0 ? ": " + string.Join("; ", why.ToArray()) : " with the mods installed") + ".";
+                    return null;
+                }
+            }
+            Project p = CreateProject(moduleName, recipe.MissionTypeId, templateId, null, null, program.ProgramManager, null, out reason, recipe.Role);
             if (p == null) return null;
             p.ProgramId = program.Id;
             p.ModuleRole = recipe.Role;
@@ -532,7 +554,7 @@ namespace KSA.Core
 
             if (p.Status == ProjectStatus.Complete)
             {
-                if (program.NextModuleIndex >= type.Modules.Count)
+                if (program.NextModuleIndex >= type.RequiredModuleCount)
                 {
                     bool firstTime = program.Stage < ColonyStage.Base;
                     program.Status = ProgramStatus.Complete;

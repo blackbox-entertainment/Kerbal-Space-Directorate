@@ -141,10 +141,10 @@ namespace KSA.Core
         }
 
         /// <summary>Templates able to fly a mission type: by id for catalogue types, by shape (profile and body, then profile) for custom ones.</summary>
-        public List<Template> TemplatesFor(MissionType type)
+        public List<Template> TemplatesFor(MissionType type, string moduleRole = null)
         {
             if (type == null) return new List<Template>();
-            if (!type.IsCustom) return Catalogs.Templates.For(type.Id, InstalledMods);
+            if (!type.IsCustom) return Catalogs.Templates.For(type.Id, InstalledMods, moduleRole);
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var byBody = new List<Template>();
             var byProfile = new List<Template>();
