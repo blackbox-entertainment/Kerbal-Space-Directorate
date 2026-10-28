@@ -47,6 +47,29 @@ namespace KSA.Core
 
         public bool DesignInProgress(string projectId) { return projectId != null && _designsInFlight.Contains(projectId); }
 
+        private bool _designsResumed;
+
+        /// <summary>
+        /// After a load, any project still in Design with a Pending AI record lost its session with the old game instance:
+        /// start a fresh session so the team finishes the job. With AI off, the template flies and the note says why.
+        /// </summary>
+        public void ResumeInterruptedDesigns(List<string> notices)
+        {
+            if (_designsResumed) return;
+            _designsResumed = true;
+            foreach (Project p in Projects)
+            {
+                if (p.Status != ProjectStatus.Design || p.Design == null || p.Design.Verdict != DesignVerdict.Pending || DesignInProgress(p.Id)) continue;
+                if (StartDesign(p, notices)) { p.Notes.Add("Design session resumed after a reload."); Push(notices, p.Name + ": the engineering team resumed the design"); }
+                else
+                {
+                    p.Design.Verdict = DesignVerdict.Failed;
+                    p.Design.Error = "Design session interrupted by save/load and AI design is not available now; the template flies.";
+                    p.Notes.Add(p.Design.Error);
+                }
+            }
+        }
+
         public static PartJob JobFor(MissionType type)
         {
             if (type == null) return PartJob.LaunchVehicle;

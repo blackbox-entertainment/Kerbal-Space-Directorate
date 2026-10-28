@@ -140,9 +140,8 @@ namespace KSA.Core
                 p.Design =KSA.Core.Design.DesignRecord.FromDataNode(n.GetChild("DESIGN"));
                 if (p.Design != null && p.Design.Verdict == KSA.Core.Design.DesignVerdict.Pending)
                 {
-                    // The game was saved mid-session; the session is gone. Fall back to the template.
-                    p.Design.Verdict = KSA.Core.Design.DesignVerdict.Failed;
-                    p.Design.Error = "Design session interrupted by save/load.";
+                    // The game was saved mid-session; the team picks the work up again on the next tick (ResumeInterruptedDesigns).
+                    p.Design.Error = "Design session interrupted by save/load; resuming.";
                 }
                 agency.Projects.Add(p);
             }

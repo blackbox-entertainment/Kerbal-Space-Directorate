@@ -118,6 +118,7 @@ namespace KSA.Core
             var notices = new List<string>();
             KSA.Core.Flight.CrewDecider.Tick(Clock.UniversalTime); // overdue crew judgement calls fall back to the trait rule
             notices.AddRange(StartIfNeeded());
+            ResumeInterruptedDesigns(notices);
             int day = CurrentDay;
             int guard = 0;
             while (Calendar.YearOf(day) > State.CurrentYear && guard++ < 100)
