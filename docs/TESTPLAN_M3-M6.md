@@ -190,3 +190,11 @@ Part 1 runs on the current install (no Kerbalism). Part 2 needs Kerbalism, insta
 6. Strand a live crew (Flight Director "Crew stranded" button). The Projects window says they have 20 days before they are given up for lost.
 7. A live-flown base or station that is supplied keeps its food and water full in the Kerbalism window, at any time warp. Let a resupply go overdue: the top-ups stop.
 8. Set `enabled = false` in agency.cfg LIFE_SUPPORT, restart: KSP.log says Kerbalism is installed but switched off, and the stock rules apply.
+
+## G. Help window (added 2026-10-28)
+
+1. Open the Director's Office and click **Help**. Expect a window with 15 topics on the left; Getting started is shown.
+2. Click each topic. Expect the page to change and the clicked topic to show "> ".
+3. Close Help. Open Projects and click **?**. Expect Help to open at Projects. Repeat for Programs (Programs page) and AI Director (The AI Director page).
+4. With Help open, click **?** on another window. Expect the open Help window to switch page, not a second window.
+5. KSP.log: expect `[KSA] Help: 15 topic(s)`.

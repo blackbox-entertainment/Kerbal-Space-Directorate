@@ -102,6 +102,7 @@ namespace KSA.KSP.UI
                 new DialogGUILabel(_status.Length > 0 ? _status : "Pick a mission, a design, and a crew, then start the project.", Width - 40f, LineHeight),
                 list,
                 new DialogGUIHorizontalLayout(true, false, 4f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleRight,
+                    HelpWindow.Button("projects"),
                     new DialogGUIFlexibleSpace(),
                     new DialogGUIButton("Close", OnCloseClicked, 90f, 30f, true)));
 

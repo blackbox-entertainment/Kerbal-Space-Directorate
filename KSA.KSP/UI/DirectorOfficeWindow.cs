@@ -57,6 +57,7 @@ namespace KSA.KSP.UI
         {
             _agency.YearEnded -= OnYearEnded;
             CloseChildren();
+            HelpWindow.CloseIfOpen();
             if (_dialog == null) return;
             PopupDialog d = _dialog;
             _dialog = null;
@@ -177,7 +178,8 @@ namespace KSA.KSP.UI
                 new DialogGUIButton("Analytics", OpenAnalytics, 95f, 30f, false),
                 new DialogGUIButton("Campaign", OpenCampaign, 100f, 30f, false),
                 new DialogGUIButton("Departments", OpenDepartments, 110f, 30f, false),
-                new DialogGUIButton(_agency.DirectorOn ? "AI Director (on)" : "AI Director", OpenAiDirector, 150f, 30f, false));
+                new DialogGUIButton(_agency.DirectorOn ? "AI Director (on)" : "AI Director", OpenAiDirector, 150f, 30f, false),
+                new DialogGUIButton("Help", () => HelpWindow.Show("start"), 80f, 30f, false));
 
             var content = new DialogGUIVerticalLayout(true, true, 4f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft, list, buttons, buttons2, buttons3);
 

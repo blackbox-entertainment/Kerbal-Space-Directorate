@@ -82,6 +82,7 @@ namespace KSA.KSP.UI
                 new DialogGUILabel(_status.Length > 0 ? _status : "A program builds a station or base one module project at a time.", Width - 40f, LineHeight),
                 list,
                 new DialogGUIHorizontalLayout(true, false, 4f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleRight,
+                    HelpWindow.Button("programs"),
                     new DialogGUIFlexibleSpace(),
                     new DialogGUIButton("Close", OnCloseClicked, 90f, 30f, true)));
 

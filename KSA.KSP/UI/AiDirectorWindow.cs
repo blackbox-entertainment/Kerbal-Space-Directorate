@@ -95,7 +95,7 @@ namespace KSA.KSP.UI
                 FlightsButton(DirectorFlights.Simulate, "Simulate everything"),
                 FlightsButton(DirectorFlights.Firsts, "Firsts live"),
                 FlightsButton(DirectorFlights.All, "Everything live")));
-            Line(items, Color("Live flights roll out to the pad at the Space Center, the AI gives the go after a " + _agency.Settings.Director.GoSeconds + " s countdown (press LAUNCH to go sooner), the crew flies, and the game comes back to the Space Center afterwards. Touch the controls to take over a flight. Leave the game at the Space Center (any time warp) between flights. You can still switch any project in Mission Control.", Grey), textWidth);
+            Line(items, Color("Live flights roll out to the pad at the Space Center, the AI gives the go after a " + _agency.Settings.Director.GoSeconds + " s countdown (press LAUNCH to go sooner), the crew flies, and the game comes back to the Space Center afterwards. Touch the controls to take over a flight. Leave the game at the Space Center (any time warp) between flights. This sets the mode of the projects the AI starts; the Switch button on a project in the Projects window still changes it.", Grey), textWidth);
 
             // Plan.
             items.Add(new DialogGUISpace(6f));
@@ -135,6 +135,7 @@ namespace KSA.KSP.UI
                 new DialogGUILabel(_status.Length > 0 ? _status : "The AI Director.", Width - 40f, LineHeight),
                 list,
                 new DialogGUIHorizontalLayout(true, false, 4f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleRight,
+                    HelpWindow.Button("director"),
                     new DialogGUIFlexibleSpace(),
                     new DialogGUIButton("Close", OnCloseClicked, 90f, 30f, true)));
             var dialog = new MultiOptionDialog(DialogName, "", "AI Director", KsaUi.Skin, new Rect(0.5f, 0.5f, Width, WindowHeight), content);
