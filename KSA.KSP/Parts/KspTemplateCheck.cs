@@ -41,9 +41,9 @@ namespace KSA.KSP.Parts
                 string raw = part.GetValue("part") ?? string.Empty;
                 int us = raw.LastIndexOf('_');
                 string name = us > 0 ? raw.Substring(0, us) : raw;
-                name = name.Replace('.', '_');
                 if (name.Length == 0 || !seen.Add(name)) continue;
-                AvailablePart ap = PartLoader.getPartInfoByName(name);
+                // Loaded parts are named with dots (mk1pod.v2) even though their .cfg says mk1pod_v2; try both forms.
+                AvailablePart ap = PartLoader.getPartInfoByName(name) ?? PartLoader.getPartInfoByName(name.Replace('_', '.')) ?? PartLoader.getPartInfoByName(name.Replace('.', '_'));
                 if (ap == null) { missing.Add(name + " (unknown part)"); continue; }
                 if (!(ResearchAndDevelopment.PartTechAvailable(ap) && ResearchAndDevelopment.PartModelPurchased(ap))) missing.Add(ap.title);
             }

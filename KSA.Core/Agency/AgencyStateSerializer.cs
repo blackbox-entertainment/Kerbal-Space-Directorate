@@ -125,6 +125,7 @@ namespace KSA.Core
                 c.AddValue("farthestKm", p.Record.FarthestKm);
                 c.AddValue("daysOnOtherWorlds", p.Record.DaysOnOtherWorlds);
                 c.AddValue("longestMissionDays", p.Record.LongestMissionDays);
+                c.AddValue("xp", p.Record.Experience);
                 foreach (string tag in p.PersonalityTags) c.AddValue("tag", tag);
                 foreach (string a in p.Record.Achievements) c.AddValue("achievement", a);
                 foreach (string q in p.Record.Quotes) c.AddValue("quote", q);
@@ -340,6 +341,7 @@ namespace KSA.Core
                 p.Record.FarthestKm = c.GetDouble("farthestKm", 0);
                 p.Record.DaysOnOtherWorlds = c.GetDouble("daysOnOtherWorlds", 0);
                 p.Record.LongestMissionDays = c.GetDouble("longestMissionDays", 0);
+                p.Record.Experience = c.GetDouble("xp", 0);
                 p.PersonalityTags.AddRange(c.GetValues("tag"));
                 foreach (string a in c.GetValues("achievement")) p.Record.Achievements.Add(a);
                 p.Record.Quotes.AddRange(c.GetValues("quote"));

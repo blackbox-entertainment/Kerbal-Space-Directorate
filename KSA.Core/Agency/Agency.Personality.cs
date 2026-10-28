@@ -16,12 +16,7 @@ namespace KSA.Core
         {
             if (r == null) return;
             double prestige = 0;
-            bool first = false;
-            foreach (FirstClaim f in Firsts)
-            {
-                if (f.ClaimedBy != PlayerId || f.Year != CurrentYear) continue;
-                if (r.Achievements.Exists(a => string.Equals(a, f.Achievement, StringComparison.OrdinalIgnoreCase))) { first = true; break; }
-            }
+            bool first = ClaimedFirst(p, r);
             foreach (string id in r.Crew)
             {
                 CrewProfile c = Crew.Get(id);

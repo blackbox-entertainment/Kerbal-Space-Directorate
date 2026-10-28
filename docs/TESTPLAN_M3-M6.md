@@ -113,3 +113,11 @@ The flight director runs a list of legs (shown on the HUD as "Leg: name (n/total
 5. Fly another one and tap W/A/S/D, the throttle, or the space bar after the go: the HUD says "Director took the controls", the kerbal stops flying, and "Hand back to crew" re-plans from where you left it. The record says Director-flown (reduced rank credit).
 6. "Let me fly" leaves the craft alone and does not ask again for that vessel.
 7. If the only kerbal aboard is already assigned to another project, no offer appears (log: no "adopted hangar rocket" line).
+
+## C4. Mission experience (added 2026-10-27, KSA-63)
+
+1. Open a kerbal's Service Record: a new Experience line shows points and how many are needed for the next star (ladder 4 / 12 / 28 / 60 / 110, agency.cfg EXPERIENCE).
+2. Fly or simulate a Flea test hop to success with a 0-star pilot. The project notes say "Crew experience: +7 each (includes the First bonus)" and the pilot reaches 1 star (screen message "... reaches 1 star").
+3. Repeat the hop: +3 each, no First bonus the second time.
+4. A simulated mission now also writes its achievements into the stock flight log, so the Astronaut Complex shows the same stars after a scene change.
+5. A Director-flown flight pays half; a failed mission the crew survived pays a quarter; dead crew earn nothing.

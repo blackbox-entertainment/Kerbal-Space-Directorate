@@ -79,6 +79,8 @@ namespace KSA.Core.Personnel
         public double DaysOnOtherWorlds { get; set; }
         /// <summary>Longest single mission, days.</summary>
         public double LongestMissionDays { get; set; }
+        /// <summary>KSA experience points (KSA-63): every mission pays in; stars follow the EXPERIENCE ladder.</summary>
+        public double Experience { get; set; }
 
         /// <summary>Distinct bodies other than the home world with a Flyby, Orbit or Land achievement.</summary>
         public int WorldsVisited(string homeBody)

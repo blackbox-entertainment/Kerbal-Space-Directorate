@@ -344,7 +344,7 @@ namespace KSA.Core
 
                 bool fresh = result.Hired.Contains(p);
                 p.Role = s.Role;
-                p.Stars = s.Stars;
+                p.Stars = Math.Max(s.Stars, LadderStars(p)); // the game's level is a floor; the KSA ladder can only add (KSA-63)
                 p.Status = s.Status;
                 if (fresh || !p.TraitsOwned)
                 {

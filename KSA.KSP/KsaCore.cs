@@ -298,6 +298,66 @@ namespace KSA.KSP
         private static void OnMissionResolved(Core.Projects.MissionReport r)
         {
             ScreenMessages.PostScreenMessage("[KSA] " + r.ProjectName + ": " + Agency.OutcomeText(r.Outcome), 8f, ScreenMessageStyle.UPPER_CENTER);
+            if (r.Mode == MissionMode.Simulate) LogSimulatedFlight(r);
+            PushStars(r);
+        }
+
+        /// <summary>
+        /// KSA-63: a simulated mission writes its real achievements into the stock flight log (Suborbit:Kerbin, Orbit:Kerbin,
+        /// Land:Mun...) exactly as a flown one would, so the game's own level and the Astronaut Complex stars follow.
+        /// </summary>
+        private static void LogSimulatedFlight(Core.Projects.MissionReport r)
+        {
+            KerbalRoster roster = HighLogic.CurrentGame != null ? HighLogic.CurrentGame.CrewRoster : null;
+            if (roster == null) return;
+            foreach (string name in r.Crew)
+            {
+                if (r.Deaths.Contains(name) || !roster.Exists(name)) continue;
+                ProtoCrewMember pcm = roster[name];
+                int added = 0;
+                foreach (string ach in r.Achievements)
+                {
+                    int colon = ach.IndexOf(':');
+                    if (colon <= 0) continue;
+                    string type = StockLogType(ach.Substring(0, colon));
+                    string body = ach.Substring(colon + 1);
+                    if (type == null || FlightGlobals.Bodies == null || !FlightGlobals.Bodies.Exists(b => b.bodyName == body)) continue;
+                    if (pcm.careerLog.HasEntry(type, body)) continue;
+                    pcm.careerLog.AddEntry(type, body);
+                    added++;
+                }
+                if (added > 0) pcm.UpdateExperience();
+            }
+        }
+
+        private static string StockLogType(string ksaType)
+        {
+            // KSA keys already use the stock log names (Flight, Suborbit, Orbit, Flyby, Land); only EVA differs.
+            switch (ksaType.ToLowerInvariant())
+            {
+                case "flight": return "Flight";
+                case "suborbit": return "Suborbit";
+                case "orbit": return "Orbit";
+                case "flyby": return "Flyby";
+                case "land": return "Land";
+                case "eva": case "exitvessel": return "ExitVessel";
+                case "plantflag": return "PlantFlag";
+                default: return null;
+            }
+        }
+
+        /// <summary>The KSA ladder can hold more stars than the game's level; keep the stock kerbal's displayed level in step.</summary>
+        private static void PushStars(Core.Projects.MissionReport r)
+        {
+            KerbalRoster roster = HighLogic.CurrentGame != null ? HighLogic.CurrentGame.CrewRoster : null;
+            if (roster == null || Agency == null) return;
+            foreach (string name in r.Crew)
+            {
+                CrewProfile c = Agency.Crew.Get(name);
+                if (c == null || !roster.Exists(name)) continue;
+                ProtoCrewMember pcm = roster[name];
+                if (pcm.experienceLevel < c.Stars) pcm.experienceLevel = c.Stars; // display only: the game recomputes from its log on its own events
+            }
         }
 
         private static void OnReportUpdated(Core.Projects.MissionReport r)

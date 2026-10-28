@@ -46,6 +46,8 @@ namespace KSA.Core
         public string LiveFlightScope { get; set; } = "All";
         /// <summary>How crew competence shapes live flights (FLIGHT_CREW block).</summary>
         public KSA.Core.Flight.FlightCrewRules FlightCrew { get; set; } = new KSA.Core.Flight.FlightCrewRules();
+        /// <summary>Mission experience and the star ladder (EXPERIENCE block, KSA-63).</summary>
+        public KSA.Core.Personnel.ExperienceRules Experience { get; set; } = new KSA.Core.Personnel.ExperienceRules();
         /// <summary>What the personality tags do (PERSONALITY block).</summary>
         public KSA.Core.Personnel.PersonalityRules Personality { get; set; } = KSA.Core.Personnel.PersonalityRules.Defaults();
         /// <summary>Who makes the crew's judgement calls in flight: Rule (traits only), Local (local model, rule fallback), Any (local or API key), Off.</summary>
@@ -93,6 +95,7 @@ namespace KSA.Core
             s.Drift = KSA.Core.Personnel.TraitDrift.Parse(node.GetChild(KSA.Core.Personnel.TraitDrift.NodeName));
             s.FlightCrew = KSA.Core.Flight.FlightCrewRules.Parse(node.GetChild(KSA.Core.Flight.FlightCrewRules.NodeName));
             s.Personality = KSA.Core.Personnel.PersonalityRules.Parse(node.GetChild(KSA.Core.Personnel.PersonalityRules.NodeName));
+            s.Experience = KSA.Core.Personnel.ExperienceRules.Parse(node.GetChild(KSA.Core.Personnel.ExperienceRules.NodeName));
             s.CrewDecisions = node.GetValue("crewDecisions", s.CrewDecisions);
             s.Departments = DepartmentRules.Parse(node.GetChild(DepartmentRules.NodeName));
             s.StockContracts = node.GetBool("stockContracts", s.StockContracts);

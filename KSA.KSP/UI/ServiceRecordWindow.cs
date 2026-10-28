@@ -87,6 +87,8 @@ namespace KSA.KSP.UI
             int age = p.AgeOn(_agency.CurrentDay, _agency.Clock.DaysPerYear);
             items.Add(Field("Rank", rankName + (p.Track != CareerTrack.None ? " (" + p.Track + " track)" : string.Empty), textWidth));
             items.Add(Field("Role", RosterView.RoleText(p.Role) + ", " + RosterView.StarsText(p.Stars), textWidth));
+            double toNext = _agency.ToNextStar(p);
+            items.Add(Field("Experience", p.Record.Experience.ToString("0.#") + " points" + (toNext > 0 ? "  |  " + toNext.ToString("0.#") + " to the next star" : "  |  top of the ladder"), textWidth));
             items.Add(Field("Status", RosterView.StatusText(p.Status) + (p.Departed ? " (left the agency)" : string.Empty), textWidth));
             items.Add(Field("Age", age + "  |  hired day " + p.HiredDay, textWidth));
             items.Add(Field("Morale", p.Morale + " / 100  |  salary " + p.Salary + " / yr", textWidth));

@@ -414,6 +414,7 @@ namespace KSA.Core
             }
             DriftAfterMission(r);
             ClaimPlayerFirsts(notices); // a first is claimed the moment it is flown, not at year end
+            AwardExperience(p, r, notices);
             ApplyPersonalityAfterMission(p, r, notices);
             AwardMissionScience(r, Catalogs.Missions.Get(p.MissionTypeId), notices);
             p.Report = r;
