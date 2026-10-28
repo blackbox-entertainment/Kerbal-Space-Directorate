@@ -81,6 +81,7 @@ namespace KSA.KSP.Flight
             CelestialBody body = subject.mainBody;
             string biome = BiomeOf(subject);
 
+            if (Parts.KspLifeSupport.KerbalismInstalled) StartKerbalismExperiments(subject);
             List<ModuleScienceExperiment> exps = subject.FindPartModulesImplementing<ModuleScienceExperiment>();
             if (exps == null) return;
             foreach (ModuleScienceExperiment exp in exps)
@@ -93,6 +94,39 @@ namespace KSA.KSP.Flight
                 catch (Exception e) { KsaCore.Log.Warn("ScienceRunner: experiment skipped: " + e.Message); }
             }
         }
+
+        /// <summary>
+        /// Kerbalism replaces the stock experiments with its own "Experiment" module, which records data over time and
+        /// moves to the next subject by itself as the situation changes; recovery (or transmission) pays it. All the
+        /// crew has to do is switch each one on, through its "Start" action. Read by name: no Kerbalism reference.
+        /// </summary>
+        private void StartKerbalismExperiments(Vessel subject)
+        {
+            foreach (Part p in subject.parts)
+            {
+                foreach (PartModule m in p.Modules)
+                {
+                    if (m == null || m.moduleName != "Experiment") continue;
+                    try
+                    {
+                        System.Reflection.PropertyInfo running = m.GetType().GetProperty("Running");
+                        if (running != null && (bool)running.GetValue(m, null)) continue;
+                        BaseAction start = m.Actions != null ? m.Actions["StartAction"] : null;
+                        if (start == null) continue;
+                        string id = (m.GetType().GetField("experiment_id") != null ? m.GetType().GetField("experiment_id").GetValue(m) as string : null) ?? p.partInfo.title;
+                        string key = "kerbalism|" + p.flightID + "|" + id;
+                        if (_kerbalismTries.ContainsKey(key) && _kerbalismTries[key] >= 3) continue; // it will not run here (needs something we lack)
+                        start.Invoke(new KSPActionParam(KSPActionGroup.None, KSPActionType.Activate));
+                        int n; _kerbalismTries.TryGetValue(key, out n); _kerbalismTries[key] = n + 1;
+                        bool nowRunning = running == null || (bool)running.GetValue(m, null);
+                        if (nowRunning && n == 0) { _runs++; KsaCore.Log.Info("ScienceRunner: started Kerbalism experiment " + id + " on " + p.partInfo.title); }
+                    }
+                    catch (Exception e) { KsaCore.Log.Warn("ScienceRunner: Kerbalism experiment skipped: " + e.Message); }
+                }
+            }
+        }
+
+        private readonly Dictionary<string, int> _kerbalismTries = new Dictionary<string, int>();
 
         private bool TryDeploy(ModuleScienceExperiment exp, Vessel subject, ExperimentSituations sit, CelestialBody body, string biome, bool onEva, double now)
         {

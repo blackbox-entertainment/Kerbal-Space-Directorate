@@ -378,7 +378,10 @@ namespace KSA.KSP.Flight
             if (stranding != null) foreach (string cid in stranding.Crew) { KSA.Core.Personnel.CrewProfile sc = agency.Crew.Get(cid); _ctx.RescueNames.Add(sc != null ? sc.Name : cid); }
             _program = MissionPlanner.Build(_ctx, type);
             Live.ScienceMission = type != null && type.IsScience;
-            _science = Live.ScienceMission ? new ScienceRunner(_ctx) : null;
+            // Experiments run on every live flight (agency.cfg RESEARCH experimentsOnEveryFlight), not only on science
+            // missions: a crew report on a hop is Science too. Science missions also get their dedicated sweep legs.
+            bool everyFlight = KsaCore.Agency != null && KsaCore.Agency.Settings.ExperimentsOnEveryFlight;
+            _science = Live.ScienceMission || everyFlight ? new ScienceRunner(_ctx) : null;
             if (resuming) MissionPlanner.Resume(_program, _ctx, key => Live.Logged.Contains(key));
             var names = new List<string>();
             foreach (IFlightLeg l in _program.Legs) names.Add(l.Name);
@@ -445,7 +448,7 @@ namespace KSA.KSP.Flight
             if (speed > Live.MaxSpeed) Live.MaxSpeed = speed;
             TrackExploration();
             if (_vessel.state == Vessel.State.DEAD) { Log("Vessel destroyed.", null); Resolve(false); return; }
-            if (Live.ScienceMission && _science != null)
+            if (_science != null)
             {
                 string sline = _science.Step();
                 if (sline != null) Log(sline, null);
@@ -829,7 +832,7 @@ namespace KSA.KSP.Flight
             }
             else GUILayout.Label("Leg: " + phase);
             GUILayout.Label(_status);
-            if (Live.ScienceMission) GUILayout.Label("Science aboard: " + Live.SciencePoints.ToString("0.#") + " (" + (_science != null ? _science.ExperimentsRun : 0) + " experiments run)");
+            if (_science != null) GUILayout.Label("Science aboard: " + Live.SciencePoints.ToString("0.#") + " (" + (_science != null ? _science.ExperimentsRun : 0) + " experiments run)");
             GUILayout.Label("Alt " + LiveFlightResolver.FormatKm(_vessel.altitude) + "   Ap " + LiveFlightResolver.FormatKm(_vessel.orbit != null ? _vessel.orbit.ApA : 0) + "   Pe " + LiveFlightResolver.FormatKm(_vessel.orbit != null ? _vessel.orbit.PeA : 0));
             GUILayout.Label("Speed " + Math.Round(_vessel.srfSpeed) + " m/s   Stage " + _vessel.currentStage + "   " + (_vessel.mainBody != null ? _vessel.mainBody.bodyName : "") + "   " + Stamp());
             GUILayout.BeginHorizontal();

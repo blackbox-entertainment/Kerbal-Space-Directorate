@@ -144,6 +144,17 @@ namespace KSA.KSP.UI
         private const float LabWidth = 60f;
 
         /// <summary>Scientists (and Science-track kerbals) can be put in the research lab, where they make Science each year instead of flying.</summary>
+        /// <summary>
+        /// Stars as the agency counts them: the higher of the game's level and KSA's experience ladder (KSA-63). The game's
+        /// own figure lags (it recomputes from its flight log on its own events), so a kerbal could show a star in the
+        /// Service Record and none here (fixed 2026-10-28).
+        /// </summary>
+        private static int StarsOf(CrewRecord c)
+        {
+            CrewProfile p = KsaCore.Agency != null ? KsaCore.Agency.Crew.Get(c.Name) : null;
+            return p != null ? Math.Max(c.Stars, p.Stars) : c.Stars;
+        }
+
         private DialogGUIBase LabButton(CrewRecord c)
         {
             Agency a = KsaCore.Agency;
@@ -171,7 +182,7 @@ namespace KSA.KSP.UI
                 new DialogGUIButton(c.Name, () => OpenRecord(id), NameWidth, RowHeight, false),
                 new DialogGUILabel(rank, RankWidth, RowHeight),
                 new DialogGUILabel(RosterView.RoleText(c.Role), RoleWidth, RowHeight),
-                new DialogGUILabel(RosterView.StarsText(c.Stars), StarsWidth, RowHeight),
+                new DialogGUILabel(RosterView.StarsText(StarsOf(c)), StarsWidth, RowHeight),
                 new DialogGUILabel(morale, MoraleWidth, RowHeight),
                 new DialogGUILabel(RosterView.StatusText(c.Status), StatusWidth, RowHeight),
                 lab,

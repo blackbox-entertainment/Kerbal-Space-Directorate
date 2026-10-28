@@ -72,6 +72,8 @@ namespace KSA.Core
         public bool LaunchOnCommand { get; set; } = true;
         /// <summary>Research lab: Science per year per lab scientist = base + perStar x stars (RESEARCH block).</summary>
         public double LabScienceBase { get; set; } = 2;
+        /// <summary>Live flights run the experiments aboard (crew report, goo, thermometer...) on every mission, not only science missions; recovery pays them (2026-10-28).</summary>
+        public bool ExperimentsOnEveryFlight { get; set; } = true;
         public double LabSciencePerStar { get; set; } = 4;
         /// <summary>Head of Science: lab and mission science x (1 + this x rung).</summary>
         public double LabScienceHeadBonus { get; set; } = 0.15;
@@ -118,6 +120,7 @@ namespace KSA.Core
             if (research != null)
             {
                 s.LabScienceBase = research.GetDouble("labBase", s.LabScienceBase);
+                s.ExperimentsOnEveryFlight = research.GetBool("experimentsOnEveryFlight", s.ExperimentsOnEveryFlight);
                 s.LabSciencePerStar = research.GetDouble("labPerStar", s.LabSciencePerStar);
                 s.LabScienceHeadBonus = research.GetDouble("headOfScienceBonus", s.LabScienceHeadBonus);
                 s.MissionScienceEarly = research.GetDouble("missionEarly", s.MissionScienceEarly);
