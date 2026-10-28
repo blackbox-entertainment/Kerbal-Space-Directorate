@@ -281,6 +281,26 @@ namespace KSA.Core
             }
         }
 
+        /// <summary>For an open achievement goal: the missions that earn it, startable first, so the Director can aim at it.</summary>
+        private string GoalRoutes(Goals.GoalDefinition g, Goals.GoalState gs)
+        {
+            if (g == null || g.Condition != Goals.GoalConditionType.Achievement || string.IsNullOrEmpty(g.Pattern) || IsGoalCurrentlyMet(gs)) return string.Empty;
+            var open = new List<string>();
+            var locked = new List<string>();
+            foreach (MissionType t in Catalogs.Missions.Types)
+            {
+                if (t.ModuleRole.Length > 0 || t.IsRescue) continue;
+                bool earns = false;
+                foreach (string a in t.Achievements) if (PatternMatches(a, g.Pattern)) { earns = true; break; }
+                if (!earns) continue;
+                if (MissionBlocker(t) == null) open.Add(t.Id); else locked.Add(t.Id);
+            }
+            if (open.Count == 0 && locked.Count == 0) return string.Empty;
+            string s = " | met by: " + (open.Count > 0 ? string.Join(", ", open.ToArray()) : "nothing you can start yet");
+            if (open.Count == 0 && locked.Count > 0) s += " (research to unlock " + string.Join(", ", locked.GetRange(0, Math.Min(3, locked.Count)).ToArray()) + ")";
+            return s;
+        }
+
         private bool DirectorStartProject(Dictionary<string, object> a, out string message)
         {
             MissionType type = FindMission(Json.GetString(a, "mission", ""));
@@ -439,7 +459,7 @@ namespace KSA.Core
             {
                 GoalDefinition g = Catalogs.Goals.Get(gs.GoalId);
                 if (g == null) continue;
-                sb.AppendLine("  " + (IsGoalCurrentlyMet(gs) ? "[met] " : "[open] ") + g.Name + ": " + g.Description);
+                sb.AppendLine("  " + GoalStatusText(gs) + " " + g.Name + ": " + g.Description + GoalRoutes(g, gs));
             }
 
             sb.AppendLine("KERBALS (name | role | stars | morale | status | traits):");

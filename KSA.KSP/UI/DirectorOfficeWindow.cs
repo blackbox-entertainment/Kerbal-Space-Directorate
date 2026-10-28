@@ -141,8 +141,10 @@ namespace KSA.KSP.UI
                 GoalDefinition def = _agency.Catalogs.Goals.Get(gs.GoalId);
                 string name = def != null ? def.Name : gs.GoalId;
                 bool met = _agency.IsGoalCurrentlyMet(gs);
+                string failed = _agency.GoalFailure(gs);
                 string carried = gs.YearIssued < _agency.CurrentYear ? " (carried from year " + gs.YearIssued + ")" : string.Empty;
-                Line(items, (met ? "<color=#8be28b>[met]</color> " : "<color=#dddddd>[open]</color> ") + name + carried, textWidth);
+                string tag = failed != null ? "<color=#ff8080>[failed: " + failed + "]</color> " : met ? "<color=#8be28b>[met]</color> " : "<color=#dddddd>[open]</color> ";
+                Line(items, tag + name + carried, textWidth);
                 if (def != null && def.Description.Length > 0) Line(items, "   <i>" + def.Description + "</i>", textWidth);
             }
 

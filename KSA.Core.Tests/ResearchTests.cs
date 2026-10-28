@@ -38,14 +38,15 @@ namespace KSA.Core.Tests
         {
             Agency a = Staffed(new FakeClock());
             a.Parts = StartingParts();
-            // Every shipped template reads as unresearched (the host would say which parts).
-            a.TemplateCheck = t => "needs research: Swivel";
+            // Only the starting-parts Flea hop can be built (the host would say which parts the others lack).
+            a.TemplateCheck = t => t.Id == "StockFleaHop" ? null : "needs research: Swivel";
             MissionType hop = a.Catalogs.Missions.Get("FleaHop");
             MissionType orbit = a.Catalogs.Missions.Get("KerbinOrbit");
             MissionType mun = a.Catalogs.Missions.Get("MunLanding");
             Assert.That(a.MissionBlocker(hop), Is.Null, "a pod, a booster and a chute fly a hop");
-            Assert.That(a.MissionBlocker(orbit), Does.Contain("liquid engine"));
-            Assert.That(a.MissionBlocker(mun), Does.Contain("landing legs"));
+            Assert.That(a.MissionBlocker(orbit), Does.Contain("no design it can build").And.Contains("Swivel"), "locked when no design can be built (2026-10-28)");
+            Assert.That(a.PartKindsBlocker(orbit), Does.Contain("liquid engine"));
+            Assert.That(a.PartKindsBlocker(mun), Does.Contain("landing legs"));
 
             GoalDefinition reachSpace = null, achieveOrbit = null;
             foreach (GoalDefinition g in a.Catalogs.Goals.Goals) { if (g.Id == "ReachSpace") reachSpace = g; if (g.Id == "AchieveOrbit") achieveOrbit = g; }
@@ -54,7 +55,17 @@ namespace KSA.Core.Tests
 
             string msg;
             Assert.That(a.CreateProject("Too soon", "KerbinOrbit", null, new[] { "Jeb Kerman" }, null, null, null, out msg), Is.Null);
-            Assert.That(msg, Does.Contain("needs research"));
+            Assert.That(msg, Does.Contain("no design it can build"));
+        }
+
+        [Test]
+        public void ACrewLossFailsTheNoLossGoalAtOnce()
+        {
+            Agency a = Staffed(new FakeClock());
+            var gs = new KSA.Core.Goals.GoalState { GoalId = "NoCrewLosses", YearIssued = 1 };
+            Assert.That(a.GoalStatusText(gs), Is.EqualTo("[met]"));
+            a.RecordDeath("Jeb Kerman", "test");
+            Assert.That(a.GoalStatusText(gs), Is.EqualTo("[failed: 1 kerbal lost this year]"));
         }
 
         [Test]

@@ -107,7 +107,8 @@ namespace KSA.KSP.UI
                 string name = def != null ? def.Name : gs.GoalId;
                 bool met = _agency.IsGoalCurrentlyMet(gs);
                 string desc = def != null && !string.IsNullOrEmpty(def.Description) ? "  |  " + def.Description : string.Empty;
-                Line(items, (met ? Color("[met] ", Green) : Color("[open] ", Amber)) + "<b>" + name + "</b>  (set in year " + gs.YearIssued + ")" + desc, textWidth);
+                string failed = _agency.GoalFailure(gs);
+                Line(items, (failed != null ? Color("[failed: " + failed + "] ", "#ff8080") : met ? Color("[met] ", Green) : Color("[open] ", Amber)) + "<b>" + name + "</b>  (set in year " + gs.YearIssued + ")" + desc, textWidth);
             }
 
             var list = new DialogGUIScrollList(new Vector2(Width - 30f, ListHeight), false, true,

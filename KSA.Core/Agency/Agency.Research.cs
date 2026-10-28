@@ -72,13 +72,31 @@ namespace KSA.Core
         {
             if (type == null) return "Unknown mission.";
             bool anyTemplate = false, anyBuildable = false;
+            string firstBlock = null;
             foreach (Template t in TemplatesFor(type))
             {
                 anyTemplate = true;
-                if (TemplateBlocker(t) == null) { anyBuildable = true; break; }
+                string why = TemplateBlocker(t);
+                if (why == null) { anyBuildable = true; break; }
+                if (firstBlock == null) firstBlock = t.Name + " " + why;
             }
             if (anyBuildable) return null;
-            if (Parts == null) return anyTemplate ? "its template parts are not researched yet" : null;
+            // Every project needs a design it can fall back on (an AI design that comes up short flies the template),
+            // so a mission whose templates are all locked is locked, whatever part kinds are researched (fixed 2026-10-28:
+            // Kerbin orbit showed as open and every start was refused).
+            if (anyTemplate) return "has no design it can build yet (" + (firstBlock ?? "parts not researched") + ")";
+            return PartKindsBlocker(type);
+        }
+
+        /// <summary>
+        /// The looser test: do the researched part kinds cover the profile (a pod, a way up, a way down; engines, tanks and
+        /// decouplers for orbit...)? Null when they do or nothing is known. Used for missions with no template and for
+        /// goal feasibility, so the government may ask for what is one research step away.
+        /// </summary>
+        public string PartKindsBlocker(MissionType type)
+        {
+            if (type == null) return "Unknown mission.";
+            if (Parts == null) return null;
             var kinds = new HashSet<KSA.Core.Parts.PartKind>();
             int engines = 0;
             foreach (KSA.Core.Parts.PartInfo p in Parts.All) { kinds.Add(p.Kind); if (p.Kind == KSA.Core.Parts.PartKind.Engine) engines++; }
@@ -160,7 +178,7 @@ namespace KSA.Core
             {
                 bool earns = false;
                 foreach (string a in t.Achievements) if (PatternMatches(a, g.Pattern)) { earns = true; break; }
-                if (earns && MissionBlocker(t) == null) return true;
+                if (earns && (MissionBlocker(t) == null || PartKindsBlocker(t) == null)) return true;
             }
             return false;
         }

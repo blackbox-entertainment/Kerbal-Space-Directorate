@@ -309,6 +309,24 @@ namespace KSA.Core
             return def != null && GoalEvaluator.IsMet(def, BuildGoalContext());
         }
 
+        /// <summary>Why a goal can no longer be met this year (a crew was lost), or null while it still can.</summary>
+        public string GoalFailure(GoalState gs)
+        {
+            GoalDefinition def = gs != null ? Catalogs.Goals.Get(gs.GoalId) : null;
+            if (def == null) return null;
+            if (def.Condition == GoalConditionType.NoCrewLoss && State.DeathsThisYear > 0)
+                return State.DeathsThisYear + " kerbal" + (State.DeathsThisYear == 1 ? "" : "s") + " lost this year";
+            return null;
+        }
+
+        /// <summary>"[met]", "[failed: reason]" or "[open]", for windows and the AI Director's briefing.</summary>
+        public string GoalStatusText(GoalState gs)
+        {
+            string failed = GoalFailure(gs);
+            if (failed != null) return "[failed: " + failed + "]";
+            return IsGoalCurrentlyMet(gs) ? "[met]" : "[open]";
+        }
+
         private double PrestigeFactor() { return 0.75 + State.Prestige / 200.0; }
 
         // ------------------------------------------------------------------ roster
