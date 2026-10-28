@@ -238,7 +238,7 @@ Program: "Mun Base Alpha"
 **Program types**
 - **Orbital stations**, including inflatable habs and centrifuges (SSPXr)
 - **Surface bases** on the Mun, Minmus, Duna, Dres, and Jool's moons (KPBS, optional MKS)
-- **Eve cloud city**, using buoyancy parts (Airships or Hooligan Labs Airships)
+- **Eve cloud city** and **Jool cloud city**, using buoyancy parts (Airships or Hooligan Labs Airships); Jool is the far frontier: Late tier, four-star crew, 400-day missions
 - **Outposts with on-site construction**, where kerbals at a base build new modules locally (Extraplanetary Launchpads)
 
 Losing funding mid-program creates natural drama: a half-built station, a stranded crew, a hearing.

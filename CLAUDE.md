@@ -143,7 +143,7 @@ GameData/KSA/
 | Crisis Years | Hurt (cuts, cancellations, layoffs) and put the Director on probation; a second bad year replaces the Director, agency continues. Never game over (M2). |
 | Community templates | Yes, after release: first-party templates ship, submission path opens post-M7. |
 | AI models | Curated per-task list in AI Setup: cheapest-that-works default plus a few flagships, player-selectable; IDs live in a ModuleManager config, benchmarked in M4. |
-| Eve cloud city | HL Airships Core (M3). Angel-125 Airships stays compatible. |
+| Eve and Jool cloud cities | HL Airships Core (M3). Angel-125 Airships stays compatible. Jool cloud city added 2026-10-27 (Late tier, 4-star crew, simulated only). |
 | Live flight | Built-in flight director flies Kerbin suborbital/orbital missions live (M5); other profiles simulate until a MechJeb bridge exists. MechJeb is optional, not required. Decided 2026-10-26. |
 | Narrative | Local model only (never cloud budget); canned text first, AI rewrite in place. Post-mortems may use the cloud. Decided 2026-10-26. |
 | Courage/Stupidity drift | Planned: slow drift with missions (stupidity down, courage up on success, down on deaths/idle). Not built yet. |

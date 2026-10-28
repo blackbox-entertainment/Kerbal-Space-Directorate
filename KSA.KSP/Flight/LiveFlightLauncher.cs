@@ -20,7 +20,8 @@ namespace KSA.KSP.Flight
         {
             if (type == null) return "Unknown mission.";
             bool eve = string.Equals(type.Body, "Eve", StringComparison.OrdinalIgnoreCase);
-            if (eve && (type.Profile == MissionProfile.Land || type.Profile == MissionProfile.Base)) return "The flight director has no Eve descent or ascent program; " + type.Name + " is simulated.";
+            bool jool = string.Equals(type.Body, "Jool", StringComparison.OrdinalIgnoreCase);
+            if ((eve || jool) && (type.Profile == MissionProfile.Land || type.Profile == MissionProfile.Base)) return "The flight director has no " + type.Body + " atmospheric entry program; " + type.Name + " is simulated.";
             bool baseBody = string.Equals(type.Body, "Mun", StringComparison.OrdinalIgnoreCase) || string.Equals(type.Body, "Minmus", StringComparison.OrdinalIgnoreCase) || string.Equals(type.Body, "Duna", StringComparison.OrdinalIgnoreCase);
             if (type.Profile == MissionProfile.Base && !baseBody) return "Base modules fly live only to Mun, Minmus and Duna; " + type.Name + " is simulated.";
             return null;

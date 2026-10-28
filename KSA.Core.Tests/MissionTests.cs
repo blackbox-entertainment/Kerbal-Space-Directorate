@@ -19,9 +19,9 @@ namespace KSA.Core.Tests
             ProgramCatalog programs = ShippedConfigs.ProgramTypes(warnings);
 
             Assert.That(warnings, Is.Empty, string.Join(" | ", warnings));
-            Assert.That(missions.Count, Is.EqualTo(18));
+            Assert.That(missions.Count, Is.EqualTo(19));
             Assert.That(templates.Count, Is.EqualTo(13));
-            Assert.That(programs.Count, Is.EqualTo(5));
+            Assert.That(programs.Count, Is.EqualTo(6));
 
             foreach (MissionType t in missions.Types)
             {
