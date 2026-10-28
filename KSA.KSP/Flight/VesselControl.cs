@@ -364,18 +364,31 @@ namespace KSA.KSP.Flight
 
         public void DeployChutes(ref string line) { DeployChutes(ref line, false); }
 
-        /// <summary>Pops stowed chutes that report safe; with <paramref name="force"/> also the risky and unsafe ones (better a torn chute than a crater).</summary>
+        /// <summary>
+        /// Arms stowed chutes in the stock "open when safe" mode: the game opens each one the moment the airflow is cool
+        /// enough, at any height (it judges by shock heating, not speed). Called early on every descent, so no safe window
+        /// is missed. With <paramref name="force"/> armed chutes open at once whatever the risk: better a torn chute than a crater.
+        /// </summary>
         public void DeployChutes(ref string line, bool force)
         {
             if (_v == null) return;
+            int armed = 0, forced = 0;
             foreach (ModuleParachute chute in _v.FindPartModulesImplementing<ModuleParachute>())
             {
-                if (chute.deploymentState != ModuleParachute.deploymentStates.STOWED) continue;
-                bool safe = chute.deploymentSafeState == ModuleParachute.deploymentSafeStates.SAFE;
-                if (!safe && !force) continue;
-                chute.Deploy();
-                line = "Parachutes deployed at " + Math.Round(_v.altitude) + " m" + (safe ? "." : " (risky: too fast, no choice).");
+                if (chute.deploymentState == ModuleParachute.deploymentStates.STOWED)
+                {
+                    chute.automateSafeDeploy = force ? 2 : 0; // 0 = when safe, 2 = immediately
+                    chute.Deploy();
+                    armed++;
+                }
+                else if (force && chute.deploymentState == ModuleParachute.deploymentStates.ACTIVE && chute.automateSafeDeploy < 2)
+                {
+                    chute.automateSafeDeploy = 2;
+                    forced++;
+                }
             }
+            if (forced > 0 || (force && armed > 0)) line = "Parachutes forced open at " + Math.Round(_v.altitude) + " m, " + Math.Round(_v.srfSpeed) + " m/s (too fast to be safe; no choice).";
+            else if (armed > 0) line = "Parachutes armed at " + Math.Round(_v.altitude) + " m: they open as soon as it is safe.";
         }
 
         /// <summary>Makes a docking port the control point so SAS Target mode points the port, not the pod.</summary>

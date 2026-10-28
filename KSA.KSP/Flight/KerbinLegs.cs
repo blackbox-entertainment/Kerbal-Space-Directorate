@@ -230,9 +230,10 @@ namespace KSA.KSP.Flight
                     if (alt > atmo + 20000 && v.verticalSpeed > -50 && v.orbit.timeToPe > 120) c.WarpTo(ctx.Now + Math.Min(v.orbit.timeToPe, 600) - 90);
                     // Shed everything but the capsule once we are coming down, one stage every two seconds.
                     if (v.verticalSpeed < 0 && v.currentStage > 1 && ctx.Now - _lastShed > 2 && alt < atmo) { c.Stage(); _lastShed = ctx.Now; line = "Staged away the service section for reentry."; }
-                    // Chutes: as soon as they are safe below 8 km; too fast still below 2.5 km, because the ground is coming either way.
+                    // Chutes: armed as soon as we are falling inside the atmosphere, so the game opens them the moment it
+                    // is safe at any height; forced open below 2.5 km if still too fast, because the ground is coming either way.
                     double aboveGround = Math.Max(0, alt - Math.Max(0, v.terrainAltitude));
-                    if (v.verticalSpeed < 0 && aboveGround < 8000) c.DeployChutes(ref line, aboveGround < 2500);
+                    if (v.verticalSpeed < 0 && alt < atmo) c.DeployChutes(ref line, aboveGround < 2500);
                     if (alt < 10000 && v.srfSpeed < 350) { _phase = Phases.Descent; Status = "Deploying parachutes."; }
                     if (v.situation == Vessel.Situations.LANDED || v.situation == Vessel.Situations.SPLASHED) { _phase = Phases.Landed; Status = "Down."; State = LegState.Done; }
                     break;
