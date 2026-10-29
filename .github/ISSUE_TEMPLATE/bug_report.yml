@@ -1,0 +1,44 @@
+name: Bug report
+description: Something in Kerbal Space Directorate is broken or behaves oddly.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: "Thanks for the report. Never paste your API key; KSP.log does not contain it."
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. Open the Director's Office\n2. ..."
+  - type: textarea
+    id: log
+    attributes:
+      label: KSP.log
+      description: Attach KSP.log from your KSP folder, or paste the lines starting with [KSA] around the problem.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: KSP and mod version
+      placeholder: "KSP 1.12.5, KSD commit or release"
+  - type: textarea
+    id: mods
+    attributes:
+      label: Other mods
+      description: CKAN File > Export modlist, or a list of GameData folders.
+  - type: dropdown
+    id: ai
+    attributes:
+      label: AI features
+      options:
+        - "AI off"
+        - "OpenRouter (cloud)"
+        - "Local (Ollama / LM Studio)"
+        - "Both"

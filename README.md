@@ -100,4 +100,6 @@ If something goes wrong, look in `KSP.log` in your KSP folder. Every KSA line st
 
 MIT, copyright Blackbox Entertainment. See [LICENSE](LICENSE).
 
+Want to help? See [CONTRIBUTING.md](CONTRIBUTING.md). Contributions are signed off and may be relicensed by Blackbox.
+
 Kerbal Space Program, its assets and the Kerbal name belong to Take-Two Interactive and Squad. This mod is not affiliated with them.
