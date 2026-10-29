@@ -133,6 +133,7 @@ namespace KSA.Core
             AddScienceInstruments(req);
             AddHeatShield(type, req);
             AddAntenna(type, req);
+            AddBattery(type, req);
             if (!LifeSupportOn) return;
             int crew = Math.Max(1, type.CrewSize);
             int days = type.DurationDays + Math.Max(0, LifeSupport.MarginDays);
@@ -212,6 +213,27 @@ namespace KSA.Core
             if (antennas.Count == 0) return;
             req.MustCarry.Add("an antenna, as a payload extra on the crew pod: " + string.Join(", ", antennas.ToArray()) + ". Kerbalism stores experiment data on small drives; the antenna sends it home during the flight so the experiments do not stop for lack of storage space.");
             req.MustInclude.Add(new KeyValuePair<string, List<string>>("an antenna to send science home", antennas));
+        }
+
+        /// <summary>
+        /// With Kerbalism the pod's own charge goes fast (life support draws on it) and experiments stop with "no Electricity"
+        /// (2026-10-28). A crewed design carries a battery or other power part when one is researched. Checked by the review.
+        /// </summary>
+        private void AddBattery(MissionType type, DesignRequest req)
+        {
+            if (Parts == null || type == null || type.CrewSize <= 0) return;
+            if (!string.Equals(LifeSupportMod, "Kerbalism", StringComparison.OrdinalIgnoreCase)) return;
+            var power = new List<string>();
+            foreach (PartInfo part in Parts.All)
+            {
+                if (part.Kind != PartKind.Power || (part.RequiresDlc && !AllowDlcParts) || part.Mass > 0.3) continue;
+                if (!req.AllowedParts.Exists(x => x.Name == part.Name)) req.AllowedParts.Add(part);
+                power.Add(part.Name);
+                if (power.Count >= 6) break;
+            }
+            if (power.Count == 0) return;
+            req.MustCarry.Add("electric power, as payload extras on the crew pod: at least one of " + string.Join(", ", power.ToArray()) + ". With " + LifeSupportMod + " the pod's own charge runs down in minutes and the experiments stop for lack of electricity; add more for longer flights.");
+            req.MustInclude.Add(new KeyValuePair<string, List<string>>("a battery or power source", power));
         }
 
         /// <summary>Post-mortem lines from earlier flights of the same body/profile, oldest first.</summary>

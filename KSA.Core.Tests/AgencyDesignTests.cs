@@ -226,6 +226,12 @@ namespace KSA.Core.Tests
             Assert.That(DesignSession.MissingMustInclude(plan, req), Has.Some.Contains("antenna"));
             plan.Payload.Extras.Add("SurfAntenna");
             Assert.That(DesignSession.MissingMustInclude(plan, req), Has.None.Contains("antenna"));
+
+            // A battery, once one is researched.
+            Assert.That(req.MustInclude.Exists(r => r.Key.Contains("battery")), Is.EqualTo(new List<PartInfo>(((PartCatalog)a.Parts).All).Exists(x => x.Kind == PartKind.Power && x.Mass <= 0.3)));
+            ((PartCatalog)a.Parts).Add(new PartInfo { Name = "batteryPack", Title = "Z-100", Kind = PartKind.Power, Mass = 0.005 });
+            req = a.BuildDesignRequest(p);
+            Assert.That(req.MustInclude.Exists(r => r.Key.Contains("battery") && r.Value.Contains("batteryPack")));
         }
 
         [Test]

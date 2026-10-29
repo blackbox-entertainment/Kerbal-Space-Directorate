@@ -180,6 +180,8 @@ namespace KSA.KSP.Build
             // Extras above the pod (parachutes and anything with a bottom node and no top need), radial extras on the pod.
             Placed topMost = root;
             var belowPod = new List<string>();
+            // Radial extras (instruments, antennas) go round the pod, a quarter turn apart, not all on one spot (2026-10-28).
+            int radialIndex = 0;
             foreach (string extra in plan.Payload.Extras)
             {
                 AvailablePart ap = PartLoader.getPartInfoByName(extra);
@@ -197,7 +199,9 @@ namespace KSA.KSP.Build
                 else if (ap.partPrefab.srfAttachNode != null && ap.partPrefab.attachRules.srfAttach)
                 {
                     Placed e = make(extra);
-                    SurfaceAttach(root, e, 0f, 0f, result);
+                    float angle = (float)(Math.PI / 4 + radialIndex * Math.PI / 2 + (radialIndex / 4) * Math.PI / 8);
+                    radialIndex++;
+                    SurfaceAttachOnPod(root, e, angle);
                 }
                 else result.Warnings.Add("Extra '" + extra + "' cannot attach; skipped.");
             }
@@ -382,6 +386,35 @@ namespace KSA.KSP.Build
             float childTopWorld = child.Pos.y + childTopY;
             float hostTopWorld = host.Pos.y + topY;
             if (childTop != null && childTopWorld > hostTopWorld) child.Pos += new Vector3(0, hostTopWorld - childTopWorld, 0);
+            child.Parent = host; child.ParentNode = "srf"; child.OwnNode = "srfAttach"; child.Radial = true;
+            host.Children.Add(child);
+        }
+
+        /// <summary>
+        /// Surface-attaches a small part (instrument, antenna) flush on a crew pod, which is usually a cone: the radius is
+        /// taken at mid-height between the pod's bottom and top nodes, and the part is tilted to the slope, as the editor
+        /// does with the surface normal (2026-10-28: the goo floated off the Mk1 pod at the wrong angle).
+        /// </summary>
+        private static void SurfaceAttachOnPod(Placed host, Placed child, float angle)
+        {
+            Part cp = child.Ap.partPrefab;
+            AttachNode srf = cp.srfAttachNode;
+            AttachNode top = Node(host.Ap, "top"), bottom = Node(host.Ap, "bottom");
+            float rBottom = bottom != null ? (bottom.size == 0 ? 0.3125f : 0.625f * bottom.size) : Radius(host);
+            float rTop = top != null ? (top.size == 0 ? 0.3125f : 0.625f * top.size) : rBottom;
+            float yBottom = bottom != null ? bottom.position.y : -0.5f, yTop = top != null ? top.position.y : 0.5f;
+            float height = Math.Max(0.1f, yTop - yBottom);
+            float midY = (yTop + yBottom) / 2f;
+            float radius = (rTop + rBottom) / 2f;
+            float slope = (float)Math.Atan2(rBottom - rTop, height); // 0 for a cylinder
+            var dir = new Vector3((float)Math.Cos(angle), 0, (float)Math.Sin(angle));
+            Vector3 normal = (dir * (float)Math.Cos(slope) + Vector3.up * (float)Math.Sin(slope)).normalized;
+            Vector3 hostUp = (Vector3.up * (float)Math.Cos(slope) - dir * (float)Math.Sin(slope)).normalized;
+            Vector3 orient = srf.orientation.sqrMagnitude > 0 ? srf.orientation.normalized : new Vector3(1, 0, 0);
+            Quaternion rot = Quaternion.LookRotation(normal, hostUp) * Quaternion.LookRotation(orient, Vector3.up);
+            child.Rot = rot;
+            Vector3 attachWorld = host.Pos + dir * radius + new Vector3(0, midY, 0);
+            child.Pos = attachWorld - rot * srf.position;
             child.Parent = host; child.ParentNode = "srf"; child.OwnNode = "srfAttach"; child.Radial = true;
             host.Children.Add(child);
         }
