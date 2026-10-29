@@ -371,6 +371,9 @@ namespace KSA.Core
             // The human Director's own design: as asked, or the first that fits when nothing else can fly the mission.
             string design = Json.GetString(a, "design", string.Empty);
             if (design.Length > 0 && FindPlayerDesign(design) == null) design = string.Empty;
+            // The human Director's pick for this mission always wins (2026-10-28).
+            PlayerDesign picked = PreferredDesignFor(type);
+            if (picked != null) design = picked.CraftPath;
             if (design.Length == 0 && MissionBlocker(type) != null) { List<PlayerDesign> fit = PlayerDesignsFor(type); if (fit.Count > 0) design = fit[0].CraftPath; }
             string pd = design.Length > 0 ? design : null;
             Project p = CreateProject(null, type.Id, pd != null ? null : (template != null ? template.Id : null), crew, engineers, null, DirectorMode(type), out message, null, pd);
@@ -581,7 +584,8 @@ namespace KSA.Core
                 var names = new List<string>();
                 foreach (PlayerDesign d in mine) if (names.Count < 3) names.Add(d.Name);
                 sb.AppendLine("  " + t.Id + " | " + t.Name + " | " + Money(ProjectCost(t, best)) + " | " + t.CrewSize + " | " + t.MinStars + " | " + t.DurationDays + " | " + MissionsCompleted(t.Id) + (t.IsFirst && !HasAgencyAchievement(t.PrimaryAchievement) ? " | a First" : string.Empty)
-                    + (names.Count > 0 ? " | the human Director's own designs that fit: " + string.Join(", ", names.ToArray()) : string.Empty));
+                    + (PreferredDesignFor(t) != null ? " | the human Director wants their design '" + PreferredDesignFor(t).Name + "' flown for this (used automatically)"
+                       : names.Count > 0 ? " | the human Director's own designs that fit: " + string.Join(", ", names.ToArray()) : string.Empty));
             }
             if (locked.Count > 0) sb.AppendLine("NEXT LOCKED MISSIONS: " + string.Join("; ", locked.ToArray()));
 

@@ -307,9 +307,14 @@ namespace KSA.KSP.UI
                 bool isSel = pickedMine != null && pickedMine.CraftPath == path;
                 string label = (isSel ? "> " : "") + d.Name + "  (" + Math.Round(d.DeltaV) + " m/s, TWR " + d.LiftoffTwr.ToString("0.0") + ", " + d.Seats + (d.Seats == 1 ? " seat" : " seats") + ")";
                 if (unfit != null) label = "<color=#888888>" + label + "  [" + unfit + "]</color>";
-                var b = new DialogGUIButton(label, () => OnSelectPlayerDesign(path), textWidth - 40f, ButtonHeight, false);
+                var b = new DialogGUIButton(label, () => OnSelectPlayerDesign(path), textWidth - 260f, ButtonHeight, false);
                 if (unfit != null) b.OptionInteractableCondition = () => false;
-                items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft, new DialogGUISpace(16f), b));
+                // Tell the AI Director to fly this design for this mission (2026-10-28).
+                string mission = selected.Id, dname = d.Name;
+                bool preferred = _agency.PreferredDesigns.ContainsKey(mission) && string.Equals(_agency.PreferredDesigns[mission], dname, StringComparison.OrdinalIgnoreCase);
+                var pref = new DialogGUIButton((preferred ? "[x] " : "[  ] ") + "AI Director flies this", () => OnPreferDesign(mission, dname, !preferred), 200f, ButtonHeight, false);
+                if (unfit != null && !preferred) pref.OptionInteractableCondition = () => false;
+                items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft, new DialogGUISpace(16f), b, pref));
             }
 
             // Crew pick.
@@ -626,6 +631,14 @@ namespace KSA.KSP.UI
         {
             _selectedTemplateId = templateId;
             _selectedPlayerDesign = string.Empty;
+            Refresh();
+        }
+
+        private void OnPreferDesign(string missionTypeId, string designName, bool on)
+        {
+            _agency.SetPreferredDesign(missionTypeId, on ? designName : null);
+            MissionType t = _agency.Catalogs.Missions.Get(missionTypeId);
+            _status = on ? "The AI Director will fly " + designName + " whenever it starts " + (t != null ? t.Name : missionTypeId) + "." : "The AI Director picks its own design for " + (t != null ? t.Name : missionTypeId) + " again.";
             Refresh();
         }
 

@@ -38,6 +38,27 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void ThePickedDesignIsRememberedAndOnlyUsedWhileItFits()
+        {
+            var clock = new FakeClock();
+            Agency a = Staffed(clock);
+            a.PlayerDesignSource = () => new List<PlayerDesign> { Orbiter(), Hopper() };
+            MissionType orbit = a.Catalogs.Missions.Get("KerbinOrbit");
+            a.SetPreferredDesign("KerbinOrbit", "Tim's Orbiter");
+            Assert.That(a.PreferredDesignFor(orbit).Name, Is.EqualTo("Tim's Orbiter"));
+            Assert.That(a.DirectorBriefing(), Does.Contain("wants their design 'Tim's Orbiter' flown"));
+            a.SetPreferredDesign("KerbinOrbit", "Hopper");
+            Assert.That(a.PreferredDesignFor(orbit), Is.Null, "the hopper cannot reach orbit, so it is not forced on the mission");
+
+            a.SetPreferredDesign("KerbinOrbit", "Tim's Orbiter");
+            var store = new MemoryPersistence();
+            a.Save(store);
+            Agency b = Make.Agency(clock, new ListLogger());
+            b.Load(store);
+            Assert.That(b.PreferredDesigns["KerbinOrbit"], Is.EqualTo("Tim's Orbiter"));
+        }
+
+        [Test]
         public void YourDesignFliesTheProjectWithoutAnAiDesign()
         {
             var clock = new FakeClock();

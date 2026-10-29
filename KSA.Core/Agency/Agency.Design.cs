@@ -534,6 +534,29 @@ namespace KSA.Core
             return result.Length == 0 ? null : result;
         }
 
+        /// <summary>
+        /// The human Director's pick of their own design for a mission (mission id -> craft name), which the AI Director then
+        /// flies whenever it starts that mission and the design still fits (2026-10-28). Saved.
+        /// </summary>
+        public Dictionary<string, string> PreferredDesigns { get; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>Sets or clears (null) the design the AI Director must fly for a mission.</summary>
+        public void SetPreferredDesign(string missionTypeId, string designName)
+        {
+            if (string.IsNullOrEmpty(missionTypeId)) return;
+            if (string.IsNullOrEmpty(designName)) PreferredDesigns.Remove(missionTypeId);
+            else PreferredDesigns[missionTypeId] = designName;
+        }
+
+        /// <summary>The design the human Director picked for this mission, when it still exists and fits; else null.</summary>
+        public PlayerDesign PreferredDesignFor(MissionType type)
+        {
+            string name;
+            if (type == null || !PreferredDesigns.TryGetValue(type.Id, out name)) return null;
+            PlayerDesign d = FindPlayerDesign(name);
+            return d != null && d.Blocker(type, Requirements.For(type)) == null ? d : null;
+        }
+
         /// <summary>The Director's saved designs that can fly a mission today.</summary>
         public List<PlayerDesign> PlayerDesignsFor(MissionType type)
         {
