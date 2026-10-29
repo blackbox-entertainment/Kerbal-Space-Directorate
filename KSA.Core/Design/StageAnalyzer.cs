@@ -171,8 +171,18 @@ namespace KSA.Core.Design
             for (int i = 0; i < plan.Stages.Count; i++)
             {
                 PlanStage s = plan.Stages[i];
-                Accumulate(s.Core, catalog, false, ref stageDry[i], ref stageFuel[i], ref stageThrust[i], ref stageIspNum[i], ref stageCost[i], ref parts);
-                Accumulate(s.Radial, catalog, true, ref stageDry[i], ref stageFuel[i], ref stageThrust[i], ref stageIspNum[i], ref stageCost[i], ref parts);
+                double tankFuel = 0;
+                bool liquidEngine = false;
+                Accumulate(s.Core, catalog, false, ref stageDry[i], ref stageFuel[i], ref tankFuel, ref liquidEngine, ref stageThrust[i], ref stageIspNum[i], ref stageCost[i], ref parts);
+                Accumulate(s.Radial, catalog, true, ref stageDry[i], ref stageFuel[i], ref tankFuel, ref liquidEngine, ref stageThrust[i], ref stageIspNum[i], ref stageCost[i], ref parts);
+                // Tank propellant burns only in a liquid engine of the same stage (2026-10-28: tanks hung under a solid
+                // booster were counted as fuel, so designs were approved on delta-v they could never have).
+                if (liquidEngine) stageFuel[i] += tankFuel;
+                else if (tankFuel > 0)
+                {
+                    stageDry[i] += tankFuel;
+                    a.Problems.Add("Stage " + s.Stage + ": its fuel tanks have no liquid engine in the same stage to burn them, so their " + tankFuel.ToString("0.0") + " t of propellant is dead weight. Put a liquid engine under the tanks, or leave the tanks out (a solid booster carries its own fuel).");
+                }
                 PartInfo dec = catalog.Get(s.Decoupler);
                 if (dec != null) { stageDry[i] += dec.Mass; stageCost[i] += dec.Cost; parts++; }
             }
@@ -218,7 +228,7 @@ namespace KSA.Core.Design
             return a;
         }
 
-        private static void Accumulate(List<PlanPart> list, IPartCatalog catalog, bool radial, ref double dry, ref double fuel, ref double thrust, ref double ispNum, ref double cost, ref int parts)
+        private static void Accumulate(List<PlanPart> list, IPartCatalog catalog, bool radial, ref double dry, ref double fuel, ref double tankFuel, ref bool liquidEngine, ref double thrust, ref double ispNum, ref double cost, ref int parts)
         {
             foreach (PlanPart p in list)
             {
@@ -227,7 +237,9 @@ namespace KSA.Core.Design
                 int n = Math.Max(1, p.Count) * (radial ? Math.Max(1, p.Symmetry) : 1);
                 if (radial && p.Count > 0 && p.Symmetry > 1 && p.Count == p.Symmetry) n = p.Count; // "4 boosters in 4x symmetry" means 4 total
                 dry += info.Mass * n;
-                fuel += info.FuelMass * n;
+                // A solid booster carries and burns its own propellant; everything else's feeds the liquid engines.
+                if (info.Kind == PartKind.Booster) fuel += info.FuelMass * n; else tankFuel += info.FuelMass * n;
+                if (info.Kind == PartKind.Engine && info.Thrust > 0) liquidEngine = true;
                 cost += info.Cost * n;
                 parts += n;
                 if (info.ProducesThrust)

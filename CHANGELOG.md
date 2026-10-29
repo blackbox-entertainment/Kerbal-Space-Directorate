@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.5.7 (2026-10-28), eighth test build
+
+- **Fixed: designs were credited with fuel they could not burn.** The design review added up every tank in a stage, so liquid fuel tanks under a solid booster (with no liquid engine to burn them) counted as propellant, and rockets were approved on delta-v they never had. Tank propellant now counts only when the same stage has a liquid engine; otherwise the tanks are dead weight and the design goes back to the engineers.
+- **Better rocket designers:** Claude Haiku 5.5 is the new default design model, and Claude Sonnet 5.5 is listed for the best designs. GPT-4o mini stays in the list as the cheapest option, but its rockets were weak. Your current choice in AI Setup is not changed.
+
 ## 0.5.6 (2026-10-28), seventh test build
 
 - **No rocket, no flight.** A design that cannot be assembled in the VAB is never simulated. The engineers first build one by hand from the researched parts; if that cannot be assembled either, the project goes back to design with the failure as a lesson, and when the design attempts run out it is called off with its budget returned. A launch with no craft file is scrubbed and sent back to the engineers the same way.

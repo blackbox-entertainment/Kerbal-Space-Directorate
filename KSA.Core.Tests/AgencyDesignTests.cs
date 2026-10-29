@@ -383,6 +383,25 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void TanksUnderASolidBoosterAreDeadWeightNotFuel()
+        {
+            // The AI drew a solid booster with liquid tanks and no liquid engine in the launch stage (2026-10-28).
+            PartCatalog c = TestParts.Catalog();
+            string json = "{\"design_name\":\"Dead\",\"rationale\":\"\",\"stages\":[" +
+                          "{\"stage\":0,\"role\":\"launch\",\"core\":[{\"part\":\"solidBooster\",\"count\":1},{\"part\":\"fuelTankLong\",\"count\":2}],\"radial\":[],\"decoupler\":\"stackDecoupler\"}," +
+                          "{\"stage\":1,\"role\":\"upper\",\"core\":[{\"part\":\"fuelTankLong\",\"count\":1},{\"part\":\"liquidEngine3\",\"count\":1}],\"radial\":[],\"decoupler\":\"\"}]," +
+                          "\"payload\":{\"command\":\"mk1pod\",\"extras\":[\"parachuteSingle\"]}}";
+            StagePlan plan; string error;
+            Assert.That(StagePlan.TryParse(json, out plan, out error), Is.True, error);
+            DesignAnalysis a = StageAnalyzer.Analyze(plan, c, null);
+            Assert.That(a.Problems, Has.Some.Contains("dead weight"));
+            Assert.That(a.Passes, Is.False);
+            // Without the dead tanks the booster alone gives more delta-v than with them: they only add mass.
+            plan.Stages[0].Core.RemoveAt(1);
+            Assert.That(StageAnalyzer.Analyze(plan, c, null).Stages[0].DeltaV, Is.GreaterThan(a.Stages[0].DeltaV));
+        }
+
+        [Test]
         public void RadialDecouplerBetweenStagesIsRejected()
         {
             PartCatalog c = TestParts.Catalog();
