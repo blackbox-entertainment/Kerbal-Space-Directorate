@@ -132,6 +132,7 @@ namespace KSA.Core
             }
             AddScienceInstruments(req);
             AddHeatShield(type, req);
+            AddAntenna(type, req);
             if (!LifeSupportOn) return;
             int crew = Math.Max(1, type.CrewSize);
             int days = type.DurationDays + Math.Max(0, LifeSupport.MarginDays);
@@ -190,6 +191,27 @@ namespace KSA.Core
             var accepted = new List<string>(shields);
             accepted.AddRange(shieldedPods);
             req.MustInclude.Add(new KeyValuePair<string, List<string>>("a heat shield for re-entry", accepted));
+        }
+
+        /// <summary>
+        /// With Kerbalism, experiments record onto small drives (the Mk1 pod holds 0.5 Mb) and stop with "no storage space"
+        /// when they fill. An external antenna sends the data home during the flight and frees the drive (2026-10-28).
+        /// Pods' built-in antennas do not carry science there, so a crewed design must carry one. Checked by the review.
+        /// </summary>
+        private void AddAntenna(MissionType type, DesignRequest req)
+        {
+            if (Parts == null || type == null || type.CrewSize <= 0) return;
+            if (!string.Equals(LifeSupportMod, "Kerbalism", StringComparison.OrdinalIgnoreCase)) return;
+            var antennas = new List<string>();
+            foreach (PartInfo part in Parts.All)
+            {
+                if (part.Kind != PartKind.Antenna || (part.RequiresDlc && !AllowDlcParts)) continue;
+                if (!req.AllowedParts.Exists(x => x.Name == part.Name)) req.AllowedParts.Add(part);
+                antennas.Add(part.Name);
+            }
+            if (antennas.Count == 0) return;
+            req.MustCarry.Add("an antenna, as a payload extra on the crew pod: " + string.Join(", ", antennas.ToArray()) + ". Kerbalism stores experiment data on small drives; the antenna sends it home during the flight so the experiments do not stop for lack of storage space.");
+            req.MustInclude.Add(new KeyValuePair<string, List<string>>("an antenna to send science home", antennas));
         }
 
         /// <summary>Post-mortem lines from earlier flights of the same body/profile, oldest first.</summary>

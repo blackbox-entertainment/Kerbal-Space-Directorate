@@ -206,6 +206,29 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void WithKerbalismACrewedDesignMustCarryAnAntenna()
+        {
+            var clock = new FakeClock();
+            Agency a = Staffed(clock, new ListLogger());
+            var transport = new ScriptedTransport();
+            transport.Fallback = ScriptedTransport.Chat(TestParts.WeakPlan());
+            EnableAi(a, transport);
+            ((PartCatalog)a.Parts).Add(new PartInfo { Name = "SurfAntenna", Title = "Communotron 16-S", Kind = PartKind.Antenna, Mass = 0.015 });
+            string msg;
+            Project p = a.CreateProject("Orbit", "KerbinOrbit", null, null, null, null, MissionMode.Simulate, out msg);
+            Assert.That(p, Is.Not.Null, msg);
+            Assert.That(a.BuildDesignRequest(p).MustInclude.Exists(r => r.Key.Contains("antenna")), Is.False, "stock: the pod keeps its own results");
+            a.LifeSupportMod = "Kerbalism";
+            DesignRequest req = a.BuildDesignRequest(p);
+            Assert.That(req.MustInclude.Exists(r => r.Key.Contains("antenna") && r.Value.Contains("SurfAntenna")));
+            StagePlan plan; string error;
+            Assert.That(StagePlan.TryParse(TestParts.GoodOrbitPlan(), out plan, out error), Is.True, error);
+            Assert.That(DesignSession.MissingMustInclude(plan, req), Has.Some.Contains("antenna"));
+            plan.Payload.Extras.Add("SurfAntenna");
+            Assert.That(DesignSession.MissingMustInclude(plan, req), Has.None.Contains("antenna"));
+        }
+
+        [Test]
         public void ANoTemplateProjectRetriesItsDesignThenIsCalledOffWithItsMoneyBack()
         {
             var clock = new FakeClock();

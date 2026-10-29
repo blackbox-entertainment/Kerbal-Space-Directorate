@@ -9,5 +9,5 @@
       "core": [ { "part": "solidBooster.sm.v2", "count": 1 } ],
       "radial": [] }
   ],
-  "payload": { "command": "mk1pod.v2", "extras": [ "parachuteSingle", "sensorThermometer", "GooExperiment" ] }
+  "payload": { "command": "mk1pod.v2", "extras": [ "parachuteSingle", "sensorThermometer", "GooExperiment", "SurfAntenna" ] }
 }

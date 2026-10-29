@@ -121,7 +121,7 @@ namespace KSA.Core.Tests
             Assert.That(StagePlan.TryParse(System.IO.File.ReadAllText(path), out plan, out error), Is.True, error);
             Assert.That(plan.Stages, Has.Count.EqualTo(2));
             // Start, Basic Rocketry and Engineering 101 only: the AI Director's first research reaches space with this.
-            var early = new HashSet<string> { "sensorThermometer", "GooExperiment", "solidBooster.v2", "solidBooster.sm.v2", "basicFin", "Decoupler.1", "mk1pod.v2", "parachuteSingle" };
+            var early = new HashSet<string> { "SurfAntenna", "sensorThermometer", "GooExperiment", "solidBooster.v2", "solidBooster.sm.v2", "basicFin", "Decoupler.1", "mk1pod.v2", "parachuteSingle" };
             foreach (PlanStage s in plan.Stages)
             {
                 foreach (PlanPart p in s.Core) Assert.That(early, Does.Contain(p.Part));

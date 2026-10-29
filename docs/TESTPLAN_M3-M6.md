@@ -212,5 +212,5 @@ Part 1 runs on the current install (no Kerbalism). Part 2 needs Kerbalism, insta
 2. Pick it. The Design section says "The engineering team designs this rocket from scratch (AI)" or, with a buildable fallback, that the picked design is the fallback.
 3. Start it. The project line shows "design engineering team design (AI)" until the design is approved, then the AI design's name.
 4. If the design falls short, expect "the engineers try another design (attempt 2 of 3)". After three failures: "called off ... returned", balance back to where it was.
-5. Open Design Review on the project: the plan should carry a thermometer/goo (whatever is researched), and for Kerbin orbit a heat shield under the pod.
+5. Open Design Review on the project: the plan should carry a thermometer/goo (whatever is researched), for Kerbin orbit a heat shield under the pod, and with Kerbalism an antenna (Communotron 16-S or similar). In flight, Kerbalism data should transmit instead of stopping at "no storage space".
 6. With AI off, the same mission stays "(research)" until a ready-made design can be built.
