@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.5.14 (2026-10-29), fifteenth test build
+
+- **The turn is flat at 55 km again** (60 km in 0.5.12 and 0.5.13): vertical to 15 km, then an even turn to level at 55 km, which wastes less fuel fighting gravity on the way to orbit.
+
 ## 0.5.13 (2026-10-29), fourteenth test build
 
 - **A suborbital hop must reach space.** A live hop that never climbed above the top of Kerbin's air (70 km) earns no Suborbit credit and is an abort, crew safe, with "Space not reached" and its peak altitude in the report. The Suborbit log entry is also only written above the air.
