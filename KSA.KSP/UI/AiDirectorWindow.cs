@@ -78,6 +78,9 @@ namespace KSA.KSP.UI
             // Model.
             items.Add(new DialogGUISpace(6f));
             Line(items, "<b>Model</b>  (OpenRouter; your API key from AI Setup)  now: " + Color(endpoint != null ? endpoint.Model + (endpoint.IsLocal ? " (local)" : string.Empty) : "none", endpoint != null ? Green : Amber), textWidth);
+            // Without a readable key the Director falls back to the local model, which is slow and weak at this job (2026-10-28).
+            if (!ai.HasApiKey)
+                Line(items, Color("No OpenRouter key could be read, so the Director " + (endpoint != null ? "is using the local model (slow; small models often fail at this)" : "cannot think") + ". Enter your key again in AI Setup and save.", Amber), textWidth);
             string current = ai.DirectorModel.Length > 0 ? ai.DirectorModel : AiSettings.DefaultDirectorModel;
             foreach (DirectorModels.Preset p in DirectorModels.Presets)
             {

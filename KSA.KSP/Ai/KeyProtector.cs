@@ -44,6 +44,8 @@ namespace KSA.KSP.Ai
             catch (Exception e)
             {
                 KsaCore.Log.Error("Could not decrypt the stored API key (different Windows user or machine?): " + e.Message + ". Re-enter it in AI Setup.");
+                // Say it on screen too: without the key the AI quietly falls back to the local model (2026-10-28).
+                try { ScreenMessages.PostScreenMessage("[KSA] Your OpenRouter key could not be read. Enter it again in AI Setup (Director's Office) and save.", 10f, ScreenMessageStyle.UPPER_CENTER); } catch { }
                 return string.Empty;
             }
         }
