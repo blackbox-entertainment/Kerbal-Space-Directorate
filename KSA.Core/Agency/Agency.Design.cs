@@ -87,6 +87,7 @@ namespace KSA.Core
         {
             if (_designsResumed) return;
             _designsResumed = true;
+            RecheckApprovedDesigns(notices);
             foreach (Project p in Projects)
             {
                 if (p.Status != ProjectStatus.Design || p.Design == null || p.Design.Verdict != DesignVerdict.Pending || DesignInProgress(p.Id)) continue;
@@ -97,6 +98,40 @@ namespace KSA.Core
                     p.Design.Error = "Design session interrupted by save/load and AI design is not available now; the template flies.";
                     p.Notes.Add(p.Design.Error);
                 }
+            }
+        }
+
+        /// <summary>
+        /// After a load, approved AI plans that break a rule added since (2026-10-28: several boosters stacked in one column)
+        /// go back to the drawing board before they can fly: back to Design, and the team designs again.
+        /// </summary>
+        private void RecheckApprovedDesigns(List<string> notices)
+        {
+            if (Parts == null) return;
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (PartInfo part in Parts.All) names.Add(part.Name);
+            foreach (Project p in Projects)
+            {
+                if (p.Status != ProjectStatus.Design && p.Status != ProjectStatus.Build && p.Status != ProjectStatus.Ready) continue;
+                if (p.Design == null || !p.Design.IsAi || p.Design.Verdict != DesignVerdict.Approved || p.Design.Plan == null) continue;
+                List<string> problems = StagePlanValidator.Validate(p.Design.Plan, Parts, names);
+                problems.RemoveAll(x => x.Contains("not in the allowed part list")); // research is not lost; only real design faults count
+                if (problems.Count == 0) continue;
+                p.Design.Verdict = DesignVerdict.Failed;
+                p.Design.Error = problems[0];
+                p.Design.CraftPath = string.Empty;
+                p.Status = ProjectStatus.Design;
+                p.PhaseStartDay = CurrentDay;
+                p.DesignDays = Math.Max(1, p.DesignDays / 2);
+                p.Notes.Add("Design '" + p.Design.DesignName + "' failed a check added since it was approved (" + problems[0] + "); back to the drawing board.");
+                Push(notices, p.Name + ": its design failed a new check and goes back to the drawing board");
+                if (!StartDesign(p, notices))
+                {
+                    string why;
+                    DesignRecord byHand = EngineersDesign(p, out why);
+                    if (byHand != null) p.Design = byHand;
+                }
+                RaiseProjectChanged(p);
             }
         }
 

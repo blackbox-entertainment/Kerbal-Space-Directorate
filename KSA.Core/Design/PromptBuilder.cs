@@ -63,6 +63,7 @@ namespace KSA.Core.Design
             sb.AppendLine("2. Stage 0 is the launch stage at the bottom of the stack; higher stage numbers sit above it and fire later.");
             sb.AppendLine("3. Each stage lists core parts (stacked, from the bottom of that stage upward) and optional radial parts with symmetry 2, 3, 4, 6 or 8.");
             sb.AppendLine("4. Every stage except the top one must name a decoupler that separates it from the stage above.");
+            sb.AppendLine("   Each stage's core stack holds at most ONE engine or solid booster, at its bottom: stacked engines fire into each other and lose their thrust. Put extra boosters in \"radial\" with symmetry 2, 3 or 4.");
             sb.AppendLine("5. The payload names one command part (it must seat the crew) and extras such as parachutes, heat shields, antennas.");
             sb.AppendLine("6. Prefer stock parts: use a part marked [DLC] only when no stock part does the job.");
             sb.AppendLine("7. Keep part counts realistic: a core tank list like [{\"part\":\"fuelTankLong\",\"count\":2}] stacks two of that tank.");

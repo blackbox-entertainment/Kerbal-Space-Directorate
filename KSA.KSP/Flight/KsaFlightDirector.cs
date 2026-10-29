@@ -191,6 +191,7 @@ namespace KSA.KSP.Flight
             bool onPad = v.situation == Vessel.Situations.PRELAUNCH || (v.srfSpeed < 1.0 && v.altitude - v.terrainAltitude < 60 && v.mainBody == FlightGlobals.GetHomeBody());
             _holdForLaunch = onPad && agency.Settings.LaunchOnCommand && pending != null;
             _padStage = v.currentStage;
+            if (onPad) PreflightChecks(v);
             if (_holdForLaunch) { _status = "Holding on the pad. Press Launch (or the staging key) when you are ready."; Log("On the pad, holding for the Director's go.", null); }
             else if (Live.AutopilotOn && _program != null) _program.Engage();
             GameEvents.onVesselSOIChanged.Add(OnSoiChanged);
@@ -252,6 +253,7 @@ namespace KSA.KSP.Flight
             bool onPad = v.situation == Vessel.Situations.PRELAUNCH || (v.srfSpeed < 1.0 && v.altitude - v.terrainAltitude < 60 && v.mainBody == FlightGlobals.GetHomeBody());
             _holdForLaunch = onPad;
             _padStage = v.currentStage;
+            if (onPad) PreflightChecks(v);
             if (_holdForLaunch) { _status = "Holding on the pad. Press Launch (or the staging key) when you are ready."; Log("On the pad, holding for the Director's go.", null); }
             else _program.Engage();
             Log("Hangar flight: " + msg + " Touch the controls at any time to take over.", null);
@@ -410,6 +412,25 @@ namespace KSA.KSP.Flight
 
         public bool IsLive(Vessel v) { return Live != null && v != null && v.persistentId == Live.VesselId; }
         public static bool IsLiveVessel(uint persistentId) { return Live != null && Live.VesselId == persistentId; }
+
+        /// <summary>
+        /// The crew's pre-launch checklist (2026-10-28): SAS on in Stability Assist, and RCS on when the craft has thrusters,
+        /// before the go, so nothing starts to wander on the pad or at liftoff.
+        /// </summary>
+        private void PreflightChecks(Vessel v)
+        {
+            if (v == null) return;
+            try
+            {
+                v.ActionGroups.SetGroup(KSPActionGroup.SAS, true);
+                if (v.Autopilot != null) v.Autopilot.SetMode(VesselAutopilot.AutopilotMode.StabilityAssist);
+                bool rcs = false;
+                foreach (ModuleRCS r in v.FindPartModulesImplementing<ModuleRCS>()) if (r.rcsEnabled) { rcs = true; break; }
+                if (rcs) v.ActionGroups.SetGroup(KSPActionGroup.RCS, true);
+                Log("Pre-launch checks: SAS on" + (rcs ? ", RCS on." : "; no RCS thrusters aboard."), null);
+            }
+            catch (Exception e) { KsaCore.Log.Warn("Pre-launch checks: " + e.Message); }
+        }
 
         private void Log(string text, string achievement)
         {

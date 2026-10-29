@@ -235,6 +235,12 @@ namespace KSA.Core.Design
                 bool hasThrust = false;
                 if (catalog != null)
                 {
+                    // One engine or booster per stack (2026-10-28): stacked end to end, the upper ones fire into the parts
+                    // below and KSP blocks their thrust, so the rocket crawls. Extra thrust goes round the side.
+                    int coreThrusters = 0;
+                    foreach (PlanPart p in s.Core) { PartInfo info = catalog.Get(p.Part); if (info != null && info.ProducesThrust) coreThrusters += Math.Max(1, p.Count); }
+                    if (coreThrusters > 1)
+                        problems.Add(label + ": " + coreThrusters + " engines or boosters are stacked in the core; only ONE can sit in a stack (the others fire into it and their thrust is blocked). Use one in the core and put extra boosters in \"radial\" with symmetry 2, 3 or 4.");
                     foreach (PlanPart p in s.Core) { PartInfo info = catalog.Get(p.Part); if (info != null && info.ProducesThrust) hasThrust = true; }
                     foreach (PlanPart p in s.Radial) { PartInfo info = catalog.Get(p.Part); if (info != null && info.ProducesThrust) hasThrust = true; }
                     if (!hasThrust && (i == 0 || string.Equals(s.Role, "launch", StringComparison.OrdinalIgnoreCase)))
