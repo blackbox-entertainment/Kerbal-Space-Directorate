@@ -4,6 +4,7 @@ Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the
 
 ## Unreleased
 
+- **The crew finishes the climb to orbit after coasting:** coasting to apoapsis with the engines idle no longer reads as "out of fuel" (it checks the delta-v left in the tanks), so the crew burns to circularise instead of turning for home. When the Director hands back on the way up, or already past apoapsis, the crew circularises from there.
 - **A gentler gravity turn:** the crew climbs straight up to 1 km, then turns evenly to horizontal at 45 km (about 72 degrees at 10 km, 49 at 20 km, 29 at 30 km), burns flat until the apoapsis is high enough, coasts to it and circularises there. The old curve was at 53 degrees by 10 km, far too early for a modest rocket.
 - **Side boosters that drag the rocket off course are dropped:** if the rocket stays more than 25 degrees off its heading for 3 seconds and the next stage is only radial decouplers, the crew drops the side boosters early, as a pilot would.
 - **Orbit means a complete orbit.** A live flight earns orbit only after flying one full orbit in a stable orbit (periapsis above the atmosphere, or 10 km over an airless world); breaking the orbit starts the count again. Captures at the Mun, Minmus and beyond count the same way. Simulated flights claim orbit only on a full success.

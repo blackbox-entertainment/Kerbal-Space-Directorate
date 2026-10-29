@@ -435,6 +435,22 @@ namespace KSA.KSP.Flight
             return _v.currentStage <= 0 || Now - _lastStage > 4;
         }
 
+        /// <summary>
+        /// True when the craft has (nearly) no delta-v left in any stage, by the stock calculator. Unlike
+        /// <see cref="NoThrustAvailable"/> this is right with the throttle closed, so coasting legs use it (2026-10-28: a
+        /// coast to apoapsis read "no engine burning" as "out of fuel" and gave up on orbit). Unknown counts as fuel left.
+        /// </summary>
+        public bool OutOfDeltaV(double minimum = 15)
+        {
+            if (_v == null) return true;
+            try
+            {
+                if (_v.VesselDeltaV == null || !_v.VesselDeltaV.IsReady) return false;
+                return _v.VesselDeltaV.TotalDeltaVVac < minimum;
+            }
+            catch { return false; }
+        }
+
         /// <summary>Lights the next stage if no engine is ignited (used before a burn after a long coast).</summary>
         public bool EnsureEngine(ref string line)
         {

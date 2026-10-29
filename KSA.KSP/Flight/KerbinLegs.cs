@@ -119,8 +119,10 @@ namespace KSA.KSP.Flight
                     break;
                 case Phases.Coast:
                     c.DropSpentStage(ref line); // a burnt-out booster does not ride along
-                    if (v.orbit.ApA < atmo + 5000 || c.NoThrustAvailable()) { State = LegState.Done; break; }
-                    if (alt > atmo && v.orbit.timeToAp < 25)
+                    // Fuel left in the tanks, not an engine burning: the throttle is closed while coasting.
+                    if (v.orbit.ApA < atmo + 5000 || c.OutOfDeltaV()) { State = LegState.Done; break; }
+                    // Burn at apoapsis, or at once if already past it (the Director handed back on the way down).
+                    if (alt > atmo && (v.orbit.timeToAp < 25 || v.verticalSpeed < 0))
                     {
                         c.Sas(VesselAutopilot.AutopilotMode.Prograde, false);
                         _phase = Phases.Circularize; _phaseStart = ctx.Now;
