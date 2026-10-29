@@ -148,7 +148,7 @@ GameData/KSA/
 | Narrative | Local model only (never cloud budget); canned text first, AI rewrite in place. Post-mortems may use the cloud. Decided 2026-10-26. |
 | Courage/Stupidity drift | Planned: slow drift with missions (stupidity down, courage up on success, down on deaths/idle). Not built yet. |
 | Interviews | Paid: 200 funds first round, +100 each further round (agency.cfg). Senior panel reveals two facts per round. Blind hiring allowed. Decided 2026-10-27. |
-| Rival agencies | Three rivals from rivals.cfg simulated each fiscal year; firsts, league table and year-over-year figures in the Analytics window. On by default (agency.cfg rivals). Decided 2026-10-27. |
+| Rival agencies | Three rivals from rivals.cfg simulated each fiscal year (since 2026-10-28 their flights are spread through the year, RivalSimulator.MissionDay; the review flies any left); firsts, league table and year-over-year figures in the Analytics window. On by default (agency.cfg rivals). Decided 2026-10-27. |
 | Flight director | KSA's own, built 2026-10-27: ascent, transfers/capture (KSA-51), landing + EVA + ascent (KSA-52), rendezvous/docking (KSA-53). Legs per mission profile (KSA.KSP/Flight), portable math in KSA.Core/Flight/Orbital.cs. Eve surface stays simulated. MechJeb optional, never copied (GPL). |
 | Crew competence in flight | The kerbals fly: pilot stars/courage/stupidity/morale set precision, margins, mistakes (agency.cfg FLIGHT_CREW). Judgement calls by trait rule or a local/API model in character (crewDecisions). Decided 2026-10-27. |
 | Department heads | Built 2026-10-27: Management-track kerbals hold Finances / Science / PR / Operations (Departments window); rank-scaled bonuses from agency.cfg DEPARTMENTS. Stock strategies untouched. |

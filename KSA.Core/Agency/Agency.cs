@@ -127,6 +127,7 @@ namespace KSA.Core
             TickRecruiting(day, notices);
             TickProjects(day, notices);
             TickLab(day, notices); // lab staff earn experience day by day (2026-10-28)
+            TickRivalMissions(notices); // rivals fly through the year, not only at its end (2026-10-28)
             if (LifeSupportOn) StrandedSuppliesTick(notices); // KSA-67: with life support the stranded run out in days, not years
             DirectorTick(); // KSA-68: the AI Director takes a turn when one is due
             return notices;

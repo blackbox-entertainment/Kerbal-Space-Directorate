@@ -65,6 +65,30 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void RivalsFlyThroughTheYearNotOnlyAtItsEnd()
+        {
+            var clock = new FakeClock();
+            Agency a = Staffed(clock, new ListLogger());
+            Assert.That(a.Settings.RivalsEnabled, Is.True);
+            int flownEarly = 0;
+            foreach (RivalAgency r in a.Rivals) flownEarly += r.Missions;
+            Assert.That(flownEarly, Is.EqualTo(0), "nobody flies on day one");
+            // Most of the way through year 1: every rival has flown at least once, before any review.
+            clock.AdvanceDays(clock.DaysPerYear * 0.8);
+            a.Tick();
+            Assert.That(a.CurrentYear, Is.EqualTo(1));
+            foreach (RivalAgency r in a.Rivals) Assert.That(r.Missions, Is.GreaterThan(0), r.Id + " has not flown by day " + a.DayOfYear);
+            // At year end each has flown exactly its year's quota, once.
+            a.ForceYearEnd();
+            foreach (RivalAgency r in a.Rivals)
+            {
+                RivalDefinition def = a.RivalDefinition(r.Id);
+                Assert.That(r.Missions, Is.EqualTo(RivalSimulator.MissionsPerYear(def)), r.Id);
+                Assert.That(r.Years.Count, Is.EqualTo(1));
+            }
+        }
+
+        [Test]
         public void PlayerClaimsAFirstWhenAheadAndLeagueRanksIt()
         {
             var clock = new FakeClock();

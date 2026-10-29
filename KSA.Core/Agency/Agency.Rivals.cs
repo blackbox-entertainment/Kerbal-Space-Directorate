@@ -72,31 +72,74 @@ namespace KSA.Core
             }
         }
 
+        /// <summary>Year end: any of the closing year's rival flights not yet flown go now, so every year is complete.</summary>
         private void TickRivals(int year, List<string> notices)
+        {
+            FlyRivalMissions(year, int.MaxValue, notices);
+        }
+
+        /// <summary>
+        /// Rivals fly through the year (2026-10-28): each one's flights are spread across the fiscal year and go as their
+        /// day comes, with firsts, notices and wire stories at the time. Called every tick with today's day of the year.
+        /// </summary>
+        private void TickRivalMissions(List<string> notices)
+        {
+            if (!State.Started) return;
+            FlyRivalMissions(CurrentYear, DayOfYear, notices);
+        }
+
+        private void FlyRivalMissions(int year, int dayOfYear, List<string> notices)
         {
             EnsureRivals();
             if (!Settings.RivalsEnabled || Rivals.Count == 0) return;
-            List<MilestoneLadder.Rung> ladder = MilestoneLadder.Build(Catalogs.Missions);
-            foreach (RivalAgency r in Rivals)
+            List<MilestoneLadder.Rung> ladder = null;
+            int dpy = Math.Max(10, Calendar.DaysPerYear);
+            for (int i = 0; i < Rivals.Count; i++)
             {
+                RivalAgency r = Rivals[i];
                 RivalDefinition def = RivalDefinition(r.Id);
                 if (def == null) continue;
-                RivalSimulator.YearOutcome o = RivalSimulator.RunYear(def, r, ladder, year, Rng);
-                foreach (string m in o.Year.Milestones)
+                if (r.FlownYear != year)
                 {
-                    if (FirstFor(m) == null)
+                    if (r.FlownYear > year) continue; // already past this year
+                    r.FlownYear = year; r.FlownCount = 0;
+                }
+                int n = RivalSimulator.MissionsPerYear(def);
+                while (r.FlownCount < n && RivalSimulator.MissionDay(r.FlownCount, n, dpy, i) <= dayOfYear)
+                {
+                    if (ladder == null) ladder = MilestoneLadder.Build(Catalogs.Missions);
+                    var milestones = new List<string>();
+                    var headlines = new List<string>();
+                    RivalSimulator.RunMission(def, r, ladder, r.YearRecord(year), Rng, milestones, headlines);
+                    r.FlownCount++;
+                    foreach (string m in milestones)
                     {
+                        if (FirstFor(m) != null) continue;
                         Firsts.Add(new FirstClaim { Achievement = m, ClaimedBy = r.Id, Year = year });
                         Push(notices, def.Name + " beat us to " + MilestoneLadder.Describe(m));
                     }
-                }
-                foreach (string h in o.Headlines)
-                {
-                    Action<string> handler = RivalNews;
-                    if (handler != null) handler(h);
-                    Publish(new NewsItem { Kind = NewsKind.Dispatch, Byline = "Wire service", Related = "rival:" + r.Id, Headline = h, Body = h + (string.IsNullOrEmpty(def.Blurb) ? string.Empty : " " + def.Blurb) }, false);
+                    foreach (string h in headlines)
+                    {
+                        Action<string> handler = RivalNews;
+                        if (handler != null) handler(h);
+                        Publish(new NewsItem { Kind = NewsKind.Dispatch, Byline = "Wire service", Related = "rival:" + r.Id, Headline = h, Body = h + (string.IsNullOrEmpty(def.Blurb) ? string.Empty : " " + def.Blurb) }, false);
+                    }
                 }
             }
+        }
+
+        /// <summary>For the Analytics window: when a rival flies next this year, or null when its year is done.</summary>
+        public string RivalNextFlight(RivalAgency r)
+        {
+            int i = Rivals.IndexOf(r);
+            RivalDefinition def = r != null ? RivalDefinition(r.Id) : null;
+            if (def == null || i < 0) return null;
+            int n = RivalSimulator.MissionsPerYear(def);
+            int flown = r.FlownYear == CurrentYear ? r.FlownCount : 0;
+            if (flown >= n) return null;
+            int day = RivalSimulator.MissionDay(flown, n, Math.Max(10, Calendar.DaysPerYear), i);
+            int wait = Math.Max(0, day - DayOfYear);
+            return "next flight in about " + wait + " day" + (wait == 1 ? "" : "s");
         }
 
         // ------------------------------------------------------------------ analytics
@@ -172,7 +215,7 @@ namespace KSA.Core
                 if (HasAgencyAchievement(rung.Achievement)) { player.Milestones++; player.LatestMilestone = MilestoneLadder.Describe(rung.Achievement); }
             foreach (FirstClaim f in Firsts) if (f.ClaimedBy == PlayerId) player.Firsts++;
             rows.Add(player);
-            foreach (RivalAgency r in Rivals)
+            if (Settings.RivalsEnabled) foreach (RivalAgency r in Rivals)
             {
                 RivalDefinition def = RivalDefinition(r.Id);
                 var row = new LeagueRow

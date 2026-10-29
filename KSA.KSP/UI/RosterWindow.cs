@@ -23,6 +23,8 @@ namespace KSA.KSP.UI
         private const float StatusWidth = 90f;
         private const float ActionWidth = 90f;
         private const float RowHeight = 22f;
+        // Taller on taller screens, so a bigger roster fits without scrolling (2026-10-28: the 7th kerbal hid below the fold).
+        private static float ListHeight { get { return Mathf.Clamp(Screen.height - 420f, 380f, 760f); } }
 
         private readonly IRosterSource _source;
         private readonly Core.ILogger _log;
@@ -69,6 +71,7 @@ namespace KSA.KSP.UI
             _dialog = null;
             d.Dismiss();
             Spawn();
+            if (_record != null && _record.IsOpen) _record.BringToFront(); // an open Service Record stays on top
         }
 
         private void Spawn()
@@ -108,13 +111,13 @@ namespace KSA.KSP.UI
             }
 
             float width = PortraitSize + KsaIcons.BadgeSize + NameWidth + RankWidth + RoleWidth + StarsWidth + MoraleWidth + StatusWidth + LabWidth + ActionWidth + 44f;
-            var list = new DialogGUIScrollList(new Vector2(width + 40f, 380f), false, true,
+            var list = new DialogGUIScrollList(new Vector2(width + 40f, ListHeight), false, true,
                 new DialogGUIVerticalLayout(false, false, 4f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft, KsaUi.Scrollable(rows)));
 
             string hint = "Click a name to open the Service Record.";
             if (agency != null && agency.State.PendingLayoffs > 0) hint += "  Layoffs required: " + agency.State.PendingLayoffs + ".";
             var content = new DialogGUIVerticalLayout(true, true, 4f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft,
-                new DialogGUILabel(hint, width, RowHeight),
+                new DialogGUILabel(hint + (crew.Count > 6 ? "  Scroll for more." : string.Empty), width, RowHeight),
                 new DialogGUILabel(_status.Length > 0 ? "<color=#ffd27f>" + _status + "</color>" : " ", width, RowHeight),
                 list,
                 new DialogGUIHorizontalLayout(true, false, 4f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleRight,
@@ -122,7 +125,7 @@ namespace KSA.KSP.UI
                     new DialogGUIButton("Close", OnCloseClicked, 80f, 28f, true)));
 
             var dialog = new MultiOptionDialog(DialogName, "", "KSA Roster (" + crew.Count + ")", KsaUi.Skin,
-                new Rect(0.5f, 0.5f, width + 70f, 540f), content);
+                new Rect(0.5f, 0.5f, width + 70f, ListHeight + 160f), content);
 
             _dialog = PopupDialog.SpawnPopupDialog(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), dialog, false, KsaUi.Skin, false);
         }

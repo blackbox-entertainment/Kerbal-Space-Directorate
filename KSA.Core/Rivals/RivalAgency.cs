@@ -70,8 +70,20 @@ namespace KSA.Core.Rivals
         /// <summary>Achievement keys ("Orbit:Kerbin") claimed so far, in order.</summary>
         public List<string> Milestones { get; } = new List<string>();
         public List<RivalYear> Years { get; } = new List<RivalYear>();
+        /// <summary>Fiscal year the in-year flights below belong to, and how many of that year's flights have flown (2026-10-28).</summary>
+        public int FlownYear { get; set; }
+        public int FlownCount { get; set; }
 
         public RivalAgency() { Id = string.Empty; }
+
+        /// <summary>The record for a year, created when its first flight goes.</summary>
+        public RivalYear YearRecord(int year)
+        {
+            foreach (RivalYear y in Years) if (y.Year == year) return y;
+            var r = new RivalYear { Year = year, Prestige = Prestige };
+            Years.Add(r);
+            return r;
+        }
 
         public bool Has(string achievement)
         {
@@ -83,6 +95,7 @@ namespace KSA.Core.Rivals
         {
             var n = new DataNode("RIVAL");
             n.AddValue("id", Id).AddValue("prestige", Prestige).AddValue("missions", Missions).AddValue("successes", Successes).AddValue("deaths", Deaths);
+            n.AddValue("flownYear", FlownYear).AddValue("flownCount", FlownCount);
             foreach (string m in Milestones) n.AddValue("milestone", m);
             foreach (RivalYear y in Years)
             {
@@ -101,7 +114,9 @@ namespace KSA.Core.Rivals
                 Prestige = n.GetDouble("prestige", 40),
                 Missions = n.GetInt("missions", 0),
                 Successes = n.GetInt("successes", 0),
-                Deaths = n.GetInt("deaths", 0)
+                Deaths = n.GetInt("deaths", 0),
+                FlownYear = n.GetInt("flownYear", 0),
+                FlownCount = n.GetInt("flownCount", 0)
             };
             r.Milestones.AddRange(n.GetValues("milestone"));
             foreach (DataNode yn in n.GetChildren("YEAR"))
@@ -176,48 +191,67 @@ namespace KSA.Core.Rivals
             public List<string> Headlines = new List<string>();
         }
 
+        /// <summary>Flights a rival makes in a fiscal year: 1 + aggression x 3.</summary>
+        public static int MissionsPerYear(RivalDefinition def) { return 1 + (int)Math.Round(def.Aggression * 3); }
+
+        /// <summary>
+        /// Day of the fiscal year a rival's k-th flight of n goes: evenly spread, each rival a little offset from the
+        /// others so they do not all fly on the same day (2026-10-28: rivals used to act only at year end).
+        /// </summary>
+        public static int MissionDay(int k, int n, int daysPerYear, int rivalIndex)
+        {
+            int spacing = daysPerYear / (n + 1);
+            int offset = ((rivalIndex * 37) % Math.Max(1, spacing / 2)) - spacing / 4;
+            int day = (k + 1) * spacing + offset;
+            return Math.Max(1, Math.Min(daysPerYear - 2, day));
+        }
+
+        /// <summary>Flies one rival mission up the ladder into the year's record; milestones and headlines are added to the lists.</summary>
+        public static void RunMission(RivalDefinition def, RivalAgency state, List<MilestoneLadder.Rung> ladder, RivalYear record, Random rng, List<string> milestones, List<string> headlines)
+        {
+            MilestoneLadder.Rung next = NextRung(state, ladder);
+            double difficulty = next != null ? next.Difficulty : 0.5;
+            double p = 0.35 + 0.4 * def.Safety + 0.15 * (state.Prestige / 100.0) - 0.3 * difficulty;
+            p = p < 0.08 ? 0.08 : (p > 0.92 ? 0.92 : p);
+            state.Missions++; record.Missions++;
+            if (rng.NextDouble() < p)
+            {
+                state.Successes++; record.Successes++;
+                state.Prestige = Math.Min(100, state.Prestige + 2);
+                if (next != null)
+                {
+                    state.Milestones.Add(next.Achievement);
+                    record.Milestones.Add(next.Achievement);
+                    milestones.Add(next.Achievement);
+                    state.Prestige = Math.Min(100, state.Prestige + 3);
+                    headlines.Add(def.Name + " completes " + MilestoneLadder.Describe(next.Achievement) + ".");
+                }
+                else headlines.Add(def.Name + " flies another successful mission.");
+            }
+            else
+            {
+                state.Prestige = Math.Max(0, state.Prestige - 3);
+                double deathChance = (1 - def.Safety) * 0.35;
+                if (rng.NextDouble() < deathChance)
+                {
+                    state.Deaths++; record.Deaths++;
+                    state.Prestige = Math.Max(0, state.Prestige - 6);
+                    headlines.Add(def.Name + " loses a crew member in a failed " + (next != null ? next.MissionName.ToLowerInvariant() : "flight") + ".");
+                }
+                else headlines.Add(def.Name + " aborts a " + (next != null ? next.MissionName.ToLowerInvariant() : "flight") + "; crew safe.");
+            }
+            record.Prestige = state.Prestige;
+        }
+
+        /// <summary>A whole year at once (tests, and catching up a year nobody ticked through).</summary>
         public static YearOutcome RunYear(RivalDefinition def, RivalAgency state, List<MilestoneLadder.Rung> ladder, int year, Random rng)
         {
             var o = new YearOutcome();
-            o.Year.Year = year;
-            int missions = 1 + (int)Math.Round(def.Aggression * 3);
-            for (int i = 0; i < missions; i++)
-            {
-                MilestoneLadder.Rung next = NextRung(state, ladder);
-                double difficulty = next != null ? next.Difficulty : 0.5;
-                double p = 0.35 + 0.4 * def.Safety + 0.15 * (state.Prestige / 100.0) - 0.3 * difficulty;
-                p = p < 0.08 ? 0.08 : (p > 0.92 ? 0.92 : p);
-                state.Missions++; o.Year.Missions++;
-                if (rng.NextDouble() < p)
-                {
-                    state.Successes++; o.Year.Successes++;
-                    state.Prestige = Math.Min(100, state.Prestige + 2);
-                    if (next != null)
-                    {
-                        state.Milestones.Add(next.Achievement);
-                        o.Year.Milestones.Add(next.Achievement);
-                        state.Prestige = Math.Min(100, state.Prestige + 3);
-                        o.Headlines.Add(def.Name + " completes " + MilestoneLadder.Describe(next.Achievement) + ".");
-                    }
-                }
-                else
-                {
-                    state.Prestige = Math.Max(0, state.Prestige - 3);
-                    double deathChance = (1 - def.Safety) * 0.35;
-                    if (rng.NextDouble() < deathChance)
-                    {
-                        state.Deaths++; o.Year.Deaths++;
-                        state.Prestige = Math.Max(0, state.Prestige - 6);
-                        o.Headlines.Add(def.Name + " loses a crew member in a failed " + (next != null ? next.MissionName.ToLowerInvariant() : "flight") + ".");
-                    }
-                    else if (rng.NextDouble() < 0.5)
-                    {
-                        o.Headlines.Add(def.Name + " aborts a " + (next != null ? next.MissionName.ToLowerInvariant() : "flight") + "; crew safe.");
-                    }
-                }
-            }
-            o.Year.Prestige = state.Prestige;
-            state.Years.Add(o.Year);
+            RivalYear record = state.YearRecord(year);
+            o.Year = record;
+            int missions = MissionsPerYear(def);
+            for (int i = 0; i < missions; i++) RunMission(def, state, ladder, record, rng, new List<string>(), o.Headlines);
+            record.Prestige = state.Prestige;
             return o;
         }
 

@@ -35,6 +35,9 @@ namespace KSA.KSP.UI
 
         public bool IsOpen { get { return _dialog != null; } }
 
+        /// <summary>Puts the record back in front (the roster rebuilds itself when portraits finish, which drew it on top; 2026-10-28).</summary>
+        public void BringToFront() { if (_dialog != null) _dialog.transform.SetAsLastSibling(); }
+
         public void Open()
         {
             if (_dialog != null) return;
