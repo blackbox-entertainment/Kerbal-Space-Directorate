@@ -23,6 +23,8 @@ namespace KSA.Core.Projects
         public int DesignDays { get; set; }
         /// <summary>AI design sessions started for this project (a rocket with no fallback template gets a few).</summary>
         public int DesignAttempts { get; set; }
+        /// <summary>Started by the AI Director; it may only cancel its own projects, never the human Director's (2026-10-28).</summary>
+        public bool ByAiDirector { get; set; }
         public int BuildDays { get; set; }
         /// <summary>Day the current phase began.</summary>
         public int PhaseStartDay { get; set; }

@@ -83,6 +83,25 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void TheAiDirectorCannotCancelTheHumanDirectorsProject()
+        {
+            var transport = new ScriptedTransport();
+            var clock = new FakeClock();
+            Agency a = Staffed(clock, transport);
+            string msg;
+            Project mine = a.CreateProject("My hop", "FleaHop", null, null, null, null, MissionMode.Simulate, out msg);
+            Assert.That(mine, Is.Not.Null, msg);
+            Assert.That(mine.ByAiDirector, Is.False);
+            transport.Replies.Enqueue(ScriptedTransport.Chat(Reply("{\"do\": \"cancel_project\", \"project\": \"" + mine.Id + "\", \"why\": \"too cheap\"}")));
+            a.SetDirector(true, out msg);
+            a.Tick();
+            Assert.That(transport.Sent, Has.Count.EqualTo(1));
+            Assert.That(transport.Sent[0].Body, Does.Contain("started by the human Director"));
+            Assert.That(mine.IsActive, Is.True, "still running");
+            Assert.That(a.DirectorLog, Has.Some.Matches<DirectorLogEntry>(e => e.Text.Contains("only they can cancel it")));
+        }
+
+        [Test]
         public void TheBriefingShowsTheCampaignLadder()
         {
             var clock = new FakeClock();

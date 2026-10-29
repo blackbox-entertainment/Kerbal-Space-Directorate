@@ -255,20 +255,31 @@ namespace KSA.Core
                         if (g == null) { message = "no such program"; return false; }
                         ProgramType t = Catalogs.ProgramTypes.Get(g.ProgramTypeId);
                         MissionType mt = t != null ? Catalogs.Missions.Get(t.ResupplyMissionType) : null;
-                        return CreateResupply(g.Id, null, mt != null ? DirectorMode(mt) : MissionMode.Simulate, out message) != null;
+                        Project rp = CreateResupply(g.Id, null, mt != null ? DirectorMode(mt) : MissionMode.Simulate, out message);
+                        if (rp != null) rp.ByAiDirector = true;
+                        return rp != null;
                     }
                 case "rescue":
                     {
                         Stranding s = GetStranding(Json.GetString(a, "stranding", ""));
                         if (s == null) { message = "no such stranding"; return false; }
                         MissionMode mode = State.DirectorFlights == DirectorFlights.Simulate ? MissionMode.Simulate : MissionMode.WatchLive;
-                        return CreateRescue(s.Id, null, mode, out message) != null;
+                        Project sp = CreateRescue(s.Id, null, mode, out message);
+                        if (sp != null) sp.ByAiDirector = true;
+                        return sp != null;
                     }
                 case "extend_program": { Program g = FindProgram(Json.GetString(a, "program", "")); if (g == null) { message = "no such program"; return false; } return ExtendProgram(g.Id, out message); }
                 case "resume_program": { Program g = FindProgram(Json.GetString(a, "program", "")); if (g == null) { message = "no such program"; return false; } return ResumeProgram(g.Id, out message); }
                 case "cancel_program": { Program g = FindProgram(Json.GetString(a, "program", "")); if (g == null) { message = "no such program"; return false; } return CancelProgram(g.Id, out message); }
                 case "evacuate": { Program g = FindProgram(Json.GetString(a, "program", "")); if (g == null) { message = "no such program"; return false; } return Evacuate(g.Id, out message); }
-                case "cancel_project": { Project p = GetProject(Json.GetString(a, "project", "")); if (p == null) { message = "no such project"; return false; } return CancelProject(p.Id, out message); }
+                case "cancel_project":
+                    {
+                        Project p = GetProject(Json.GetString(a, "project", ""));
+                        if (p == null) { message = "no such project"; return false; }
+                        // The human Director's own projects are theirs to cancel (2026-10-28).
+                        if (!p.ByAiDirector) { message = p.Name + " was started by the human Director; only they can cancel it"; return false; }
+                        return CancelProject(p.Id, out message);
+                    }
                 case "research":
                     {
                         if (ResearchHost == null) { message = "research is not available in this game mode"; return false; }
@@ -365,6 +376,7 @@ namespace KSA.Core
             Project p = CreateProject(null, type.Id, pd != null ? null : (template != null ? template.Id : null), crew, engineers, null, DirectorMode(type), out message, null, pd);
             if (p == null && (crew != null || engineers != null)) p = CreateProject(null, type.Id, pd != null ? null : (template != null ? template.Id : null), null, null, null, DirectorMode(type), out message, null, pd);
             if (p == null) return false;
+            p.ByAiDirector = true;
             message = p.Name + " started (" + (p.Mode == MissionMode.WatchLive ? "to fly live" : "simulated") + ", " + Money(p.Budget) + ")";
             return true;
         }
@@ -551,7 +563,8 @@ namespace KSA.Core
                 if (!p.IsActive) continue;
                 active++;
                 MissionType t = Catalogs.Missions.Get(p.MissionTypeId);
-                sb.AppendLine("  " + p.Id + " | " + p.Name + " | " + p.Status + (t != null ? ", " + p.DaysRemaining(CurrentDay, t.DurationDays) + " days left" : string.Empty) + " | " + (p.Mode == MissionMode.WatchLive ? "live" : "simulated"));
+                sb.AppendLine("  " + p.Id + " | " + p.Name + " | " + p.Status + (t != null ? ", " + p.DaysRemaining(CurrentDay, t.DurationDays) + " days left" : string.Empty) + " | " + (p.Mode == MissionMode.WatchLive ? "live" : "simulated")
+                    + (p.ByAiDirector ? string.Empty : " | started by the human Director: leave it running and work around it"));
             }
             if (active == 0) sb.AppendLine("  none: the agency is flying nothing. Start a mission this turn unless you cannot afford one or have no crew.");
 

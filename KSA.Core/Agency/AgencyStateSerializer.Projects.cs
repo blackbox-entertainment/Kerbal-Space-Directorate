@@ -31,6 +31,7 @@ namespace KSA.Core
                 n.AddValue("createdDay", p.CreatedDay);
                 n.AddValue("designDays", p.DesignDays);
                 n.AddValue("designAttempts", p.DesignAttempts);
+                n.AddValue("byAiDirector", p.ByAiDirector);
                 n.AddValue("buildDays", p.BuildDays);
                 n.AddValue("phaseStartDay", p.PhaseStartDay);
                 n.AddValue("launchDay", p.LaunchDay);
@@ -175,6 +176,7 @@ namespace KSA.Core
                     CreatedDay = n.GetInt("createdDay", 0),
                     DesignDays = n.GetInt("designDays", 1),
                     DesignAttempts = n.GetInt("designAttempts", 0),
+                    ByAiDirector = n.GetBool("byAiDirector", false),
                     BuildDays = n.GetInt("buildDays", 1),
                     PhaseStartDay = n.GetInt("phaseStartDay", 0),
                     LaunchDay = n.GetInt("launchDay", -1),

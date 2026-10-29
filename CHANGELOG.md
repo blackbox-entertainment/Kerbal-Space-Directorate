@@ -4,6 +4,7 @@ Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the
 
 ## Unreleased
 
+- **Your projects are safe from the AI Director:** projects you start (including custom missions) are marked as yours; the AI Director sees them as "started by the human Director" and cannot cancel them. It still runs everything else around them.
 - **KSA mission report after recovery:** a small window beside KSP's recovery screen lists what the crew and engineers earned on KSA's ladder (points, total, stars) and the Science paid. KSP's own screen only shows stock experience, which a kerbal repeating a flight does not get.
 - **Spent stages are jettisoned when empty:** once every lit engine has burnt out and the next stage only separates (no engine, no parachute), the crew drops it at once, in the coast and reentry legs too. Before, a booster that burnt past the target apoapsis rode along until the craft fell back below 70 km, which also kept the capsule from turning to retrograde.
 - **The AI design is part of the design phase:** no separate "waiting for the AI design" status and no time-warp stop; the project shows "engineers finishing the design" until they answer. A project with a fallback design builds that if the AI has not answered 2 real minutes after its design days (agency.cfg `designWaitSeconds`); the late answer is ignored.
