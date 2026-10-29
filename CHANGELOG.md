@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.5.25 (2026-10-29), twenty-sixth test build
+
+- **A real gravity turn.** The crew no longer climbs straight up to 15 km: by then a finned rocket is going 600 m/s and the air holds its nose on the path, so it could not lean and never built sideways speed. Now: straight up to 100 m/s, a small kick east (at most 5 degrees) to 150 m/s, then a curve from the ground, about 77 degrees at 1 km, 50 at 10 km, 33 at 20 km, 23 at 30 km, flat at 55 km. To keep control the nose never leans more than 10 degrees off the flight path below 20 km (8 in the thickest air), opening up as the air thins. Suborbital hops still go straight up.
+
 ## 0.5.24 (2026-10-29), twenty-fifth test build
 
 - **No cutoff while still steep.** Below 55 km, an apoapsis at target no longer ends the climb: the crew throttles back to hold it within 10% over target and keeps following the turn, so what the engine adds goes sideways. The engine cuts off once the rocket is up at the end of the turn. (A strong rocket had reached its 75 km apoapsis at about 28 km up and coasted on pointing straight up.)

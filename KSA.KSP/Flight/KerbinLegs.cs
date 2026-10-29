@@ -229,33 +229,33 @@ namespace KSA.KSP.Flight
             return double.IsInfinity(t) || double.IsNaN(t) ? 60 : Math.Min(t, 300);
         }
 
-        /// <summary>No turning below this: the thick lower air tips a rocket that leans over (2026-10-29).</summary>
-        internal const double TurnStart = 15000;
         /// <summary>The turn is flat by here; above it the rocket burns horizontally for apoapsis.</summary>
         internal const double TurnEnd = 55000;
+        /// <summary>Straight up until this surface speed, then the small kick east.</summary>
+        internal const double KickSpeed = 100;
+        /// <summary>Below this speed the kick leans at most 5 degrees off vertical.</summary>
+        internal const double KickDone = 150;
 
         /// <summary>
-        /// The ascent pitch, degrees above the horizon. Straight up (88, a touch east) to 15 km, then a turn that drops
-        /// quickly and flattens out, flat at 55 km. Above 15 km and over 150 m/s it stays close to the surface flight path while the air is thick
-        /// (within 8 degrees at 25 kPa of dynamic pressure or more), and is free to follow the program once the air is thin
-        /// (5 kPa or less). A suborbital hop climbs at 88 all the way.
+        /// The ascent pitch, degrees above the horizon: a classic gravity turn (2026-10-29, T: "fine as long as it can
+        /// maintain control"). Straight up (88, a touch east) to 100 m/s, a kick of at most 5 degrees up to 150 m/s, then a
+        /// curve from the ground, 88 x (1 - sqrt(alt / 55 km)): about 77 at 1 km, 50 at 10 km, 33 at 20 km, 23 at 30 km, flat
+        /// at 55 km. To keep control the nose never leans far off the flight path: at most 10 degrees below 20 km, 8 while the
+        /// air is thick (25 kPa or more), opening as it thins (free at 5 kPa). A suborbital hop climbs at 88 all the way.
         /// </summary>
         internal static double TargetPitch(Vessel v, bool orbit = true)
         {
+            if (!orbit) return 88;
             double alt = Math.Max(0, v.altitude);
-            // 2026-10-29: the old program leaned 5 degrees at lift-off and then followed the flight path down; a finless
-            // Suborbital hop was flying flat at 3 km. Below the turn the program holds, whatever the path does, so a rocket
-            // that drifts is pushed back upright.
-            // From 15 km the turn drops quickly at first, then flattens out: 44 degrees at 25 km, 26 at 35, 12 at 45, flat at
-            // 55 (2026-10-29: an even turn left a strong rocket steep when its apoapsis reached 75 km at about 30 km up, and the
-            // upper stage could not make up the sideways speed).
-            double program = orbit && alt > TurnStart ? Math.Max(0, 88 * (1 - Math.Sqrt(Math.Min(1, (alt - TurnStart) / (TurnEnd - TurnStart))))) : 88;
-            if (v.srfSpeed < 150 || alt <= TurnStart || !orbit) return program;
+            if (v.srfSpeed < KickSpeed) return 88;
+            // 2026-10-29: straight up to 15 km left a fast, finned rocket pointing up (fins keep the nose on the path and the
+            // pod cannot pull it over at 600 m/s), so it never built sideways speed. The turn starts low and slow instead.
+            double program = Math.Max(0, 88 * (1 - Math.Sqrt(Math.Min(1, alt / TurnEnd))));
+            if (v.srfSpeed < KickDone) return Math.Max(85, program);
             Vector3d up = v.upAxis;
             double pathPitch = 90 - Vector3d.Angle(v.srf_velocity, up);
-            // 2026-10-29: a fixed 8 degrees kept a fast rocket going straight up (the path hardly bends when the nose may
-            // lean only 8 degrees off it): Kerbin orbit coasted to 84 km at 386 m/s sideways. The band opens as the air thins.
             double band = MaxLean(v.dynamicPressurekPa);
+            if (alt < 20000) band = Math.Min(band, 10);
             return Math.Max(pathPitch - band, Math.Min(pathPitch + band, program));
         }
 
