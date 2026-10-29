@@ -48,6 +48,16 @@ if (Get-ChildItem -Recurse $stage -Filter 'ksa_settings.cfg') { throw "ksa_setti
 
 $zip = Join-Path $repo "dist\KerbalSpaceDirectorate-$version.zip"
 if (Test-Path $zip) { Remove-Item -Force $zip }
-Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zip
+# Zip with forward slashes in the entry names (2026-10-29): Windows PowerShell's Compress-Archive writes backslashes,
+# and CKAN (and anything outside Windows) then cannot find GameData/KSA inside the zip.
+Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
+$archive = [System.IO.Compression.ZipFile]::Open($zip, [System.IO.Compression.ZipArchiveMode]::Create)
+try {
+    foreach ($file in Get-ChildItem -Recurse -File $stage) {
+        $entry = $file.FullName.Substring($stage.Length + 1).Replace('\', '/')
+        [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $file.FullName, $entry, [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null
+    }
+}
+finally { $archive.Dispose() }
 Remove-Item -Recurse -Force $stage
 Write-Host "Done: $zip"
