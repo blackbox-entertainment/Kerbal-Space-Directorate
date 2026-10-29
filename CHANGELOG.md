@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.5.20 (2026-10-29), twenty-first test build
+
+- **The capsule lets go, however the rocket is staged.** Coming down over Kerbin with nothing burning, the crew now fires the decoupler nearest under the capsule directly, so everything below goes at once. Before, they only staged, and a rocket with that decoupler in the parachute stage (which the crew never fires; they arm chutes directly) came down with its top stage still on. Over other worlds only spent stages are dropped, so a lander coasting down keeps its descent engine.
+
 ## 0.5.19 (2026-10-29), twentieth test build
 
 - **A decoupler under every capsule.** The design review now turns back any crewed design whose top stage has no decoupler under the pod and its heat shield: the capsule must be able to drop its last stage before it comes home. (Stack order: pod, heat shield, decoupler, upper stage, decoupler, first stage.)

@@ -501,7 +501,9 @@ namespace KSA.KSP.Flight
             // goes, spent or not, one stage at a time (2026-10-29: a hop came down with its fuelled upper stage still on,
             // fell nose first at 837 m/s and the chutes could not save it).
             string line = null;
-            if (!_ctx.Control.DropSpentStage(ref line)) _ctx.Control.ShedForReentry(ref line);
+            // Only over the home world, where every landing is under parachutes: a lander coasting down to Duna before its
+            // landing burn keeps its descent stage.
+            if (!_ctx.Control.DropSpentStage(ref line) && v.mainBody.isHomeWorld) _ctx.Control.ShedForReentry(ref line);
             if (line != null) Log(line, null);
             double aboveGround = Math.Max(0, v.altitude - Math.Max(0, v.terrainAltitude));
             string chute = null;

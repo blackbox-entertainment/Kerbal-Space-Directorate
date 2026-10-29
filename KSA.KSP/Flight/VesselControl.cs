@@ -362,7 +362,22 @@ namespace KSA.KSP.Flight
         /// </summary>
         public bool ShedForReentry(ref string line)
         {
-            if (_v == null || _v.currentStage <= 0 || Now - _lastStage < 1.5) return false;
+            if (_v == null || Now - _lastStage < 1.5) return false;
+            // The decoupler nearest under the capsule, fired directly: everything below goes at once, whatever stage it
+            // was put in (2026-10-29: a Director's rocket had it in the parachute stage, which the crew never fires).
+            ModuleDecouple under = DecouplerUnderCapsule();
+            if (under != null)
+            {
+                try
+                {
+                    under.Decouple();
+                    _lastStage = Now;
+                    line = "Decoupled everything below the capsule for the descent.";
+                    return true;
+                }
+                catch (Exception e) { KsaCore.Log.Warn("Decoupling under the capsule failed: " + e.Message); }
+            }
+            if (_v.currentStage <= 0) return false;
             int next = _v.currentStage - 1;
             bool decoupler = false;
             foreach (Part p in _v.parts)
@@ -376,6 +391,28 @@ namespace KSA.KSP.Flight
             Stage();
             line = "Staged away everything below the capsule for the descent.";
             return true;
+        }
+
+        /// <summary>
+        /// The unfired stack decoupler closest below a crewed part (not a heat shield's own), or null when the capsule has
+        /// nothing under it to let go of.
+        /// </summary>
+        private ModuleDecouple DecouplerUnderCapsule()
+        {
+            ModuleDecouple best = null;
+            int bestHops = int.MaxValue;
+            foreach (Part p in _v.parts)
+            {
+                if (p.FindModuleImplementing<ModuleAblator>() != null) continue;
+                ModuleDecouple d = p.FindModuleImplementing<ModuleDecouple>();
+                if (d == null || d.isDecoupled) continue;
+                int hops = 0;
+                Part up = p.parent;
+                while (up != null && up.CrewCapacity == 0 && hops < 50) { up = up.parent; hops++; }
+                if (up == null || up.CrewCapacity == 0) continue; // not under a crew part
+                if (hops < bestHops) { bestHops = hops; best = d; }
+            }
+            return best;
         }
 
         private static bool HasPropellant(ModuleEngines e)
