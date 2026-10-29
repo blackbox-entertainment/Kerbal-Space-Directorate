@@ -101,15 +101,27 @@ namespace KSA.KSP.Flight
                         if (off > 25) { if (_offSince < 0) _offSince = ctx.Now; } else _offSince = -1;
                         if (_offSince > 0 && ctx.Now - _offSince > 3 && c.DropSideBoosters(ref line)) _offSince = -1;
                     }
-                    if (v.orbit.ApA >= _targetAp)
+                    // Below the end of the turn, an apoapsis at target is no reason to stop (2026-10-29: a strong rocket
+                    // reached 75 km of apoapsis at about 28 km up, cut off still steep, and the upper stage could not make
+                    // up the sideways speed). The crew throttles back to hold the apoapsis within 10% over target and
+                    // keeps following the turn, so the speed it adds goes sideways. Cutoff once level at the end of the turn.
+                    bool holding = _orbit && alt < TurnEnd && v.orbit.ApA >= _targetAp;
+                    if (holding)
+                    {
+                        c.Throttle = (float)Math.Max(0, Math.Min(1, (_targetAp * 1.1 - v.orbit.ApA) / (_targetAp * 0.1)));
+                        Status = "Gravity turn: pitch " + Math.Round(TargetPitch(v, _orbit)) + " deg, holding apoapsis at " + Math.Round(v.orbit.ApA / 1000) + " km (throttle " + Math.Round(c.Throttle * 100) + "%).";
+                    }
+                    else if (_orbit && c.Throttle < 1f && v.orbit.ApA < _targetAp) c.Throttle = 1f;
+                    if (v.orbit.ApA >= _targetAp && !holding)
                     {
                         c.Throttle = 0;
                         _phase = Phases.Coast; _phaseStart = ctx.Now;
                         Status = "Coasting to apoapsis.";
                         line = "Main engine cutoff; apoapsis " + Math.Round(v.orbit.ApA / 1000) + " km.";
                         if (!_orbit) State = LegState.Done;
+                        else { c.PointAlong(() => Horizontal(v)); _pointedFlat = true; } // start swinging round to the horizon now
                     }
-                    else if (c.NoThrustAvailable())
+                    else if (c.Throttle > 0.05f && c.NoThrustAvailable())
                     {
                         _phase = Phases.Coast; _phaseStart = ctx.Now;
                         Status = "Out of propellant; coasting.";
@@ -127,6 +139,7 @@ namespace KSA.KSP.Flight
                         // the burn followed prograde, which still pointed mostly up, and raised the apoapsis instead of
                         // the periapsis). Light the next engine ahead of the burn so its length can be worked out.
                         if (!_pointedFlat) { c.PointAlong(() => Horizontal(v)); _pointedFlat = true; }
+                        LogAttitude(ctx, "coast");
                         if (v.orbit.timeToAp < 120) c.EnsureEngine(ref line);
                         double halfBurn = CircularizeBurnTime(v, c) / 2;
                         Status = "Coasting to apoapsis; circularisation burn in " + Math.Max(0, Math.Round(v.orbit.timeToAp - halfBurn)) + " s.";
@@ -134,15 +147,24 @@ namespace KSA.KSP.Flight
                         if (v.orbit.timeToAp <= Math.Max(5, halfBurn) || v.verticalSpeed < 0)
                         {
                             _phase = Phases.Circularize; _phaseStart = ctx.Now;
-                            Status = "Circularising."; c.Throttle = 1f;
+                            Status = "Circularising.";
                             c.EnsureEngine(ref line);
                             line = line ?? "Circularisation burn, " + Math.Round(CircularizeDeltaV(v)) + " m/s along the horizon.";
                         }
                     }
                     break;
                 case Phases.Circularize:
-                    c.AutoStage(ref line);
                     if (!c.ManualAttitude) c.PointAlong(() => Horizontal(v));
+                    LogAttitude(ctx, "circularise");
+                    {
+                        // Burn only with the nose on the horizon: thrust while still pointing up only raises the apoapsis
+                        // (2026-10-29: a gimbal-less upper stage burned straight up to a 2,000 km apoapsis).
+                        double offFlat = c.AttitudeError(Horizontal(v));
+                        bool aligned = offFlat < 15;
+                        c.Throttle = v.orbit.PeA > atmo + 2000 ? 0f : aligned ? 1f : 0f;
+                        if (!aligned) Status = "Circularising: turning to the horizon (" + Math.Round(offFlat) + " deg to go).";
+                        else { Status = "Circularising."; c.AutoStage(ref line); }
+                    }
                     if (v.orbit.PeA > atmo + 2000)
                     {
                         c.Throttle = 0;
@@ -151,7 +173,7 @@ namespace KSA.KSP.Flight
                         // Let the game flip the situation to ORBITING before the next leg looks at it.
                         if (v.situation == Vessel.Situations.ORBITING || ctx.Now - _cutoff > 3) State = LegState.Done;
                     }
-                    else if (c.NoThrustAvailable())
+                    else if (c.Throttle > 0.05f && c.NoThrustAvailable())
                     {
                         Status = "Out of propellant before circular orbit.";
                         line = "Propellant exhausted during circularisation.";
@@ -165,6 +187,20 @@ namespace KSA.KSP.Flight
         public void End(FlightContext ctx) { ctx.Control.Yaw = 0; }
 
         private bool _pointedFlat;
+        private double _lastAttitudeLog = -1;
+
+        /// <summary>Every 10 s in the log: how far the nose is from the horizon and how fast it turns (2026-10-29).</summary>
+        private void LogAttitude(FlightContext ctx, string what)
+        {
+            if (ctx.Now - _lastAttitudeLog < 10) return;
+            _lastAttitudeLog = ctx.Now;
+            Vessel v = ctx.Vessel;
+            double off = ctx.Control.AttitudeError(Horizontal(v));
+            double spin = v.angularVelocity.magnitude * 180 / Math.PI;
+            KsaCore.Log.Info("Ascent " + what + ": nose " + Math.Round(off) + " deg from the horizon, turning " + Math.Round(spin, 1) + " deg/s, SAS "
+                + (v.ActionGroups[KSPActionGroup.SAS] ? "on" : "off") + (ctx.Control.ManualAttitude ? ", crew steering by hand" : ", stock hold")
+                + ", pitch input " + ctx.Control.Pitch.ToString("0.00") + ", yaw input " + ctx.Control.Yaw.ToString("0.00") + ", alt " + Math.Round(v.altitude / 1000, 1) + " km, apoapsis in " + Math.Round(v.orbit.timeToAp) + " s");
+        }
 
         /// <summary>Along the horizon in the direction of travel: the orbital velocity with its up-down part taken out.</summary>
         internal static Vector3d Horizontal(Vessel v)

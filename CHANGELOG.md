@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.5.24 (2026-10-29), twenty-fifth test build
+
+- **No cutoff while still steep.** Below 55 km, an apoapsis at target no longer ends the climb: the crew throttles back to hold it within 10% over target and keeps following the turn, so what the engine adds goes sideways. The engine cuts off once the rocket is up at the end of the turn. (A strong rocket had reached its 75 km apoapsis at about 28 km up and coasted on pointing straight up.)
+- **The circularisation burn waits for the nose.** The crew starts turning to the horizon at cutoff and opens the throttle only when the nose is within 15 degrees of it: a rocket with no engine gimbal turns only on its pod's reaction wheel, and burning while still pointing up only raised the apoapsis, to 2,000 km on one flight. The log now records every 10 s how far the nose is from the horizon and how fast it is turning.
+
 ## 0.5.23 (2026-10-29), twenty-fourth test build
 
 - **A sharper turn.** Still straight up to 15 km, then a turn that drops quickly and flattens out (44 degrees at 25 km, 26 at 35, 12 at 45, flat at 55) instead of an even one. A strong rocket reached its 75 km apoapsis at about 30 km up while still steep, and the upper stage could not make up the sideways speed.
