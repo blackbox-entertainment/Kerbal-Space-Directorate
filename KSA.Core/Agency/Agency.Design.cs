@@ -48,6 +48,29 @@ namespace KSA.Core
 
         public bool DesignInProgress(string projectId) { return projectId != null && _designsInFlight.Contains(projectId); }
 
+        private readonly HashSet<string> _designsAbandoned = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// The host gave up waiting on a slow AI answer (2026-10-28: a local model can take minutes of real time while time
+        /// warp runs the design days out in seconds). With a fallback design the project goes on with it and the late
+        /// answer is ignored; without one the wait continues, since there is nothing else to fly. True when it gave up.
+        /// </summary>
+        public bool AbandonSlowDesign(string projectId, string why)
+        {
+            Project p = GetProject(projectId);
+            if (p == null || !WaitingForAiDesign(p) || NeedsAiDesign(p)) return false;
+            _designsInFlight.Remove(p.Id);
+            _designsAbandoned.Add(p.Id);
+            if (p.Design != null) { p.Design.Verdict = DesignVerdict.Failed; p.Design.Error = why; }
+            p.Notes.Add("The AI design took too long (" + why + "); building the fallback design " + Catalogs.Templates.NameOf(p.TemplateId) + ".");
+            Push(null, p.Name + ": the AI design took too long; building the fallback design");
+            var notices = new List<string>();
+            TickProjects(CurrentDay, notices);
+            foreach (string n in notices) Push(null, n);
+            RaiseProjectChanged(p);
+            return true;
+        }
+
         /// <summary>The design days are over but the AI engineering team has not answered yet: the project waits on it.</summary>
         public bool WaitingForAiDesign(Project p)
         {
@@ -336,6 +359,7 @@ namespace KSA.Core
             {
                 Project live = GetProject(projectId);
                 record.PartsResearched = partsNow;
+                if (_designsAbandoned.Contains(projectId)) return; // given up on: leave the record alone
                 if (live != null) live.Design = record;
                 if (!endpoint.IsLocal) Costs.Record(CurrentDay, EstimateCost(record));
             };
@@ -360,6 +384,7 @@ namespace KSA.Core
 
         private void FinishDesign(string projectId, DesignRecord record)
         {
+            if (_designsAbandoned.Remove(projectId)) { Log.Info("Late AI design for " + projectId + " ignored: the project went on with its fallback design."); return; }
             _designsInFlight.Remove(projectId);
             Project p = GetProject(projectId);
             if (p == null) return;

@@ -309,24 +309,32 @@ namespace KSA.KSP
             public Core.Parts.PartInfo Get(string name) { return KspPartCatalog.Current.Get(name); }
         }
 
-        /// <summary>Experience moved a kerbal's Courage or Stupidity: the stock kerbal follows (shown in the Astronaut Complex).</summary>
-        private static readonly HashSet<string> _warpHeldFor = new HashSet<string>();
-
         /// <summary>
-        /// Called every frame: when a project's design days are over and the AI engineering team is still thinking,
-        /// drops out of time warp once for that project, so a few seconds of AI do not cost months of game time.
+        /// Called every frame: when a project's design days are over and the AI engineering team is still thinking, the
+        /// project stays in design; after designWaitSeconds of real time one with a fallback design builds that instead.
         /// </summary>
+        private static readonly Dictionary<string, float> _designWaitSince = new Dictionary<string, float>();
+
         public static void HoldWarpForDesigns()
         {
-            if (Agency == null || TimeWarp.CurrentRate <= 1.01f) return;
+            if (Agency == null) return;
+            // Give up on a slow AI answer after designWaitSeconds of real time, when there is a fallback design (2026-10-28).
+            float now = UnityEngine.Time.realtimeSinceStartup;
+            int limit = Agency.Settings.DesignWaitSeconds;
             foreach (Project p in Agency.Projects)
             {
-                if (!Agency.WaitingForAiDesign(p) || _warpHeldFor.Contains(p.Id)) continue;
-                _warpHeldFor.Add(p.Id);
-                TimeWarp.SetRate(0, true);
-                ScreenMessages.PostScreenMessage("[KSA] " + p.Name + ": waiting for the AI design. Time warp stopped; it continues when the design is in.", 6f, ScreenMessageStyle.UPPER_CENTER);
-                return;
+                if (!Agency.WaitingForAiDesign(p)) { _designWaitSince.Remove(p.Id); continue; }
+                float since;
+                if (!_designWaitSince.TryGetValue(p.Id, out since)) { _designWaitSince[p.Id] = now; continue; }
+                if (limit > 0 && now - since > limit && Agency.AbandonSlowDesign(p.Id, "no answer after " + limit + " s"))
+                {
+                    _designWaitSince.Remove(p.Id);
+                    Log.Warn(p.Name + ": AI design abandoned after " + limit + " s; flying the fallback design");
+                    break; // the project list may have changed
+                }
             }
+            // Time warp is no longer stopped for a design (2026-10-28): the engineers' AI work is simply part of the design
+            // phase, which stays "in design" until they answer or the wait above runs out.
         }
 
         /// <summary>Science the agency earned (lab, simulated missions, colonies) goes into the stock R&D pool, where the tech tree spends it.</summary>

@@ -137,7 +137,7 @@ namespace KSA.KSP.UI
                     new DialogGUILabel("<b>" + p.Name + "</b>  (" + p.Id + ")", 260f, LineHeight),
                     new DialogGUILabel(() =>
                     {
-                        if (_agency.WaitingForAiDesign(live)) return typeName + "  |  " + StatusText(live.Status) + "  |  <color=#ffd27f>waiting for the AI design</color>";
+                        if (_agency.WaitingForAiDesign(live)) return typeName + "  |  " + StatusText(live.Status) + "  |  engineers finishing the design";
                         int d = live.DaysRemaining(_agency.CurrentDay, duration);
                         return typeName + "  |  " + StatusText(live.Status) + "  |  " + d + " day" + (d == 1 ? "" : "s") + " left";
                     }, textWidth - 266f, LineHeight)));

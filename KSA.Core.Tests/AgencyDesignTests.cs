@@ -331,6 +331,40 @@ namespace KSA.Core.Tests
             Assert.That(a.MissionBlocker(orbit), Is.Null, "new research: worth another try");
         }
 
+        private sealed class HangingTransport : KSA.Core.Ai.ILlmTransport
+        {
+            public System.Action<KSA.Core.Ai.LlmResponse> Pending;
+            public void Send(KSA.Core.Ai.LlmRequest request, System.Action<KSA.Core.Ai.LlmResponse> callback) { Pending = callback; }
+        }
+
+        [Test]
+        public void ASlowAiDesignIsAbandonedForTheFallbackAndItsLateAnswerIgnored()
+        {
+            var clock = new FakeClock();
+            Agency a = Staffed(clock, new ListLogger());
+            var transport = new HangingTransport();
+            a.Ai = new AiSettings { DesignMode = DesignMode.Api, ApiKey = "sk-test", DesignModel = "test/model", MaxCallsPerDay = 50, MonthlySpendCapUsd = 5 };
+            a.Transport = transport;
+            a.Parts = TestParts.Catalog();
+            a.Requirements = MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
+            string msg;
+            Project p = a.CreateProject("Orbit", "KerbinOrbit", null, null, null, null, MissionMode.Simulate, out msg);
+            Assert.That(p, Is.Not.Null, msg);
+            clock.AdvanceDays(p.DesignDays + 1);
+            a.Tick();
+            Assert.That(a.WaitingForAiDesign(p), Is.True, "design days over, the engineers still thinking");
+            Assert.That(p.Status, Is.EqualTo(ProjectStatus.Design));
+
+            Assert.That(a.AbandonSlowDesign(p.Id, "no answer after 120 s"), Is.True);
+            Assert.That(p.Status, Is.EqualTo(ProjectStatus.Build), "the fallback design is built");
+            Assert.That(a.DesignNameOf(p), Does.Not.EndWith("(AI)"));
+
+            // The late answer changes nothing.
+            transport.Pending(ScriptedTransport.Chat(TestParts.GoodOrbitPlan()));
+            Assert.That(p.Design.Verdict, Is.EqualTo(DesignVerdict.Failed));
+            Assert.That(p.Status, Is.EqualTo(ProjectStatus.Build));
+        }
+
         [Test]
         public void ANoTemplateProjectRetriesItsDesignThenIsCalledOffWithItsMoneyBack()
         {
