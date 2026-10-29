@@ -130,6 +130,7 @@ namespace KSA.Core
                 req.MustCarry.Add("at least one drill and one ore converter (Industry parts) and a power source (solar panels or an RTG): this module makes the base self-sufficient, and it stays on the surface.");
                 if (LifeSupportOn) req.MustCarry.Add("at least one greenhouse (" + LifeSupportMod + " LifeSupport part) to grow food for the residents.");
             }
+            AddParachute(type, p, req);
             AddScienceInstruments(req);
             AddHeatShield(type, req);
             AddAntenna(type, req);
@@ -236,6 +237,52 @@ namespace KSA.Core
             req.MustInclude.Add(new KeyValuePair<string, List<string>>("a battery or power source", power));
         }
 
+        /// <summary>
+        /// Every crew that comes home lands under parachutes (2026-10-28: an AI design with no chute killed its pilot). Base
+        /// modules that stay on another world are left out. Checked by the design review, not only asked for.
+        /// </summary>
+        private void AddParachute(MissionType type, Project p, DesignRequest req)
+        {
+            if (Parts == null || type == null || type.CrewSize <= 0) return;
+            if (type.Profile == MissionProfile.Base || (p != null && string.Equals(p.ModuleRole, "industry", StringComparison.OrdinalIgnoreCase))) return;
+            var chutes = new List<string>();
+            foreach (PartInfo part in Parts.All)
+            {
+                if (part.Kind != PartKind.Parachute || (part.RequiresDlc && !AllowDlcParts)) continue;
+                if (!req.AllowedParts.Exists(x => x.Name == part.Name)) req.AllowedParts.Add(part);
+                chutes.Add(part.Name);
+            }
+            if (chutes.Count == 0) return;
+            req.MustCarry.Add("a parachute, as a payload extra on top of the crew pod: " + string.Join(", ", chutes.ToArray()) + ". The crew comes home and lands under it; without one the landing kills them. Add a second for heavy pods.");
+            req.MustInclude.Add(new KeyValuePair<string, List<string>>("a parachute for landing", chutes));
+        }
+
+        /// <summary>
+        /// A design that already flew this mission successfully is used again instead of a new one (2026-10-28), until new
+        /// parts are researched or the Director asks for a redesign. Returns true when one was reused.
+        /// </summary>
+        private bool TryReuseDesign(Project p)
+        {
+            if (p == null) return false;
+            int parts = Parts != null ? Parts.All.Count : 0;
+            Project best = null;
+            foreach (Project q in Projects)
+            {
+                if (q == p || q.MissionTypeId != p.MissionTypeId || q.ModuleRole != p.ModuleRole) continue;
+                if (q.Report == null || !q.Report.IsSuccess || !HasApprovedDesign(q) || string.IsNullOrEmpty(q.Design.PlanJson)) continue;
+                if (Parts != null && q.Design.PartsResearched != parts) continue; // new parts since: worth a fresh look
+                if (best == null || q.EndDay > best.EndDay) best = q;
+            }
+            if (best == null) return false;
+            DesignRecord copy = DesignRecord.FromDataNode(best.Design.ToDataNode());
+            copy.CraftPath = string.Empty; // the build writes this project's own craft
+            p.Design = copy;
+            p.DesignDays = Math.Max(1, p.DesignDays / 4);
+            p.Notes.Add("Reusing the proven design '" + copy.DesignName + "' from " + best.Id + " (it flew this mission successfully). Design Review > Redesign asks for a new one.");
+            Log.Info(p.Name + ": reusing design '" + copy.DesignName + "' from " + best.Id);
+            return true;
+        }
+
         /// <summary>Post-mortem lines from earlier flights of the same body/profile, oldest first.</summary>
         public List<string> Lessons(MissionType type, int max)
         {
@@ -277,7 +324,8 @@ namespace KSA.Core
             var session = new DesignSession(new LlmClient(Transport, Log), endpoint, Parts, Log, LaunchGravity);
             _designsInFlight.Add(p.Id);
             p.DesignAttempts++;
-            p.Design = new DesignRecord { Source = DesignSource.Ai, Verdict = DesignVerdict.Pending, PassesAllowed = passes, Model = endpoint.Model };
+            int partsNow = Parts != null ? Parts.All.Count : 0;
+            p.Design = new DesignRecord { Source = DesignSource.Ai, Verdict = DesignVerdict.Pending, PassesAllowed = passes, Model = endpoint.Model, PartsResearched = partsNow };
             p.Notes.Add("Engineering team (" + (lead != null ? lead.Name : "no lead") + ") requested an AI design via " + endpoint.Provider + " / " + endpoint.Model + ", up to " + passes + " pass(es).");
             Log.Info("Design session started for " + p.Name + " (" + passes + " passes, " + request.AllowedParts.Count + " parts offered)");
             Action<Project> started = DesignStarted;
@@ -287,10 +335,11 @@ namespace KSA.Core
             session.PassCompleted += record =>
             {
                 Project live = GetProject(projectId);
+                record.PartsResearched = partsNow;
                 if (live != null) live.Design = record;
                 if (!endpoint.IsLocal) Costs.Record(CurrentDay, EstimateCost(record));
             };
-            session.Run(request, passes, record => FinishDesign(projectId, record));
+            session.Run(request, passes, record => { record.PartsResearched = partsNow; FinishDesign(projectId, record); });
             return true;
         }
 
@@ -340,6 +389,12 @@ namespace KSA.Core
             foreach (string n in notices) Push(null, n);
         }
 
+        /// <summary>
+        /// Missions the engineers gave up on, with the number of parts researched at the time (2026-10-28). The mission stays
+        /// shut, and the AI Director stops retrying it, until something new is researched. Saved.
+        /// </summary>
+        public Dictionary<string, int> NoDesignAt { get; } = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
         /// <summary>Design attempts the engineering team gets on a rocket with no fallback template before the project is called off.</summary>
         public const int MaxAiDesignAttempts = 3;
 
@@ -373,6 +428,8 @@ namespace KSA.Core
             string why = p.DesignAttempts >= MaxAiDesignAttempts
                 ? "the engineering team could not design a rocket that does the job with the parts researched (" + p.DesignAttempts + " attempts)"
                 : "AI design is not available (AI Setup) and there is no fallback design";
+            // Remember it, so the mission stays shut (and the AI Director stops retrying it) until new parts are researched.
+            if (p.DesignAttempts >= MaxAiDesignAttempts && Parts != null) NoDesignAt[p.MissionTypeId] = Parts.All.Count;
             double refund = Math.Round(p.Budget);
             if (refund > 0) Ledger.Deposit(refund, LedgerCategory.Cancellation, "Called off " + p.Name, CurrentDay, CurrentYear);
             ReleaseStaff(p);

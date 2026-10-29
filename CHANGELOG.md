@@ -4,6 +4,9 @@ Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the
 
 ## Unreleased
 
+- **Every crewed design must carry a parachute.** An AI design with no chute was approved and its pilot died on landing; the design review now rejects a plan without one (base modules that stay on another world excepted).
+- **Proven designs are reused.** A new project for a mission that a past AI design flew successfully reuses that design (design phase a quarter as long, no AI call), until new parts are researched or Design Review asks for a redesign.
+- **Called-off missions stay shut** until something new is researched, so neither you nor the AI Director keeps paying for designs that cannot work; the Finished list says "called off: no workable design (budget returned)" instead of "cancelled".
 - **Flight toolbar button:** the KSD button on the flight toolbar shows or hides the Flight Director window; the crew keeps flying either way, and a pad offer still appears.
 - **Fixed: a rocket's main booster could get no stage.** The craft builder decided what was an engine from the researched-parts list; when a part was missing from it (the Hammer on the Hammer-Flea), it was stacked unlit, the first stage fired the decoupler above it, and the flight topped out at 4 km. Engines are now recognised from the part itself, and fins no longer claim an empty stage.
 

@@ -256,6 +256,82 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void ACrewedDesignMustCarryAParachute()
+        {
+            var clock = new FakeClock();
+            Agency a = Staffed(clock, new ListLogger());
+            var transport = new ScriptedTransport();
+            transport.Fallback = ScriptedTransport.Chat(TestParts.WeakPlan());
+            EnableAi(a, transport);
+            string msg;
+            Project p = a.CreateProject("Orbit", "KerbinOrbit", null, null, null, null, MissionMode.Simulate, out msg);
+            Assert.That(p, Is.Not.Null, msg);
+            DesignRequest req = a.BuildDesignRequest(p);
+            Assert.That(req.MustInclude.Exists(r => r.Key.Contains("parachute") && r.Value.Contains("parachuteSingle")));
+            StagePlan plan; string error;
+            Assert.That(StagePlan.TryParse(TestParts.GoodOrbitPlan(), out plan, out error), Is.True, error);
+            Assert.That(DesignSession.MissingMustInclude(plan, req), Has.None.Contains("parachute"));
+            plan.Payload.Extras.Remove("parachuteSingle");
+            Assert.That(DesignSession.MissingMustInclude(plan, req), Has.Some.Contains("parachute"), "no chute, no approval (a pilot died, 2026-10-28)");
+        }
+
+        [Test]
+        public void AProvenDesignIsReusedUntilNewPartsAreResearched()
+        {
+            var clock = new FakeClock();
+            Agency a = Staffed(clock, new ListLogger());
+            var transport = new ScriptedTransport();
+            transport.Replies.Enqueue(ScriptedTransport.Chat(TestParts.GoodOrbitPlan()));
+            transport.Fallback = ScriptedTransport.Chat(TestParts.WeakPlan());
+            EnableAi(a, transport);
+            string msg;
+            Project first = a.CreateProject("Orbit 1", "KerbinOrbit", null, null, null, null, MissionMode.Simulate, out msg);
+            Assert.That(first.Design.Verdict, Is.EqualTo(DesignVerdict.Approved));
+            Assert.That(a.CancelProject(first.Id, out msg), Is.True, msg); // frees the crew; pretend it flew well
+            first.Report = new MissionReport { MissionTypeId = "KerbinOrbit", Outcome = MissionOutcome.Success };
+            int calls = transport.Sent.Count;
+
+            Project second = a.CreateProject("Orbit 2", "KerbinOrbit", null, null, null, null, MissionMode.Simulate, out msg);
+            Assert.That(second, Is.Not.Null, msg);
+            Assert.That(second.Design.Verdict, Is.EqualTo(DesignVerdict.Approved));
+            Assert.That(second.Design.DesignName, Is.EqualTo(first.Design.DesignName));
+            Assert.That(second.Notes, Has.Some.StartsWith("Reusing the proven design"));
+            Assert.That(transport.Sent.Count, Is.EqualTo(calls), "no new AI call for a proven design");
+
+            // New parts researched: the team takes a fresh look.
+            Assert.That(a.CancelProject(second.Id, out msg), Is.True, msg);
+            ((PartCatalog)a.Parts).Add(new PartInfo { Name = "newTank", Title = "New tank", Kind = PartKind.Tank, Mass = 0.1 });
+            Project third = a.CreateProject("Orbit 3", "KerbinOrbit", null, null, null, null, MissionMode.Simulate, out msg);
+            Assert.That(third.Notes, Has.None.StartsWith("Reusing the proven design"));
+        }
+
+        [Test]
+        public void ACalledOffMissionStaysShutUntilSomethingNewIsResearched()
+        {
+            var clock = new FakeClock();
+            Agency a = Staffed(clock, new ListLogger());
+            a.TemplateCheck = t => "needs parts not researched";
+            var transport = new ScriptedTransport();
+            transport.Fallback = ScriptedTransport.Chat(TestParts.WeakPlan());
+            EnableAi(a, transport);
+            string msg;
+            Project p = a.CreateProject("Too hard", "KerbinOrbit", null, null, null, null, MissionMode.Simulate, out msg);
+            for (int i = 0; i < 4; i++) { clock.AdvanceDays(p.DesignDays + 1); a.Tick(); }
+            Assert.That(p.Status, Is.EqualTo(ProjectStatus.Cancelled));
+            KSA.Core.Missions.MissionType orbit = a.Catalogs.Missions.Get("KerbinOrbit");
+            Assert.That(a.MissionBlocker(orbit), Does.Contain("no workable design"));
+
+            var store = new MemoryPersistence();
+            a.Save(store);
+            Agency b = Make.Agency(clock, new ListLogger());
+            b.Load(store);
+            Assert.That(b.NoDesignAt.ContainsKey("KerbinOrbit"), Is.True, "remembered across a save");
+
+            ((PartCatalog)a.Parts).Add(new PartInfo { Name = "newEngine", Title = "New engine", Kind = PartKind.Engine, Mass = 0.5, Thrust = 60 });
+            Assert.That(a.MissionBlocker(orbit), Is.Null, "new research: worth another try");
+        }
+
+        [Test]
         public void ANoTemplateProjectRetriesItsDesignThenIsCalledOffWithItsMoneyBack()
         {
             var clock = new FakeClock();

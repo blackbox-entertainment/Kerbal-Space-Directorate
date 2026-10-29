@@ -85,7 +85,13 @@ namespace KSA.Core
             if (anyBuildable) return null;
             // With AI design on, the engineering team designs the rocket: templates are only the AI-off fallback
             // (2026-10-28), so the researched part kinds decide.
-            if (AiDesignAvailable) return PartKindsBlocker(type);
+            if (AiDesignAvailable)
+            {
+                int known;
+                if (Parts != null && NoDesignAt.TryGetValue(type.Id, out known) && known == Parts.All.Count)
+                    return "has no workable design yet: the engineers tried and could not make one with today's parts (research something new)";
+                return PartKindsBlocker(type);
+            }
             // Every project needs a design it can fall back on (an AI design that comes up short flies the template),
             // so a mission whose templates are all locked is locked, whatever part kinds are researched (fixed 2026-10-28:
             // Kerbin orbit showed as open and every start was refused).

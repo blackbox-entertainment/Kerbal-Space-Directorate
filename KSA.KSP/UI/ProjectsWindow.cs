@@ -529,6 +529,8 @@ namespace KSA.KSP.UI
             {
                 string id = p.Id;
                 string outcome = p.Report != null ? Agency.OutcomeText(p.Report.Outcome) : StatusText(p.Status);
+                if (p.Report == null && p.Status == ProjectStatus.Cancelled && p.Notes.Exists(n => n.StartsWith("Called off")))
+                    outcome = "<color=#ffd27f>called off: no workable design with the parts researched (budget returned)</color>";
                 items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
                     new DialogGUISpace(16f),
                     new DialogGUIButton("Design", () => OpenDesignReview(id), 90f, ButtonHeight, false),

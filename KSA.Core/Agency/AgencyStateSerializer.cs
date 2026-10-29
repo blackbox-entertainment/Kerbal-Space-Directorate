@@ -36,6 +36,7 @@ namespace KSA.Core
             st.AddValue("scienceEarned", s.ScienceEarned);
             st.AddValue("scienceCredited", s.ScienceCredited);
             st.AddValue("lastLaunchDay", s.LastLaunchDay);
+            foreach (KeyValuePair<string, int> kv in agency.NoDesignAt) st.AddValue("noDesign", kv.Key + "|" + kv.Value);
             st.AddValue("systemColonized", s.SystemColonized);
             st.AddValue("nextStranding", s.NextStrandingNumber);
             st.AddValue("hiringFreeze", s.HiringFreeze);
@@ -223,6 +224,12 @@ namespace KSA.Core
                 s.ScienceEarned = st.GetDouble("scienceEarned", 0);
                 s.ScienceCredited = st.GetDouble("scienceCredited", 0);
                 s.LastLaunchDay = st.GetInt("lastLaunchDay", -1);
+                agency.NoDesignAt.Clear();
+                foreach (string v in st.GetValues("noDesign"))
+                {
+                    int bar = v.LastIndexOf('|'); int count;
+                    if (bar > 0 && int.TryParse(v.Substring(bar + 1), out count)) agency.NoDesignAt[v.Substring(0, bar)] = count;
+                }
                 s.SystemColonized = st.GetBool("systemColonized", false);
                 s.NextStrandingNumber = st.GetInt("nextStranding", 1);
                 s.HiringFreeze = st.GetBool("hiringFreeze", false);

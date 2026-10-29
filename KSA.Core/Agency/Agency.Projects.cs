@@ -224,7 +224,7 @@ namespace KSA.Core
             RaiseProjectChanged(project);
             PublishProjectStart(project, type);
             if (template == null) project.Notes.Add("No fallback design: the engineering team designs this rocket from scratch.");
-            StartDesign(project, null);
+            if (!TryReuseDesign(project)) StartDesign(project, null);
             return project;
         }
 
