@@ -37,6 +37,23 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void ASuborbitalHopCountsOnlyIfItReachedSpace()
+        {
+            MissionType hop = ShippedConfigs.Missions().Get("SuborbitalHop");
+            var crew = new List<string> { "Jeb Kerman" };
+            var high = new LiveFlightResult { Recovered = true, MaxAltitude = 85000, SpaceAltitude = 70000 };
+            high.Achievements.Add("Flight:Kerbin"); high.Achievements.Add("Suborbit:Kerbin");
+            Assert.That(LiveFlightResolver.Resolve(null, hop, crew, high, 10, 0.7, 0.6).Outcome, Is.EqualTo(MissionOutcome.Success));
+
+            var low = new LiveFlightResult { Recovered = true, MaxAltitude = 4200, SpaceAltitude = 70000 };
+            low.Achievements.Add("Flight:Kerbin"); low.Achievements.Add("Suborbit:Kerbin"); // a stray situation flip on the way
+            MissionReport r = LiveFlightResolver.Resolve(new Project { Id = "P1", Name = "Hop" }, hop, crew, low, 10, 0.7, 0.6);
+            Assert.That(r.Outcome, Is.EqualTo(MissionOutcome.Abort), "4 km is not space");
+            Assert.That(r.Achievements, Has.No.Member("Suborbit:Kerbin"));
+            Assert.That(r.Lesson, Does.Contain("Space not reached"));
+        }
+
+        [Test]
         public void ResolverGradesFlightsFromFacts()
         {
             MissionType orbit = ShippedConfigs.Missions().Get("KerbinOrbit");

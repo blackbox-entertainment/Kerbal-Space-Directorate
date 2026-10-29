@@ -28,6 +28,11 @@ namespace KSA.Core.Flight
         /// <summary>Timeline lines the host logged during the flight (already stored on the project too).</summary>
         public List<string> Events { get; } = new List<string>();
         public double MaxAltitude { get; set; }
+        /// <summary>
+        /// Where space begins above the home world, metres (the top of its atmosphere; 70 km on Kerbin), when the host knows
+        /// it; 0 when not. A suborbital flight that never climbed this high earns no Suborbit credit (2026-10-29).
+        /// </summary>
+        public double SpaceAltitude { get; set; }
         public double MaxSpeed { get; set; }
         /// <summary>Farthest from the home world during the flight, km (the host measures it).</summary>
         public double MaxDistanceFromHomeKm { get; set; }
@@ -67,6 +72,10 @@ namespace KSA.Core.Flight
             // Achievements: what the flight actually logged, filtered to what the mission asked for plus any firsts.
             var earned = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (string a in result.Achievements) if (!string.IsNullOrEmpty(a)) earned.Add(a);
+            // A suborbital flight counts only once it reached space: below the top of the air it was a high flight, not a
+            // trip to space (2026-10-29).
+            bool belowSpace = result.SpaceAltitude > 0 && result.MaxAltitude < result.SpaceAltitude;
+            if (belowSpace) earned.RemoveWhere(a => a.StartsWith("Suborbit:", StringComparison.OrdinalIgnoreCase));
             if (type != null && type.IsScience && result.SciencePoints > 0 && (result.Recovered || result.Delivered)) earned.Add("Science:" + type.Body);
             List<string> wanted = type != null ? type.Achievements : new List<string>();
             foreach (string w in wanted) if (Matches(earned, w)) r.Achievements.Add(w);
@@ -117,6 +126,8 @@ namespace KSA.Core.Flight
                 r.Lesson = r.Achievements.Count > 0
                     ? "Main objective (" + primary + ") missed on " + r.ProjectName + "; the crew came home safe."
                     : "Abort on " + r.ProjectName + "; nothing of note was achieved.";
+                if (belowSpace && primary.StartsWith("Suborbit:", StringComparison.OrdinalIgnoreCase))
+                    r.Lesson = "Space not reached on " + r.ProjectName + ": it peaked at " + FormatKm(result.MaxAltitude) + ", below the " + FormatKm(result.SpaceAltitude) + " where space begins; the crew came home safe.";
             }
             if (result.DirectorFlown) r.Lesson += " Director-flown.";
             r.Lines.AddRange(CannedLines(r, result));

@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.5.13 (2026-10-29), fourteenth test build
+
+- **A suborbital hop must reach space.** A live hop that never climbed above the top of Kerbin's air (70 km) earns no Suborbit credit and is an abort, crew safe, with "Space not reached" and its peak altitude in the report. The Suborbit log entry is also only written above the air.
+- **Nothing rides the capsule down.** When a craft falls back through the air with nothing burning, the crew now stages away everything below the capsule one stage at a time, fuelled or not, before the parachutes (heat shields stay on). Before, only empty stages were dropped: a hop came down with its fuelled upper stage still attached, fell nose first at 837 m/s and the parachutes could not save the crew.
+
 ## 0.5.12 (2026-10-29), thirteenth test build
 
 - **A gentler turn.** The ascent now turns evenly from vertical at 15 km to flat at 60 km (was 55 km), so the rocket stays steeper through the upper air.

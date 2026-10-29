@@ -497,9 +497,11 @@ namespace KSA.KSP.Flight
             bool falling = v.verticalSpeed < -10;
             bool comingDown = v.orbit == null || v.orbit.PeA < atmo * 0.5;
             if (!falling || !comingDown || v.altitude > atmo) return;
-            // Still burning upward through a powered descent? Leave engines alone: only spent stages go.
+            // Nothing is burning and the craft falls back on a path that meets the ground: everything under the capsule
+            // goes, spent or not, one stage at a time (2026-10-29: a hop came down with its fuelled upper stage still on,
+            // fell nose first at 837 m/s and the chutes could not save it).
             string line = null;
-            _ctx.Control.DropSpentStage(ref line);
+            if (!_ctx.Control.DropSpentStage(ref line)) _ctx.Control.ShedForReentry(ref line);
             if (line != null) Log(line, null);
             double aboveGround = Math.Max(0, v.altitude - Math.Max(0, v.terrainAltitude));
             string chute = null;
@@ -671,7 +673,9 @@ namespace KSA.KSP.Flight
                     break;
                 case Vessel.Situations.SUB_ORBITAL:
                     if (data.from == Vessel.Situations.LANDED || data.from == Vessel.Situations.PRELAUNCH) Log("Liftoff from " + body + ".", "Flight:" + body);
-                    else Log("Suborbital above " + body + ".", "Suborbit:" + body);
+                    // Only above the air: the game can flip a craft to SUB_ORBITAL for a moment lower down (2026-10-29).
+                    else if (data.host.mainBody == null || !data.host.mainBody.atmosphere || data.host.altitude >= data.host.mainBody.atmosphereDepth * 0.99)
+                        Log("Suborbital above " + body + ".", "Suborbit:" + body);
                     break;
                 case Vessel.Situations.ORBITING:
                     CheckOrbit();
@@ -762,6 +766,17 @@ namespace KSA.KSP.Flight
         /// <summary>Called by the recovery hook for the live vessel; also by destruction and delivery. Clears the live state.</summary>
         public static void Resolve(bool recovered) { Resolve(recovered, false); }
 
+        /// <summary>The top of the home world's atmosphere, metres (70 km on stock Kerbin); 0 when unknown.</summary>
+        private static double HomeSpaceAltitude()
+        {
+            try
+            {
+                CelestialBody home = FlightGlobals.GetHomeBody();
+                return home != null && home.atmosphere ? home.atmosphereDepth : 0;
+            }
+            catch { return 0; }
+        }
+
         public static void Resolve(bool recovered, bool delivered)
         {
             if (Live == null || KsaCore.Agency == null) return;
@@ -773,6 +788,7 @@ namespace KSA.KSP.Flight
                 Crashed = Live.Crashed,
                 DirectorFlown = Live.DirectorFlown,
                 MaxAltitude = Live.MaxAltitude,
+                SpaceAltitude = HomeSpaceAltitude(),
                 MaxSpeed = Live.MaxSpeed,
                 SciencePoints = Live.SciencePoints,
                 MaxDistanceFromHomeKm = Live.MaxDistanceFromHomeKm,

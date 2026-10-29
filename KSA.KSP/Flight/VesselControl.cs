@@ -352,6 +352,29 @@ namespace KSA.KSP.Flight
             return true;
         }
 
+        /// <summary>
+        /// Falling back for a landing under parachutes: stages away the next stage when it only decouples (no engine to
+        /// light, no parachute to fire), so the capsule comes down alone, blunt end first. One stage per call, 1.5 s apart.
+        /// Sets line when it staged.
+        /// </summary>
+        public bool ShedForReentry(ref string line)
+        {
+            if (_v == null || _v.currentStage <= 0 || Now - _lastStage < 1.5) return false;
+            int next = _v.currentStage - 1;
+            bool decoupler = false;
+            foreach (Part p in _v.parts)
+            {
+                if (p.inverseStage != next) continue;
+                if (p.FindModuleImplementing<ModuleEngines>() != null || p.FindModuleImplementing<ModuleParachute>() != null) return false;
+                if (p.FindModuleImplementing<ModuleAblator>() != null) return false; // a heat shield (it can decouple itself): keep it
+                if (p.FindModuleImplementing<ModuleDecouple>() != null || p.FindModuleImplementing<ModuleAnchoredDecoupler>() != null) decoupler = true;
+            }
+            if (!decoupler) return false;
+            Stage();
+            line = "Staged away everything below the capsule for the descent.";
+            return true;
+        }
+
         private static bool HasPropellant(ModuleEngines e)
         {
             if (e.part == null || e.propellants == null) return false;
