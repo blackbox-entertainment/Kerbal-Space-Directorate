@@ -318,6 +318,34 @@ namespace KSA.Core
             return s;
         }
 
+        private static readonly string[] LadderSteps = { "Flyby", "Orbit", "Land", "Science", "Base", "Resupply", "Colony" };
+
+        /// <summary>
+        /// The first open step of the exploration ladder on each world, in the Campaign window's order (Kerbin first; its
+        /// first rung is a suborbital hop). Firsts a rival already holds are marked. At most <paramref name="max"/> worlds.
+        /// </summary>
+        public List<string> CampaignNextSteps(int max)
+        {
+            var list = new List<string>();
+            List<string> colonizable = ColonizableWorlds();
+            foreach (string body in CustomBodies)
+            {
+                bool home = string.Equals(body, "Kerbin", StringComparison.OrdinalIgnoreCase);
+                for (int i = 0; i < LadderSteps.Length; i++)
+                {
+                    if (LadderSteps[i] == "Colony" && !colonizable.Exists(x => string.Equals(x, body, StringComparison.OrdinalIgnoreCase))) continue;
+                    string key = home && i == 0 ? "Suborbit:" + body : LadderSteps[i] + ":" + body;
+                    if (HasAgencyAchievement(key)) continue;
+                    FirstClaim f = FirstFor(key);
+                    string rival = f != null && f.ClaimedBy != PlayerId ? " (a rival got there first)" : string.Empty;
+                    list.Add(body + ": " + (home && i == 0 ? "suborbital hop" : LadderSteps[i].ToLowerInvariant()) + rival);
+                    break;
+                }
+                if (list.Count >= max) break;
+            }
+            return list;
+        }
+
         private bool DirectorStartProject(Dictionary<string, object> a, out string message)
         {
             MissionType type = FindMission(Json.GetString(a, "mission", ""));
@@ -477,6 +505,9 @@ namespace KSA.Core
             if (_directorLastResults.Count > 0) { sb.AppendLine("RESULTS OF YOUR LAST TURN:"); foreach (string s in _directorLastResults) sb.AppendLine("  " + s); }
             if (_directorReasons.Count > 0) sb.AppendLine("WHY NOW: " + string.Join("; ", _directorReasons.ToArray()) + ".");
 
+            // The exploration ladder (Campaign window), so the Director knows where the agency stands (2026-10-28).
+            List<string> next = CampaignNextSteps(6);
+            sb.AppendLine("CAMPAIGN LADDER (next open step per world, nearest first): " + (next.Count > 0 ? string.Join("; ", next.ToArray()) : "every step done") + ". Climb it when this year's goals allow; firsts there beat the rivals.");
             sb.AppendLine("GOALS THIS YEAR:");
             if (ActiveGoals.Count == 0) sb.AppendLine("  none yet (set at the next review)");
             foreach (GoalState gs in ActiveGoals)

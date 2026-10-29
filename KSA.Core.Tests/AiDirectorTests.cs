@@ -83,6 +83,18 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void TheBriefingShowsTheCampaignLadder()
+        {
+            var clock = new FakeClock();
+            Agency a = Staffed(clock, new ScriptedTransport());
+            List<string> next = a.CampaignNextSteps(3);
+            Assert.That(next, Has.Count.EqualTo(3));
+            Assert.That(next[0], Is.EqualTo("Kerbin: suborbital hop"));
+            Assert.That(next[1], Is.EqualTo("Mun: flyby"));
+            Assert.That(a.DirectorBriefing(), Does.Contain("CAMPAIGN LADDER").And.Contain("Kerbin: suborbital hop"));
+        }
+
+        [Test]
         public void BadActionsFailAndTheNextBriefingSaysWhy()
         {
             var transport = new ScriptedTransport();
