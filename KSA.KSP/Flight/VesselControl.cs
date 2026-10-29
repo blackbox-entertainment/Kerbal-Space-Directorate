@@ -308,6 +308,9 @@ namespace KSA.KSP.Flight
             }
             // Stage on burnout, or when lit engines give nothing; never to fire a stage that holds only parachutes.
             // Burnout, dead thrust, or nothing lit at all with stages left: keep going down the stack (never into a chute-only stage).
+            // While some engine still burns, stage only when the next stage throws away nothing that is burning (2026-10-28:
+            // side boosters burnt out and the crew dropped the whole first stage with its main engine still running).
+            if (anyActive && anyFlamedOut && anyThrust && !NextStageDropsOnlySpent()) return;
             if ((anyActive && (anyFlamedOut || !anyThrust)) || (!anyActive && HasStagesLeft)) if (NextStageIsWorthFiring())
             {
                 Stage();
@@ -354,6 +357,31 @@ namespace KSA.KSP.Flight
                 if (pr.name == "ElectricCharge" || pr.name == "IntakeAir") continue;
                 if (pr.totalResourceAvailable > 0.01) return true;
             }
+            return false;
+        }
+
+        /// <summary>
+        /// True when every engine that the next stage's decouplers would cut loose has burnt out, so staging only sheds dead
+        /// weight. A decoupler takes everything hanging below or beside it in the part tree.
+        /// </summary>
+        public bool NextStageDropsOnlySpent()
+        {
+            if (_v == null || _v.currentStage <= 0) return false;
+            int next = _v.currentStage - 1;
+            foreach (Part p in _v.parts)
+            {
+                if (p.inverseStage != next) continue;
+                if (p.FindModuleImplementing<ModuleDecouple>() == null && p.FindModuleImplementing<ModuleAnchoredDecoupler>() == null) continue;
+                if (BurningBelow(p)) return false;
+            }
+            return true;
+        }
+
+        private static bool BurningBelow(Part p)
+        {
+            foreach (ModuleEngines e in p.FindModulesImplementing<ModuleEngines>())
+                if (e.EngineIgnited && !e.flameout && e.finalThrust > 0.1f) return true;
+            foreach (Part c in p.children) if (BurningBelow(c)) return true;
             return false;
         }
 

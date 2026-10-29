@@ -86,7 +86,9 @@ namespace KSA.Core.Design
             double target = (need != null ? need.DeltaV : 3600) * Margin;
             double twrNeed = Math.Max(LaunchTwr, need != null ? need.MinTwr + 0.25 : LaunchTwr);
             var options = Options(engines, tanks, boosters, false);
-            var launchOptions = Options(engines, tanks, boosters, true);
+            // Side boosters only when a radial decoupler can drop them on their own (2026-10-28).
+            bool radialDecoupler = allowed.Exists(p => p.Kind == PartKind.Decoupler && !p.IsStackable);
+            var launchOptions = Options(engines, tanks, boosters, radialDecoupler);
 
             StagePlan best = null;
             double bestMass = double.MaxValue, closest = 0;
@@ -138,7 +140,7 @@ namespace KSA.Core.Design
             return best;
         }
 
-        private static List<Option> Options(List<PartInfo> engines, List<PartInfo> tanks, List<PartInfo> boosters, bool launch)
+        private static List<Option> Options(List<PartInfo> engines, List<PartInfo> tanks, List<PartInfo> boosters, bool sideBoosters)
         {
             var list = new List<Option>();
             foreach (PartInfo e in engines)
@@ -148,7 +150,7 @@ namespace KSA.Core.Design
                         var o = new Option { Engine = e, Tank = t, Tanks = c };
                         Sum(o);
                         list.Add(o);
-                        if (launch) foreach (PartInfo b in boosters) foreach (int nb in new[] { 2, 4 }) { var ob = new Option { Engine = e, Tank = t, Tanks = c, Booster = b, Boosters = nb }; Sum(ob); list.Add(ob); }
+                        if (sideBoosters) foreach (PartInfo b in boosters) foreach (int nb in new[] { 2, 4 }) { var ob = new Option { Engine = e, Tank = t, Tanks = c, Booster = b, Boosters = nb }; Sum(ob); list.Add(ob); }
                     }
             // A solid booster alone makes a stage too (stacked, if it can be).
             foreach (PartInfo b in boosters) if (b.IsStackable) { var o = new Option { Booster = b, Boosters = 1 }; Sum(o); list.Add(o); }
