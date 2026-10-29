@@ -20,7 +20,7 @@ namespace KSA.Core.Tests
 
             Assert.That(warnings, Is.Empty, string.Join(" | ", warnings));
             Assert.That(missions.Count, Is.EqualTo(64)); // + 18 base and resupply missions (KSA-64)
-            Assert.That(templates.Count, Is.EqualTo(15)); // + 2 colony industry modules (KSA-67), - Flea cluster (removed 2026-10-28)
+            Assert.That(templates.Count, Is.EqualTo(16)); // + 2 colony industry modules (KSA-67), - Flea cluster, + Hammer-Flea (2026-10-28)
             Assert.That(programs.Count, Is.EqualTo(15)); // + 9 bases (KSA-64)
 
             foreach (MissionType t in missions.Types)

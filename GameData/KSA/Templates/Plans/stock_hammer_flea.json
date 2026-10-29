@@ -1,0 +1,13 @@
+{
+  "design_name": "Directorate Hammer-Flea sounding rocket",
+  "rationale": "First suborbital design (2026-10-28), built only from Start, Basic Rocketry and Engineering 101 parts. An RT-10 Hammer with four basic fins lifts it, a TD-12 drops the Hammer, an RT-5 Flea pushes the pod past 70 km, and a second TD-12 drops the Flea so the Mk1 pod comes down alone under its Mk16 chute. About 1,700 m/s in vacuum, roughly 1,250 m/s after drag and gravity: enough for space straight up.",
+  "stages": [
+    { "stage": 0, "role": "launch", "decoupler": "Decoupler.1",
+      "core": [ { "part": "solidBooster.v2", "count": 1 } ],
+      "radial": [ { "part": "basicFin", "count": 4, "symmetry": 4 } ] },
+    { "stage": 1, "role": "upper", "decoupler": "Decoupler.1",
+      "core": [ { "part": "solidBooster.sm.v2", "count": 1 } ],
+      "radial": [] }
+  ],
+  "payload": { "command": "mk1pod.v2", "extras": [ "parachuteSingle" ] }
+}

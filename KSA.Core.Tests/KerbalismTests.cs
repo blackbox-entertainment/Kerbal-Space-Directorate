@@ -114,6 +114,24 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void TheHammerFleaPlanUsesOnlyEarlyParts()
+        {
+            string path = System.IO.Path.Combine(ShippedConfigs.ConfigDir, "..", "Templates", "Plans", "stock_hammer_flea.json");
+            StagePlan plan; string error;
+            Assert.That(StagePlan.TryParse(System.IO.File.ReadAllText(path), out plan, out error), Is.True, error);
+            Assert.That(plan.Stages, Has.Count.EqualTo(2));
+            // Start, Basic Rocketry and Engineering 101 only: the AI Director's first research reaches space with this.
+            var early = new HashSet<string> { "solidBooster.v2", "solidBooster.sm.v2", "basicFin", "Decoupler.1", "mk1pod.v2", "parachuteSingle" };
+            foreach (PlanStage s in plan.Stages)
+            {
+                foreach (PlanPart p in s.Core) Assert.That(early, Does.Contain(p.Part));
+                foreach (PlanPart p in s.Radial) Assert.That(early, Does.Contain(p.Part));
+                Assert.That(early, Does.Contain(s.Decoupler));
+            }
+            Assert.That(plan.Payload.Command, Is.EqualTo("mk1pod.v2"));
+        }
+
+        [Test]
         public void AFinishedBaseAddsItsIndustryModuleWithTheRightDesign()
         {
             foreach (bool kerbalism in new[] { false, true })
