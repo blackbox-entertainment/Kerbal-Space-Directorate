@@ -4,6 +4,7 @@ Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the
 
 ## Unreleased
 
+- **Fixed: a stranded crew broke the Projects window and the AI Director.** Checking whether a rescue rocket can be built crashed (rescue missions are not in the mission catalog), so the Projects window failed to draw and its buttons did nothing, and the AI Director's turn crashed every 5 seconds.
 - **Watch Live flights no longer get simulated for want of a rocket:** the design review now rejects a radial (side) decoupler placed between two stages, which the VAB builder cannot assemble (two AI designs with one were approved, and their Mun flyby and Orbital spacewalk Firsts were simulated instead of flown). If a design still cannot be assembled, the engineering team draws one up by hand from the researched parts and that one flies live.
 - **The crew finishes the climb to orbit after coasting:** coasting to apoapsis with the engines idle no longer reads as "out of fuel" (it checks the delta-v left in the tanks), so the crew burns to circularise instead of turning for home. When the Director hands back on the way up, or already past apoapsis, the crew circularises from there.
 - **A gentler gravity turn:** the crew climbs straight up to 1 km, then turns evenly to horizontal at 45 km (about 72 degrees at 10 km, 49 at 20 km, 29 at 30 km), burns flat until the apoapsis is high enough, coasts to it and circularises there. The old curve was at 53 degrees by 10 km, far too early for a modest rocket.

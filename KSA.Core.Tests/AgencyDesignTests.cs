@@ -371,6 +371,18 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void AMissionOutsideTheCatalogCanBeCheckedForADesign()
+        {
+            // A rescue mission is built on the fly and is not in the catalog (2026-10-28: this crashed every tick).
+            var clock = new FakeClock();
+            Agency a = Staffed(clock, new ListLogger());
+            a.Parts = TestParts.Catalog();
+            a.Requirements = MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
+            var rescue = new MissionType { Id = "rescue-test", Name = "Rescue at Minmus", Body = "Minmus", Profile = MissionProfile.Orbit, CrewSize = 1 };
+            Assert.DoesNotThrow(() => a.DesignableBlocker(rescue));
+        }
+
+        [Test]
         public void RadialDecouplerBetweenStagesIsRejected()
         {
             PartCatalog c = TestParts.Catalog();

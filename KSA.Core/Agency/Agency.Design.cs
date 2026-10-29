@@ -155,9 +155,11 @@ namespace KSA.Core
         }
 
         /// <summary>Builds the request the prompt is written from. Public so the Design Review window can show it.</summary>
-        public DesignRequest BuildDesignRequest(Project p)
+        public DesignRequest BuildDesignRequest(Project p, MissionType mission = null)
         {
-            MissionType type = Catalogs.Missions.Get(p.MissionTypeId);
+            // A rescue is built on the fly and is not in the mission catalog, so its caller passes it in (2026-10-28: a
+            // stranded crew crashed the AI Director's turn here every 5 seconds).
+            MissionType type = mission ?? Catalogs.Missions.Get(p.MissionTypeId);
             var req = new DesignRequest
             {
                 Mission = type,
@@ -182,7 +184,7 @@ namespace KSA.Core
                 req.Lessons.Add("Your last design for this project, '" + p.Design.DesignName + "', had only " + p.Design.TotalDeltaV + " of the " + p.Design.RequiredDeltaV + " m/s needed: add stages, use more efficient engines or carry more fuel.");
             else if (p.Design != null && p.Design.IsAi && p.Design.Verdict == DesignVerdict.Failed && !string.IsNullOrEmpty(p.Design.Error))
                 req.Lessons.Add("Your last design for this project was rejected: " + p.Design.Error);
-            req.PriorDesigns = MissionsCompleted(type.Id);
+            req.PriorDesigns = type != null ? MissionsCompleted(type.Id) : 0;
             return req;
         }
 
@@ -497,11 +499,11 @@ namespace KSA.Core
         /// The engineering team's own design for a project, without AI (2026-10-28), or null with the reason. Checked like an
         /// AI design; the craft is assembled from the plan at build time like one.
         /// </summary>
-        public DesignRecord EngineersDesign(Project p, out string why)
+        public DesignRecord EngineersDesign(Project p, out string why, MissionType mission = null)
         {
             why = null;
             if (p == null || Parts == null) { why = "no parts list"; return null; }
-            DesignRequest req = BuildDesignRequest(p);
+            DesignRequest req = BuildDesignRequest(p, mission);
             StagePlan plan = ProceduralDesigner.Design(req, Parts, req.Requirement, LaunchGravity, out why);
             if (plan == null) return null;
             DesignAnalysis a = StageAnalyzer.Analyze(plan, Parts, req.Requirement, LaunchGravity);
@@ -535,7 +537,9 @@ namespace KSA.Core
             if (_designable.TryGetValue(key, out cached)) return cached.Length == 0 ? null : cached;
             string why;
             var probe = new Project { Id = "probe", MissionTypeId = type.Id, Name = type.Name };
-            DesignRecord r = EngineersDesign(probe, out why);
+            DesignRecord r;
+            try { r = EngineersDesign(probe, out why, type); }
+            catch (Exception e) { r = null; why = "the engineers could not check it (" + e.Message + ")"; }
             string result = r != null ? string.Empty : (why ?? "no rocket can be built for it");
             _designable[key] = result;
             return result.Length == 0 ? null : result;
