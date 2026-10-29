@@ -761,6 +761,73 @@ namespace KSA.Core
             return ok;
         }
 
+        /// <summary>
+        /// Swaps the rocket of a project that has not launched (2026-10-29): the Director's own saved design, when it fits the
+        /// mission. A project still in design goes on to build at once; one in build or on the pad is rebuilt in half its
+        /// build time. Any AI design under way is dropped.
+        /// </summary>
+        public bool SwapToPlayerDesign(string projectId, string designName, out string message)
+        {
+            Project p = GetProject(projectId);
+            string tooLate = SwapBlocker(p);
+            if (tooLate != null) { message = tooLate; return false; }
+            MissionType type = Catalogs.Missions.Get(p.MissionTypeId);
+            PlayerDesign mine = FindPlayerDesign(designName);
+            if (mine == null) { message = "No saved design called '" + designName + "'."; return false; }
+            string unfit = mine.Blocker(type, Requirements.For(type));
+            if (unfit != null) { message = mine.Name + " cannot fly " + p.Name + ": " + unfit + "."; return false; }
+            DropDesignSession(p);
+            p.Design = mine.ToRecord(Requirements.For(type));
+            p.DepotId = string.Empty; // your rocket flies as you built it
+            Rebuild(p, "the Director's own design '" + mine.Name + "' (" + p.Design.TotalDeltaV + " m/s, TWR " + p.Design.LiftoffTwr + "). Take Control is always allowed on it");
+            message = p.Name + " will fly " + mine.Name + "; " + (p.Status == ProjectStatus.Build ? "rebuilt in " + p.BuildDays + " day" + (p.BuildDays == 1 ? "" : "s") + "." : "the engineers check it over.");
+            return true;
+        }
+
+        /// <summary>Swaps a project that has not launched back to a fresh design by the engineering team (by hand, no AI).</summary>
+        public bool SwapToEngineersDesign(string projectId, out string message)
+        {
+            Project p = GetProject(projectId);
+            string tooLate = SwapBlocker(p);
+            if (tooLate != null) { message = tooLate; return false; }
+            string why;
+            DesignRecord r = EngineersDesign(p, out why);
+            if (r == null) { message = "The engineers cannot draw one up for " + p.Name + ": " + why + "."; return false; }
+            DropDesignSession(p);
+            p.Design = r;
+            Rebuild(p, "the engineering team's '" + r.DesignName + "' (" + r.TotalDeltaV + " m/s, TWR " + r.LiftoffTwr + ")");
+            message = p.Name + " will fly the engineering team's new design; rebuilt in " + p.BuildDays + " day" + (p.BuildDays == 1 ? "" : "s") + ".";
+            return true;
+        }
+
+        /// <summary>Null when a project's rocket can still be swapped, else why not.</summary>
+        public string SwapBlocker(Project p)
+        {
+            if (p == null) return "No such project.";
+            if (!p.IsActive || p.Status == ProjectStatus.InFlight) return "Too late to swap the rocket on " + p.Name + ": it has flown or is flying.";
+            return null;
+        }
+
+        private void DropDesignSession(Project p)
+        {
+            if (_designsInFlight.Remove(p.Id)) _designsAbandoned.Add(p.Id); // a late AI reply is ignored
+        }
+
+        /// <summary>
+        /// A new rocket for a project: straight on to build (half the build time when it was already building or on the pad),
+        /// with the craft written for a planned design.
+        /// </summary>
+        private void Rebuild(Project p, string what)
+        {
+            bool wasBuilt = p.Status == ProjectStatus.Build || p.Status == ProjectStatus.Ready;
+            p.Status = ProjectStatus.Build;
+            p.PhaseStartDay = CurrentDay;
+            if (wasBuilt) p.BuildDays = Math.Max(1, p.BuildDays / 2);
+            p.Notes.Add("Rocket swapped on day " + CurrentDay + ": " + what + ".");
+            OnEnteredBuild(p);
+            RaiseProjectChanged(p);
+        }
+
         /// <summary>Design quality for the simulator: the AI analysis when approved, else the template.</summary>
         internal double? DesignOverride(Project p)
         {

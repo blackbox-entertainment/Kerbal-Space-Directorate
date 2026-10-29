@@ -37,6 +37,7 @@ namespace KSA.KSP.UI
         private string _selectedTemplateId = string.Empty;
         /// <summary>Craft path of the Director's own design picked for the new project, or empty (2026-10-28).</summary>
         private string _selectedPlayerDesign = string.Empty;
+        private string _swapFor = string.Empty; // the project whose swap-rocket choices are open
         private readonly List<string> _selectedCrew = new List<string>();
         private readonly List<string> _selectedEngineers = new List<string>();
         private MissionMode _mode = MissionMode.Simulate;
@@ -168,10 +169,60 @@ namespace KSA.KSP.UI
                     buttons.Add(new DialogGUIButton("Launch now", () => OnLaunchNow(id), 120f, ButtonHeight, false));
                 }
                 if (p.Status != ProjectStatus.InFlight)
+                {
+                    buttons.Add(new DialogGUIButton(_swapFor == id ? "Keep this rocket" : "Swap rocket", () => { _swapFor = _swapFor == id ? string.Empty : id; Refresh(); }, 140f, ButtonHeight, false));
                     buttons.Add(new DialogGUIButton("Cancel", () => OnCancel(id), 90f, ButtonHeight, false));
+                }
                 if (buttons.Count > 1)
                     items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft, buttons.ToArray()));
+                if (_swapFor == id && p.Status != ProjectStatus.InFlight) BuildSwapChoices(items, textWidth, p, type);
             }
+        }
+
+        /// <summary>
+        /// Swap the rocket before launch (2026-10-29): one of the Director's saved VAB rockets that fits, or a fresh design by
+        /// the engineering team. A project already building or on the pad is rebuilt in half its build time.
+        /// </summary>
+        private void BuildSwapChoices(List<DialogGUIBase> items, float textWidth, Project p, MissionType type)
+        {
+            string id = p.Id;
+            bool built = p.Status == ProjectStatus.Build || p.Status == ProjectStatus.Ready;
+            Line(items, "    Swap the rocket" + (built ? " (it is rebuilt in about " + Math.Max(1, p.BuildDays / 2) + " days)" : string.Empty) + ":", textWidth);
+            items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                new DialogGUISpace(32f),
+                new DialogGUIButton("New engineers' design", () => OnSwapEngineers(id), 200f, ButtonHeight, false),
+                new DialogGUILabel("<color=#aaaaaa>the team draws a fresh rocket from today's parts</color>", textWidth - 250f, ButtonHeight)));
+            List<PlayerDesign> fit = _agency.PlayerDesignsFor(type);
+            if (fit.Count == 0)
+            {
+                Line(items, "    <color=#888888>None of your saved rockets fits this mission. Build one in the VAB and save it in this game: it shows here.</color>", textWidth);
+                return;
+            }
+            foreach (PlayerDesign d in fit)
+            {
+                string name = d.Name;
+                bool current = p.Design != null && p.Design.Source == DesignSource.Player && string.Equals(p.Design.DesignName, d.Name, StringComparison.OrdinalIgnoreCase);
+                items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                    new DialogGUISpace(32f),
+                    new DialogGUIButton(current ? "Flying it" : "Fly " + d.Name, () => OnSwapMine(id, name), 200f, ButtonHeight, false),
+                    new DialogGUILabel(Math.Round(d.DeltaV) + " m/s, lift-off TWR " + d.LiftoffTwr.ToString("0.00") + ", " + d.Seats + " seat" + (d.Seats == 1 ? "" : "s") + (d.IsPlane ? ", spaceplane" : string.Empty), textWidth - 250f, ButtonHeight)));
+            }
+        }
+
+        private void OnSwapMine(string projectId, string designName)
+        {
+            string message;
+            bool ok = _agency.SwapToPlayerDesign(projectId, designName, out message);
+            if (ok) _swapFor = string.Empty;
+            Report(ok, message);
+        }
+
+        private void OnSwapEngineers(string projectId)
+        {
+            string message;
+            bool ok = _agency.SwapToEngineersDesign(projectId, out message);
+            if (ok) _swapFor = string.Empty;
+            Report(ok, message);
         }
 
         // --- New project ---

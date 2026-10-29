@@ -54,6 +54,38 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void TheRocketCanBeSwappedBeforeLaunch()
+        {
+            var clock = new FakeClock();
+            Agency a = Staffed(clock, new ListLogger());
+            a.Parts = DesignerReachTests.StockParts();
+            a.Requirements = KSA.Core.Design.MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
+            var mine = new KSA.Core.Design.PlayerDesign { Name = "Orbital hop mk II", CraftPath = "Ships/VAB/Orbital hop mk II.craft", Seats = 1, DeltaV = 4200, LiftoffTwr = 1.8, HasParachute = true };
+            var weak = new KSA.Core.Design.PlayerDesign { Name = "Orbital hop mk I", CraftPath = "Ships/VAB/Orbital hop mk I.craft", Seats = 1, DeltaV = 2740, LiftoffTwr = 4.5, HasParachute = true };
+            a.PlayerDesignSource = () => new List<KSA.Core.Design.PlayerDesign> { mine, weak };
+            Project p = ReadyProject(a, clock);
+            int build = p.BuildDays;
+            string msg;
+
+            Assert.That(a.SwapToPlayerDesign(p.Id, "Orbital hop mk I", out msg), Is.False, "too little delta-v for orbit");
+            Assert.That(msg, Does.Contain("cannot fly"));
+            Assert.That(a.SwapToPlayerDesign(p.Id, "Orbital hop mk II", out msg), Is.True, msg);
+            Assert.That(p.Design.Source, Is.EqualTo(KSA.Core.Design.DesignSource.Player));
+            Assert.That(p.Design.CraftPath, Is.EqualTo(mine.CraftPath));
+            Assert.That(p.Status, Is.EqualTo(ProjectStatus.Build), "off the pad to be rebuilt");
+            Assert.That(p.BuildDays, Is.EqualTo(System.Math.Max(1, build / 2)));
+            clock.AdvanceDays(p.BuildDays + 1); a.Tick();
+            Assert.That(p.Status, Is.EqualTo(ProjectStatus.Ready));
+
+            Assert.That(a.SwapToEngineersDesign(p.Id, out msg), Is.True, msg);
+            Assert.That(p.Design.Model, Is.EqualTo(Agency.EngineersModel));
+            Assert.That(p.Status, Is.EqualTo(ProjectStatus.Build));
+
+            p.Status = ProjectStatus.InFlight;
+            Assert.That(a.SwapToEngineersDesign(p.Id, out msg), Is.False, "too late once it flies");
+        }
+
+        [Test]
         public void ResolverGradesFlightsFromFacts()
         {
             MissionType orbit = ShippedConfigs.Missions().Get("KerbinOrbit");

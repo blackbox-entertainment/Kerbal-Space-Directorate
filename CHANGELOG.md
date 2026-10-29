@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.5.16 (2026-10-29), seventeenth test build
+
+- **Swap the rocket before launch.** Every active project that has not flown has a Swap rocket button in Projects. It lists your saved VAB rockets that fit the mission (delta-v, lift-off thrust, seats) and a fresh design by the engineering team. A project still in design goes straight on to build; one in build or on the pad is rebuilt in half its build time. Any AI design under way is dropped.
+
 ## 0.5.15 (2026-10-29), sixteenth test build
 
 - **Stages separate again.** Stock heat shields can decouple themselves (with staging switched off), and the part list counted the small 0.625 m Heat Shield as a decoupler. Being the lightest one, the engineers put it between every pair of stages, so pressing stage dropped nothing. Heat shields are now heat shields, and the design review turns back any stage "decoupler" that is not a decoupler. Approved designs with one are redesigned when the save loads.
