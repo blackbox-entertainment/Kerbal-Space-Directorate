@@ -11,7 +11,7 @@ Open an issue with the **Bug report** template. The most useful things to includ
 - Your KSP version and mod list (CKAN: File > Export modlist).
 - Whether AI features were on, and which model. **Never paste your API key.**
 
-Questions and ideas go in GitHub Discussions.
+Questions and ideas can go in an issue too.
 
 ## If this ever changes
 
