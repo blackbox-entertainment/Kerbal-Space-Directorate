@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.5.22 (2026-10-29), twenty-third test build
+
+- **Parachutes sized for the capsule.** The engineers no longer snap on one parachute whatever the pod weighs. A main parachute lands about 22 times its own mass softly (a 0.1 t Mk16 or Mk2-R about 2.2 t, a 0.3 t Mk16-XL about 6.6 t); drogues count for nothing. The engineers weigh what comes down (pod, heat shield, instruments, the chutes themselves) and add radial chutes in pairs, or a bigger stack chute, until it lands softly. The design review checks AI designs the same way (adding chutes where it can), the AI is told the rule, and your own rockets show "parachutes too small" when the capsule they bring home is too heavy for them.
+
 ## 0.5.21 (2026-10-29), twenty-second test build
 
 - **A crash that kills the crew is reported as one.** When a live craft was destroyed, the flight was graded before the game reported the deaths: "vehicle lost, crew safe", then the pilot listed as killed on an unknown vessel. Everyone still aboard a craft being destroyed is now counted as lost before the report is written.

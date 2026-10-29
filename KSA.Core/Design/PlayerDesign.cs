@@ -37,6 +37,10 @@ namespace KSA.Core.Design
         /// <summary>Null when every part is researched (and bought), else why it cannot be built yet.</summary>
         public string ResearchBlocker { get; set; }
 
+        /// <summary>What comes down under the chutes once every decoupler has fired, tonnes (0 when not known).</summary>
+        public double LandingMass { get; set; }
+        /// <summary>The landing mass the main parachutes bring down softly, tonnes.</summary>
+        public double ChuteCapacity { get; set; }
         /// <summary>A heat shield as wide as the crew pod, or a pod with its own ablator.</summary>
         public bool HasHeatShield { get; set; }
         /// <summary>A heat shield wide enough for a crew pod is researched (the host sets it); only then is one demanded.</summary>
@@ -63,6 +67,8 @@ namespace KSA.Core.Design
                 return null;
             }
             if (type.CrewSize > 0 && type.Profile != MissionProfile.Base && !HasParachute) return "no main parachute (a drogue alone cannot land it): the crew could not land";
+            if (type.CrewSize > 0 && type.Profile != MissionProfile.Base && LandingMass > 0 && ChuteCapacity + 1e-6 < LandingMass)
+                return "parachutes too small: they land about " + ChuteCapacity.ToString("0.0") + " t softly and the capsule weighs " + LandingMass.ToString("0.0") + " t (add parachutes)";
             // Home from orbit or beyond: a heat shield that fits the pod, once one is researched (2026-10-29: a Director's
             // rocket flew with only 0.625 m shields between its stages and none under the pod).
             if (type.CrewSize > 0 && type.Profile != MissionProfile.Suborbital && type.Profile != MissionProfile.Base && HeatShieldResearched && !HasHeatShield)

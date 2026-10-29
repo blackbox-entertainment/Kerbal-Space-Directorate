@@ -209,6 +209,8 @@ namespace KSA.Core.Design
                     List<string> repairs = StagePlanValidator.Repair(plan, allowed);
                     string fins = Fins.AddIfMissing(plan, request.AllowedParts, _catalog);
                     if (fins != null) repairs.Add(fins);
+                    string chutes = NeedsChute(request) ? Parachutes.Fit(plan, request.AllowedParts, _catalog) : null;
+                    if (chutes != null) repairs.Add(chutes);
                     foreach (string note in repairs) record.Feedback.Add("Pass " + record.PassesUsed + ": " + note);
                     List<string> problems = StagePlanValidator.Validate(plan, _catalog, allowed);
                     DesignAnalysis analysis = StageAnalyzer.Analyze(plan, _catalog, request.Requirement, _surfaceGravity);
@@ -218,6 +220,8 @@ namespace KSA.Core.Design
                     if (seats != null) analysis.Problems.Add(seats);
                     string tanks = MissingDepotTanks(plan, request, _catalog);
                     if (tanks != null) analysis.Problems.Add(tanks);
+                    string chutesShort = ChutesShort(plan, request, _catalog);
+                    if (chutesShort != null) analysis.Problems.Add(chutesShort);
                     record.Plan = plan;
                     record.PlanJson = plan.ToJsonText(false);
                     record.DesignName = plan.DesignName;
@@ -276,6 +280,18 @@ namespace KSA.Core.Design
         }
 
         /// <summary>Seats in the payload (the command part plus any crewed extras, such as a crew cabin).</summary>
+        /// <summary>True when the brief asks for a parachute (the crew lands under it).</summary>
+        public static bool NeedsChute(DesignRequest request)
+        {
+            return request != null && request.MustInclude.Exists(r => r.Key.IndexOf("parachute", StringComparison.OrdinalIgnoreCase) >= 0);
+        }
+
+        /// <summary>Null when the parachutes land the capsule softly (or none is asked for), else what is wrong (2026-10-29).</summary>
+        public static string ChutesShort(StagePlan plan, DesignRequest request, IPartCatalog catalog)
+        {
+            return NeedsChute(request) ? Parachutes.Shortfall(plan, catalog) : null;
+        }
+
         public static int SeatsIn(StagePlan plan, IPartCatalog catalog)
         {
             if (plan == null || plan.Payload == null || catalog == null) return 0;

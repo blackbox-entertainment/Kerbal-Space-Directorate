@@ -2,7 +2,7 @@
   "NAME": "Kerbal Space Directorate",
   "URL": "https://raw.githubusercontent.com/blackbox-entertainment/Kerbal-Space-Directorate/main/GameData/KSA/KSA.version",
   "DOWNLOAD": "https://github.com/blackbox-entertainment/Kerbal-Space-Directorate/releases",
-  "VERSION": { "MAJOR": 0, "MINOR": 5, "PATCH": 21, "BUILD": 0 },
+  "VERSION": { "MAJOR": 0, "MINOR": 5, "PATCH": 22, "BUILD": 0 },
   "KSP_VERSION": { "MAJOR": 1, "MINOR": 12, "PATCH": 5 },
   "KSP_VERSION_MIN": { "MAJOR": 1, "MINOR": 12, "PATCH": 0 },
   "KSP_VERSION_MAX": { "MAJOR": 1, "MINOR": 12, "PATCH": 99 }

@@ -40,6 +40,7 @@ namespace KSA.Core.Tests
             var c = new PartCatalog();
             c.Add(new PartInfo { Name = "mk1pod", Title = "Mk1 Command Pod", Kind = PartKind.Command, Mass = 0.84, CrewCapacity = 1, Cost = 600, Diameter = 1.25, HasTopNode = true, HasBottomNode = true });
             c.Add(new PartInfo { Name = "parachuteSingle", Title = "Mk16 Parachute", Kind = PartKind.Parachute, Mass = 0.1, Cost = 422, HasBottomNode = true });
+            c.Add(new PartInfo { Name = "parachuteRadial", Title = "Mk2-R Radial-Mount Parachute", Kind = PartKind.Parachute, Mass = 0.1, Cost = 400 });
             c.Add(new PartInfo { Name = "HeatShield1", Kind = PartKind.HeatShield, Mass = 0.3, Cost = 300, Diameter = 1.25, HasTopNode = true, HasBottomNode = true });
             c.Add(new PartInfo { Name = "stackDecoupler", Title = "TD-12 Decoupler", Kind = PartKind.Decoupler, Mass = 0.04, Cost = 400, Diameter = 1.25, HasTopNode = true, HasBottomNode = true });
             c.Add(new PartInfo { Name = "fuelTankSmall", Title = "FL-T200", Kind = PartKind.Tank, Mass = 0.125, FuelMass = 1.0, Cost = 275, Diameter = 1.25, HasTopNode = true, HasBottomNode = true });

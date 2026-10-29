@@ -351,7 +351,8 @@ namespace KSA.Core
                 return;
             }
             if (sides) req.MustCarry.Add("parachutes on the sides of the pod (radial parachutes; the nose carries the docking port): " + string.Join(", ", chutes.ToArray()) + ".");
-            else req.MustCarry.Add("a parachute, as a payload extra on top of the crew pod: " + string.Join(", ", chutes.ToArray()) + ". The crew comes home and lands under it; without one the landing kills them. Add a second for heavy pods.");
+            else req.MustCarry.Add("a parachute, as a payload extra on top of the crew pod: " + string.Join(", ", chutes.ToArray()) + ". The crew comes home and lands under it; without one the landing kills them.");
+            req.MustCarry.Add("enough parachute for the capsule that comes down (pod, heat shield and everything else in the payload): each main parachute lands about " + Parachutes.TonnesPerChuteTonne.ToString("0") + " times its own mass softly (a 0.1 t chute about 2.2 t). Add radial parachutes in pairs round the pod for a heavier capsule. Drogues do not count.");
             req.MustInclude.Add(new KeyValuePair<string, List<string>>("a parachute for landing", chutes));
         }
 

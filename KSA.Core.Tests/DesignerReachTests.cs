@@ -152,6 +152,47 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void TheParachutesAreSizedForTheCapsule()
+        {
+            PartCatalog parts = StockParts();
+            // One Mk16 lands about 2.2 t: enough for a Mk1 pod with its heat shield, not for a three-seat pod with its own.
+            var small = new StagePlan();
+            small.Payload.Command = "mk1pod.v2";
+            small.Payload.Extras.Add("parachuteSingle"); small.Payload.Extras.Add("HeatShield1");
+            Assert.That(Parachutes.Shortfall(small, parts), Is.Null);
+
+            var big = new StagePlan();
+            big.Payload.Command = "mk1-3pod";
+            big.Payload.Extras.Add("parachuteSingle"); big.Payload.Extras.Add("HeatShield2");
+            Assert.That(Parachutes.Shortfall(big, parts), Does.Contain("too small"));
+            Assert.That(Parachutes.Fit(big, parts.All, parts), Is.Not.Null);
+            Assert.That(Parachutes.Shortfall(big, parts), Is.Null, "radial chutes added until it lands softly");
+            Assert.That(big.Payload.Extras.FindAll(e => e == "parachuteRadial").Count % 2, Is.EqualTo(0), "in pairs");
+
+            // The engineers do it themselves: a three-seat Kerbin orbit capsule comes down slowly.
+            Agency a = Make.Agency(new FakeClock(), new ListLogger());
+            a.Parts = parts;
+            a.Requirements = MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
+            var three = new MissionType { Id = "orbit3", Name = "Crew of three", Body = "Kerbin", Profile = MissionProfile.Orbit, CrewSize = 3 };
+            a.Catalogs.Missions.Add(three);
+            string why;
+            DesignRecord r = a.EngineersDesign(new KSA.Core.Projects.Project { Id = "x", MissionTypeId = three.Id, Name = three.Name }, out why, three);
+            Assert.That(r, Is.Not.Null, why);
+            Assert.That(Parachutes.Shortfall(r.Plan, parts), Is.Null, string.Join(", ", r.Plan.Payload.Extras.ToArray()));
+            Assert.That(Parachutes.CapacityOf(r.Plan, parts), Is.GreaterThan(4.0));
+        }
+
+        [Test]
+        public void YourRocketNeedsEnoughParachute()
+        {
+            var orbit = ShippedConfigs.Missions().Get("KerbinOrbit");
+            var mine = new PlayerDesign { Name = "Heavy", Seats = 1, DeltaV = 4000, LiftoffTwr = 1.5, HasParachute = true, LandingMass = 3.2, ChuteCapacity = 2.2 };
+            Assert.That(mine.Blocker(orbit, null), Does.Contain("parachutes too small"));
+            mine.ChuteCapacity = 4.4;
+            Assert.That(mine.Blocker(orbit, null), Is.Null);
+        }
+
+        [Test]
         public void AnAiDesignWithoutFinsGetsThem()
         {
             PartCatalog parts = StockParts();

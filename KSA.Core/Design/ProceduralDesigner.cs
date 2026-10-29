@@ -113,6 +113,8 @@ namespace KSA.Core.Design
                 for (int k = 0; k < Math.Min(count, 8); k++) plan.Payload.Extras.Insert(at, farm.Name);
                 plan.Payload.TanksEmpty = true; // it goes up empty; tankers fill it
             }
+            // Enough parachute for the capsule that comes down, not one small chute whatever it weighs (2026-10-29).
+            Parachutes.Fit(plan, allowed, catalog);
             double payload = pod.Mass + pod.FuelMass;
             foreach (string e in plan.Payload.Extras) { PartInfo x = catalog.Get(e); if (x != null) payload += x.Mass + (plan.Payload.TanksEmpty && x.Kind == PartKind.Tank ? 0 : x.FuelMass); }
 
@@ -219,11 +221,12 @@ namespace KSA.Core.Design
             foreach (PartInfo p in allowed) names.Add(p.Name);
             List<string> invalid = StagePlanValidator.Validate(best, catalog, names);
             string tanksShort = DesignSession.MissingDepotTanks(best, req, catalog);
-            if (!check.Passes || invalid.Count > 0 || DesignSession.MissingMustInclude(best, req).Count > 0 || tanksShort != null)
+            string chutesShort = DesignSession.ChutesShort(best, req, catalog);
+            if (!check.Passes || invalid.Count > 0 || DesignSession.MissingMustInclude(best, req).Count > 0 || tanksShort != null || chutesShort != null)
             {
 
                 List<string> missing = DesignSession.MissingMustInclude(best, req);
-                why = check.Problems.Count > 0 ? check.Problems[0] : invalid.Count > 0 ? invalid[0] : tanksShort ?? (missing.Count > 0 ? missing[0] : "the design misses something the brief asks for");
+                why = check.Problems.Count > 0 ? check.Problems[0] : invalid.Count > 0 ? invalid[0] : tanksShort ?? chutesShort ?? (missing.Count > 0 ? missing[0] : "the design misses something the brief asks for");
                 return null;
             }
             return best;

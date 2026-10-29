@@ -49,7 +49,7 @@ namespace KSA.KSP.Parts
                     try { d = Analyze(path); } catch (Exception e) { KsaCore.Log.Warn("Your design '" + name + "' could not be read: " + e.Message); }
                     c = new Cached { Time = time, Design = d };
                     Cache[path] = c;
-                    if (d != null) KsaCore.Log.Info("Your design '" + d.Name + "': " + Math.Round(d.DeltaV) + " m/s, liftoff TWR " + d.LiftoffTwr.ToString("0.00") + ", " + d.Seats + " seat(s)" + (d.HasParachute ? ", parachute" : ", no parachute") + (d.ResearchBlocker != null ? ", " + d.ResearchBlocker : string.Empty));
+                    if (d != null) KsaCore.Log.Info("Your design '" + d.Name + "': " + Math.Round(d.DeltaV) + " m/s, liftoff TWR " + d.LiftoffTwr.ToString("0.00") + ", " + d.Seats + " seat(s)" + (d.HasParachute ? ", parachutes for " + d.ChuteCapacity.ToString("0.0") + " t (capsule " + d.LandingMass.ToString("0.0") + " t)" : ", no main parachute") + (d.ResearchBlocker != null ? ", " + d.ResearchBlocker : string.Empty));
                 }
                 if (c.Design == null) continue;
                 // Research changes without the file changing: check it every time (cheap).
@@ -161,6 +161,22 @@ namespace KSA.KSP.Parts
                 for (P q = p; q != null; q = q.Parent != null && parts.ContainsKey(q.Parent) ? parts[q.Parent] : null)
                     if (q.Decoupler && q.Stage >= 0) { drop = Math.Max(drop, q.Stage); }
                 p.DropStage = drop;
+            }
+            // What comes down under the chutes: every part still attached when all the decouplers have fired, when that
+            // includes the crew pod (2026-10-29). Main parachutes land about 22 times their own mass softly.
+            {
+                double land = 0, cap = 0;
+                bool crewed = false;
+                foreach (P p in order)
+                {
+                    if (p.DropStage >= 0) continue;
+                    land += p.DryMass;
+                    foreach (double f in p.Fuel.Values) land += f;
+                    Part prefab = p.Ap.partPrefab;
+                    if (prefab.CrewCapacity > 0) crewed = true;
+                    if (prefab.FindModuleImplementing<ModuleParachute>() != null && !p.Ap.name.ToLowerInvariant().Contains("drogue")) cap += Math.Max(0.05, prefab.mass) * Parachutes.TonnesPerChuteTonne;
+                }
+                if (crewed) { d.LandingMass = Math.Round(land, 2); d.ChuteCapacity = Math.Round(cap, 2); }
             }
 
             int maxStage = 0;
