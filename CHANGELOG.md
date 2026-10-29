@@ -4,6 +4,7 @@ Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the
 
 ## Unreleased
 
+- **Spent stages are jettisoned when empty:** once every lit engine has burnt out and the next stage only separates (no engine, no parachute), the crew drops it at once, in the coast and reentry legs too. Before, a booster that burnt past the target apoapsis rode along until the craft fell back below 70 km, which also kept the capsule from turning to retrograde.
 - **The AI design is part of the design phase:** no separate "waiting for the AI design" status and no time-warp stop; the project shows "engineers finishing the design" until they answer. A project with a fallback design builds that if the AI has not answered 2 real minutes after its design days (agency.cfg `designWaitSeconds`); the late answer is ignored.
 - **The AI Director sees the campaign ladder:** its briefing now lists the next open step on each world (Kerbin: suborbital hop; Mun: flyby...), marking firsts a rival already took, so it climbs the ladder when the year's goals allow.
 - **Your own rockets fly projects.** Every rocket you save in this game's VAB is listed under "Your designs" in Projects, with its delta-v, liftoff TWR and seats worked out from the craft file. Pick one that fits the mission (enough seats, a parachute, the mission's delta-v and thrust, all parts researched) and the crew flies it; simulated flights score it like an AI design. Take Control is always allowed on your designs. The AI Director sees them too and prefers them when one fits.

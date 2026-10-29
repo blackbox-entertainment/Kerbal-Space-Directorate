@@ -301,6 +301,48 @@ namespace KSA.KSP.Flight
             }
         }
 
+        /// <summary>
+        /// Drops dead weight (2026-10-28): when every lit engine has burnt out and the next stage only separates (decouplers,
+        /// no engines, no parachutes), the crew fires it, so a spent booster does not ride along into reentry. Nothing that
+        /// would light an engine or open a chute is fired here. Returns true when it staged.
+        /// </summary>
+        public bool DropSpentStage(ref string line)
+        {
+            if (_v == null || _v.currentStage <= 0 || Now - _lastStage < 1.5) return false;
+            bool anyLit = false;
+            foreach (ModuleEngines e in _v.FindPartModulesImplementing<ModuleEngines>())
+            {
+                if (!e.EngineIgnited) continue;
+                anyLit = true;
+                if (!e.flameout && e.finalThrust > 0.1f) return false; // still burning
+                if (!e.flameout && HasPropellant(e)) return false;    // throttled down, not spent
+            }
+            if (!anyLit) return false;
+            int next = _v.currentStage - 1;
+            bool decoupler = false;
+            foreach (Part p in _v.parts)
+            {
+                if (p.inverseStage != next) continue;
+                if (p.FindModuleImplementing<ModuleEngines>() != null || p.FindModuleImplementing<ModuleParachute>() != null) return false;
+                if (p.FindModuleImplementing<ModuleDecouple>() != null || p.FindModuleImplementing<ModuleAnchoredDecoupler>() != null) decoupler = true;
+            }
+            if (!decoupler) return false;
+            Stage();
+            line = "Spent stage jettisoned.";
+            return true;
+        }
+
+        private static bool HasPropellant(ModuleEngines e)
+        {
+            if (e.part == null || e.propellants == null) return false;
+            foreach (Propellant pr in e.propellants)
+            {
+                if (pr.name == "ElectricCharge" || pr.name == "IntakeAir") continue;
+                if (pr.totalResourceAvailable > 0.01) return true;
+            }
+            return false;
+        }
+
         /// <summary>True when the next stage carries an engine or a decoupler (so staging gets us somewhere), false for chute-only stages.</summary>
         public bool NextStageIsWorthFiring()
         {

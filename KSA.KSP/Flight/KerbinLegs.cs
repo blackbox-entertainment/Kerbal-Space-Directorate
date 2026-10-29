@@ -100,6 +100,7 @@ namespace KSA.KSP.Flight
                     }
                     break;
                 case Phases.Coast:
+                    c.DropSpentStage(ref line); // a burnt-out booster does not ride along
                     if (v.orbit.ApA < atmo + 5000 || c.NoThrustAvailable()) { State = LegState.Done; break; }
                     if (alt > atmo && v.orbit.timeToAp < 25)
                     {
@@ -227,6 +228,7 @@ namespace KSA.KSP.Flight
                     }
                     break;
                 case Phases.Reentry:
+                    c.DropSpentStage(ref line); // spent stages go as soon as they are empty, not when we fall back into the air
                     c.Sas(VesselAutopilot.AutopilotMode.Retrograde, alt < atmo * 0.5);
                     {
                         // Heat shield first: report how far the capsule is from retrograde, every 10 s in the log (2026-10-28).
