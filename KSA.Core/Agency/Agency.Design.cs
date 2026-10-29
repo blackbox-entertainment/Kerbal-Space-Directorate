@@ -116,6 +116,11 @@ namespace KSA.Core
                 if (p.Design == null || !p.Design.IsAi || p.Design.Verdict != DesignVerdict.Approved || p.Design.Plan == null) continue;
                 List<string> problems = StagePlanValidator.Validate(p.Design.Plan, Parts, names);
                 problems.RemoveAll(x => x.Contains("not in the allowed part list")); // research is not lost; only real design faults count
+                // And against today's requirements (2026-10-28: Minmus orbit was approved against a wrong 2400 m/s figure).
+                MissionType mt = Catalogs.Missions.Get(p.MissionTypeId);
+                MissionRequirements.Entry need = Requirements.For(mt);
+                if (need != null && p.Design.TotalDeltaV > 0 && p.Design.TotalDeltaV < need.DeltaV)
+                    problems.Add("only " + Math.Round(p.Design.TotalDeltaV) + " of the " + Math.Round(need.DeltaV) + " m/s the mission needs");
                 if (problems.Count == 0) continue;
                 p.Design.Verdict = DesignVerdict.Failed;
                 p.Design.Error = problems[0];

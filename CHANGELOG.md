@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## Unreleased
+
+- **Fixed: Minmus orbit was approved with far too little delta-v.** dv_requirements.cfg listed it twice; a second, "from Kerbin orbit" figure (2400 m/s) overrode the 4900 m/s round trip, so a rocket that could not even reach Kerbin orbit was approved. Duplicates removed (Duna orbit, Dres landing, Jool orbit kept at the safer figure), and a test now keeps every other world at or above Kerbin orbit. Approved designs in a save are re-checked against the requirements on load and redesigned if short.
+
 ## 0.5.3 (2026-10-28), fourth test build
 
 - **Help brought up to date:** who designs the rockets (AI first, then the engineering team by hand), the design rules, how the crew flies (pre-launch SAS and RCS, pitch program, staging), the parachute safety net, the KSA mission report, and telling the AI Director to fly your design.
