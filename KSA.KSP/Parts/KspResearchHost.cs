@@ -162,6 +162,7 @@ namespace KSA.KSP.Parts
                 case PartKind.Envelope: return "airship envelope";
                 case PartKind.Antenna: return "antenna";
                 case PartKind.Industry: return "drill or ore converter";
+                case PartKind.Fin: return "fins";
                 default: return null;
             }
         }

@@ -264,7 +264,7 @@ namespace KSA.KSP.Build
                 }
                 ordered.Reverse(); // plan lists bottom-up; we build top-down
                 ordered.AddRange(engines);
-                Placed firstTank = null;
+                Placed firstTank = null, lastTank = null;
                 foreach (PlanPart pp in ordered)
                 {
                     for (int c = 0; c < Math.Max(1, pp.Count); c++)
@@ -277,7 +277,7 @@ namespace KSA.KSP.Build
                         StackBelow(bottomMost, part);
                         bottomMost = part;
                         bool solid = thrusts && (info == null || info.Kind == PartKind.Booster) && HasFuel(part.Ap);
-                        if (firstTank == null && ((info != null && info.Kind == PartKind.Tank) || solid)) firstTank = part;
+                        if ((info != null && info.Kind == PartKind.Tank) || solid) { if (firstTank == null) firstTank = part; lastTank = part; }
                     }
                 }
                 Placed anchor = firstTank ?? bottomMost;
@@ -292,15 +292,18 @@ namespace KSA.KSP.Build
                     if (rap == null) { result.Warnings.Add("Radial '" + rp.Part + "' is not loaded; skipped."); continue; }
                     CorePart rinfo = catalog != null ? catalog.Get(rp.Part) : null;
                     bool thrusts = Thrusts(rp.Part, catalog);
-                    bool low = rinfo != null && (rinfo.Kind == PartKind.LandingLeg || rinfo.Kind == PartKind.Industry);
-                    AttachNode anchorBottom = Node(anchor.Ap, "bottom");
+                    // Fins go low on the bottom tank, just above the engine, where they keep the rocket nose first (2026-10-29).
+                    bool fin = rinfo != null && rinfo.Kind == PartKind.Fin;
+                    bool low = rinfo != null && (rinfo.Kind == PartKind.LandingLeg || rinfo.Kind == PartKind.Industry || fin);
+                    Placed groupAnchor = fin && lastTank != null ? lastTank : anchor;
+                    AttachNode anchorBottom = Node(groupAnchor.Ap, "bottom");
                     float yOffset = low && anchorBottom != null ? anchorBottom.position.y * 0.8f : 0f;
                     float turn = (float)(Math.PI / 8 * groupIndex++);
                     var group = new List<Placed>();
                     for (int k = 0; k < n; k++)
                     {
                         float angle = (float)(2 * Math.PI * k / n) + (thrusts ? 0f : turn);
-                        Placed host = anchor;
+                        Placed host = groupAnchor;
                         if (thrusts && radialDecouplerName != null)
                         {
                             Placed rd = make(radialDecouplerName);
@@ -310,7 +313,7 @@ namespace KSA.KSP.Build
                         }
                         Placed booster = make(rp.Part);
                         booster.Stage = thrusts ? stageOf(engineSeq[i]) : -1;
-                        SurfaceAttach(host, booster, angle, host == anchor ? yOffset : 0f, result);
+                        SurfaceAttach(host, booster, angle, host == groupAnchor ? yOffset : 0f, result);
                         group.Add(booster);
                     }
                     foreach (Placed g in group) foreach (Placed other in group) if (other != g) g.Symmetry.Add(other);

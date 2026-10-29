@@ -170,6 +170,8 @@ namespace KSA.KSP.Parts
             if (has("ModuleDeployableSolarPanel") || has("ModuleGenerator") || (ap.category == PartCategories.Electrical)) return PartKind.Power;
             if (has("ModuleDataTransmitter") && ap.category == PartCategories.Communication) return PartKind.Antenna;
             if (has("ModuleScienceLab") || has("ModuleScienceExperiment") || has("Experiment") || ap.category == PartCategories.Science) return PartKind.Science;
+            // Rocket fins (stock Basic Fin, AV-T1, AV-R8, Delta-Deluxe winglets; mod fins by name), not wings (2026-10-29).
+            if (ap.category == PartCategories.Aero && (has("ModuleLiftingSurface") || has("ModuleControlSurface")) && (n.Contains("fin") || n.Contains("winglet"))) return PartKind.Fin;
             if (ap.category == PartCategories.Ground || has("ModuleWheelBase"))
             {
                 if (n.Contains("leg") || n.Contains("gear")) return PartKind.LandingLeg;

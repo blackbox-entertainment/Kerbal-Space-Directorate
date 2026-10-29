@@ -117,8 +117,10 @@ namespace KSA.Core.Design
                 {
                     checkedKey = i * 1000 + leg;
                     double twr = thrust / (mass * l.Gravity);
-                    // Fuel left over from an earlier leg but too weak for this one: stage it away, as a pilot would.
-                    if (minTwr > 0 && twr < minTwr && fuels[i] < s.Fuel && i < n - 1)
+                    // Fuel left over from an earlier leg but too weak for this one: stage it away, as a pilot would. After
+                    // lift-off that goes for an untouched stage too (2026-10-29: the stage below had flown the depot
+                    // rendezvous with its leftovers, so the small rendezvous stage was still full at the transfer).
+                    if (minTwr > 0 && twr < minTwr && (fuels[i] < s.Fuel || leg > 0) && i < n - 1)
                     {
                         r.Lines.Add("Stage " + s.Label + " is dropped with fuel left before the " + l.Name + " (too weak for it).");
                         mass -= s.Dry + fuels[i];

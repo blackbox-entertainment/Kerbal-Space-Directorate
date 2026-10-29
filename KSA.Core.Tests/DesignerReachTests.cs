@@ -34,6 +34,8 @@ namespace KSA.Core.Tests
             Add("Decoupler.2", PartKind.Decoupler, 0.16, d: 2.5);
             Add("radialDecoupler", PartKind.Decoupler, 0.025, stack: false);
             Add("landingLeg1", PartKind.LandingLeg, 0.05, stack: false);
+            Add("fuelTankSmallFlat", PartKind.Tank, 0.0625, 0.5);   // FL-T100
+            Add("fuelTankSmall", PartKind.Tank, 0.125, 1.0);        // FL-T200
             Add("fuelTank", PartKind.Tank, 0.25, 2.0);              // FL-T400
             Add("fuelTank.long", PartKind.Tank, 0.5, 4.0);          // FL-T800
             Add("Rockomax16.BW", PartKind.Tank, 1.0, 8.0, d: 2.5);  // X200-16
@@ -56,7 +58,59 @@ namespace KSA.Core.Tests
             Add("dockingPort2", PartKind.Docking, 0.05);
             Add("solarPanels4", PartKind.Power, 0.0175, stack: false);
             Add("RCSBlock.v2", PartKind.Rcs, 0.04, stack: false);                                    // RV-105
+            Add("basicFin", PartKind.Fin, 0.01, d: 0, stack: false);                                 // Basic Fin
+            Add("R8winglet", PartKind.Fin, 0.1, d: 0, stack: false);                                 // AV-R8
             return c;
+        }
+
+        [Test]
+        public void TheEngineersPutFinsOnTheLaunchStageAndStackFewBigTanks()
+        {
+            Agency a = Make.Agency(new FakeClock(), new ListLogger());
+            a.Parts = StockParts();
+            a.Requirements = MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
+            foreach (string id in new[] { "SuborbitalHop", "KerbinOrbit", "MunLanding" })
+            {
+                MissionType t = a.Catalogs.Missions.Get(id);
+                string why;
+                DesignRecord r = a.EngineersDesign(new KSA.Core.Projects.Project { Id = "x", MissionTypeId = t.Id, Name = t.Name }, out why, t);
+                Assert.That(r, Is.Not.Null, id + ": " + why);
+                Assert.That(Fins.Has(r.Plan, a.Parts), Is.True, id + ": fins on the launch stage");
+                Assert.That(r.Plan.Stages.FindIndex(1, s => Fins.Has(new StagePlan { Stages = { s } }, a.Parts)) < 0 || r.Plan.Stages.Count == 1, Is.True, id + ": fins only at the bottom");
+                foreach (PlanStage s in r.Plan.Stages)
+                    foreach (PlanPart p in s.Core)
+                    {
+                        // An even number of a tank never where half as many tanks twice the size weigh the same.
+                        bool even = p.Count >= 2 && p.Count % 2 == 0;
+                        Assert.That(p.Part == "fuelTankSmallFlat" && even, Is.False, id + ": " + p.Count + " FL-T100s");
+                        Assert.That(p.Part == "fuelTankSmall" && even, Is.False, id + ": " + p.Count + " FL-T200s");
+                        Assert.That(p.Part == "fuelTank" && even, Is.False, id + ": " + p.Count + " FL-T400s");
+                    }
+                DesignAnalysis check = StageAnalyzer.Analyze(r.Plan, a.Parts, a.Requirements.For(t));
+                Assert.That(check.Passes, Is.True, id + ": " + StageAnalyzer.Feedback(check));
+                if (id == "SuborbitalHop")
+                {
+                    Assert.That(r.Plan.Stages.Count, Is.EqualTo(2), "a hop flies two stages");
+                    Assert.That(r.Plan.Stages[0].Core.Exists(p => a.Parts.Get(p.Part).Kind == PartKind.Booster), Is.True, "solid first");
+                    Assert.That(r.Plan.Stages[1].Core.Exists(p => a.Parts.Get(p.Part).Kind == PartKind.Engine), Is.True, "then liquid");
+                }
+                TestContext.Out.WriteLine(id + ": " + r.Plan.ToJsonText(false));
+            }
+        }
+
+        [Test]
+        public void AnAiDesignWithoutFinsGetsThem()
+        {
+            PartCatalog parts = StockParts();
+            var plan = new StagePlan();
+            plan.Payload.Command = "mk1pod.v2";
+            var s = new PlanStage { Stage = 0, Role = "launch" };
+            s.Core.Add(new PlanPart { Part = "fuelTank", Count = 1 });
+            s.Core.Add(new PlanPart { Part = "liquidEngine2.v2", Count = 1 });
+            plan.Stages.Add(s);
+            Assert.That(Fins.AddIfMissing(plan, parts.All, parts), Is.Not.Null);
+            Assert.That(plan.Stages[0].Radial.Exists(p => p.Part == "basicFin" && p.Symmetry == 4), Is.True, "a 5 t rocket gets the small fin");
+            Assert.That(Fins.AddIfMissing(plan, parts.All, parts), Is.Null, "never twice");
         }
 
         [Test]

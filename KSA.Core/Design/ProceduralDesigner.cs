@@ -19,6 +19,7 @@ namespace KSA.Core.Design
         private const double Margin = 1.10;      // aim 10% over every leg
         private const int MaxTanks = 8;
         private const int MaxStages = 8;
+        private const double MaxSlenderness = 10;
         private static readonly int[] SideCounts = { 2, 3, 4, 6, 8 };
 
         private sealed class Option
@@ -29,6 +30,7 @@ namespace KSA.Core.Design
             public PartInfo Booster;    // a core solid booster (Boosters == 1, no engine) or side boosters
             public int Boosters;
             public double Dry, Fuel, Thrust, IspNum, IspSlNum;
+            public bool Awkward;        // too tall and thin, or an engine wider than its tanks: tried last
             public double Wet { get { return Dry + Fuel; } }
         }
 
@@ -146,6 +148,18 @@ namespace KSA.Core.Design
                     flight.Add(new FlightLeg { Name = "rest of the flight", DeltaV = total - 1800 * Margin, Gravity = gravity, MinTwr = 0.3 });
                 }
             }
+            // One climb (a hop) may be flown by two stages: split it in half so the search can drop the spent bottom half
+            // (2026-10-29: the Director's two-stage hop reached 78 km where the one-stage stack topped out at 4 km). The
+            // upper half is flown in thin air, as the design review judges it.
+            bool splitHop = false;
+            if (flight.Count == 1 && flight[0].Atmospheric && flight[0].DeltaV > 600 && !flight[0].Landing && !flight[0].Refuel && flight[0].FuelDrop <= 0)
+            {
+                splitHop = true;
+                FlightLeg whole = flight[0];
+                flight.Clear();
+                flight.Add(new FlightLeg { Name = whole.Name, Body = whole.Body, DeltaV = whole.DeltaV / 2, Gravity = whole.Gravity, MinTwr = whole.MinTwr, MaxTwr = whole.MaxTwr, Atmospheric = true });
+                flight.Add(new FlightLeg { Name = whole.Name + " (upper half)", Body = whole.Body, DeltaV = whole.DeltaV / 2, Gravity = whole.Gravity, MinTwr = 0.6 });
+            }
             int landingLeg = flight.FindIndex(x => x.Landing);
             if (landingLeg >= 0 && legs == null) { why = "no landing legs researched"; return null; }
             // Only the climb out of Kerbin may use solid boosters: they cannot throttle for a landing or restart.
@@ -154,21 +168,88 @@ namespace KSA.Core.Design
             bool radialDecoupler = allowed.Exists(x => x.Kind == PartKind.Decoupler && !x.IsStackable);
             List<Option> liquid = Options(engines, tanks, boosters, false, false);
             List<Option> withSolids = Options(engines, tanks, boosters, true, radialDecoupler);
+            // A two-stage hop: a solid booster first, a liquid stage above it, as the Director flies it (2026-10-29). Solid
+            // stages are tried first for the bottom half; the lightest anything when no solid does it.
+            List<Option> solidLaunch = null;
+            if (splitHop)
+            {
+                solidLaunch = new List<Option>(withSolids.FindAll(o => o.Engine == null));
+                solidLaunch.AddRange(withSolids.FindAll(o => o.Engine != null));
+            }
             double decouplerMass = decoupler != null ? decoupler.Mass : 0;
             double legsMass = legs != null ? legs.Mass * 4 : 0;
 
-            // Every way to cut the legs into consecutive stages: bit k set = a new stage starts after leg k.
-            int legCount = flight.Count;
+            // Fins on the launch stage when it lifts off through air (2026-10-29): sized first with the lightest fin, then
+            // again with the fin that suits the weight of the rocket if that is a different one.
+            PartInfo fin = flight.Count > 0 && flight[0].Atmospheric ? Fins.Pick(allowed, 0) : null;
             int refuelLeg = flight.FindIndex(x => x.Refuel);
+            Pick[] bestStages;
+            int[][] bestChunks;
+            double bestMass;
+            string shortOn;
+            Search(flight, payload, decouplerMass, legsMass, fin != null ? fin.Mass * Fins.Count : 0, landingLeg, refuelLeg, kerbinLegs, liquid, withSolids, solidLaunch, out bestStages, out bestChunks, out bestMass, out shortOn);
+            if (bestStages == null)
+            {
+                // Nothing short and wide does it: the lightest stacks, whatever their shape (a rocket at the edge of reach).
+                liquid = LightestFirst(liquid); withSolids = LightestFirst(withSolids);
+                if (solidLaunch != null) { solidLaunch = new List<Option>(withSolids.FindAll(o => o.Engine == null)); solidLaunch.AddRange(withSolids.FindAll(o => o.Engine != null)); }
+                string shortAgain;
+                Search(flight, payload, decouplerMass, legsMass, fin != null ? fin.Mass * Fins.Count : 0, landingLeg, refuelLeg, kerbinLegs, liquid, withSolids, solidLaunch, out bestStages, out bestChunks, out bestMass, out shortAgain);
+            }
+            if (fin != null && bestStages != null)
+            {
+                PartInfo sized = Fins.Pick(allowed, bestMass);
+                if (sized != null && sized != fin)
+                {
+                    Pick[] s2; int[][] c2; double m2; string short2;
+                    Search(flight, payload, decouplerMass, legsMass, sized.Mass * Fins.Count, landingLeg, refuelLeg, kerbinLegs, liquid, withSolids, solidLaunch, out s2, out c2, out m2, out short2);
+                    if (s2 != null) { fin = sized; bestStages = s2; bestChunks = c2; bestMass = m2; }
+                }
+            }
+            if (bestStages == null)
+            {
+                why = "no stack of the researched parts flies the whole mission (" + Math.Round(need != null ? need.DeltaV : 0) + " m/s): with everything above it, no stage manages the " + (shortOn ?? "climb");
+                return null;
+            }
+
+            StagePlan best = Build(plan, bestStages, bestChunks, flight, decoupler, legs, landingLeg, refuelLeg);
+            if (fin != null) best.Stages[0].Radial.Add(new PlanPart { Part = fin.Name, Count = Fins.Count, Symmetry = Fins.Count });
+            DesignAnalysis check = StageAnalyzer.Analyze(best, catalog, need, gravity);
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (PartInfo p in allowed) names.Add(p.Name);
+            List<string> invalid = StagePlanValidator.Validate(best, catalog, names);
+            string tanksShort = DesignSession.MissingDepotTanks(best, req, catalog);
+            if (!check.Passes || invalid.Count > 0 || DesignSession.MissingMustInclude(best, req).Count > 0 || tanksShort != null)
+            {
+
+                List<string> missing = DesignSession.MissingMustInclude(best, req);
+                why = check.Problems.Count > 0 ? check.Problems[0] : invalid.Count > 0 ? invalid[0] : tanksShort ?? (missing.Count > 0 ? missing[0] : "the design misses something the brief asks for");
+                return null;
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// Every way to cut the legs into consecutive stages (bit k set = a new stage starts after leg k), each sized from
+        /// the top down; the lightest whole rocket wins. <paramref name="finMass"/> rides on the launch stage.
+        /// </summary>
+        private static void Search(List<FlightLeg> flight, double payload, double decouplerMass, double legsMass, double finMass, int landingLeg, int refuelLeg, int kerbinLegs,
+                                   List<Option> liquid, List<Option> withSolids, List<Option> solidLaunch, out Pick[] bestStages, out int[][] bestChunks, out double bestMass, out string shortOn)
+        {
+            int legCount = flight.Count;
             var memo = new Dictionary<string, Pick>();
-            Pick[] bestStages = null;
-            int[][] bestChunks = null;
-            double bestMass = double.MaxValue;
+            bestStages = null;
+            bestChunks = null;
+            bestMass = double.MaxValue;
             // For the "why not": the leg where the try that got furthest (most stages sized) ran out of options.
-            string shortOn = null;
+            shortOn = null;
             int furthest = -1;
+            // A split hop tries two stages first and flies one only when no two-stage rocket does it.
+            for (int pass = 0; pass < 2; pass++)
             for (int mask = 0; mask < (1 << (legCount - 1)); mask++)
             {
+                if (pass == 1 && (solidLaunch == null || bestStages != null)) break;
+                if (solidLaunch != null && (pass == 0) == (mask == 0)) continue;
                 var chunks = new List<int[]>();
                 int from = 0;
                 for (int k = 0; k < legCount - 1; k++) if ((mask & (1 << k)) != 0) { chunks.Add(new[] { from, k }); from = k + 1; }
@@ -188,12 +269,14 @@ namespace KSA.Core.Design
                     int a = chunks[c][0], b = chunks[c][1];
                     if (refuelLeg >= 0 && b <= refuelLeg && !dry) { above -= postFuel; dry = true; }
                     bool solidsOk = b < kerbinLegs;
-                    double extra = decouplerMass + (landingLeg >= a && landingLeg <= b ? legsMass : 0);
+                    double extra = decouplerMass + (landingLeg >= a && landingLeg <= b ? legsMass : 0) + (c == 0 ? finMass : 0);
                     string key = a + "-" + b + "-" + Math.Round(above, 3);
                     Pick pick;
                     if (!memo.TryGetValue(key, out pick))
                     {
-                        pick = Size(flight, a, b, above + extra, solidsOk ? withSolids : liquid);
+                        // The bottom stage of a split hop with a stage above it: solid first (see solidLaunch).
+                        List<Option> opts = solidLaunch != null && a == 0 && b < legCount - 1 ? solidLaunch : solidsOk ? withSolids : liquid;
+                        pick = Size(flight, a, b, above + extra, opts);
                         memo[key] = pick;
                     }
 
@@ -213,26 +296,6 @@ namespace KSA.Core.Design
                 bestStages = picks;
                 bestChunks = chunks.ToArray();
             }
-            if (bestStages == null)
-            {
-                why = "no stack of the researched parts flies the whole mission (" + Math.Round(need != null ? need.DeltaV : 0) + " m/s): with everything above it, no stage manages the " + (shortOn ?? "climb");
-                return null;
-            }
-
-            StagePlan best = Build(plan, bestStages, bestChunks, flight, decoupler, legs, landingLeg, refuelLeg);
-            DesignAnalysis check = StageAnalyzer.Analyze(best, catalog, need, gravity);
-            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (PartInfo p in allowed) names.Add(p.Name);
-            List<string> invalid = StagePlanValidator.Validate(best, catalog, names);
-            string tanksShort = DesignSession.MissingDepotTanks(best, req, catalog);
-            if (!check.Passes || invalid.Count > 0 || DesignSession.MissingMustInclude(best, req).Count > 0 || tanksShort != null)
-            {
-
-                List<string> missing = DesignSession.MissingMustInclude(best, req);
-                why = check.Problems.Count > 0 ? check.Problems[0] : invalid.Count > 0 ? invalid[0] : tanksShort ?? (missing.Count > 0 ? missing[0] : "the design misses something the brief asks for");
-                return null;
-            }
-            return best;
         }
 
         /// <summary>The lightest stage that flies legs a..b (inclusive) under <paramref name="above"/> tonnes, or null.</summary>
@@ -266,20 +329,58 @@ namespace KSA.Core.Design
             var list = new List<Option>();
             foreach (PartInfo e in engines)
                 foreach (PartInfo t in tanks)
+                {
+                    // An engine wider than its tanks is a wobbly, top-heavy stack (a Mainsail under 1.25 m tanks), and a
+                    // stack more than MaxSlenderness times as tall as it is wide is hard to keep pointed: both only when
+                    // nothing short and wide does the job (2026-10-29).
+                    bool wideEngine = e.Diameter > 0 && t.Diameter > 0 && e.Diameter > t.Diameter + 0.01;
                     for (int c = 1; c <= MaxTanks; c++)
                     {
-                        var o = new Option { Engine = e, Tank = t, Tanks = c };
+                        bool awkward = wideEngine || (t.Diameter > 0 && c * TankLength(t) > MaxSlenderness * t.Diameter);
+                        var o = new Option { Engine = e, Tank = t, Tanks = c, Awkward = awkward };
                         Sum(o);
                         list.Add(o);
                         if (solids && sideBoosters)
                             foreach (PartInfo b in boosters)
-                                foreach (int nb in SideCounts) { var ob = new Option { Engine = e, Tank = t, Tanks = c, Booster = b, Boosters = nb }; Sum(ob); list.Add(ob); }
+                                foreach (int nb in SideCounts) { var ob = new Option { Engine = e, Tank = t, Tanks = c, Booster = b, Boosters = nb, Awkward = awkward }; Sum(ob); list.Add(ob); }
                     }
+                }
             // A solid booster alone makes a stage too (stacked, if it can be).
             if (solids) foreach (PartInfo b in boosters) if (b.IsStackable) { var o = new Option { Booster = b, Boosters = 1 }; Sum(o); list.Add(o); }
             list.RemoveAll(o => o.Thrust <= 0 || o.IspNum <= 0);
-            list.Sort((x, y) => x.Wet.CompareTo(y.Wet));
+            // Lightest first; at the same weight, fewer and wider tanks: a short, wide rocket is easier to keep pointed than
+            // a tall, thin one (2026-10-29: six FL-T100s stacked, where three FL-T200s weigh the same).
+            list.Sort((x, y) =>
+            {
+                if (x.Awkward != y.Awkward) return x.Awkward ? 1 : -1; // short and wide first
+                int byMass = Math.Round(x.Wet, 3).CompareTo(Math.Round(y.Wet, 3));
+                if (byMass != 0) return byMass;
+                int byCount = x.Tanks.CompareTo(y.Tanks);
+                if (byCount != 0) return byCount;
+                return (y.Tank != null ? y.Tank.Diameter : 0).CompareTo(x.Tank != null ? x.Tank.Diameter : 0);
+            });
             return list;
+        }
+
+        /// <summary>The same options, lightest first whatever their shape.</summary>
+        private static List<Option> LightestFirst(List<Option> options)
+        {
+            var list = new List<Option>(options);
+            list.Sort((x, y) =>
+            {
+                int byMass = Math.Round(x.Wet, 3).CompareTo(Math.Round(y.Wet, 3));
+                return byMass != 0 ? byMass : x.Tanks.CompareTo(y.Tanks);
+            });
+            return list;
+        }
+
+        /// <summary>
+        /// A tank's length in metres, from its propellant and width: stock liquid-fuel tanks hold about 0.68 t of propellant
+        /// per cubic metre of a diameter-squared-by-length block (FL-T400: 2 t, 1.25 m wide, 1.875 m long).
+        /// </summary>
+        internal static double TankLength(PartInfo t)
+        {
+            return t.Diameter > 0 ? t.FuelMass / (0.683 * t.Diameter * t.Diameter) : 0;
         }
 
         private static void Sum(Option o)

@@ -2,6 +2,14 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.5.11 (2026-10-29), twelfth test build
+
+- **Straight up to 15 km.** The crew now holds the rocket vertical (88 degrees, a touch east) until 15 km, then turns evenly until it is flat at 55 km. A suborbital hop climbs at 88 degrees all the way. Below 15 km the rocket is pushed back upright if it drifts, instead of following its flight path down. A finless Suborbital hop had leaned over right off the pad and was flying flat, heading the wrong way, at 3 km.
+- **Fins.** Every rocket the engineers draw up has four fins at the base of its launch stage: the biggest researched fin whose four weigh at most 2% of the rocket (the Basic Fin from day one). AI designs without fins get them added in the design review, and the AI is told to fit them.
+- **Short, wide stacks.** At equal weight the engineers now pick fewer, bigger tanks: three FL-T200s, not six FL-T100s. A tank stack more than ten times as tall as it is wide, or an engine wider than its tanks (a Mainsail under 1.25 m tanks), is used only when nothing short and wide does the job. A Mun lander now launches on a Jumbo-64, not seven FL-T800s.
+- **Two-stage hops, solid then liquid.** A suborbital hop can now be split between two stages, a solid booster first with a liquid stage above (with stock start parts, a Hammer with fins under an FL-T200 and a Terrier). One stage is used only when two will not do it.
+- **Design review fix:** a stage too weak for the next leg is now staged away even when it has not fired yet (the stage below had flown the depot rendezvous on its leftovers), instead of failing the design.
+
 ## 0.5.10 (2026-10-29), eleventh test build
 
 - **Orbital fuel depot.** A new program in Kerbin orbit: a tank farm with a docking port on its nose and a keeper aboard. It goes up empty and holds about 64 t (`agency.cfg depotCapacity`).

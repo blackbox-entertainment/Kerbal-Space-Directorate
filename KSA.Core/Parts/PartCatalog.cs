@@ -8,7 +8,9 @@ namespace KSA.Core.Parts
         Other = 0, Command, Tank, Engine, Booster, Decoupler, Parachute, HeatShield, Fairing, Docking,
         Habitat, Power, Rcs, LifeSupport, Science, Structural, LandingLeg, Wheel, Envelope, Antenna,
         /// <summary>Drills and ore converters (stock ISRU, Kerbalism chemical plants and harvesters). Appended so saved values stay put.</summary>
-        Industry
+        Industry,
+        /// <summary>Fins: small lifting surfaces at the base of a rocket that keep it flying nose first (2026-10-29).</summary>
+        Fin
     }
 
     public enum PartJob { LaunchVehicle = 0, StationModule = 1, BaseModule = 2, CloudCityModule = 3 }
@@ -84,15 +86,15 @@ namespace KSA.Core.Parts
             {
                 case PartJob.StationModule:
                     return new[] { PartKind.Command, PartKind.Habitat, PartKind.Docking, PartKind.Power, PartKind.Rcs, PartKind.LifeSupport, PartKind.Science, PartKind.Structural, PartKind.Antenna,
-                                   PartKind.Tank, PartKind.Engine, PartKind.Decoupler, PartKind.Booster, PartKind.Fairing };
+                                   PartKind.Tank, PartKind.Engine, PartKind.Decoupler, PartKind.Booster, PartKind.Fairing, PartKind.Fin };
                 case PartJob.BaseModule:
                     return new[] { PartKind.Command, PartKind.Habitat, PartKind.Power, PartKind.LandingLeg, PartKind.Wheel, PartKind.LifeSupport, PartKind.Industry, PartKind.Science, PartKind.Structural, PartKind.Docking,
-                                   PartKind.Tank, PartKind.Engine, PartKind.Decoupler, PartKind.Booster, PartKind.Fairing, PartKind.Antenna };
+                                   PartKind.Tank, PartKind.Engine, PartKind.Decoupler, PartKind.Booster, PartKind.Fairing, PartKind.Antenna, PartKind.Fin };
                 case PartJob.CloudCityModule:
                     return new[] { PartKind.Envelope, PartKind.Command, PartKind.Habitat, PartKind.Power, PartKind.LifeSupport, PartKind.Structural, PartKind.Docking,
-                                   PartKind.Tank, PartKind.Engine, PartKind.Decoupler, PartKind.Booster, PartKind.Fairing, PartKind.HeatShield };
+                                   PartKind.Tank, PartKind.Engine, PartKind.Decoupler, PartKind.Booster, PartKind.Fairing, PartKind.HeatShield, PartKind.Fin };
                 default:
-                    return new[] { PartKind.Command, PartKind.Tank, PartKind.Engine, PartKind.Booster, PartKind.Decoupler, PartKind.Parachute, PartKind.HeatShield, PartKind.Fairing, PartKind.Structural, PartKind.Antenna, PartKind.Power };
+                    return new[] { PartKind.Command, PartKind.Tank, PartKind.Engine, PartKind.Booster, PartKind.Decoupler, PartKind.Parachute, PartKind.HeatShield, PartKind.Fairing, PartKind.Structural, PartKind.Antenna, PartKind.Power, PartKind.Fin };
             }
         }
 

@@ -153,19 +153,24 @@ namespace KSA.KSP.Flight
 
         public void End(FlightContext ctx) { ctx.Control.Yaw = 0; }
 
+        /// <summary>No turning below this: the thick lower air tips a rocket that leans over (2026-10-29).</summary>
+        internal const double TurnStart = 15000;
+        /// <summary>The turn is flat by here; above it the rocket burns horizontally for apoapsis.</summary>
+        internal const double TurnEnd = 55000;
+
         /// <summary>
-        /// The ascent pitch, degrees above the horizon: 90 x (1 - sqrt(alt / 60 km)), at least 10, so about 78 at 1 km, 53 at
-        /// 10 km and 26 at 30 km. Once fast (over 150 m/s) it stays within 8 degrees of the surface flight path, so the air
-        /// never meets the rocket side-on.
+        /// The ascent pitch, degrees above the horizon. Straight up (88, a touch east) to 15 km, then an even turn that is
+        /// flat at 55 km. Above 15 km and over 150 m/s it stays within 8 degrees of the surface flight path, so the air
+        /// never meets the rocket side-on. A suborbital hop climbs at 88 all the way.
         /// </summary>
         internal static double TargetPitch(Vessel v, bool orbit = true)
         {
             double alt = Math.Max(0, v.altitude);
-            // A suborbital hop goes nearly straight up (85 deg, a little east so it does not come down on the pad).
-            // Straight up to 1 km, then an even turn that is horizontal at 45 km (2026-10-28: the old curve was at 53 degrees
-            // by 10 km, far too soon for a modest rocket). Above 45 km: flat, burning for apoapsis.
-            double program = orbit ? (alt < 1000 ? 90 : Math.Max(0, 90 * (1 - Math.Min(1, (alt - 1000) / 44000.0)))) : 85;
-            if (v.srfSpeed < 150) return program;
+            // 2026-10-29: the old program leaned 5 degrees at lift-off and then followed the flight path down; a finless
+            // Suborbital hop was flying flat at 3 km. Below the turn the program holds, whatever the path does, so a rocket
+            // that drifts is pushed back upright.
+            double program = orbit && alt > TurnStart ? Math.Max(0, 88 * (1 - Math.Min(1, (alt - TurnStart) / (TurnEnd - TurnStart)))) : 88;
+            if (v.srfSpeed < 150 || alt <= TurnStart || !orbit) return program;
             Vector3d up = v.upAxis;
             double pathPitch = 90 - Vector3d.Angle(v.srf_velocity, up);
             return Math.Max(pathPitch - 8, Math.Min(pathPitch + 8, program));
