@@ -114,6 +114,22 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void TheModVersionMatchesKsaVersionFile()
+        {
+            string root = System.IO.Path.GetFullPath(System.IO.Path.Combine(ShippedConfigs.ConfigDir, "..", "..", ".."));
+            string props = System.IO.File.ReadAllText(System.IO.Path.Combine(root, "Directory.Build.props"));
+            var m = System.Text.RegularExpressions.Regex.Match(props, @"<Version>(\d+)\.(\d+)\.(\d+)</Version>");
+            Assert.That(m.Success, Is.True, "no <Version> in Directory.Build.props");
+            string avc = System.IO.File.ReadAllText(System.IO.Path.Combine(ShippedConfigs.ConfigDir, "..", "KSA.version"));
+            var v = System.Text.RegularExpressions.Regex.Match(avc, @"""VERSION""\s*:\s*\{\s*""MAJOR""\s*:\s*(\d+)\s*,\s*""MINOR""\s*:\s*(\d+)\s*,\s*""PATCH""\s*:\s*(\d+)");
+            Assert.That(v.Success, Is.True, "no VERSION in KSA.version");
+            Assert.That(v.Groups[1].Value + "." + v.Groups[2].Value + "." + v.Groups[3].Value,
+                Is.EqualTo(m.Groups[1].Value + "." + m.Groups[2].Value + "." + m.Groups[3].Value), "bump Directory.Build.props and KSA.version together");
+            Assert.That(KSA.Core.CoreInfo.Version, Is.EqualTo(m.Groups[1].Value + "." + m.Groups[2].Value + "." + m.Groups[3].Value));
+            Assert.That(System.IO.File.Exists(System.IO.Path.Combine(root, "CHANGELOG.md")), Is.True);
+        }
+
+        [Test]
         public void TheHammerFleaPlanUsesOnlyEarlyParts()
         {
             string path = System.IO.Path.Combine(ShippedConfigs.ConfigDir, "..", "Templates", "Plans", "stock_hammer_flea.json");

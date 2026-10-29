@@ -92,6 +92,13 @@ You need the [.NET SDK](https://dotnet.microsoft.com/download) and a copy of KSP
    dotnet test KSA.Core.Tests
    ```
 
+4. Package a zip to share (builds Release, runs the tests, writes `dist\KerbalSpaceDirectorate-<version>.zip`):
+   ```powershell
+   .\tools\package.ps1
+   ```
+
+**Versions.** The version lives in `Directory.Build.props` and `GameData/KSA/KSA.version` (a test checks they match). Changes are listed in [CHANGELOG.md](CHANGELOG.md). Below 1.0 the minor number tracks the roadmap milestone reached.
+
 The code is split in two. `KSA.Core` is the agency logic in plain C# with no KSP references. `KSA.KSP` connects it to the game. Design notes are in [docs/KSA_GDD.md](docs/KSA_GDD.md), and the in-game test plan is in [docs/TESTPLAN_M3-M6.md](docs/TESTPLAN_M3-M6.md).
 
 If something goes wrong, look in `KSP.log` in your KSP folder. Every KSA line starts with `[KSA]`.

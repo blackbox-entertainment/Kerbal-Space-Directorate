@@ -183,7 +183,7 @@ namespace KSA.KSP.UI
 
             var content = new DialogGUIVerticalLayout(true, true, 4f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft, list, buttons, buttons2, buttons3);
 
-            var dialog = new MultiOptionDialog(DialogName, "", "Kerbal Space Directorate", KsaUi.Skin,
+            var dialog = new MultiOptionDialog(DialogName, "", "Kerbal Space Directorate  v" + Core.CoreInfo.Version, KsaUi.Skin,
                 new Rect(0.5f, 0.5f, Width, WindowHeight), content);
 
             _dialog = PopupDialog.SpawnPopupDialog(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), dialog, false, KsaUi.Skin, false);

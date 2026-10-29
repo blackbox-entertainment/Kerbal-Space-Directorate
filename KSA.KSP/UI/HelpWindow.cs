@@ -13,10 +13,10 @@ namespace KSA.KSP.UI
     {
         public const string NodeName = "KSA_HELP_TOPIC";
         private const string DialogName = "KSA_Help";
-        private const float Width = 900f;
+        private const float Width = 940f;
         private static float WindowHeight { get { return Mathf.Clamp(Screen.height - 200f, 520f, 820f); } }
         private static float ListHeight { get { return WindowHeight - 110f; } }
-        private const float TopicWidth = 210f;
+        private const float TopicWidth = 250f;
         private const float LineHeight = 22f;
         private const string Amber = "#ffd27f";
 

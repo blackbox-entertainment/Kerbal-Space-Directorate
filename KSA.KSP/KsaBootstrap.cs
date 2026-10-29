@@ -11,7 +11,7 @@ namespace KSA.KSP
     {
         private void Start()
         {
-            KsaCore.Log.Info("Loaded v" + Core.CoreInfo.Version);
+            KsaCore.Log.Info("Kerbal Space Directorate v" + Core.CoreInfo.Version + " loaded");
             KsaCore.LoadCatalogs();
         }
     }
