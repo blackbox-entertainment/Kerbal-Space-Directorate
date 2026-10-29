@@ -14,6 +14,7 @@ namespace KSA.KSP.Flight
         private bool _engaged;
         private float _throttle;
         private double _lastStage = -1e9;
+        private double _throttleUp = -1e9;
 
         public float Yaw, Pitch, Roll;
         /// <summary>RCS translation inputs (-1..1): X right, Y up, Z forward in the control frame.</summary>
@@ -223,7 +224,9 @@ namespace KSA.KSP.Flight
             get { return _throttle; }
             set
             {
-                _throttle = Mathf.Clamp01(value);
+                float next = Mathf.Clamp01(value);
+                if (_throttle < 0.05f && next >= 0.05f) _throttleUp = Now; // engines take a moment to build thrust
+                _throttle = next;
                 if (_v != null && _v == FlightGlobals.ActiveVessel) FlightInputHandler.state.mainThrottle = _throttle;
             }
         }
@@ -453,6 +456,9 @@ namespace KSA.KSP.Flight
         {
             if (_v == null) return true;
             if (_v.currentStage > 0 && Now - _lastStage < 3) return false;
+            // Just opened the throttle: no thrust yet is the engine spooling up, not empty tanks (2026-10-29: the
+            // circularisation burn was given up in the frame it started, with 1,600 m/s still aboard).
+            if (Now - _throttleUp < 3) return false;
             foreach (ModuleEngines e in _v.FindPartModulesImplementing<ModuleEngines>())
                 if (e.EngineIgnited && !e.flameout && e.finalThrust > 0.1f) return false;
             return _v.currentStage <= 0 || Now - _lastStage > 4;

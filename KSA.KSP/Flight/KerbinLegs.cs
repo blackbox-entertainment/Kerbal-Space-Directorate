@@ -126,7 +126,9 @@ namespace KSA.KSP.Flight
                     {
                         c.Sas(VesselAutopilot.AutopilotMode.Prograde, false);
                         _phase = Phases.Circularize; _phaseStart = ctx.Now;
-                        Status = "Circularising."; line = "Circularisation burn."; c.Throttle = 1f;
+                        Status = "Circularising."; c.Throttle = 1f;
+                        c.EnsureEngine(ref line); // after the coast the next engine may not be lit yet
+                        line = line ?? "Circularisation burn.";
                     }
                     else if (alt > atmo) c.Sas(VesselAutopilot.AutopilotMode.Prograde, false);
                     break;

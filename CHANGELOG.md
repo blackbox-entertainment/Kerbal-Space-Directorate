@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.5.18 (2026-10-29), nineteenth test build
+
+- **The circularisation burn is flown.** The crew opened the throttle and, in the same instant, read "no thrust" as empty tanks: the burn was given up with 1,600 m/s still aboard and the flight came home from 84 km. Any burn now gets three seconds for the engine to build thrust, and the next engine is lit first if the coast left none burning.
+
 ## 0.5.17 (2026-10-29), eighteenth test build
 
 - **The turn actually turns.** Above 15 km the crew kept the nose within 8 degrees of the flight path, and a fast rocket going straight up hardly bends that way: a Kerbin orbit flight coasted to 84 km at only 386 m/s sideways, far short of orbit. The limit now opens as the air thins: 8 degrees at 25 kPa of dynamic pressure or more, none at 5 kPa or less.
