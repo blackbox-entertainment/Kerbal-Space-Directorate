@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## Unreleased
+
+- **Your planes fly missions:** craft saved in the spaceplane hangar (SPH) appear under "Your designs" for Kerbin missions. They roll out to the runway and you fly them (no plane autopilot yet); the crew, records and recovery count as usual. A plane fits a mission when its rockets plus a jet-climb allowance reach the mission's delta-v and it has landing gear or a parachute. The AI Director does not pick planes until a plane autopilot exists.
+
 ## 0.5.4 (2026-10-28), fifth test build
 
 - **Records:** a Records window in the Director's Office. Firsts are credited to the kerbals who flew them (crew, mission, date) or show the rival that got there first; the agency record book keeps highest altitude, fastest flight, farthest from Kerbin, longest mission, and the career leaders for days in space, missions flown and worlds visited. A broken record makes the news (career records when they change hands). Older saves fill in the career records from their service records.

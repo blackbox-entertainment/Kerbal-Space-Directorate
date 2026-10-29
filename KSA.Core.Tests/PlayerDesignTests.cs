@@ -38,6 +38,27 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void PlanesFlyKerbinMissionsLandOnWheelsAndAreNotGivenToTheAiDirector()
+        {
+            Agency a = Staffed(new FakeClock());
+            var plane = new PlayerDesign { Name = "Tim's Plane", CraftPath = "C:/saves/x/Ships/SPH/Plane.craft", Seats = 1, DeltaV = 2600, IsPlane = true, HasJets = true, HasWheels = true };
+            a.PlayerDesignSource = () => new List<PlayerDesign> { plane };
+            MissionType orbit = a.Catalogs.Missions.Get("KerbinOrbit");
+            MissionType mun = a.Catalogs.Missions.Get("MunFlyby");
+            MissionRequirements.Entry need = a.Requirements.For(orbit);
+            Assert.That(plane.Blocker(orbit, need), Is.Null, "2600 m/s of rockets plus the jet climb reaches orbit");
+            Assert.That(plane.Blocker(mun, a.Requirements.For(mun)), Does.Contain("Kerbin missions only"));
+            plane.HasWheels = false;
+            Assert.That(plane.Blocker(orbit, need), Does.Contain("could not land"));
+            plane.HasWheels = true;
+            Assert.That(a.PlayerDesignsFor(orbit), Has.Count.EqualTo(1));
+            Assert.That(a.PlayerDesignsFor(orbit, true), Is.Empty, "the AI Director cannot fly a plane yet");
+            a.SetPreferredDesign("KerbinOrbit", "Tim's Plane");
+            Assert.That(a.PreferredDesignFor(orbit), Is.Null);
+            Assert.That(plane.ToRecord(need).IsPlane, Is.True);
+        }
+
+        [Test]
         public void ThePickedDesignIsRememberedAndOnlyUsedWhileItFits()
         {
             var clock = new FakeClock();

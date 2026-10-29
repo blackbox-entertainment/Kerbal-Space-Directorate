@@ -135,7 +135,10 @@ namespace KSA.KSP.Flight
                     BodyOrbit = pending.BodyOrbitAltitude > 0 ? pending.BodyOrbitAltitude : agency.Settings.LiveTargetOrbitAltitude,
                     ReentryPe = pending.ReentryPeriapsis > 0 ? pending.ReentryPeriapsis : agency.Settings.LiveReentryPeriapsis,
                     MaxSlope = pending.MaxSiteSlope,
-                    ManualAllowed = pending.ManualOverrideAllowed,
+                    // A plane (2026-10-28): no plane autopilot yet, so the Director flies it from the runway.
+                    ManualAllowed = pending.ManualOverrideAllowed || pending.IsPlane,
+                    AutopilotOn = !pending.IsPlane,
+                    DirectorFlown = pending.IsPlane,
                     TargetBody = pending.Mission != null ? pending.Mission.Body : "Kerbin",
                     DockTargetVesselId = pending.DockTargetVesselId ?? string.Empty,
                     ProgramId = pending.ProgramId ?? string.Empty
@@ -189,9 +192,17 @@ namespace KSA.KSP.Flight
             _vessel = v;
             BuildProgram(agency, project, pending == null);
             bool onPad = v.situation == Vessel.Situations.PRELAUNCH || (v.srfSpeed < 1.0 && v.altitude - v.terrainAltitude < 60 && v.mainBody == FlightGlobals.GetHomeBody());
-            _holdForLaunch = onPad && agency.Settings.LaunchOnCommand && pending != null;
+            bool plane = pending != null && pending.IsPlane;
+            _holdForLaunch = onPad && agency.Settings.LaunchOnCommand && pending != null && !plane;
             _padStage = v.currentStage;
             if (onPad) PreflightChecks(v);
+            if (plane)
+            {
+                agency.SetDirectorFlown(Live.ProjectId, true);
+                _status = "Your plane is on the runway: you have the controls.";
+                Log("On the runway: the Director flies this plane (no plane autopilot yet). Land it, or reach the mission's goal and come home; recovery closes the flight.", null);
+                ScreenMessages.PostScreenMessage("[KSA] " + v.vesselName + " is on the runway: you have the controls. Recover it when you are down to close the mission.", 10f, ScreenMessageStyle.UPPER_CENTER);
+            }
             if (_holdForLaunch) { _status = "Holding on the pad. Press Launch (or the staging key) when you are ready."; Log("On the pad, holding for the Director's go.", null); }
             else if (Live.AutopilotOn && _program != null) _program.Engage();
             GameEvents.onVesselSOIChanged.Add(OnSoiChanged);

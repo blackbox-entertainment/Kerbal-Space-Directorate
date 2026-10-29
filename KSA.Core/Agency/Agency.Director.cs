@@ -370,11 +370,11 @@ namespace KSA.Core
             if (engineers != null && engineers.Count == 0) engineers = null;
             // The human Director's own design: as asked, or the first that fits when nothing else can fly the mission.
             string design = Json.GetString(a, "design", string.Empty);
-            if (design.Length > 0 && FindPlayerDesign(design) == null) design = string.Empty;
+            if (design.Length > 0 && (FindPlayerDesign(design) == null || FindPlayerDesign(design).IsPlane)) design = string.Empty;
             // The human Director's pick for this mission always wins (2026-10-28).
             PlayerDesign picked = PreferredDesignFor(type);
             if (picked != null) design = picked.CraftPath;
-            if (design.Length == 0 && MissionBlocker(type) != null) { List<PlayerDesign> fit = PlayerDesignsFor(type); if (fit.Count > 0) design = fit[0].CraftPath; }
+            if (design.Length == 0 && MissionBlocker(type) != null) { List<PlayerDesign> fit = PlayerDesignsFor(type, true); if (fit.Count > 0) design = fit[0].CraftPath; }
             string pd = design.Length > 0 ? design : null;
             Project p = CreateProject(null, type.Id, pd != null ? null : (template != null ? template.Id : null), crew, engineers, null, DirectorMode(type), out message, null, pd);
             if (p == null && (crew != null || engineers != null)) p = CreateProject(null, type.Id, pd != null ? null : (template != null ? template.Id : null), null, null, null, DirectorMode(type), out message, null, pd);
@@ -577,7 +577,7 @@ namespace KSA.Core
             {
                 if (t.ModuleRole.Length > 0 || t.IsRescue) continue;
                 string block = MissionBlocker(t);
-                List<PlayerDesign> mine = PlayerDesignsFor(t);
+                List<PlayerDesign> mine = PlayerDesignsFor(t, true);
                 if (block != null && mine.Count == 0) { if (locked.Count < 10) locked.Add(t.Name + " (" + block + ")"); continue; }
                 Template best = null;
                 foreach (Template tp in TemplatesFor(t)) if (TemplateBlocker(tp) == null) { best = tp; break; }

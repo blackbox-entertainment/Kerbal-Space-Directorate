@@ -18,17 +18,24 @@ namespace KSA.KSP.Parts
         private sealed class Cached { public DateTime Time; public PlayerDesign Design; }
         private static readonly Dictionary<string, Cached> Cache = new Dictionary<string, Cached>(StringComparer.OrdinalIgnoreCase);
 
-        public static string Folder
+        public static string Folder { get { return FolderFor("VAB"); } }
+
+        /// <summary>This game's craft folder for a building: "VAB" (rockets) or "SPH" (planes, 2026-10-28).</summary>
+        public static string FolderFor(string building)
         {
-            get { return HighLogic.SaveFolder == null ? null : Path.Combine(KSPUtil.ApplicationRootPath, Path.Combine("saves", Path.Combine(HighLogic.SaveFolder, Path.Combine("Ships", "VAB")))); }
+            return HighLogic.SaveFolder == null ? null : Path.Combine(KSPUtil.ApplicationRootPath, Path.Combine("saves", Path.Combine(HighLogic.SaveFolder, Path.Combine("Ships", building))));
         }
 
         public static List<PlayerDesign> List()
         {
             var list = new List<PlayerDesign>();
-            string folder = Folder;
-            if (folder == null || !Directory.Exists(folder)) return list;
-            foreach (string path in Directory.GetFiles(folder, "*.craft", SearchOption.TopDirectoryOnly))
+            var files = new List<string>();
+            foreach (string building in new[] { "VAB", "SPH" })
+            {
+                string folder = FolderFor(building);
+                if (folder != null && Directory.Exists(folder)) files.AddRange(Directory.GetFiles(folder, "*.craft", SearchOption.TopDirectoryOnly));
+            }
+            foreach (string path in files)
             {
                 string name = Path.GetFileNameWithoutExtension(path);
                 if (name.StartsWith("KSA ", StringComparison.OrdinalIgnoreCase)) continue; // the engineering team's own craft
@@ -83,6 +90,7 @@ namespace KSA.KSP.Parts
             var parts = new Dictionary<string, P>();
             var order = new List<P>();
             var d = new PlayerDesign { CraftPath = path, Name = craft.GetValue("ship") ?? Path.GetFileNameWithoutExtension(path) };
+            d.IsPlane = string.Equals(craft.GetValue("type"), "SPH", StringComparison.OrdinalIgnoreCase);
             foreach (ConfigNode n in craft.GetNodes("PART"))
             {
                 string raw = n.GetValue("part") ?? string.Empty;
@@ -108,6 +116,8 @@ namespace KSA.KSP.Parts
                     p.IspSl = e.atmosphereCurve.Evaluate(1f);
                     p.Propellants = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                     foreach (Propellant pr in e.propellants) if (pr.name != "ElectricCharge" && pr.name != "IntakeAir") p.Propellants.Add(pr.name);
+                    // Jets breathe air: their thrust is not rocket delta-v (a plane gets a climb credit instead).
+                    foreach (Propellant pr in e.propellants) if (pr.name == "IntakeAir") { p.Engine = false; d.HasJets = true; }
                 }
                 foreach (ConfigNode r in n.GetNodes("RESOURCE"))
                 {
@@ -121,6 +131,7 @@ namespace KSA.KSP.Parts
                 d.Seats += prefab.CrewCapacity;
                 d.Cost += ap.cost;
                 if (prefab.FindModuleImplementing<ModuleParachute>() != null) d.HasParachute = true;
+                if (prefab.FindModuleImplementing<ModuleWheelBase>() != null) d.HasWheels = true;
                 parts[raw] = p;
                 order.Add(p);
             }

@@ -50,8 +50,12 @@ namespace KSA.KSP.Flight
                 int seated = Seat(manifest, spec.CrewNames);
                 if (seated == 0) throw new InvalidOperationException("no seats for the crew (" + spec.CrewNames.Count + " assigned)");
                 Pending = spec;
-                KsaCore.Log.Info("Launching " + spec.Project.Name + " from " + path + " with " + seated + " crew");
-                FlightDriver.StartWithNewLaunch(path, "Squad/Flags/default", "LaunchPad", manifest);
+                // Planes from the spaceplane hangar roll out to the runway (2026-10-28).
+                bool plane = spec.IsPlane || string.Equals(craft.GetValue("type"), "SPH", StringComparison.OrdinalIgnoreCase);
+                spec.IsPlane = plane;
+                string site = plane ? "Runway" : "LaunchPad";
+                KsaCore.Log.Info("Launching " + spec.Project.Name + " from " + path + " with " + seated + " crew on the " + site);
+                FlightDriver.StartWithNewLaunch(path, "Squad/Flags/default", site, manifest);
             }
             catch (Exception e)
             {

@@ -28,6 +28,8 @@ namespace KSA.Core
         public double MaxSiteSlope { get; set; }
         public string ProgramId { get; set; }
         public bool ManualOverrideAllowed { get; set; }
+        /// <summary>A plane from the spaceplane hangar: launched on the runway, flown by the Director (2026-10-28).</summary>
+        public bool IsPlane { get; set; }
         /// <summary>The crew reduced to flight numbers: precision, margins, mistake chance (decision 21).</summary>
         public CrewFlightProfile FlightCrew { get; set; }
 
@@ -137,7 +139,8 @@ namespace KSA.Core
                 ReentryPeriapsis = Settings.LiveReentryPeriapsis,
                 ProgramId = p.ProgramId,
                 FlightCrew = FlightProfileFor(p.Id),
-                ManualOverrideAllowed = Settings.ManualOverride || (p.Design != null && p.Design.Source == Design.DesignSource.Player) // the Director may always take over a rocket they built (2026-10-28)
+                ManualOverrideAllowed = Settings.ManualOverride || (p.Design != null && p.Design.Source == Design.DesignSource.Player), // the Director may always take over a rocket they built (2026-10-28)
+                IsPlane = p.Design != null && p.Design.IsPlane
             };
             foreach (string id in p.Crew) { CrewProfile c = Crew.Get(id); if (c != null) spec.CrewNames.Add(c.Name); }
             Program program = p.ProgramId.Length > 0 ? GetProgram(p.ProgramId) : null;

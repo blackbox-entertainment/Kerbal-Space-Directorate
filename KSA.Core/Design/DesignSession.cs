@@ -36,6 +36,8 @@ namespace KSA.Core.Design
         public string Error { get; set; }
         /// <summary>Host-side craft file path once built (M4 VesselBuilder), or empty.</summary>
         public string CraftPath { get; set; }
+        /// <summary>A plane from the spaceplane hangar: rolls out to the runway and the Director flies it (2026-10-28).</summary>
+        public bool IsPlane { get; set; }
         /// <summary>How many parts were researched when the design was made; a proven design is reused until this changes (2026-10-28).</summary>
         public int PartsResearched { get; set; }
 
@@ -84,6 +86,7 @@ namespace KSA.Core.Design
             n.AddValue("error", Error);
             n.AddValue("craft", CraftPath);
             n.AddValue("partsResearched", PartsResearched);
+            n.AddValue("isPlane", IsPlane);
             foreach (string f in Feedback) n.AddValue("feedback", f);
             foreach (string s in StageSummary) n.AddValue("stage", s);
             return n;
@@ -117,7 +120,8 @@ namespace KSA.Core.Design
                 Model = n.GetValue("model", string.Empty),
                 Error = n.GetValue("error", string.Empty),
                 CraftPath = n.GetValue("craft", string.Empty),
-                PartsResearched = n.GetInt("partsResearched", 0)
+                PartsResearched = n.GetInt("partsResearched", 0),
+                IsPlane = n.GetBool("isPlane", false)
             };
             DesignSource src; DesignVerdict v;
             if (Enum.TryParse(n.GetValue("source", "Template"), true, out src)) r.Source = src;
