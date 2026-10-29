@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## Unreleased
+
+- **One pad:** projects that are ready together launch 3 days apart (agency.cfg `launchSpacingDays`); simulated launches and live roll-outs wait their turn, time warp stops only when a live flight's window opens, and Launch now skips the queue.
+- README: install steps for the test zip; Kerbalism science notes brought up to date.
+
 ## 0.5.0 (2026-10-28), first test build
 
 The first build shared outside the dev machine. Everything through the live flight director (M5) is in, plus parts of M6.

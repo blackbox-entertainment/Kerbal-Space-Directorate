@@ -214,3 +214,10 @@ Part 1 runs on the current install (no Kerbalism). Part 2 needs Kerbalism, insta
 4. If the design falls short, expect "the engineers try another design (attempt 2 of 3)". After three failures: "called off ... returned", balance back to where it was.
 5. Open Design Review on the project: the plan should carry a thermometer/goo (whatever is researched), for Kerbin orbit a heat shield under the pod, and with Kerbalism an antenna (Communotron 16-S or similar). In flight, Kerbalism data should transmit instead of stopping at "no storage space".
 6. With AI off, the same mission stays "(research)" until a ready-made design can be built.
+
+## J. Launch queue (added 2026-10-28)
+
+1. Start three projects that will be ready within a day of each other (for example three Flea hops, Simulate).
+2. Time warp past their build. Expect them to launch on three different days, 3 days apart. Projects shows "Launch queue: waiting for the pad: next launch window day N" on the waiting ones.
+3. With a Watch Live project waiting in the queue, time warp keeps running; it stops when the window opens and the roll-out countdown starts.
+4. Press Launch now on a waiting project: it goes at once.

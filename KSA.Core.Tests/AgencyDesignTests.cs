@@ -229,6 +229,27 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void ProjectsReadyTogetherLaunchThreeDaysApart()
+        {
+            var clock = new FakeClock();
+            Agency a = Make.Agency(clock, new ListLogger());
+            a.SyncRoster(new List<CrewSnapshot> { Make.Snapshot("Jeb Kerman", CrewRole.Pilot, 3), Make.Snapshot("Val Kerman", CrewRole.Pilot, 3), Make.Snapshot("Ludo Kerman", CrewRole.Pilot, 3) });
+            a.Tick();
+            a.Ledger.SetBalance(500000);
+            string msg;
+            Project p1 = a.CreateProject("Hop 1", "FleaHop", null, new[] { "Jeb Kerman" }, new string[0], null, MissionMode.Simulate, out msg);
+            Project p2 = a.CreateProject("Hop 2", "FleaHop", null, new[] { "Val Kerman" }, new string[0], null, MissionMode.Simulate, out msg);
+            Project p3 = a.CreateProject("Hop 3", "FleaHop", null, new[] { "Ludo Kerman" }, new string[0], null, MissionMode.Simulate, out msg);
+            Assert.That(p3, Is.Not.Null, msg);
+            Assert.That(a.Settings.LaunchSpacingDays, Is.EqualTo(3));
+            // Long catch-up: all three were ready on the same day; they take the pad in turn.
+            clock.AdvanceDays(p1.DesignDays + p1.BuildDays + 30);
+            a.Tick();
+            Assert.That(p2.LaunchDay - p1.LaunchDay, Is.EqualTo(3));
+            Assert.That(p3.LaunchDay - p2.LaunchDay, Is.EqualTo(3));
+        }
+
+        [Test]
         public void ANoTemplateProjectRetriesItsDesignThenIsCalledOffWithItsMoneyBack()
         {
             var clock = new FakeClock();

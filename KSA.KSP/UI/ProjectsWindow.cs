@@ -151,7 +151,11 @@ namespace KSA.KSP.UI
                     buttons.Add(new DialogGUIButton("Switch to " + ModeText(other), () => OnSetMode(id, other), 170f, ButtonHeight, false));
                 }
                 if (p.Status == ProjectStatus.Ready)
+                {
+                    string queue = _agency.LaunchWindowBlocker();
+                    if (queue != null) Line(items, "<color=#ffd27f>Launch queue: " + queue + ". Launch now skips the queue.</color>", textWidth);
                     buttons.Add(new DialogGUIButton("Launch now", () => OnLaunchNow(id), 120f, ButtonHeight, false));
+                }
                 if (p.Status != ProjectStatus.InFlight)
                     buttons.Add(new DialogGUIButton("Cancel", () => OnCancel(id), 90f, ButtonHeight, false));
                 if (buttons.Count > 1)

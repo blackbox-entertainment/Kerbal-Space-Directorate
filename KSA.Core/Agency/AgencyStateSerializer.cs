@@ -35,6 +35,7 @@ namespace KSA.Core
             st.AddValue("agencyName", s.AgencyName);
             st.AddValue("scienceEarned", s.ScienceEarned);
             st.AddValue("scienceCredited", s.ScienceCredited);
+            st.AddValue("lastLaunchDay", s.LastLaunchDay);
             st.AddValue("systemColonized", s.SystemColonized);
             st.AddValue("nextStranding", s.NextStrandingNumber);
             st.AddValue("hiringFreeze", s.HiringFreeze);
@@ -221,6 +222,7 @@ namespace KSA.Core
                 s.AgencyName = st.GetValue("agencyName", string.Empty);
                 s.ScienceEarned = st.GetDouble("scienceEarned", 0);
                 s.ScienceCredited = st.GetDouble("scienceCredited", 0);
+                s.LastLaunchDay = st.GetInt("lastLaunchDay", -1);
                 s.SystemColonized = st.GetBool("systemColonized", false);
                 s.NextStrandingNumber = st.GetInt("nextStranding", 1);
                 s.HiringFreeze = st.GetBool("hiringFreeze", false);

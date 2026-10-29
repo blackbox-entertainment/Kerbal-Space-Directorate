@@ -68,6 +68,8 @@ namespace KSA.Core
         public bool StockHiring { get; set; } = false;
         /// <summary>Watch Live projects roll out to the pad by themselves this many seconds after they are Ready (0 = wait for the Director).</summary>
         public int AutoRolloutSeconds { get; set; } = 20;
+        /// <summary>Days between automatic launches: one pad, so projects ready together take turns (2026-10-28). 0 = no spacing.</summary>
+        public int LaunchSpacingDays { get; set; } = 3;
         /// <summary>On the pad the crew waits for the Director's Launch button (or the staging key) before lighting the engines.</summary>
         public bool LaunchOnCommand { get; set; } = true;
         /// <summary>Research lab: Science per year per lab scientist = base + perStar x stars (RESEARCH block).</summary>
@@ -115,6 +117,7 @@ namespace KSA.Core
             s.StockContracts = node.GetBool("stockContracts", s.StockContracts);
             s.StockHiring = node.GetBool("stockHiring", s.StockHiring);
             s.AutoRolloutSeconds = node.GetInt("autoRolloutSeconds", s.AutoRolloutSeconds);
+            s.LaunchSpacingDays = node.GetInt("launchSpacingDays", s.LaunchSpacingDays);
             s.LaunchOnCommand = node.GetBool("launchOnCommand", s.LaunchOnCommand);
             DataNode research = node.GetChild("RESEARCH");
             if (research != null)

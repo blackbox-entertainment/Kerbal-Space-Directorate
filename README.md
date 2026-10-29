@@ -2,7 +2,7 @@
 
 A career mod for **Kerbal Space Program 1.12**. You are the Director of a space agency. You hire kerbals, give them projects and programs, and manage the government's budget. Your engineers design the rockets, your crews fly them, and every kerbal keeps a service record of ranks, medals, missions and, sometimes, an obituary.
 
-> Status: in development, not yet released. There is no release download or CKAN listing yet. See [Building from source](#building-from-source) to try it.
+> Status: in development, test builds only (current: 0.5.x, see [CHANGELOG.md](CHANGELOG.md)). There is no public release or CKAN listing yet. Test builds are shared as a zip; to make one yourself, see [Building from source](#building-from-source).
 
 ## What it does
 
@@ -20,7 +20,7 @@ A career mod for **Kerbal Space Program 1.12**. You are the Director of a space 
 | Kerbal Space Program | 1.12.x (developed on 1.12.5) | Everything |
 | ModuleManager | 4.2.x | Everything. KSA's careers, medals, goals and settings are ModuleManager configs |
 
-KSA never requires the Making History or Breaking Ground DLC. Every mission has a stock-parts design.
+KSA never requires the Making History or Breaking Ground DLC. With AI on, the engineers design every rocket from the parts you have researched; with AI off, missions fly stock-parts template designs.
 
 **Computer.** 16 GB of RAM is the minimum, with AI through an online API. 32 GB is recommended if you also want to run a small AI model on your own machine.
 
@@ -43,7 +43,7 @@ KSA does not need MechJeb or kOS. It has its own flight director.
 2. Search for **ModuleManager** and tick it.
 3. Optional: search for **Kerbalism** and tick it. CKAN adds what it needs by itself: the default Kerbalism config, Harmony 2, KSP Community Fixes and Community Resource Pack.
 4. Click **Apply changes**.
-5. Copy the `KSA` folder into your KSP `GameData` folder, so you have `GameData/KSA/Plugins/KSA.KSP.dll`. CKAN cannot install KSA until it is released, so this step is manual for now.
+5. Unzip the test build (`KerbalSpaceDirectorate-<version>.zip`) and copy its `GameData\KSA` folder into your KSP `GameData` folder, so you have `GameData/KSA/Plugins/KSA.KSP.dll`. CKAN cannot install KSA until it is released, so this step is manual for now. To update, delete `GameData\KSA` and copy the new one in.
 6. Start KSP and begin a new Career game. The KSA button is on the Space Center toolbar.
 
 Use a separate copy of KSP for testing mods, not the one you play on.
@@ -68,7 +68,7 @@ Kerbalism is optional. KSA finds it on its own and changes three things.
 While a station or base is supplied on KSA's schedule, KSA keeps the food, water and air of its live vessels topped up, since the resupply flights stand in for the cargo. Once a resupply is overdue, Kerbalism's own clock takes over and crews can die.
 
 **Known limits with Kerbalism:**
-- Kerbalism replaces the stock science experiments, so KSA's live experiment runs collect nothing. The Science a mission pays through KSA still arrives.
+- Kerbalism replaces the stock science experiments. On live flights the crew switches Kerbalism's experiments on, and AI designs carry an antenna so the data goes home before the pod's small drive fills ("no storage space"). Samples such as goo still wait for recovery. The Science a mission pays through KSA arrives either way.
 - Kerbalism's radiation, stress and part failures apply to live flights. They don't apply to simulated ones.
 
 Every number is in `GameData/KSA/Configs/agency.cfg`, in the `LIFE_SUPPORT` block. Set `enabled = false` there to keep Kerbalism installed but leave KSA on its stock rules.

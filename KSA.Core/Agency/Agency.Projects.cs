@@ -366,7 +366,16 @@ namespace KSA.Core
                             }
                             if (p.Mode == MissionMode.Simulate)
                             {
-                                Launch(p, type, p.PhaseStartDay, notices); // the day it became ready, so catch-up ticks resolve in sequence
+                                // One pad: launches go at least launchSpacingDays apart (2026-10-28). The day it became ready,
+                                // or the next launch window, so catch-up ticks resolve in sequence.
+                                int launchDay = Math.Max(p.PhaseStartDay, NextLaunchDay);
+                                if (launchDay > day)
+                                {
+                                    if (!p.Notes.Exists(n => n.StartsWith("Waiting for the pad")))
+                                        p.Notes.Add("Waiting for the pad: launches go " + Settings.LaunchSpacingDays + " days apart; next window day " + NextLaunchDay + ".");
+                                    break;
+                                }
+                                Launch(p, type, launchDay, notices);
                                 changed = true;
                             }
                             break;
@@ -387,8 +396,21 @@ namespace KSA.Core
             p.MissionId = BeginMission(p.Crew, p.Name);
             p.Status = ProjectStatus.InFlight;
             p.LaunchDay = day;
+            if (day > State.LastLaunchDay) State.LastLaunchDay = day;
             Push(notices, p.Name + " launched (" + (p.Mode == MissionMode.Simulate ? "simulated" : "live") + ", " + type.DurationDays + " days)");
             RaiseProjectChanged(p);
+        }
+
+        /// <summary>The first day the next automatic launch may go: launchSpacingDays after the last launch (one pad, 2026-10-28).</summary>
+        public int NextLaunchDay { get { return State.LastLaunchDay < 0 ? int.MinValue : State.LastLaunchDay + Math.Max(0, Settings.LaunchSpacingDays); } }
+
+        /// <summary>Null when an automatic launch (simulated, or a live roll-out) may go today, else why it waits. The Director's own Launch now skips the queue.</summary>
+        public string LaunchWindowBlocker()
+        {
+            int next = NextLaunchDay;
+            if (CurrentDay >= next) return null;
+            int wait = next - CurrentDay;
+            return "waiting for the pad: next launch window day " + next + " (in " + wait + " day" + (wait == 1 ? "" : "s") + "; launches go " + Settings.LaunchSpacingDays + " days apart)";
         }
 
         /// <summary>Launches a Ready project immediately instead of waiting for the next tick.</summary>
