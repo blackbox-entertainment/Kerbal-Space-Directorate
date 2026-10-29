@@ -221,3 +221,12 @@ Part 1 runs on the current install (no Kerbalism). Part 2 needs Kerbalism, insta
 2. Time warp past their build. Expect them to launch on three different days, 3 days apart. Projects shows "Launch queue: waiting for the pad: next launch window day N" on the waiting ones.
 3. With a Watch Live project waiting in the queue, time warp keeps running; it stops when the window opens and the roll-out countdown starts.
 4. Press Launch now on a waiting project: it goes at once.
+
+## K. Your own designs (added 2026-10-28)
+
+1. In the VAB, build a crewed rocket with a parachute and save it (any name not starting with "KSA ").
+2. Back at the Space Center, open Projects and pick a mission. Under "Your designs (saved in the VAB)" your rocket is listed with its delta-v, TWR and seats. Missions it cannot fly show it greyed with the reason (delta-v, seats, parachute, research).
+3. KSP.log: `[KSA] Your design '<name>': N m/s, liftoff TWR X, ...`. Compare N with the VAB's delta-v readout (vacuum); they should be close.
+4. Pick it and start the project. The project line says "design <name> (your design)"; the design phase is 1 day.
+5. Fly it live: the craft on the pad is exactly yours, and the Flight Director window offers Take control even with manualOverride off.
+6. With the AI Director on, it should start missions with your design when one fits ("design" in its decision log).

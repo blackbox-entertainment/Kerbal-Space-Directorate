@@ -137,7 +137,7 @@ namespace KSA.Core
                 ReentryPeriapsis = Settings.LiveReentryPeriapsis,
                 ProgramId = p.ProgramId,
                 FlightCrew = FlightProfileFor(p.Id),
-                ManualOverrideAllowed = Settings.ManualOverride
+                ManualOverrideAllowed = Settings.ManualOverride || (p.Design != null && p.Design.Source == Design.DesignSource.Player) // the Director may always take over a rocket they built (2026-10-28)
             };
             foreach (string id in p.Crew) { CrewProfile c = Crew.Get(id); if (c != null) spec.CrewNames.Add(c.Name); }
             Program program = p.ProgramId.Length > 0 ? GetProgram(p.ProgramId) : null;

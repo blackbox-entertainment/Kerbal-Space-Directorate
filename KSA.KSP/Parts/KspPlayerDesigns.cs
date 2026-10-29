@@ -1,0 +1,211 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using KSA.Core.Design;
+using UnityEngine;
+
+namespace KSA.KSP.Parts
+{
+    /// <summary>
+    /// The Director's own rockets (2026-10-28): every craft saved in this game's VAB folder (not KSA's own "KSA ..." craft
+    /// or the KSA Templates folder) is read from its file and offered to projects that it can fly. Delta-v and liftoff
+    /// thrust are worked out from the parts, staging and decouplers in the file, since KSP only calculates them for a
+    /// craft loaded in the editor or in flight. Results are cached until the file changes.
+    /// </summary>
+    public static class KspPlayerDesigns
+    {
+        private const double G0 = 9.80665;
+        private sealed class Cached { public DateTime Time; public PlayerDesign Design; }
+        private static readonly Dictionary<string, Cached> Cache = new Dictionary<string, Cached>(StringComparer.OrdinalIgnoreCase);
+
+        public static string Folder
+        {
+            get { return HighLogic.SaveFolder == null ? null : Path.Combine(KSPUtil.ApplicationRootPath, Path.Combine("saves", Path.Combine(HighLogic.SaveFolder, Path.Combine("Ships", "VAB")))); }
+        }
+
+        public static List<PlayerDesign> List()
+        {
+            var list = new List<PlayerDesign>();
+            string folder = Folder;
+            if (folder == null || !Directory.Exists(folder)) return list;
+            foreach (string path in Directory.GetFiles(folder, "*.craft", SearchOption.TopDirectoryOnly))
+            {
+                string name = Path.GetFileNameWithoutExtension(path);
+                if (name.StartsWith("KSA ", StringComparison.OrdinalIgnoreCase)) continue; // the engineering team's own craft
+                DateTime time;
+                try { time = File.GetLastWriteTimeUtc(path); } catch { continue; }
+                Cached c;
+                if (!Cache.TryGetValue(path, out c) || c.Time != time)
+                {
+                    PlayerDesign d = null;
+                    try { d = Analyze(path); } catch (Exception e) { KsaCore.Log.Warn("Your design '" + name + "' could not be read: " + e.Message); }
+                    c = new Cached { Time = time, Design = d };
+                    Cache[path] = c;
+                    if (d != null) KsaCore.Log.Info("Your design '" + d.Name + "': " + Math.Round(d.DeltaV) + " m/s, liftoff TWR " + d.LiftoffTwr.ToString("0.00") + ", " + d.Seats + " seat(s)" + (d.HasParachute ? ", parachute" : ", no parachute") + (d.ResearchBlocker != null ? ", " + d.ResearchBlocker : string.Empty));
+                }
+                if (c.Design == null) continue;
+                // Research changes without the file changing: check it every time (cheap).
+                c.Design.ResearchBlocker = ResearchBlocker(c.Design.CraftPath);
+                list.Add(c.Design);
+            }
+            list.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
+            return list;
+        }
+
+        // ------------------------------------------------------------------ craft analysis
+
+        private sealed class P
+        {
+            public string Id;
+            public AvailablePart Ap;
+            public int Stage;           // istg: the stage that activates it
+            public string Parent;
+            public bool Decoupler;
+            public bool Engine;
+            public double ThrustVac, IspVac, IspSl;
+            public double DryMass;
+            public readonly Dictionary<string, double> Fuel = new Dictionary<string, double>();
+            public HashSet<string> Propellants;
+            public int DropStage = -1;  // the stage at which a decoupler takes it away, -1 = stays to the end
+        }
+
+        private static AvailablePart Find(string raw)
+        {
+            int us = raw.LastIndexOf('_');
+            string name = us > 0 ? raw.Substring(0, us) : raw;
+            return PartLoader.getPartInfoByName(name) ?? PartLoader.getPartInfoByName(name.Replace('_', '.')) ?? PartLoader.getPartInfoByName(name.Replace('.', '_'));
+        }
+
+        private static PlayerDesign Analyze(string path)
+        {
+            ConfigNode craft = ConfigNode.Load(path);
+            if (craft == null) return null;
+            var parts = new Dictionary<string, P>();
+            var order = new List<P>();
+            var d = new PlayerDesign { CraftPath = path, Name = craft.GetValue("ship") ?? Path.GetFileNameWithoutExtension(path) };
+            foreach (ConfigNode n in craft.GetNodes("PART"))
+            {
+                string raw = n.GetValue("part") ?? string.Empty;
+                AvailablePart ap = Find(raw);
+                if (ap == null || ap.partPrefab == null) continue;
+                var p = new P { Id = raw, Ap = ap, DryMass = ap.partPrefab.mass };
+                int istg; p.Stage = int.TryParse(n.GetValue("istg"), out istg) ? istg : -1;
+                Part prefab = ap.partPrefab;
+                p.Decoupler = prefab.FindModuleImplementing<ModuleDecouple>() != null || prefab.FindModuleImplementing<ModuleAnchoredDecoupler>() != null;
+                ModuleEngines e = prefab.FindModuleImplementing<ModuleEngines>();
+                if (e != null && e.atmosphereCurve != null)
+                {
+                    p.Engine = true;
+                    double limit = 1.0;
+                    foreach (ConfigNode m in n.GetNodes("MODULE"))
+                    {
+                        string mn = m.GetValue("name") ?? string.Empty;
+                        float pct;
+                        if (mn.StartsWith("ModuleEngines", StringComparison.Ordinal) && float.TryParse(m.GetValue("thrustPercentage"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out pct)) limit = Mathf.Clamp(pct, 0f, 100f) / 100.0;
+                    }
+                    p.ThrustVac = e.maxThrust * limit;
+                    p.IspVac = e.atmosphereCurve.Evaluate(0f);
+                    p.IspSl = e.atmosphereCurve.Evaluate(1f);
+                    p.Propellants = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    foreach (Propellant pr in e.propellants) if (pr.name != "ElectricCharge" && pr.name != "IntakeAir") p.Propellants.Add(pr.name);
+                }
+                foreach (ConfigNode r in n.GetNodes("RESOURCE"))
+                {
+                    string rn = r.GetValue("name") ?? string.Empty;
+                    double amount;
+                    if (!double.TryParse(r.GetValue("amount"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out amount)) continue;
+                    PartResourceDefinition def = PartResourceLibrary.Instance != null ? PartResourceLibrary.Instance.GetDefinition(rn) : null;
+                    if (def == null || def.density <= 0) continue;
+                    p.Fuel[rn] = (p.Fuel.ContainsKey(rn) ? p.Fuel[rn] : 0) + amount * def.density;
+                }
+                d.Seats += prefab.CrewCapacity;
+                d.Cost += ap.cost;
+                if (prefab.FindModuleImplementing<ModuleParachute>() != null) d.HasParachute = true;
+                parts[raw] = p;
+                order.Add(p);
+            }
+            if (order.Count == 0) return null;
+            d.PartCount = order.Count;
+            // Tree: a part lists its children with "link".
+            foreach (ConfigNode n in craft.GetNodes("PART"))
+            {
+                string raw = n.GetValue("part") ?? string.Empty;
+                if (!parts.ContainsKey(raw)) continue;
+                foreach (string child in n.GetValues("link")) { P c; if (parts.TryGetValue(child, out c)) c.Parent = raw; }
+            }
+            // A part leaves when the nearest decoupler between it and the root fires (the decoupler goes with it).
+            foreach (P p in order)
+            {
+                int drop = -1;
+                for (P q = p; q != null; q = q.Parent != null && parts.ContainsKey(q.Parent) ? parts[q.Parent] : null)
+                    if (q.Decoupler && q.Stage >= 0) { drop = Math.Max(drop, q.Stage); }
+                p.DropStage = drop;
+            }
+
+            int maxStage = 0;
+            foreach (P p in order) maxStage = Math.Max(maxStage, p.Stage);
+            double total = 0;
+            bool liftoffSet = false;
+            for (int s = maxStage; s >= 0; s--)
+            {
+                var present = order.FindAll(p => p.DropStage < s);
+                var engines = present.FindAll(p => p.Engine && p.Stage >= s && p.ThrustVac > 0);
+                if (engines.Count == 0) continue;
+                double mass = 0;
+                foreach (P p in present) { mass += p.DryMass; foreach (double f in p.Fuel.Values) mass += f; }
+                var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                double thrust = 0, flow = 0, thrustSl = 0;
+                foreach (P e in engines)
+                {
+                    foreach (string pr in e.Propellants) used.Add(pr);
+                    thrust += e.ThrustVac;
+                    flow += e.ThrustVac / Math.Max(1, e.IspVac);
+                    thrustSl += e.ThrustVac * (e.IspVac > 0 ? e.IspSl / e.IspVac : 1);
+                }
+                if (!liftoffSet) { d.LiftoffTwr = thrustSl / Math.Max(0.001, mass * G0); d.Mass = mass; liftoffSet = true; }
+                // Burn the propellant of the group that goes next (the highest drop stage still aboard that holds some).
+                int next = -2;
+                foreach (P p in present) if (HasFuel(p, used)) next = Math.Max(next, p.DropStage);
+                if (next == -2) continue;
+                double burned = 0;
+                foreach (P p in present)
+                {
+                    if (p.DropStage != next) continue;
+                    foreach (string rn in new List<string>(p.Fuel.Keys)) if (used.Contains(rn)) { burned += p.Fuel[rn]; p.Fuel[rn] = 0; }
+                }
+                double isp = thrust / Math.Max(1e-6, flow);
+                if (burned > 0 && mass - burned > 0) total += isp * G0 * Math.Log(mass / (mass - burned));
+            }
+            d.DeltaV = total;
+            d.ResearchBlocker = ResearchBlocker(path);
+            return d;
+        }
+
+        private static bool HasFuel(P p, HashSet<string> used)
+        {
+            foreach (KeyValuePair<string, double> kv in p.Fuel) if (kv.Value > 0 && used.Contains(kv.Key)) return true;
+            return false;
+        }
+
+        /// <summary>Null when every part is researched and bought, else which are not.</summary>
+        private static string ResearchBlocker(string path)
+        {
+            if (HighLogic.CurrentGame == null || (HighLogic.CurrentGame.Mode != Game.Modes.CAREER && HighLogic.CurrentGame.Mode != Game.Modes.SCIENCE_SANDBOX)) return null;
+            if (ResearchAndDevelopment.Instance == null) return null;
+            ConfigNode craft;
+            try { craft = ConfigNode.Load(path); } catch { return null; }
+            if (craft == null) return null;
+            var missing = new List<string>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (ConfigNode n in craft.GetNodes("PART"))
+            {
+                AvailablePart ap = Find(n.GetValue("part") ?? string.Empty);
+                if (ap == null) { missing.Add("an unknown part"); continue; }
+                if (!seen.Add(ap.name)) continue;
+                if (!(ResearchAndDevelopment.PartTechAvailable(ap) && ResearchAndDevelopment.PartModelPurchased(ap))) missing.Add(ap.title);
+            }
+            if (missing.Count == 0) return null;
+            return "needs research: " + string.Join(", ", missing.ToArray(), 0, Math.Min(3, missing.Count)) + (missing.Count > 3 ? " and " + (missing.Count - 3) + " more" : string.Empty);
+        }
+    }
+}

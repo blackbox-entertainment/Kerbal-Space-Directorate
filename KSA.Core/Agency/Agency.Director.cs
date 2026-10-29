@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using KSA.Core.Ai;
+using KSA.Core.Design;
 using KSA.Core.Data;
 using KSA.Core.Goals;
 using KSA.Core.Missions;
@@ -328,8 +329,13 @@ namespace KSA.Core
             if (crew != null && crew.Count != type.CrewSize) crew = null;           // wrong count: let the agency pick
             List<string> engineers = CrewIdsFrom(Json.GetArray(a, "engineers"));
             if (engineers != null && engineers.Count == 0) engineers = null;
-            Project p = CreateProject(null, type.Id, template != null ? template.Id : null, crew, engineers, null, DirectorMode(type), out message);
-            if (p == null && (crew != null || engineers != null)) p = CreateProject(null, type.Id, template != null ? template.Id : null, null, null, null, DirectorMode(type), out message);
+            // The human Director's own design: as asked, or the first that fits when nothing else can fly the mission.
+            string design = Json.GetString(a, "design", string.Empty);
+            if (design.Length > 0 && FindPlayerDesign(design) == null) design = string.Empty;
+            if (design.Length == 0 && MissionBlocker(type) != null) { List<PlayerDesign> fit = PlayerDesignsFor(type); if (fit.Count > 0) design = fit[0].CraftPath; }
+            string pd = design.Length > 0 ? design : null;
+            Project p = CreateProject(null, type.Id, pd != null ? null : (template != null ? template.Id : null), crew, engineers, null, DirectorMode(type), out message, null, pd);
+            if (p == null && (crew != null || engineers != null)) p = CreateProject(null, type.Id, pd != null ? null : (template != null ? template.Id : null), null, null, null, DirectorMode(type), out message, null, pd);
             if (p == null) return false;
             message = p.Name + " started (" + (p.Mode == MissionMode.WatchLive ? "to fly live" : "simulated") + ", " + Money(p.Budget) + ")";
             return true;
@@ -450,7 +456,8 @@ namespace KSA.Core
             sb.AppendLine("Actions:");
             sb.AppendLine("  hire {applicant} | interview {applicant} | reject {applicant} | recruit_drive {source}");
             sb.AppendLine("  dismiss {kerbal} | lab {kerbal, on: true|false} | appoint {department: Finances|Science|PublicRelations|Operations, kerbal} | vacate {department}");
-            sb.AppendLine("  start_project {mission, crew?: [names], engineers?: [names]} | cancel_project {project}");
+            sb.AppendLine("  start_project {mission, crew?: [names], engineers?: [names], design?: name of one of the human Director's own designs listed with the mission} | cancel_project {project}");
+            sb.AppendLine("Prefer the human Director's own designs when one fits a mission: they built them for the agency.");
             sb.AppendLine("  start_program {program_type, body} | resupply {program} | extend_program {program} | resume_program {program} | evacuate {program} | cancel_program {program}");
             sb.AppendLine("  rescue {stranding} | research {tech} | wait {}");
             return sb.ToString();
@@ -523,10 +530,14 @@ namespace KSA.Core
             {
                 if (t.ModuleRole.Length > 0 || t.IsRescue) continue;
                 string block = MissionBlocker(t);
-                if (block != null) { if (locked.Count < 10) locked.Add(t.Name + " (" + block + ")"); continue; }
+                List<PlayerDesign> mine = PlayerDesignsFor(t);
+                if (block != null && mine.Count == 0) { if (locked.Count < 10) locked.Add(t.Name + " (" + block + ")"); continue; }
                 Template best = null;
                 foreach (Template tp in TemplatesFor(t)) if (TemplateBlocker(tp) == null) { best = tp; break; }
-                sb.AppendLine("  " + t.Id + " | " + t.Name + " | " + Money(ProjectCost(t, best)) + " | " + t.CrewSize + " | " + t.MinStars + " | " + t.DurationDays + " | " + MissionsCompleted(t.Id) + (t.IsFirst && !HasAgencyAchievement(t.PrimaryAchievement) ? " | a First" : string.Empty));
+                var names = new List<string>();
+                foreach (PlayerDesign d in mine) if (names.Count < 3) names.Add(d.Name);
+                sb.AppendLine("  " + t.Id + " | " + t.Name + " | " + Money(ProjectCost(t, best)) + " | " + t.CrewSize + " | " + t.MinStars + " | " + t.DurationDays + " | " + MissionsCompleted(t.Id) + (t.IsFirst && !HasAgencyAchievement(t.PrimaryAchievement) ? " | a First" : string.Empty)
+                    + (names.Count > 0 ? " | the human Director's own designs that fit: " + string.Join(", ", names.ToArray()) : string.Empty));
             }
             if (locked.Count > 0) sb.AppendLine("NEXT LOCKED MISSIONS: " + string.Join("; ", locked.ToArray()));
 

@@ -176,6 +176,7 @@ namespace KSA.KSP
             a.Ai = KsaSettingsFile.Load();
             a.Transport = UnityWebTransport.Instance;
             a.Parts = new LivePartCatalog();
+            a.PlayerDesignSource = Parts.KspPlayerDesigns.List; // the Director's own VAB rockets (2026-10-28)
             a.Requirements = KsaSettingsFile.Requirements();
             a.ModelRates = KsaSettingsFile.Rates(models);
             a.AllowDlcParts = Expansions.ExpansionsLoader.IsExpansionInstalled("MakingHistory") || Expansions.ExpansionsLoader.IsExpansionInstalled("Serenity");

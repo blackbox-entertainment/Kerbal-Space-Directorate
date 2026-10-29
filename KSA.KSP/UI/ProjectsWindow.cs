@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using KSA.Core;
+using KSA.Core.Design;
 using KSA.Core.Missions;
 using KSA.Core.Personnel;
 using KSA.Core.Projects;
@@ -34,6 +35,8 @@ namespace KSA.KSP.UI
         // New-project selection state; survives Refresh() because the window object does.
         private string _selectedTypeId = string.Empty;
         private string _selectedTemplateId = string.Empty;
+        /// <summary>Craft path of the Director's own design picked for the new project, or empty (2026-10-28).</summary>
+        private string _selectedPlayerDesign = string.Empty;
         private readonly List<string> _selectedCrew = new List<string>();
         private readonly List<string> _selectedEngineers = new List<string>();
         private MissionMode _mode = MissionMode.Simulate;
@@ -234,7 +237,7 @@ namespace KSA.KSP.UI
                 MissionType t = types[i];
                 string tid = t.Id;
                 bool isSel = selected != null && string.Equals(selected.Id, tid, StringComparison.OrdinalIgnoreCase);
-                bool locked = _agency.MissionBlocker(t) != null;
+                bool locked = _agency.MissionBlocker(t) != null && _agency.PlayerDesignsFor(t).Count == 0; // one of your designs can open it
                 int done = _agency.MissionsCompleted(t.Id);
                 string name = t.IsCustom ? t.Name + " (custom)" : t.Name;
                 string text = locked ? "<color=#888888>" + name + " (research)</color>" : done > 0 ? "<color=#8be28b>" + name + " (done" + (done > 1 ? " x" + done : "") + ")</color>" : name;
@@ -254,7 +257,14 @@ namespace KSA.KSP.UI
             Line(items, "Crew " + selected.CrewSize + "  |  min stars " + selected.MinStars + "  |  " + selected.DurationDays + " day"
                 + (selected.DurationDays == 1 ? "" : "s") + "  |  difficulty " + Percent(selected.Difficulty) + "  |  " + selected.Body
                 + (selected.IsFirst ? "  |  a First" : ""), textWidth);
-            string missionLocked = _agency.MissionBlocker(selected);
+            // The Director's own designs that can fly this mission, and the one picked (2026-10-28).
+            List<PlayerDesign> mine = _agency.PlayerDesigns();
+            MissionRequirements.Entry need = _agency.Requirements.For(selected);
+            PlayerDesign pickedMine = null;
+            foreach (PlayerDesign d in mine) if (string.Equals(d.CraftPath, _selectedPlayerDesign, StringComparison.OrdinalIgnoreCase) && d.Blocker(selected, need) == null) pickedMine = d;
+            if (pickedMine == null) _selectedPlayerDesign = string.Empty;
+            string missionLocked = pickedMine != null ? null : _agency.MissionBlocker(selected);
+            if (missionLocked != null && _agency.PlayerDesignsFor(selected).Count > 0) missionLocked = "can only be flown with one of your designs below for now";
             if (missionLocked != null) Line(items, "<color=#ffd27f>Locked: " + selected.Name + " " + missionLocked + ". Put scientists in the lab or fly missions to earn Science, then unlock the parts in R&D.</color>", textWidth);
 
             // Templates.
@@ -286,6 +296,21 @@ namespace KSA.KSP.UI
                 string label = (isSel ? "> " : "") + t.Name + " (" + (t.Seats > 0 ? t.Seats + (t.Seats == 1 ? " seat, " : " seats, ") : "") + Percent(t.DesignScore) + ", " + Agency.Money(_agency.ProjectCost(typeForCost, t)) + ")" + (blocked != null ? "  [" + blocked + "]" : "");
                 return new DialogGUIButton(label, () => OnSelectTemplate(tid), 220f, ButtonHeight, false);
             });
+
+            // Your designs: rockets saved in this game's VAB.
+            Line(items, "Your designs (saved in the VAB):" + (mine.Count == 0 ? "  none yet. Build a rocket in the VAB and save it; it appears here." : pickedMine != null ? "  the crew flies " + pickedMine.Name + "; Take Control is always allowed on it." : "  pick one to fly it instead."), textWidth);
+            var mineButtons = new List<DialogGUIBase>();
+            foreach (PlayerDesign d in mine)
+            {
+                string path = d.CraftPath;
+                string unfit = d.Blocker(selected, need);
+                bool isSel = pickedMine != null && pickedMine.CraftPath == path;
+                string label = (isSel ? "> " : "") + d.Name + "  (" + Math.Round(d.DeltaV) + " m/s, TWR " + d.LiftoffTwr.ToString("0.0") + ", " + d.Seats + (d.Seats == 1 ? " seat" : " seats") + ")";
+                if (unfit != null) label = "<color=#888888>" + label + "  [" + unfit + "]</color>";
+                var b = new DialogGUIButton(label, () => OnSelectPlayerDesign(path), textWidth - 40f, ButtonHeight, false);
+                if (unfit != null) b.OptionInteractableCondition = () => false;
+                items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft, new DialogGUISpace(16f), b));
+            }
 
             // Crew pick.
             PruneSelection(_selectedCrew, flyers);
@@ -329,7 +354,7 @@ namespace KSA.KSP.UI
                 new DialogGUIButton((!simSel ? "> " : "") + "Watch Live", () => OnSetNewMode(MissionMode.WatchLive), 110f, ButtonHeight, false),
                 new DialogGUILabel(_agency.LiveFlightAvailable ? "" : "Live flight arrives in M5; will simulate", textWidth - 370f, LineHeight)));
 
-            double cost = _agency.ProjectCost(selected, selectedTemplate);
+            double cost = _agency.ProjectCost(selected, pickedMine != null ? null : selectedTemplate);
             var start = new DialogGUIButton(missionLocked != null ? "<color=#888888>Start project (research)</color>" : "Start project (" + Agency.Money(cost) + ")", OnStartProject, 240f, 30f, false);
             if (missionLocked != null) start.OptionInteractableCondition = () => false; // KSA-66: greyed until researched
             items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 4, 0), TextAnchor.MiddleLeft,
@@ -600,6 +625,13 @@ namespace KSA.KSP.UI
         private void OnSelectTemplate(string templateId)
         {
             _selectedTemplateId = templateId;
+            _selectedPlayerDesign = string.Empty;
+            Refresh();
+        }
+
+        private void OnSelectPlayerDesign(string craftPath)
+        {
+            _selectedPlayerDesign = _selectedPlayerDesign == craftPath ? string.Empty : craftPath; // a second click unpicks it
             Refresh();
         }
 
@@ -641,11 +673,13 @@ namespace KSA.KSP.UI
             MissionType type = _agency.Catalogs.Missions.Get(_selectedTypeId);
             if (type == null) { Report(false, "Choose a mission type first."); return; }
             string message;
-            Project p = _agency.CreateProject(type.Name, type.Id, _selectedTemplateId, new List<string>(_selectedCrew), new List<string>(_selectedEngineers), null, _mode, out message);
+            string mine = string.IsNullOrEmpty(_selectedPlayerDesign) ? null : _selectedPlayerDesign;
+            Project p = _agency.CreateProject(type.Name, type.Id, mine != null ? null : _selectedTemplateId, new List<string>(_selectedCrew), new List<string>(_selectedEngineers), null, _mode, out message, null, mine);
             if (p != null)
             {
                 _selectedTypeId = string.Empty;
                 _selectedTemplateId = string.Empty;
+                _selectedPlayerDesign = string.Empty;
                 _selectedCrew.Clear();
                 _selectedEngineers.Clear();
                 _mode = MissionMode.Simulate;

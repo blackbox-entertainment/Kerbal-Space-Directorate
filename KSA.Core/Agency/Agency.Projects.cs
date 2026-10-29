@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using KSA.Core.Careers;
+using KSA.Core.Design;
 using KSA.Core.Finance;
 using KSA.Core.Missions;
 using KSA.Core.Personnel;
@@ -148,16 +149,25 @@ namespace KSA.Core
         /// Creates a project. Pass null for crew or engineers to auto-staff. Charges the budget immediately.
         /// </summary>
         public Project CreateProject(string name, string missionTypeId, string templateId, IList<string> crewIds, IList<string> engineerIds,
-                                     string programManagerId, MissionMode? mode, out string message, string moduleRole = null)
+                                     string programManagerId, MissionMode? mode, out string message, string moduleRole = null, string playerDesign = null)
         {
             MissionType type = Catalogs.Missions.Get(missionTypeId);
             if (type == null) { message = "Unknown mission type."; return null; }
-            string why = MissionBlocker(type);
+            // The Director's own rocket (2026-10-28): it only has to fit the mission, whatever designs exist.
+            PlayerDesign mine = null;
+            if (!string.IsNullOrEmpty(playerDesign))
+            {
+                mine = FindPlayerDesign(playerDesign);
+                if (mine == null) { message = "No saved design called '" + playerDesign + "'."; return null; }
+                string unfit = mine.Blocker(type, Requirements.For(type));
+                if (unfit != null) { message = mine.Name + " cannot fly " + type.Name + ": " + unfit + "."; return null; }
+            }
+            string why = mine != null ? null : MissionBlocker(type);
             if (why != null) { message = type.Name + " " + why + ". Earn Science (lab, missions) and unlock parts in R&D first."; return null; }
-            if (type == null) { message = "Unknown mission type."; return null; }
             List<Template> able = TemplatesFor(type, moduleRole);
             Template template;
-            if (string.IsNullOrEmpty(templateId))
+            if (mine != null) template = null;
+            else if (string.IsNullOrEmpty(templateId))
             {
                 // No design picked: the first fallback design that can be built today, else (AI on) none at all and the
                 // engineering team designs the rocket from scratch (2026-10-28: templates are the AI-off fallback, not a gate).
@@ -223,8 +233,17 @@ namespace KSA.Core
             Push(null, message);
             RaiseProjectChanged(project);
             PublishProjectStart(project, type);
-            if (template == null) project.Notes.Add("No fallback design: the engineering team designs this rocket from scratch.");
-            if (!TryReuseDesign(project)) StartDesign(project, null);
+            if (mine != null)
+            {
+                project.Design = mine.ToRecord(Requirements.For(type));
+                project.DesignDays = 1; // already designed: the engineers only check it over
+                project.Notes.Add("Flying the Director's own design '" + mine.Name + "' (" + project.Design.TotalDeltaV + " m/s, TWR " + project.Design.LiftoffTwr + "). Take Control is always allowed on it.");
+            }
+            else
+            {
+                if (template == null) project.Notes.Add("No fallback design: the engineering team designs this rocket from scratch.");
+                if (!TryReuseDesign(project)) StartDesign(project, null);
+            }
             return project;
         }
 

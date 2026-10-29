@@ -401,13 +401,43 @@ namespace KSA.Core
         /// <summary>True when the project has no fallback template: only an approved AI design can fly it.</summary>
         public bool NeedsAiDesign(Project p) { return p != null && Catalogs.Templates.Get(p.TemplateId) == null; }
 
-        public static bool HasApprovedDesign(Project p) { return p != null && p.Design != null && p.Design.IsAi && p.Design.Verdict == DesignVerdict.Approved; }
+        public static bool HasApprovedDesign(Project p) { return p != null && p.Design != null && (p.Design.IsAi || p.Design.Source == DesignSource.Player) && p.Design.Verdict == DesignVerdict.Approved; }
+
+        /// <summary>The host lists the rockets the Director saved in the vehicle editor (2026-10-28). Null: none.</summary>
+        public Func<List<PlayerDesign>> PlayerDesignSource { get; set; }
+
+        public List<PlayerDesign> PlayerDesigns()
+        {
+            Func<List<PlayerDesign>> source = PlayerDesignSource;
+            List<PlayerDesign> list = null;
+            if (source != null) { try { list = source(); } catch (Exception e) { Log.Warn("Player designs could not be read: " + e.Message); } }
+            return list ?? new List<PlayerDesign>();
+        }
+
+        /// <summary>A saved design by name or craft path.</summary>
+        public PlayerDesign FindPlayerDesign(string nameOrPath)
+        {
+            if (string.IsNullOrEmpty(nameOrPath)) return null;
+            foreach (PlayerDesign d in PlayerDesigns())
+                if (string.Equals(d.CraftPath, nameOrPath, StringComparison.OrdinalIgnoreCase) || string.Equals(d.Name, nameOrPath, StringComparison.OrdinalIgnoreCase)) return d;
+            return null;
+        }
+
+        /// <summary>The Director's saved designs that can fly a mission today.</summary>
+        public List<PlayerDesign> PlayerDesignsFor(MissionType type)
+        {
+            var fit = new List<PlayerDesign>();
+            if (type == null) return fit;
+            MissionRequirements.Entry need = Requirements.For(type);
+            foreach (PlayerDesign d in PlayerDesigns()) if (d.Blocker(type, need) == null) fit.Add(d);
+            return fit;
+        }
 
         /// <summary>The design a project flies, for the UI: the approved AI design, else the template, else the team's work in progress.</summary>
         public string DesignNameOf(Project p)
         {
             if (p == null) return string.Empty;
-            if (HasApprovedDesign(p)) return p.Design.DesignName + " (AI)";
+            if (HasApprovedDesign(p)) return p.Design.DesignName + (p.Design.Source == DesignSource.Player ? " (your design)" : " (AI)");
             Template t = Catalogs.Templates.Get(p.TemplateId);
             return t != null ? t.Name : "engineering team design (AI)";
         }
@@ -475,7 +505,7 @@ namespace KSA.Core
         /// <summary>Design quality for the simulator: the AI analysis when approved, else the template.</summary>
         internal double? DesignOverride(Project p)
         {
-            if (p.Design == null || !p.Design.IsAi) return null;
+            if (p.Design == null || !(p.Design.IsAi || p.Design.Source == DesignSource.Player)) return null;
             if (p.Design.Verdict == DesignVerdict.Approved) return p.Design.DesignScore;
             return null; // fell back to the template
         }

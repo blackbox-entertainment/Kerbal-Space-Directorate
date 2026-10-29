@@ -8,7 +8,8 @@ namespace KSA.Core.Design
 {
     public enum DesignVerdict { Pending = 0, Approved = 1, Short = 2, Failed = 3, Template = 4 }
 
-    public enum DesignSource { Template = 0, Ai = 1 }
+    /// <summary>Template, AI engineering team, or the Director in the vehicle editor (Player, 2026-10-28).</summary>
+    public enum DesignSource { Template = 0, Ai = 1, Player = 2 }
 
     /// <summary>What the design phase produced for a project (Jira KSA-44).</summary>
     public sealed class DesignRecord
