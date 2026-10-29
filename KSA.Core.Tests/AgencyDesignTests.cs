@@ -355,6 +355,22 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void SideTanksAndUndroppableSideBoostersAreRejected()
+        {
+            PartCatalog c = TestParts.Catalog();
+            string json = "{\"design_name\":\"Odd\",\"rationale\":\"\",\"stages\":[" +
+                          "{\"stage\":0,\"role\":\"launch\",\"core\":[{\"part\":\"solidBooster\",\"count\":1}],\"radial\":[{\"part\":\"solidBooster\",\"count\":4,\"symmetry\":4},{\"part\":\"fuelTankLong\",\"count\":2,\"symmetry\":2}],\"decoupler\":\"\"}]," +
+                          "\"payload\":{\"command\":\"mk1pod\",\"extras\":[\"parachuteSingle\"]}}";
+            StagePlan plan; string error;
+            Assert.That(StagePlan.TryParse(json, out plan, out error), Is.True, error);
+            var names = new HashSet<string>();
+            foreach (PartInfo p in c.All) if (!(p.Kind == PartKind.Decoupler && !p.IsStackable)) names.Add(p.Name); // no radial decoupler researched
+            List<string> problems = StagePlanValidator.Validate(plan, c, names);
+            Assert.That(problems, Has.Some.Contains("side tanks cannot feed"));
+            Assert.That(problems, Has.Some.Contains("needs a radial decoupler"));
+        }
+
+        [Test]
         public void WhenTheAiFallsShortTheEngineersDesignItByHand()
         {
             var clock = new FakeClock();

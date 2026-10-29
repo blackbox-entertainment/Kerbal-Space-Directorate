@@ -4,6 +4,7 @@ Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the
 
 ## Unreleased
 
+- **No side tanks, no undroppable side boosters:** the design check rejects fuel tanks placed on the side (nothing can feed from them without fuel lines, yet their fuel was counted) and side boosters when no radial decoupler is researched (they ended up bolted to the core). Saved designs breaking these rules are redesigned on load.
 - **Fixed: Minmus orbit was approved with far too little delta-v.** dv_requirements.cfg listed it twice; a second, "from Kerbin orbit" figure (2400 m/s) overrode the 4900 m/s round trip, so a rocket that could not even reach Kerbin orbit was approved. Duplicates removed (Duna orbit, Dres landing, Jool orbit kept at the safer figure), and a test now keeps every other world at or above Kerbin orbit. Approved designs in a save are re-checked against the requirements on load and redesigned if short.
 
 ## 0.5.3 (2026-10-28), fourth test build

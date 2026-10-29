@@ -193,6 +193,15 @@ namespace KSA.Core.Design
             return notes;
         }
 
+        /// <summary>True when a radial (side) decoupler is among the allowed parts.</summary>
+        private static bool HasRadialDecoupler(IPartCatalog catalog, ICollection<string> allowedNames)
+        {
+            if (catalog == null) return true;
+            foreach (PartInfo p in catalog.All)
+                if (p.Kind == PartKind.Decoupler && !p.IsStackable && (allowedNames == null || allowedNames.Contains(p.Name))) return true;
+            return false;
+        }
+
         public static List<string> Validate(StagePlan plan, IPartCatalog catalog, ICollection<string> allowedNames)
         {
             var problems = new List<string>();
@@ -231,6 +240,15 @@ namespace KSA.Core.Design
                 {
                     if (p.Count <= 0) problems.Add(label + ": '" + p.Part + "' has count " + p.Count + ".");
                     if (Array.IndexOf(AllowedSymmetry, p.Symmetry) < 0) problems.Add(label + ": radial '" + p.Part + "' symmetry " + p.Symmetry + " is not 2, 3, 4, 6 or 8.");
+                    if (catalog == null) continue;
+                    PartInfo info = catalog.Get(p.Part);
+                    if (info == null) continue;
+                    // Side tanks cannot feed anything: no fuel lines are fitted (2026-10-28).
+                    if (info.Kind == PartKind.Tank)
+                        problems.Add(label + ": fuel tank '" + p.Part + "' is in \"radial\"; side tanks cannot feed the engines (no fuel lines). Stack tanks in the core.");
+                    // Side boosters must be able to drop off on their own (2026-10-28: boosters were bolted to the core).
+                    if (info.ProducesThrust && !HasRadialDecoupler(catalog, allowedNames))
+                        problems.Add(label + ": side booster '" + p.Part + "' needs a radial decoupler to drop off, and none is researched. Use no side boosters: put the engine or booster in the core.");
                 }
                 bool hasThrust = false;
                 if (catalog != null)
