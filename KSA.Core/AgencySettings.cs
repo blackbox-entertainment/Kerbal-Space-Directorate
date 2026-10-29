@@ -35,7 +35,7 @@ namespace KSA.Core
         /// <summary>Recover landed crewed vessels on the home world automatically (GDD, T 2026-10-26).</summary>
         public bool AutoRecover { get; set; } = true;
         /// <summary>Opt-in: the Director may take the controls during a live flight (decision 2026-10-26).</summary>
-        public bool ManualOverride { get; set; } = false;
+        public bool ManualOverride { get; set; } = true;
         /// <summary>Target orbit for live Kerbin flights, metres.</summary>
         public double LiveOrbitAltitude { get; set; } = 85000;
         /// <summary>Orbit altitude above other bodies for capture and ascent, metres (liveTargetOrbitAltitude).</summary>

@@ -131,6 +131,8 @@ namespace KSA.KSP.Parts
             int size = top != null ? top.size : (bottom != null ? bottom.size : -1);
             info.Diameter = size < 0 ? 0 : (size == 0 ? 0.625 : 1.25 * size);
             if (p.srfAttachNode != null && p.attachRules != null && p.attachRules.srfAttach) info.Tags.Add("radial");
+            // Drogues slow a fast capsule but cannot land it (2026-10-29: a Kerbin orbit design carried only a Mk25 drogue).
+            if (p.Modules != null && p.Modules.Contains("ModuleParachute") && ap.name.ToLowerInvariant().Contains("drogue")) info.Tags.Add("drogue");
             if (p.CrewCapacity > 0) info.Tags.Add("crew" + p.CrewCapacity);
             // A crew pod with its own ablator (the Making History KV "Onion" pods) needs no separate heat shield.
             if (p.CrewCapacity > 0 && p.Modules != null && p.Modules.Contains("ModuleAblator")) info.Tags.Add("heatshielded");
@@ -157,9 +159,11 @@ namespace KSA.KSP.Parts
                 if (p.CrewCapacity > 0) return PartKind.Command;
                 return ap.category == PartCategories.Pods ? PartKind.Command : PartKind.Other; // probe cores: uncrewed, not offered in v1
             }
+            // Heat shields before decouplers: stock heat shields can decouple themselves (staging off), and the 0.625 m one
+            // was taken for the lightest decoupler, so stages never came apart (2026-10-29).
+            if (has("ModuleAblator") || n.Contains("heatshield")) return PartKind.HeatShield;
             if (has("ModuleDecouple") || has("ModuleAnchoredDecoupler")) return PartKind.Decoupler;
             if (has("ModuleParachute")) return PartKind.Parachute;
-            if (has("ModuleAblator") || n.Contains("heatshield")) return PartKind.HeatShield;
             if (has("ModuleProceduralFairing")) return PartKind.Fairing;
             if (has("ModuleDockingNode")) return PartKind.Docking;
             if (has("ModuleRCS") || has("ModuleRCSFX")) return PartKind.Rcs;

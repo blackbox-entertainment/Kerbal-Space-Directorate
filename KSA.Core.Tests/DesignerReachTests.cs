@@ -99,6 +99,25 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void AHeatShieldIsNotADecouplerBetweenStages()
+        {
+            PartCatalog parts = StockParts();
+            var plan = new StagePlan();
+            plan.Payload.Command = "mk1pod.v2";
+            var s0 = new PlanStage { Stage = 0, Role = "launch", Decoupler = "HeatShield1" };
+            s0.Core.Add(new PlanPart { Part = "fuelTank", Count = 1 });
+            s0.Core.Add(new PlanPart { Part = "liquidEngine2.v2", Count = 1 });
+            var s1 = new PlanStage { Stage = 1, Role = "ascent" };
+            s1.Core.Add(new PlanPart { Part = "fuelTankSmall", Count = 1 });
+            s1.Core.Add(new PlanPart { Part = "liquidEngine3.v2", Count = 1 });
+            plan.Stages.Add(s0); plan.Stages.Add(s1);
+            var names = new HashSet<string>(); foreach (PartInfo p in parts.All) names.Add(p.Name);
+            Assert.That(StagePlanValidator.Validate(plan, parts, names), Has.Some.Contains("is not a decoupler"));
+            s0.Decoupler = "Decoupler.1";
+            Assert.That(StagePlanValidator.Validate(plan, parts, names), Has.None.Contains("is not a decoupler"));
+        }
+
+        [Test]
         public void AnAiDesignWithoutFinsGetsThem()
         {
             PartCatalog parts = StockParts();

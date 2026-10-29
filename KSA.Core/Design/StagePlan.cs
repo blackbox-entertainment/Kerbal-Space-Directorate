@@ -285,7 +285,9 @@ namespace KSA.Core.Design
                     if (s.Decoupler.Length > 0)
                     {
                         PartInfo dec = catalog.Get(s.Decoupler);
-                        if (dec != null && !dec.IsStackable)
+                        if (dec != null && dec.Kind != PartKind.Decoupler)
+                            problems.Add(label + ": '" + s.Decoupler + "' is not a decoupler (a heat shield or other part cannot separate the stages). Use a stack decoupler.");
+                        else if (dec != null && !dec.IsStackable)
                             problems.Add(label + ": decoupler '" + s.Decoupler + "' is a radial (side) decoupler and cannot sit between stages. Use a stack decoupler there; radial decouplers are fitted automatically under side boosters.");
                     }
                 }

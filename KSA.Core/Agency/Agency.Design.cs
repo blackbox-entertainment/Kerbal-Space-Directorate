@@ -340,6 +340,7 @@ namespace KSA.Core
             {
                 if (part.Kind != PartKind.Parachute || (part.RequiresDlc && !AllowDlcParts)) continue;
                 if (sides && part.IsStackable) continue;
+                if (part.Tags.Contains("drogue")) continue; // a drogue cannot land a capsule on its own
                 if (!req.AllowedParts.Exists(x => x.Name == part.Name)) req.AllowedParts.Add(part);
                 chutes.Add(part.Name);
             }
