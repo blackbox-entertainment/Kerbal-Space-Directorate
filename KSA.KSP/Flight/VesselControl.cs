@@ -388,6 +388,27 @@ namespace KSA.KSP.Flight
             return false;
         }
 
+        /// <summary>
+        /// Drops the side boosters early when they drag the rocket off course: fires the next stage only when it is radial
+        /// decouplers and nothing else (no engines, no stack decouplers, no chutes). True when it staged.
+        /// </summary>
+        public bool DropSideBoosters(ref string line)
+        {
+            if (_v == null || _v.currentStage <= 0 || Now - _lastStage < 1.5) return false;
+            int next = _v.currentStage - 1;
+            bool any = false;
+            foreach (Part p in _v.parts)
+            {
+                if (p.inverseStage != next) continue;
+                if (p.FindModuleImplementing<ModuleAnchoredDecoupler>() == null) return false; // only radial decouplers
+                any = true;
+            }
+            if (!any) return false;
+            Stage();
+            line = "Side boosters were pulling the rocket off course: dropped them early.";
+            return true;
+        }
+
         /// <summary>True when the next stage carries an engine or a decoupler (so staging gets us somewhere), false for chute-only stages.</summary>
         public bool NextStageIsWorthFiring()
         {

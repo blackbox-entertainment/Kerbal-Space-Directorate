@@ -47,6 +47,8 @@ namespace KSA.KSP.Flight
             if (_phase == Phases.Ascent) ctx.Control.Sas(VesselAutopilot.AutopilotMode.Prograde, v.altitude < 40000);
         }
 
+        private double _offSince = -1;
+
         public string Step(FlightContext ctx)
         {
             if (State != LegState.Running) return null;
@@ -90,11 +92,14 @@ namespace KSA.KSP.Flight
                     break;
                 case Phases.Ascent:
                     c.AutoStage(ref line);
-                    if (alt > 45000) c.Sas(VesselAutopilot.AutopilotMode.Prograde, false);
-                    else
+                    if (!c.ManualAttitude) c.PointAlong(() => AscentDirection(v, _orbit));
+                    Status = "Gravity turn: pitch " + Math.Round(TargetPitch(v, _orbit)) + " deg.";
+                    // Side boosters pulling the rocket off course that SAS cannot hold: drop them, as a pilot would
+                    // (2026-10-28: heavy side boosters tipped a rocket over until the Director dropped them by hand).
                     {
-                        if (!c.ManualAttitude) c.PointAlong(() => AscentDirection(v, _orbit));
-                        Status = "Gravity turn: pitch " + Math.Round(TargetPitch(v, _orbit)) + " deg.";
+                        double off = c.AttitudeError(AscentDirection(v, _orbit));
+                        if (off > 25) { if (_offSince < 0) _offSince = ctx.Now; } else _offSince = -1;
+                        if (_offSince > 0 && ctx.Now - _offSince > 3 && c.DropSideBoosters(ref line)) _offSince = -1;
                     }
                     if (v.orbit.ApA >= _targetAp)
                     {
@@ -155,7 +160,9 @@ namespace KSA.KSP.Flight
         {
             double alt = Math.Max(0, v.altitude);
             // A suborbital hop goes nearly straight up (85 deg, a little east so it does not come down on the pad).
-            double program = orbit ? Math.Max(10, 90 * (1 - Math.Sqrt(Math.Min(1, alt / 60000.0)))) : 85;
+            // Straight up to 1 km, then an even turn that is horizontal at 45 km (2026-10-28: the old curve was at 53 degrees
+            // by 10 km, far too soon for a modest rocket). Above 45 km: flat, burning for apoapsis.
+            double program = orbit ? (alt < 1000 ? 90 : Math.Max(0, 90 * (1 - Math.Min(1, (alt - 1000) / 44000.0)))) : 85;
             if (v.srfSpeed < 150) return program;
             Vector3d up = v.upAxis;
             double pathPitch = 90 - Vector3d.Angle(v.srf_velocity, up);
