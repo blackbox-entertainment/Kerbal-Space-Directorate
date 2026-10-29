@@ -26,6 +26,8 @@ namespace KSA.Core.Personnel
         public bool TraitsOwned { get; set; }
         /// <summary>Assigned to the research lab: produces Science each year, not available for missions.</summary>
         public bool InLab { get; set; }
+        /// <summary>Day lab experience was last paid up to, or -1 (2026-10-28).</summary>
+        public int LabSinceDay { get; set; } = -1;
         /// <summary>From the game's kerbal (KSA-64: colonies need a man and a woman to grow).</summary>
         public bool Female { get; set; }
         public CrewStatus Status { get; set; }

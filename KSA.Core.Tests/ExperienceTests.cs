@@ -85,5 +85,75 @@ namespace KSA.Core.Tests
             b.Load(store);
             Assert.That(b.Crew.Get("Jeb Kerman").Record.Experience, Is.EqualTo(31.5));
         }
+
+        [Test]
+        public void TheLeadEngineerIsPaidWhenTheDesignFlies()
+        {
+            var clock = new FakeClock();
+            Agency a = Staffed(clock);
+            CrewProfile bill = a.Crew.Get("Bill Kerman");
+            string msg;
+            Project p = a.AdoptHangarLaunch("SuborbitalHop", "v1", "Hopper", new List<string> { "Jeb Kerman" }, out msg);
+            Assert.That(p, Is.Not.Null, msg);
+            p.LeadEngineer = bill.Id;
+            var result = new LiveFlightResult { Recovered = true, MaxAltitude = 90000, MaxSpeed = 1200, DaysInSpace = 0.1 };
+            result.Achievements.Add("Flight:Kerbin");
+            result.Achievements.Add("Suborbit:Kerbin");
+            result.Achievements.Add("Recover:-");
+            Assert.That(a.ResolveLive(p.Id, result).IsSuccess, Is.True);
+            // Early 2 x 1.5 = 3, plus the First bonus 4: the same 7 the pilot earned, at designLead = 1.
+            Assert.That(bill.Record.Experience, Is.EqualTo(7).Within(0.01));
+            Assert.That(bill.Record.DesignsFlown, Is.EqualTo(1));
+            Assert.That(KSA.Core.Careers.PromotionEngine.MissionCredit(bill), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void LabYearsPayExperienceAndCountTowardScienceRanks()
+        {
+            var clock = new FakeClock();
+            Agency a = Make.Agency(clock, new ListLogger());
+            a.SyncRoster(new List<CrewSnapshot> { Make.Snapshot("Bob Kerman", CrewRole.Scientist, 0) });
+            a.Tick();
+            CrewProfile bob = a.Crew.Get("Bob Kerman");
+            string msg;
+            Assert.That(a.SetLab(bob.Id, true, out msg), Is.True, msg);
+            clock.AdvanceDays(213);
+            a.Tick();
+            Assert.That(bob.Record.Experience, Is.EqualTo(1.5).Within(0.01));
+            Assert.That(bob.Record.LabYears, Is.EqualTo(0));
+            clock.AdvanceDays(213);
+            a.Tick();
+            Assert.That(bob.Record.Experience, Is.EqualTo(3).Within(0.01));
+            Assert.That(bob.Record.LabYears, Is.EqualTo(1));
+            Assert.That(KSA.Core.Careers.PromotionEngine.MissionCredit(bob), Is.EqualTo(1));
+
+            // Leaving the lab pays the days so far and stops the clock.
+            clock.AdvanceDays(71);
+            Assert.That(a.SetLab(bob.Id, false, out msg), Is.True, msg);
+            Assert.That(bob.Record.Experience, Is.EqualTo(3.5).Within(0.01));
+            clock.AdvanceDays(200);
+            a.Tick();
+            Assert.That(bob.Record.Experience, Is.EqualTo(3.5).Within(0.01));
+
+            var store = new MemoryPersistence();
+            a.Save(store);
+            Agency b = Make.Agency(clock, new ListLogger());
+            b.Load(store);
+            Assert.That(b.Crew.Get("Bob Kerman").Record.LabYears, Is.EqualTo(1));
+            Assert.That(b.Crew.Get("Bob Kerman").Record.LabDays, Is.EqualTo(497).Within(0.01));
+        }
+
+        [Test]
+        public void GroundWorkCountsOnlyForItsOwnTrack()
+        {
+            var c = new CrewProfile("x", "X Kerman") { Track = CareerTrack.Flight };
+            c.Record.DesignsFlown = 3;
+            c.Record.LabYears = 2;
+            Assert.That(KSA.Core.Careers.PromotionEngine.MissionCredit(c), Is.EqualTo(0));
+            c.Track = CareerTrack.Engineering;
+            Assert.That(KSA.Core.Careers.PromotionEngine.MissionCredit(c), Is.EqualTo(3));
+            c.Track = CareerTrack.Science;
+            Assert.That(KSA.Core.Careers.PromotionEngine.MissionCredit(c), Is.EqualTo(2));
+        }
     }
 }

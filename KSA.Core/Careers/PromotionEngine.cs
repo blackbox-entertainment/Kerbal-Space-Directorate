@@ -39,10 +39,23 @@ namespace KSA.Core.Careers
         {
             if (profile == null || rank == null) return false;
             if (profile.Stars < rank.MinStars) return false;
-            if (profile.Record.CompletedMissionCount < rank.MinMissions) return false;
+            if (MissionCredit(profile) < rank.MinMissions) return false;
             for (int i = 0; i < rank.RequiredAchievements.Count; i++)
                 if (!profile.Record.HasAchievement(rank.RequiredAchievements[i])) return false;
             return true;
+        }
+
+        /// <summary>
+        /// Completed missions, plus ground work for the tracks that do their work on the ground (2026-10-28): an engineer
+        /// counts each mission flown on a design they led, a scientist each full year in the lab.
+        /// </summary>
+        public static int MissionCredit(CrewProfile profile)
+        {
+            if (profile == null) return 0;
+            int n = profile.Record.CompletedMissionCount;
+            if (profile.Track == CareerTrack.Engineering) n += profile.Record.DesignsFlown;
+            else if (profile.Track == CareerTrack.Science) n += profile.Record.LabYears;
+            return n;
         }
 
         public bool HasOpenSlot(RankDefinition rank)

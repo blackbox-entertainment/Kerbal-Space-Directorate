@@ -89,6 +89,10 @@ namespace KSA.KSP.UI
             items.Add(Field("Role", RosterView.RoleText(p.Role) + ", " + RosterView.StarsText(p.Stars), textWidth));
             double toNext = _agency.ToNextStar(p);
             items.Add(Field("Experience", p.Record.Experience.ToString("0.#") + " points" + (toNext > 0 ? "  |  " + toNext.ToString("0.#") + " to the next star" : "  |  top of the ladder"), textWidth));
+            if (p.Record.DesignsFlown > 0 || p.Record.LabDays > 0 || p.InLab)
+                items.Add(Field("Ground work", (p.Record.DesignsFlown > 0 ? p.Record.DesignsFlown + " design" + (p.Record.DesignsFlown == 1 ? "" : "s") + " flown" : "no designs flown yet")
+                    + "  |  " + (p.Record.LabDays / Math.Max(1, KsaCore.Agency != null ? KsaCore.Agency.Calendar.DaysPerYear : 426)).ToString("0.0") + " years in the lab"
+                    + "  |  counts toward rank: " + PromotionEngine.MissionCredit(p) + " missions", textWidth));
             string whereabouts = _agency.WhereaboutsOf(p.Id);
             items.Add(Field("Status", RosterView.StatusText(p.Status) + (p.Departed ? " (left the agency)" : string.Empty) + (whereabouts.Length > 0 ? ", " + whereabouts : string.Empty), textWidth));
             items.Add(Field("Age", age + "  |  hired day " + p.HiredDay, textWidth));

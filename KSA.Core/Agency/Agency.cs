@@ -126,6 +126,7 @@ namespace KSA.Core
                 RunYearEnd(notices);
             TickRecruiting(day, notices);
             TickProjects(day, notices);
+            TickLab(day, notices); // lab staff earn experience day by day (2026-10-28)
             if (LifeSupportOn) StrandedSuppliesTick(notices); // KSA-67: with life support the stranded run out in days, not years
             DirectorTick(); // KSA-68: the AI Director takes a turn when one is due
             return notices;
@@ -203,6 +204,7 @@ namespace KSA.Core
             SupplyYearNotes(notices);
             ColonyYearEnd(notices);
             StrandedYearEnd(notices);
+            TickLab(day, notices);
             AwardLabScience(notices);
             int moraleBonus = YearEndMoraleBonus();
             if (moraleBonus > 0) foreach (CrewProfile p in Crew.Active) p.Morale = Math.Min(100, p.Morale + moraleBonus);

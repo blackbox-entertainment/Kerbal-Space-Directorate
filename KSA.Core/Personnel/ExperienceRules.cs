@@ -28,6 +28,14 @@ namespace KSA.Core.Personnel
         public double DirectorFactor { get; set; } = 0.5;
         /// <summary>Credit multiplier when the mission failed but the crew came home.</summary>
         public double SurvivedFailureFactor { get; set; } = 0.25;
+        /// <summary>Ground work (2026-10-28): the lead engineer's share of a mission's design points when the design flies.</summary>
+        public double DesignLeadFactor { get; set; } = 1.0;
+        /// <summary>Each other engineer on the design team.</summary>
+        public double DesignTeamFactor { get; set; } = 0.25;
+        /// <summary>Design credit multiplier when the mission failed.</summary>
+        public double FailedDesignFactor { get; set; } = 0.25;
+        /// <summary>Points a kerbal earns for a full year in the research lab, paid day by day.</summary>
+        public double LabPerYear { get; set; } = 3;
         /// <summary>Points needed for one to five stars.</summary>
         public List<double> StarThresholds { get; } = new List<double> { 4, 12, 28, 60, 110 };
 
@@ -69,6 +77,10 @@ namespace KSA.Core.Personnel
             r.PerExtraDay = node.GetDouble("perExtraDay", r.PerExtraDay);
             r.DirectorFactor = node.GetDouble("directorFactor", r.DirectorFactor);
             r.SurvivedFailureFactor = node.GetDouble("survivedFailureFactor", r.SurvivedFailureFactor);
+            r.DesignLeadFactor = node.GetDouble("designLead", r.DesignLeadFactor);
+            r.DesignTeamFactor = node.GetDouble("designTeam", r.DesignTeamFactor);
+            r.FailedDesignFactor = node.GetDouble("failedDesign", r.FailedDesignFactor);
+            r.LabPerYear = node.GetDouble("labPerYear", r.LabPerYear);
             string ladder = node.GetValue("stars", string.Empty);
             if (ladder.Length > 0)
             {

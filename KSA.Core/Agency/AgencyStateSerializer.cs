@@ -109,6 +109,7 @@ namespace KSA.Core
                 c.AddValue("stupidity", p.Stupidity);
                 c.AddValue("traitsOwned", p.TraitsOwned);
                 c.AddValue("inLab", p.InLab);
+                c.AddValue("labSince", p.LabSinceDay);
                 c.AddValue("status", p.Status.ToString());
                 c.AddValue("track", p.Track.ToString());
                 c.AddValue("rank", p.RankId);
@@ -129,6 +130,9 @@ namespace KSA.Core
                 c.AddValue("daysOnOtherWorlds", p.Record.DaysOnOtherWorlds);
                 c.AddValue("longestMissionDays", p.Record.LongestMissionDays);
                 c.AddValue("xp", p.Record.Experience);
+                c.AddValue("designsFlown", p.Record.DesignsFlown);
+                c.AddValue("labDays", p.Record.LabDays);
+                c.AddValue("labYears", p.Record.LabYears);
                 c.AddValue("female", p.Female);
                 foreach (string tag in p.PersonalityTags) c.AddValue("tag", tag);
                 foreach (string a in p.Record.Achievements) c.AddValue("achievement", a);
@@ -349,6 +353,10 @@ namespace KSA.Core
                 p.Record.DaysOnOtherWorlds = c.GetDouble("daysOnOtherWorlds", 0);
                 p.Record.LongestMissionDays = c.GetDouble("longestMissionDays", 0);
                 p.Record.Experience = c.GetDouble("xp", 0);
+                p.Record.DesignsFlown = c.GetInt("designsFlown", 0);
+                p.Record.LabDays = c.GetDouble("labDays", 0);
+                p.Record.LabYears = c.GetInt("labYears", 0);
+                p.LabSinceDay = c.GetInt("labSince", -1);
                 p.Female = c.GetBool("female", false);
                 p.PersonalityTags.AddRange(c.GetValues("tag"));
                 foreach (string a in c.GetValues("achievement")) p.Record.Achievements.Add(a);

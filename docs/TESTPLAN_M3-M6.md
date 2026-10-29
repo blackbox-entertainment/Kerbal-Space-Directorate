@@ -198,3 +198,10 @@ Part 1 runs on the current install (no Kerbalism). Part 2 needs Kerbalism, insta
 3. Close Help. Open Projects and click **?**. Expect Help to open at Projects. Repeat for Programs (Programs page) and AI Director (The AI Director page).
 4. With Help open, click **?** on another window. Expect the open Help window to switch page, not a second window.
 5. KSP.log: expect `[KSA] Help: 15 topic(s)`.
+
+## H. Ground-work experience (added 2026-10-28)
+
+1. Start a project with a lead engineer who is not in the crew. After it flies successfully, open the engineer's Service Record. Expect more Experience and a "Ground work: 1 design flown" line. The project notes list "+N experience" for the engineer.
+2. Put a scientist in the lab and let 30+ days pass. Expect their Experience to rise slowly (about 3 points a year).
+3. After a full year in the lab, expect a notice "<name> completes 1 year in the research lab"; the Service Record's "counts toward rank" figure goes up by 1.
+4. An engineer with 3 stars and 2 designs flown is promoted to Lead Engineer without flying; a scientist with 3 stars and 2 lab years becomes Principal Investigator.

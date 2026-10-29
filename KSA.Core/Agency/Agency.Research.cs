@@ -57,7 +57,9 @@ namespace KSA.Core
                 if (IsDepartmentHead(c.Id)) { message = c.Name + " runs a department."; return false; }
                 if (c.Role != CrewRole.Scientist && c.Track != CareerTrack.Science) { message = c.Name + " is not a scientist; the lab needs Science-track kerbals (others produce half)."; }
             }
+            AccrueLab(c, CurrentDay, null); // pay up the days so far before the change
             c.InLab = inLab;
+            AccrueLab(c, CurrentDay, null); // joining: the clock starts today
             message = inLab ? c.Name + " joins the research lab: about " + LabOutput(c).ToString("0") + " Science per year." : c.Name + " leaves the lab and is available for missions.";
             Push(null, message);
             return true;
