@@ -305,32 +305,6 @@ namespace KSA.Core.Tests
             Assert.That(third.Notes, Has.None.StartsWith("Reusing the proven design"));
         }
 
-        [Test]
-        public void ACalledOffMissionStaysShutUntilSomethingNewIsResearched()
-        {
-            var clock = new FakeClock();
-            Agency a = Staffed(clock, new ListLogger());
-            a.TemplateCheck = t => "needs parts not researched";
-            var transport = new ScriptedTransport();
-            transport.Fallback = ScriptedTransport.Chat(TestParts.WeakPlan());
-            EnableAi(a, transport);
-            string msg;
-            Project p = a.CreateProject("Too hard", "KerbinOrbit", null, null, null, null, MissionMode.Simulate, out msg);
-            for (int i = 0; i < 4; i++) { clock.AdvanceDays(p.DesignDays + 1); a.Tick(); }
-            Assert.That(p.Status, Is.EqualTo(ProjectStatus.Cancelled));
-            KSA.Core.Missions.MissionType orbit = a.Catalogs.Missions.Get("KerbinOrbit");
-            Assert.That(a.MissionBlocker(orbit), Does.Contain("no workable design"));
-
-            var store = new MemoryPersistence();
-            a.Save(store);
-            Agency b = Make.Agency(clock, new ListLogger());
-            b.Load(store);
-            Assert.That(b.NoDesignAt.ContainsKey("KerbinOrbit"), Is.True, "remembered across a save");
-
-            ((PartCatalog)a.Parts).Add(new PartInfo { Name = "newEngine", Title = "New engine", Kind = PartKind.Engine, Mass = 0.5, Thrust = 60 });
-            Assert.That(a.MissionBlocker(orbit), Is.Null, "new research: worth another try");
-        }
-
         private sealed class HangingTransport : KSA.Core.Ai.ILlmTransport
         {
             public System.Action<KSA.Core.Ai.LlmResponse> Pending;
@@ -366,7 +340,7 @@ namespace KSA.Core.Tests
         }
 
         [Test]
-        public void ANoTemplateProjectRetriesItsDesignThenIsCalledOffWithItsMoneyBack()
+        public void WhenTheAiFallsShortTheEngineersDesignItByHand()
         {
             var clock = new FakeClock();
             Agency a = Staffed(clock, new ListLogger());
@@ -374,16 +348,53 @@ namespace KSA.Core.Tests
             var transport = new ScriptedTransport();
             transport.Fallback = ScriptedTransport.Chat(TestParts.WeakPlan());
             EnableAi(a, transport);
-            double before = a.Ledger.Balance;
+            KSA.Core.Missions.MissionType orbit = a.Catalogs.Missions.Get("KerbinOrbit");
+            Assert.That(a.MissionBlocker(orbit), Is.Null, "the researched parts can build an orbital rocket");
             string msg;
-            Project p = a.CreateProject("Too hard", "KerbinOrbit", null, null, null, null, MissionMode.Simulate, out msg);
+            Project p = a.CreateProject("Orbit", "KerbinOrbit", null, null, null, null, MissionMode.Simulate, out msg);
             Assert.That(p, Is.Not.Null, msg);
-            Assert.That(p.Design.Verdict, Is.EqualTo(DesignVerdict.Short));
+            Assert.That(p.Design.Verdict, Is.EqualTo(DesignVerdict.Short), "the AI comes up short");
             for (int i = 0; i < 4; i++) { clock.AdvanceDays(p.DesignDays + 1); a.Tick(); }
             Assert.That(p.DesignAttempts, Is.EqualTo(Agency.MaxAiDesignAttempts));
-            Assert.That(p.Status, Is.EqualTo(ProjectStatus.Cancelled));
-            Assert.That(a.Ledger.Balance, Is.EqualTo(before).Within(1));
-            Assert.That(a.Crew.Get("Jeb Kerman").ProjectId, Is.Empty);
+            Assert.That(p.Design.Model, Is.EqualTo(Agency.EngineersModel), "drawn up by hand, not called off");
+            Assert.That(p.Design.Verdict, Is.EqualTo(DesignVerdict.Approved));
+            Assert.That(p.Design.TotalDeltaV, Is.GreaterThanOrEqualTo(p.Design.RequiredDeltaV));
+            Assert.That(p.Status, Is.Not.EqualTo(ProjectStatus.Cancelled));
+            Assert.That(a.DesignNameOf(p), Does.EndWith("(engineering team)"));
+        }
+
+        [Test]
+        public void WithAiOffTheEngineersStillDesignTheRocket()
+        {
+            var clock = new FakeClock();
+            Agency a = Staffed(clock, new ListLogger());
+            a.TemplateCheck = t => "needs parts not researched";
+            a.Parts = TestParts.Catalog();
+            a.Requirements = MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
+            Assert.That(a.AiDesignAvailable, Is.False);
+            string msg;
+            Project p = a.CreateProject("Orbit", "KerbinOrbit", null, null, null, null, MissionMode.Simulate, out msg);
+            Assert.That(p, Is.Not.Null, msg);
+            Assert.That(p.Design, Is.Not.Null);
+            Assert.That(p.Design.Model, Is.EqualTo(Agency.EngineersModel));
+            Assert.That(p.Design.Plan.Payload.Extras, Has.Member("parachuteSingle"), "the brief's must-carry parts are on it");
+        }
+
+        [Test]
+        public void AMissionNoRocketCanFlyStaysShut()
+        {
+            var clock = new FakeClock();
+            Agency a = Staffed(clock, new ListLogger());
+            a.TemplateCheck = t => "needs parts not researched";
+            var weak = new PartCatalog();
+            weak.Add(new PartInfo { Name = "mk1pod", Title = "Mk1 pod", Kind = PartKind.Command, Mass = 0.84, CrewCapacity = 1, Diameter = 1.25, HasTopNode = true, HasBottomNode = true });
+            weak.Add(new PartInfo { Name = "parachuteSingle", Title = "Mk16", Kind = PartKind.Parachute, Mass = 0.1, HasBottomNode = true });
+            weak.Add(new PartInfo { Name = "flea", Title = "Flea", Kind = PartKind.Booster, Mass = 0.45, FuelMass = 1.05, Thrust = 192, IspVacuum = 165, IspSeaLevel = 140, Diameter = 1.25, HasTopNode = true, HasBottomNode = true });
+            a.Parts = weak;
+            KSA.Core.Missions.MissionType orbit = a.Catalogs.Missions.Get("KerbinOrbit");
+            Assert.That(a.MissionBlocker(orbit), Does.Contain("no rocket"));
+            string msg;
+            Assert.That(a.CreateProject("Too soon", "KerbinOrbit", null, null, null, null, MissionMode.Simulate, out msg), Is.Null);
         }
     }
 }

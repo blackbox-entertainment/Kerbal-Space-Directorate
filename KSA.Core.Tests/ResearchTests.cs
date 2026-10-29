@@ -44,7 +44,7 @@ namespace KSA.Core.Tests
             MissionType orbit = a.Catalogs.Missions.Get("KerbinOrbit");
             MissionType mun = a.Catalogs.Missions.Get("MunLanding");
             Assert.That(a.MissionBlocker(hop), Is.Null, "a pod, a booster and a chute fly a hop");
-            Assert.That(a.MissionBlocker(orbit), Does.Contain("no design it can build").And.Contains("Swivel"), "locked when no design can be built (2026-10-28)");
+            Assert.That(a.MissionBlocker(orbit), Does.Contain("no rocket"), "locked when no rocket can be built from the parts (2026-10-28)");
             Assert.That(a.PartKindsBlocker(orbit), Does.Contain("liquid engine"));
             Assert.That(a.PartKindsBlocker(mun), Does.Contain("landing legs"));
 
@@ -57,7 +57,7 @@ namespace KSA.Core.Tests
 
             string msg;
             Assert.That(a.CreateProject("Too soon", "KerbinOrbit", null, new[] { "Jeb Kerman" }, null, null, null, out msg), Is.Null);
-            Assert.That(msg, Does.Contain("no design it can build"));
+            Assert.That(msg, Does.Contain("no rocket"));
         }
 
         [Test]

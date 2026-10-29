@@ -172,7 +172,7 @@ namespace KSA.Core
                 // No design picked: the first fallback design that can be built today, else (AI on) none at all and the
                 // engineering team designs the rocket from scratch (2026-10-28: templates are the AI-off fallback, not a gate).
                 template = able.Find(x => x.IsAvailable(InstalledMods) && TemplateBlocker(x) == null);
-                if (template == null && !AiDesignAvailable) { message = "No design template can fly " + type.Name + " with the parts researched, and AI design is off (AI Setup)."; return null; }
+                if (template == null && !AiDesignAvailable && DesignableBlocker(type) != null) { message = "No rocket can be built for " + type.Name + " with the parts researched."; return null; }
             }
             else
             {
@@ -241,8 +241,14 @@ namespace KSA.Core
             }
             else
             {
-                if (template == null) project.Notes.Add("No fallback design: the engineering team designs this rocket from scratch.");
-                if (!TryReuseDesign(project)) StartDesign(project, null);
+                if (template == null) project.Notes.Add("No ready-made design: the engineering team designs this rocket from scratch.");
+                if (!TryReuseDesign(project) && !StartDesign(project, null) && template == null)
+                {
+                    // No AI: the engineers draw it up by hand (2026-10-28).
+                    string handWhy;
+                    DesignRecord byHand = EngineersDesign(project, out handWhy);
+                    if (byHand != null) { project.Design = byHand; project.Notes.Add("Designed by hand: '" + byHand.DesignName + "' (" + byHand.TotalDeltaV + " m/s, TWR " + byHand.LiftoffTwr + ")."); }
+                }
             }
             return project;
         }

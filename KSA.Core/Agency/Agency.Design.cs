@@ -448,6 +448,57 @@ namespace KSA.Core
             return null;
         }
 
+        /// <summary>Model name on designs the engineering team drew up without AI (ProceduralDesigner).</summary>
+        public const string EngineersModel = "engineering team (by hand)";
+
+        /// <summary>
+        /// The engineering team's own design for a project, without AI (2026-10-28), or null with the reason. Checked like an
+        /// AI design; the craft is assembled from the plan at build time like one.
+        /// </summary>
+        public DesignRecord EngineersDesign(Project p, out string why)
+        {
+            why = null;
+            if (p == null || Parts == null) { why = "no parts list"; return null; }
+            DesignRequest req = BuildDesignRequest(p);
+            StagePlan plan = ProceduralDesigner.Design(req, Parts, req.Requirement, LaunchGravity, out why);
+            if (plan == null) return null;
+            DesignAnalysis a = StageAnalyzer.Analyze(plan, Parts, req.Requirement, LaunchGravity);
+            var r = new DesignRecord
+            {
+                Source = DesignSource.Ai,
+                Verdict = DesignVerdict.Approved,
+                DesignName = plan.DesignName,
+                Rationale = plan.Rationale,
+                Plan = plan,
+                PlanJson = plan.ToJsonText(false),
+                Model = EngineersModel,
+                PartsResearched = Parts.All.Count
+            };
+            r.ApplyAnalysis(a);
+            return r;
+        }
+
+        private readonly Dictionary<string, string> _designable = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Null when a rocket for the mission can be built from today's parts (the engineering team's own designer finds
+        /// one), else why not. Cached per mission until the researched parts change. This, not the AI, decides whether a
+        /// mission is open (2026-10-28: missions were shut because a small AI model gave up, and opened by part kinds alone).
+        /// </summary>
+        public string DesignableBlocker(MissionType type)
+        {
+            if (type == null || Parts == null) return null;
+            string key = type.Id + "|" + Parts.All.Count + "|" + LifeSupportMod;
+            string cached;
+            if (_designable.TryGetValue(key, out cached)) return cached.Length == 0 ? null : cached;
+            string why;
+            var probe = new Project { Id = "probe", MissionTypeId = type.Id, Name = type.Name };
+            DesignRecord r = EngineersDesign(probe, out why);
+            string result = r != null ? string.Empty : (why ?? "no rocket can be built for it");
+            _designable[key] = result;
+            return result.Length == 0 ? null : result;
+        }
+
         /// <summary>The Director's saved designs that can fly a mission today.</summary>
         public List<PlayerDesign> PlayerDesignsFor(MissionType type)
         {
@@ -462,7 +513,7 @@ namespace KSA.Core
         public string DesignNameOf(Project p)
         {
             if (p == null) return string.Empty;
-            if (HasApprovedDesign(p)) return p.Design.DesignName + (p.Design.Source == DesignSource.Player ? " (your design)" : " (AI)");
+            if (HasApprovedDesign(p)) return p.Design.DesignName + (p.Design.Source == DesignSource.Player ? " (your design)" : p.Design.Model == EngineersModel ? " (engineering team)" : " (AI)");
             Template t = Catalogs.Templates.Get(p.TemplateId);
             return t != null ? t.Name : "engineering team design (AI)";
         }
@@ -478,6 +529,17 @@ namespace KSA.Core
             {
                 p.Notes.Add("Design attempt " + p.DesignAttempts + " of " + MaxAiDesignAttempts + " started.");
                 Push(notices, p.Name + ": the engineers try another design (attempt " + p.DesignAttempts + " of " + MaxAiDesignAttempts + ")");
+                return true;
+            }
+            // The AI could not (or is not there): the engineering team draws one up by hand from the researched parts.
+            string handWhy;
+            DesignRecord byHand = EngineersDesign(p, out handWhy);
+            if (byHand != null)
+            {
+                p.Design = byHand;
+                p.Notes.Add("The AI design fell short; the engineering team drew up '" + byHand.DesignName + "' by hand (" + byHand.TotalDeltaV + " of " + byHand.RequiredDeltaV + " m/s, TWR " + byHand.LiftoffTwr + ").");
+                Push(notices, p.Name + ": the engineering team designed it by hand");
+                RaiseProjectChanged(p);
                 return true;
             }
             string why = p.DesignAttempts >= MaxAiDesignAttempts
