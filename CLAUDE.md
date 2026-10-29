@@ -211,7 +211,7 @@ Each milestone is playable on its own. Don't start a milestone until the previou
 
 - **License:** MIT, copyright Blackbox Entertainment (LICENSE at repo root, added 2026-10-26). Blackbox holds copyright on all first-party code, so KSA.Core can be relicensed for a standalone game.
 - Code T writes is T's. KSP's code, assets, kerbals, and the "Kerbal" name belong to Take-Two/Squad and can't be reused in a standalone game.
-- If outside contributors join, get agreement that T can relicense their code, or keep contributions out of Core. Done 2026-10-28: CONTRIBUTING.md requires DCO sign-off (`git commit -s`) and grants Blackbox the right to relicense; .github has bug-report and PR templates. Textures checked: all six PNGs are original (drawn by code, commits 508c03a, eda493f).
+- If outside contributors join, get agreement that T can relicense their code, or keep contributions out of Core. Decided 2026-10-28: no outside code contributions (CONTRIBUTING.md says PRs are closed; bug reports via the issue form are welcome). If that changes, require DCO sign-off and a relicense grant first. Textures checked: all six PNGs are original (drawn by code, commits 508c03a, eda493f).
 - Model licenses vary (Apache 2.0, MIT, or custom terms like Llama/Gemma). Recommend models; don't redistribute them.
 - Not legal advice. Get a lawyer before any commercial spin-off.
 
