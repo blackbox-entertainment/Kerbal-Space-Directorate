@@ -413,6 +413,34 @@ namespace KSA.KSP.Flight
         public bool IsLive(Vessel v) { return Live != null && v != null && v.persistentId == Live.VesselId; }
         public static bool IsLiveVessel(uint persistentId) { return Live != null && Live.VesselId == persistentId; }
 
+        private bool _netNoted;
+
+        /// <summary>
+        /// The crew never falls without chutes (2026-10-28: an ascent ran dry at 20 km, the plan moved on to "On orbit", and
+        /// nothing armed the parachutes, so the pod hit the sea at 198 m/s). Every physics frame, whatever the flight plan
+        /// is doing and whoever is flying: when the craft is falling back through an atmosphere on a path that meets the
+        /// ground, empty stages are dropped and the chutes are armed (forced open below 2.5 km if still not safe).
+        /// </summary>
+        private void SurvivalNet()
+        {
+            Vessel v = _vessel;
+            if (v == null || _ctx == null || v.mainBody == null || !v.mainBody.atmosphere) return;
+            if (v.situation == Vessel.Situations.LANDED || v.situation == Vessel.Situations.SPLASHED || v.situation == Vessel.Situations.PRELAUNCH) return;
+            double atmo = v.mainBody.atmosphereDepth;
+            bool falling = v.verticalSpeed < -10;
+            bool comingDown = v.orbit == null || v.orbit.PeA < atmo * 0.5;
+            if (!falling || !comingDown || v.altitude > atmo) return;
+            // Still burning upward through a powered descent? Leave engines alone: only spent stages go.
+            string line = null;
+            _ctx.Control.DropSpentStage(ref line);
+            if (line != null) Log(line, null);
+            double aboveGround = Math.Max(0, v.altitude - Math.Max(0, v.terrainAltitude));
+            string chute = null;
+            _ctx.Control.DeployChutes(ref chute, aboveGround < 2500);
+            if (chute != null) Log(chute + (_netNoted ? string.Empty : " (falling back: the crew arms the chutes whatever the flight plan says)"), null);
+            if (chute != null) _netNoted = true;
+        }
+
         /// <summary>
         /// The crew's pre-launch checklist (2026-10-28): SAS on in Stability Assist, and RCS on when the craft has thrusters,
         /// before the go, so nothing starts to wander on the pad or at liftoff.
@@ -475,6 +503,7 @@ namespace KSA.KSP.Flight
                 if (sline != null) Log(sline, null);
                 Live.SciencePoints = _science.PointsCollected;
             }
+            SurvivalNet();
             if (Live.AutopilotOn && _program != null)
             {
                 string line = _program.Step();

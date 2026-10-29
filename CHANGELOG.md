@@ -4,6 +4,8 @@ Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the
 
 ## Unreleased
 
+- **Survival net: chutes always arm when falling.** Every physics frame, whatever the flight plan is doing and whoever flies, a craft falling back through an atmosphere on a path that meets the ground drops spent stages and arms its parachutes (forced open below 2.5 km). Before, an ascent that ran dry at 20 km moved on to "On orbit", nothing armed the chutes, and Valentina hit the sea at 198 m/s. The orbit hold is also skipped when the craft is not in orbit.
+- **Honest launch-stage sums:** the engineering team counts the launch stage at the mean of sea-level and vacuum efficiency and aims 10% over the requirement, so its rockets carry the fuel they need through the thick lower air.
 - **Steering by stock SAS:** when the crew points the craft (pitch program, retrograde for a rookie, docking approaches), KSA now locks stock Stability Assist to the wanted direction instead of working the stick itself; KSP's own controller knows each craft's axes and torque. The old hand steering could guess an axis wrong and drift (a rocket ended up heading northwest and nose-down).
 - **One engine per stack:** the design check now rejects plans with several engines or boosters stacked in one column (the upper ones fire into the parts below and KSP blocks their thrust; an AI design stacked four Hammers and crawled to 8 km). Extra boosters go radially. Approved designs in a save are re-checked on load and redesigned if they break the rule.
 - **Pre-launch checks:** on the pad the crew switches SAS on (Stability Assist) and RCS on when the craft has thrusters, before the go.

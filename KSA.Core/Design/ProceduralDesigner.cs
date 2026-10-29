@@ -15,7 +15,7 @@ namespace KSA.Core.Design
     public static class ProceduralDesigner
     {
         private const double G0 = 9.80665;
-        private const double Margin = 1.06;      // aim 6% over the requirement
+        private const double Margin = 1.10;      // aim 10% over the requirement
         private const double LaunchTwr = 1.45;    // vacuum thrust figure; sea level is lower
         private const double UpperTwr = 0.45;     // in space, slow but workable
         private const int MaxTanks = 8;
@@ -27,7 +27,7 @@ namespace KSA.Core.Design
             public int Tanks;
             public PartInfo Booster;    // radial solid boosters on the launch stage
             public int Boosters;
-            public double Dry, Fuel, Thrust, IspNum;
+            public double Dry, Fuel, Thrust, IspNum, IspSlNum;
         }
 
         /// <summary>
@@ -114,7 +114,8 @@ namespace KSA.Core.Design
                     {
                         double start = above + o.Dry + extraDry + o.Fuel;
                         double end = above + o.Dry + extraDry;
-                        double isp = o.Thrust > 0 ? o.IspNum / o.Thrust : 0;
+                        // The launch stage burns mostly in thick air: count it at the mean of sea-level and vacuum Isp, not vacuum (2026-10-28).
+                        double isp = o.Thrust > 0 ? (launch ? 0.5 * (o.IspNum + o.IspSlNum) : o.IspNum) / o.Thrust : 0;
                         double dv = isp * G0 * Math.Log(start / end);
                         double twr = o.Thrust / (start * gravity);
                         if (dv < stageTarget || twr < (launch ? twrNeed : UpperTwr)) continue;
@@ -165,6 +166,7 @@ namespace KSA.Core.Design
         {
             o.Thrust += p.Thrust * n;
             o.IspNum += p.Thrust * n * (p.IspVacuum > 0 ? p.IspVacuum : p.IspSeaLevel);
+            o.IspSlNum += p.Thrust * n * (p.IspSeaLevel > 0 ? p.IspSeaLevel : p.IspVacuum);
         }
 
         private static StagePlan Build(StagePlan template, Option[] stages, PartInfo decoupler, PartInfo legs)
