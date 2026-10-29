@@ -113,9 +113,12 @@ namespace KSA.KSP.Flight
         {
             if (!_engaged) return;
             _engaged = false;
+            // A hand-over keeps the throttle where it was: some legs zero it as they end (2026-10-28).
+            float throttle = FlightInputHandler.state != null ? FlightInputHandler.state.mainThrottle : 0f;
             IFlightLeg l = Current;
             if (l != null) l.End(_ctx);
             _ctx.Control.Disengage();
+            if (FlightInputHandler.state != null) FlightInputHandler.state.mainThrottle = throttle;
         }
 
         /// <summary>Skip to the first leg of the given type (used when resuming a saved flight in a known state).</summary>

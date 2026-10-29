@@ -4,6 +4,9 @@ Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the
 
 ## Unreleased
 
+- **Orbit means a complete orbit.** A live flight earns orbit only after flying one full orbit in a stable orbit (periapsis above the atmosphere, or 10 km over an airless world); breaking the orbit starts the count again. Captures at the Mun, Minmus and beyond count the same way. Simulated flights claim orbit only on a full success.
+- **Fixed: orbit missions held for 600 orbits** (about four days) instead of 600 seconds; they now hold exactly one full orbit (or the custom mission's count).
+- **Fixed: taking control cut the engines and fired the chute.** Handing over now leaves the throttle where it was, and the parachute safety net only acts while the crew is flying and no engine is burning.
 - **Fixed: missing the main objective was scored a partial success.** A live flight that missed its main objective (a Kerbin orbit flight that peaked at 82 km) counted as a partial success and showed as "done". It is now an abort with the crew safe, and "done" in Projects needs the agency to hold the mission's main achievement.
 - **Simulated reports say what was reached and missed** ("Reached: suborbital flight, orbit. Missed: a science return from Kerbin."), since simulated flights count as flown and their achievements meet goals.
 - **Fixed: a live flight could stay "in flight" for ever** after its craft was gone (left falling, then removed by the game): the clean-up skipped it because the flight director still held it from the flight scene. Out of flight, a held flight with no vessel is now dropped and the project closed (crew lost, or back on the pad with the crew freed).

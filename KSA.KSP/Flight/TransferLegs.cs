@@ -969,7 +969,7 @@ namespace KSA.KSP.Flight
             }
             string orbit = TransferSupport.Km(v.orbit.ApA) + " x " + TransferSupport.Km(v.orbit.PeA);
             Status = "In a " + orbit + " orbit of " + _target.bodyName + ".";
-            ctx.Say("Captured into " + orbit + " orbit of " + _target.bodyName + ".", "Orbit:" + _target.bodyName);
+            ctx.Say("Captured into " + orbit + " orbit of " + _target.bodyName + "; it counts as orbit after one full orbit.");
             State = LegState.Done;
         }
 

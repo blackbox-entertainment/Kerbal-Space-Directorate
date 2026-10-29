@@ -140,7 +140,8 @@ namespace KSA.Core.Missions
                 case MissionOutcome.PartialSuccess:
                     {
                         string primary = input.Type != null ? input.Type.PrimaryAchievement : string.Empty;
-                        foreach (string a in ach) if (!string.Equals(a, primary, StringComparison.OrdinalIgnoreCase)) r.Achievements.Add(a);
+                        // A partial flight does not count as a completed orbit (2026-10-28): orbit only on a full success.
+                        foreach (string a in ach) if (!string.Equals(a, primary, StringComparison.OrdinalIgnoreCase) && !a.StartsWith("Orbit:", StringComparison.OrdinalIgnoreCase)) r.Achievements.Add(a);
                     }
                     r.DaysInSpace = duration;
                     r.Incidents.Add(IncidentKind.Other);

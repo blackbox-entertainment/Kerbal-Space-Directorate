@@ -85,7 +85,7 @@ namespace KSA.KSP.Flight
                 else
                 {
                     prog.Add(new PlaneAscentLeg(ctx.ParkingAltitude, true));
-                    if (type != null && type.Orbits > 0) prog.Add(new HoldOrbitLeg(type.Orbits)); else prog.Add(new HoldOrbitLeg(600));
+                    prog.Add(new HoldOrbitLeg(type != null ? Math.Max(1, type.Orbits) : 1));
                     if (type != null && type.IsScience) prog.Add(new ScienceSweepLeg(1800));
                     prog.Add(new PlaneReturnLeg(pe));
                 }
@@ -99,7 +99,8 @@ namespace KSA.KSP.Flight
                     break;
                 case MissionProfile.Orbit:
                     prog.Add(new AscentLeg(ctx.ParkingAltitude, true));
-                    if (type != null && type.Orbits > 0) prog.Add(new HoldOrbitLeg(type.Orbits)); else prog.Add(new HoldOrbitLeg(WantsEva(type) ? 120 : 600));
+                    // One full orbit at least (2026-10-28: "600" picked the orbits overload and held for 600 orbits).
+                    prog.Add(new HoldOrbitLeg(type != null ? Math.Max(1, type.Orbits) : 1));
                     if (type != null && type.IsScience) prog.Add(new ScienceSweepLeg(1800));
                     if (WantsEva(type)) prog.Add(new SurfaceOpsLeg(40, false, true));
                     prog.Add(new ReentryLeg(pe));
@@ -118,7 +119,7 @@ namespace KSA.KSP.Flight
                     prog.Add(new AscentLeg(ctx.ParkingAltitude, true));
                     Outbound(prog, ctx, target, interplanetary, Math.Max(20000, floor), Math.Max(80000, floor + 50000));
                     prog.Add(new CaptureLeg(target, orbitAlt));
-                    if (type != null && type.Orbits > 0) prog.Add(new HoldOrbitLeg(type.Orbits)); else prog.Add(new HoldOrbitLeg(600));
+                    prog.Add(new HoldOrbitLeg(type != null ? Math.Max(1, type.Orbits) : 1)); // a full orbit of the target counts as orbit
                     if (type != null && type.IsScience) prog.Add(new ScienceSweepLeg(1800));
                     Homebound(prog, ctx, target, interplanetary, true, peLo, peHi);
                     break;

@@ -446,7 +446,13 @@ namespace KSA.KSP.Flight
         {
             Vessel v = _vessel;
             if (v == null || _ctx == null || v.mainBody == null || !v.mainBody.atmosphere) return;
+            // Only while the crew flies: when the Director has the controls, the chutes are the Director's call (2026-10-28:
+            // the net fired a chute at 166 m right after a Take Control).
+            if (Live == null || !Live.AutopilotOn) return;
             if (v.situation == Vessel.Situations.LANDED || v.situation == Vessel.Situations.SPLASHED || v.situation == Vessel.Situations.PRELAUNCH) return;
+            // Engines still pushing: a powered descent or a climb that is still burning, not a fall.
+            foreach (ModuleEngines e in v.FindPartModulesImplementing<ModuleEngines>())
+                if (e.EngineIgnited && !e.flameout && e.finalThrust > 0.1f) return;
             double atmo = v.mainBody.atmosphereDepth;
             bool falling = v.verticalSpeed < -10;
             bool comingDown = v.orbit == null || v.orbit.PeA < atmo * 0.5;
@@ -517,6 +523,7 @@ namespace KSA.KSP.Flight
             if (alt > Live.MaxAltitude) Live.MaxAltitude = alt;
             if (speed > Live.MaxSpeed) Live.MaxSpeed = speed;
             TrackExploration();
+            TrackFullOrbit();
             if (_vessel.state == Vessel.State.DEAD) { Log("Vessel destroyed.", null); Resolve(false); return; }
             if (_science != null)
             {
@@ -574,11 +581,41 @@ namespace KSA.KSP.Flight
             }
         }
 
+        private double _orbitStart = -1;
+        private CelestialBody _orbitBody;
+        private bool _stableNoted;
+
+        /// <summary>A stable orbit: periapsis above the atmosphere (or 10 km above an airless surface), not escaping.</summary>
+        private static bool StableOrbit(Vessel v)
+        {
+            if (v == null || v.orbit == null || v.mainBody == null || v.situation != Vessel.Situations.ORBITING || v.orbit.eccentricity >= 1) return false;
+            double floor = v.mainBody.atmosphere ? v.mainBody.atmosphereDepth : 10000;
+            return v.orbit.PeA > floor;
+        }
+
+        /// <summary>Notes a stable orbit when reached; the orbit counts only once a full orbit has been flown (TrackFullOrbit).</summary>
         private void CheckOrbit()
         {
-            if (_vessel == null || _vessel.orbit == null || _vessel.mainBody == null) return;
-            if (_vessel.situation == Vessel.Situations.ORBITING && _vessel.orbit.PeA > _vessel.mainBody.atmosphereDepth)
-                Log("Orbit achieved: " + LiveFlightResolver.FormatKm(_vessel.orbit.ApA) + " x " + LiveFlightResolver.FormatKm(_vessel.orbit.PeA) + " around " + _vessel.mainBody.bodyName + ".", "Orbit:" + _vessel.mainBody.bodyName);
+            if (!StableOrbit(_vessel) || _stableNoted) return;
+            _stableNoted = true;
+            Log("Stable orbit: " + LiveFlightResolver.FormatKm(_vessel.orbit.ApA) + " x " + LiveFlightResolver.FormatKm(_vessel.orbit.PeA) + " around " + _vessel.mainBody.bodyName + ". It counts once a full orbit is flown.", null);
+        }
+
+        /// <summary>
+        /// Orbit counts only after one complete orbit (2026-10-28): the craft must stay in a stable orbit of a body for a
+        /// whole period. Breaking the orbit (periapsis into the air, a burn out of orbit, a new body) starts the count over.
+        /// </summary>
+        private void TrackFullOrbit()
+        {
+            Vessel v = _vessel;
+            if (v == null || Live == null) return;
+            double now = Planetarium.GetUniversalTime();
+            if (!StableOrbit(v)) { _orbitStart = -1; _orbitBody = null; _stableNoted = false; return; }
+            if (_orbitStart < 0 || v.mainBody != _orbitBody) { _orbitStart = now; _orbitBody = v.mainBody; CheckOrbit(); return; }
+            string key = "Orbit:" + v.mainBody.bodyName;
+            if (Live.Logged.Contains(key)) return;
+            if (now - _orbitStart >= v.orbit.period)
+                Log("Full orbit of " + v.mainBody.bodyName + " completed (" + LiveFlightResolver.FormatKm(v.orbit.ApA) + " x " + LiveFlightResolver.FormatKm(v.orbit.PeA) + ", " + Math.Round(v.orbit.period / 60) + " min).", key);
         }
 
         // ------------------------------------------------------------------ events

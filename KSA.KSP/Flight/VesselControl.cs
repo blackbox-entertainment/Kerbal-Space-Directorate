@@ -38,9 +38,12 @@ namespace KSA.KSP.Flight
             if (!_engaged) return;
             _engaged = false;
             if (_v != null) _v.OnFlyByWire -= Fly;
-            Throttle = 0;
+            // Hand over as it is (2026-10-28): the Director takes control mid-burn, so the throttle stays where it was
+            // (this used to zero the stick throttle too and the rocket fell back). Our own setting is cleared, nothing else.
+            _throttle = 0;
             Yaw = Pitch = Roll = 0;
             TransX = TransY = TransZ = 0;
+            EndManualHold();
         }
 
         private void Fly(FlightCtrlState s)
