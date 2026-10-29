@@ -8,7 +8,8 @@ namespace KSA.KSP.UI
     /// <summary>
     /// The KSA mission report (2026-10-28): after a live flight, what the crew and engineers earned on KSA's ladder and the
     /// Science paid, shown beside KSP's own recovery screen, which only knows stock experience (and shows none for a
-    /// kerbal repeating a flight). Reports wait in a queue until the game is at the Space Center or Tracking Station.
+    /// kerbal repeating a flight). Shown underneath that screen. Reports wait in a queue until the game is at the Space Center
+    /// or Tracking Station.
     /// </summary>
     [KSPAddon(KSPAddon.Startup.AllGameScenes, false)]
     public sealed class MissionReportPopup : MonoBehaviour
@@ -45,8 +46,8 @@ namespace KSA.KSP.UI
                 new DialogGUIFlexibleSpace(),
                 new DialogGUIButton("OK", () => { _dialog = null; }, 90f, 30f, true)));
             var content = new DialogGUIVerticalLayout(true, false, 4f, new RectOffset(8, 8, 8, 8), TextAnchor.UpperLeft, items.ToArray());
-            var dialog = new MultiOptionDialog("KSA_MissionReport", "", "KSA mission report", KsaUi.Skin, new Rect(0.25f, 0.6f, width, 120f), content);
-            _dialog = PopupDialog.SpawnPopupDialog(new Vector2(0.25f, 0.6f), new Vector2(0.25f, 0.6f), dialog, false, KsaUi.Skin, false);
+            var dialog = new MultiOptionDialog("KSA_MissionReport", "", "KSA mission report", KsaUi.Skin, new Rect(0.5f, 0.12f, width, 120f), content);
+            _dialog = PopupDialog.SpawnPopupDialog(new Vector2(0.5f, 0.12f), new Vector2(0.5f, 0.12f), dialog, false, KsaUi.Skin, false); // under the stock recovery screen, not over it
             KsaCore.Log.Info("Mission report shown for " + r.ProjectName + ": " + string.Join("; ", r.Rewards.ToArray()));
         }
     }
