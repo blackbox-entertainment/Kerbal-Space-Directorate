@@ -225,7 +225,8 @@ namespace KSA.KSP.Build
             for (int i = 0; i < stageCount; i++)
             {
                 engineSeq[i] = seq++;
-                radialSeq[i] = plan.Stages[i].Radial.Count > 0 ? seq++ : -1;
+                // Only thrusting radials (boosters) get a stage for their radial decouplers; fins and legs do not.
+                radialSeq[i] = plan.Stages[i].Radial.Exists(rp => Thrusts(rp.Part, catalog)) ? seq++ : -1;
                 decouplerSeq[i] = plan.Stages[i].Decoupler.Length > 0 ? seq++ : -1;
             }
             int chuteSeq = seq++;
@@ -249,8 +250,7 @@ namespace KSA.KSP.Build
                 var engines = new List<PlanPart>();
                 foreach (PlanPart pp in s.Core)
                 {
-                    CorePart info = catalog != null ? catalog.Get(pp.Part) : null;
-                    if (info != null && (info.Kind == PartKind.Engine || info.Kind == PartKind.Booster)) engines.Add(pp); else ordered.Add(pp);
+                    if (Thrusts(pp.Part, catalog)) engines.Add(pp); else ordered.Add(pp);
                 }
                 ordered.Reverse(); // plan lists bottom-up; we build top-down
                 ordered.AddRange(engines);
@@ -261,11 +261,12 @@ namespace KSA.KSP.Build
                     {
                         Placed part = make(pp.Part);
                         CorePart info = part.Info;
-                        bool thrusts = info != null && (info.Kind == PartKind.Engine || info.Kind == PartKind.Booster);
+                        bool thrusts = Thrusts(pp.Part, catalog);
                         part.Stage = thrusts ? stageOf(engineSeq[i]) : -1;
                         StackBelow(bottomMost, part);
                         bottomMost = part;
-                        if (firstTank == null && info != null && (info.Kind == PartKind.Tank || info.Kind == PartKind.Booster)) firstTank = part;
+                        bool solid = thrusts && (info == null || info.Kind == PartKind.Booster) && HasFuel(part.Ap);
+                        if (firstTank == null && ((info != null && info.Kind == PartKind.Tank) || solid)) firstTank = part;
                     }
                 }
                 Placed anchor = firstTank ?? bottomMost;
@@ -279,7 +280,7 @@ namespace KSA.KSP.Build
                     AvailablePart rap = PartLoader.getPartInfoByName(rp.Part);
                     if (rap == null) { result.Warnings.Add("Radial '" + rp.Part + "' is not loaded; skipped."); continue; }
                     CorePart rinfo = catalog != null ? catalog.Get(rp.Part) : null;
-                    bool thrusts = rinfo != null && (rinfo.Kind == PartKind.Engine || rinfo.Kind == PartKind.Booster);
+                    bool thrusts = Thrusts(rp.Part, catalog);
                     bool low = rinfo != null && (rinfo.Kind == PartKind.LandingLeg || rinfo.Kind == PartKind.Industry);
                     AttachNode anchorBottom = Node(anchor.Ap, "bottom");
                     float yOffset = low && anchorBottom != null ? anchorBottom.position.y * 0.8f : 0f;
@@ -314,6 +315,25 @@ namespace KSA.KSP.Build
             float lift = 5f - minY;
             foreach (Placed p in all) p.Pos += new Vector3(0, lift, 0);
             return all;
+        }
+
+        /// <summary>
+        /// True when the part makes thrust. Read from the loaded part itself, not only the researched-parts catalog: a part
+        /// missing from the catalog was once stacked as an unpowered tube with no stage (2026-10-28: the Hammer never lit
+        /// and the Hammer-Flea topped out at 4 km).
+        /// </summary>
+        private static bool Thrusts(string partName, IPartCatalog catalog)
+        {
+            CorePart info = catalog != null ? catalog.Get(partName) : null;
+            if (info != null && (info.Kind == PartKind.Engine || info.Kind == PartKind.Booster)) return true;
+            AvailablePart ap = PartLoader.getPartInfoByName(partName);
+            return ap != null && ap.partPrefab != null && ap.partPrefab.FindModuleImplementing<ModuleEngines>() != null;
+        }
+
+        /// <summary>True when the part carries propellant of its own (a solid booster).</summary>
+        private static bool HasFuel(AvailablePart ap)
+        {
+            return ap != null && ap.partPrefab != null && ap.partPrefab.Resources != null && ap.partPrefab.Resources.Count > 0;
         }
 
         private static string FindRadialDecoupler(IPartCatalog catalog)
