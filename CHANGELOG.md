@@ -2,7 +2,7 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
-## Unreleased
+## 0.5.5 (2026-10-28), sixth test build
 
 - **The AI Director flies your design only where you ticked it.** It no longer offers or falls back on your saved designs for other missions (it flew one on a Kerbin biome survey it was never picked for).
 - **Spaceplane autopilot:** the crew now flies your SPH planes on Kerbin suborbital and orbital missions: runway takeoff, climb on the jets, switch to rockets when the jets fade (multi-mode engines are toggled, separate rockets staged), raise the apoapsis and circularise; coming home, a nose-high reentry and a glide. With parachutes it lands under them by itself; without, the crew hands you the controls on final approach for the runway landing. The AI Director may use planes that carry parachutes.
