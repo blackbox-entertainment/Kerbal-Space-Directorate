@@ -93,6 +93,9 @@ namespace KSA.Core.Projects
         public List<IncidentKind> Incidents { get; } = new List<IncidentKind>();
         public List<string> Deaths { get; } = new List<string>();
         public double DaysInSpace { get; set; }
+        /// <summary>Live flights: highest altitude (m) and top surface speed (m/s), for the record book (2026-10-28).</summary>
+        public double MaxAltitude { get; set; }
+        public double MaxSpeed { get; set; }
         /// <summary>Farthest from home during the mission, km (KSA-60). 0 = unknown, the body table decides.</summary>
         public double FarthestKm { get; set; }
         /// <summary>Days spent on the surface of another world during the mission.</summary>

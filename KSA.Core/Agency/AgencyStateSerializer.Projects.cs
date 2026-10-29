@@ -63,7 +63,13 @@ namespace KSA.Core
             root.AddChild(agency.News.ToDataNode());
             foreach (KSA.Core.Rivals.RivalAgency rv in agency.Rivals) root.AddChild(rv.ToDataNode());
             foreach (KSA.Core.Analytics.YearSummary ys in agency.YearHistory) root.AddChild(ys.ToDataNode());
-            foreach (FirstClaim fc in agency.Firsts) root.AddChild("FIRST").AddValue("achievement", fc.Achievement).AddValue("by", fc.ClaimedBy).AddValue("year", fc.Year);
+            foreach (FirstClaim fc in agency.Firsts)
+            {
+                DataNode fn = root.AddChild("FIRST").AddValue("achievement", fc.Achievement).AddValue("by", fc.ClaimedBy).AddValue("year", fc.Year).AddValue("mission", fc.Mission).AddValue("day", fc.Day);
+                foreach (string c in fc.Crew) fn.AddValue("crew", c);
+            }
+            foreach (RecordEntry re in agency.Records.Values)
+                root.AddChild("RECORD").AddValue("key", re.Key).AddValue("value", re.Value).AddValue("holder", re.Holder).AddValue("mission", re.Mission).AddValue("day", re.Day).AddValue("year", re.Year);
             foreach (DepartmentPost dp in agency.Departments) if (dp.Filled) root.AddChild("DEPARTMENT").AddValue("department", dp.Department.ToString()).AddValue("crew", dp.CrewId).AddValue("sinceDay", dp.SinceDay);
             foreach (MissionType mt in agency.Catalogs.Missions.Types)
             {
@@ -136,6 +142,9 @@ namespace KSA.Core
                 n.AddValue("outcome", r.Outcome.ToString());
                 n.AddValue("mode", r.Mode.ToString());
                 n.AddValue("daysInSpace", r.DaysInSpace);
+                n.AddValue("maxAltitude", r.MaxAltitude);
+                n.AddValue("maxSpeed", r.MaxSpeed);
+                n.AddValue("farthestKm", r.FarthestKm);
                 n.AddValue("designScore", r.DesignScore);
                 n.AddValue("crewScore", r.CrewScore);
                 n.AddValue("successChance", r.SuccessChance);
@@ -219,7 +228,18 @@ namespace KSA.Core
             agency.YearHistory.Clear();
             foreach (DataNode ys in root.GetChildren("YEAR_SUMMARY")) agency.YearHistory.Add(KSA.Core.Analytics.YearSummary.FromDataNode(ys));
             agency.Firsts.Clear();
-            foreach (DataNode fc in root.GetChildren("FIRST")) agency.Firsts.Add(new FirstClaim { Achievement = fc.GetValue("achievement", string.Empty), ClaimedBy = fc.GetValue("by", string.Empty), Year = fc.GetInt("year", 0) });
+            foreach (DataNode fc in root.GetChildren("FIRST"))
+            {
+                var claim = new FirstClaim { Achievement = fc.GetValue("achievement", string.Empty), ClaimedBy = fc.GetValue("by", string.Empty), Year = fc.GetInt("year", 0), Mission = fc.GetValue("mission", string.Empty), Day = fc.GetInt("day", 0) };
+                claim.Crew.AddRange(fc.GetValues("crew"));
+                agency.Firsts.Add(claim);
+            }
+            agency.Records.Clear();
+            foreach (DataNode rn in root.GetChildren("RECORD"))
+            {
+                var re = new RecordEntry { Key = rn.GetValue("key", string.Empty), Value = rn.GetDouble("value", 0), Holder = rn.GetValue("holder", string.Empty), Mission = rn.GetValue("mission", string.Empty), Day = rn.GetInt("day", 0), Year = rn.GetInt("year", 0) };
+                if (re.Key.Length > 0) agency.Records[re.Key] = re;
+            }
             foreach (DataNode cm in root.GetChildren("CUSTOM_MISSION"))
             {
                 string cid = cm.GetValue("id", string.Empty);
@@ -315,6 +335,9 @@ namespace KSA.Core
                     Outcome = ParseEnum(n.GetValue("outcome"), MissionOutcome.Success),
                     Mode = ParseEnum(n.GetValue("mode"), MissionMode.Simulate),
                     DaysInSpace = n.GetDouble("daysInSpace", 0),
+                    MaxAltitude = n.GetDouble("maxAltitude", 0),
+                    MaxSpeed = n.GetDouble("maxSpeed", 0),
+                    FarthestKm = n.GetDouble("farthestKm", 0),
                     DesignScore = n.GetDouble("designScore", 0),
                     CrewScore = n.GetDouble("crewScore", 0),
                     SuccessChance = n.GetDouble("successChance", 0),

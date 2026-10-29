@@ -2,7 +2,7 @@
 
 A career mod for **Kerbal Space Program 1.12**. You are the Director of a space agency. You hire kerbals, give them projects and programs, and manage the government's budget. Your engineers design the rockets, your crews fly them, and every kerbal keeps a service record of ranks, medals, missions and, sometimes, an obituary.
 
-> Status: in development, test builds only (current: 0.5.3, see [CHANGELOG.md](CHANGELOG.md)). Test builds are on the [Releases](https://github.com/blackbox-entertainment/Kerbal-Space-Directorate/releases) page as a zip; a CKAN listing is pending. To build one yourself, see [Building from source](#building-from-source).
+> Status: in development, test builds only (current: 0.5.4, see [CHANGELOG.md](CHANGELOG.md)). Test builds are on the [Releases](https://github.com/blackbox-entertainment/Kerbal-Space-Directorate/releases) page as a zip; a CKAN listing is pending. To build one yourself, see [Building from source](#building-from-source).
 
 ## What it does
 
@@ -13,6 +13,7 @@ A career mod for **Kerbal Space Program 1.12**. You are the Director of a space 
 - **Rockets.** The engineering team designs every rocket from the parts you have researched, with an AI or by hand when AI is off. Every design must carry a parachute, the instruments researched and, for returns from orbit, a heat shield. Or fly your own: rockets you save in the VAB appear under "Your designs" in Projects, and you can tell the AI Director to fly them.
 - **Rescues.** Crews stranded in odd orbits or on other worlds wait for a rescue mission.
 - **AI, optional.** An AI engineering team designs rockets, and an optional AI Director can run the whole agency while you watch. The mod plays fully with AI off: the engineers design by hand and the text is written in.
+- **Records.** Every first is credited to the kerbals who flew it (or the rival that beat you to it), and an agency record book keeps the highest, fastest, farthest and longest flights and the career leaders. Broken records make the news.
 - **Help.** A Help window in the Director's Office explains every part of the game.
 
 ## Requirements

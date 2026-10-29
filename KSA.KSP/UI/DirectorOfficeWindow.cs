@@ -166,6 +166,7 @@ namespace KSA.KSP.UI
                 new DialogGUIButton("Recruiting", OpenRecruiting, 100f, 30f, false),
                 new DialogGUIButton("Gov. Review", OpenReview, 100f, 30f, false),
                 new DialogGUIButton("Hall of Fame", OpenHallOfFame, 100f, 30f, false),
+                new DialogGUIButton("Records", OpenRecords, 80f, 30f, false),
                 new DialogGUIFlexibleSpace(),
                 new DialogGUIButton("Close", OnCloseClicked, 90f, 30f, true));
             var buttons2 = new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
@@ -271,6 +272,14 @@ namespace KSA.KSP.UI
             _aiDirector.Open();
         }
 
+        private RecordsWindow _records;
+        private void OpenRecords()
+        {
+            if (_records != null && _records.IsOpen) return;
+            _records = new RecordsWindow(_agency, () => { _records = null; });
+            _records.Open();
+        }
+
         private DepartmentsWindow _departments;
         private void OpenDepartments()
         {
@@ -299,6 +308,7 @@ namespace KSA.KSP.UI
         private void CloseChildren()
         {
             if (_analytics != null) { AnalyticsWindow w = _analytics; _analytics = null; w.Close(); }
+            if (_records != null) { RecordsWindow w = _records; _records = null; w.Close(); }
             if (_departments != null) { DepartmentsWindow w = _departments; _departments = null; w.Close(); }
             if (_aiDirector != null) { AiDirectorWindow w = _aiDirector; _aiDirector = null; w.Close(); }
             if (_campaign != null) { CampaignWindow w = _campaign; _campaign = null; w.Close(); }

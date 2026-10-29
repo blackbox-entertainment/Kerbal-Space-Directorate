@@ -55,6 +55,8 @@ namespace KSA.Core.Flight
                 CrewScore = crewScore,
                 SuccessChance = 0,
                 DaysInSpace = Math.Max(0.05, result.DaysInSpace),
+                MaxAltitude = result.MaxAltitude,
+                MaxSpeed = result.MaxSpeed,
                 FarthestKm = result.MaxDistanceFromHomeKm,
                 SurfaceDays = result.SurfaceDays,
                 DirectorFlown = result.DirectorFlown

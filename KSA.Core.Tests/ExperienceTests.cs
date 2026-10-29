@@ -128,6 +128,46 @@ namespace KSA.Core.Tests
             Assert.That(b.LessonsLearned, Is.EqualTo(a.LessonsLearned));
         }
 
+        private static void Hop(Agency a, string vessel, double altitude, double speed)
+        {
+            string msg;
+            Project p = a.AdoptHangarLaunch("SuborbitalHop", vessel, "Hopper", new List<string> { "Jeb Kerman" }, out msg);
+            Assert.That(p, Is.Not.Null, msg);
+            var result = new LiveFlightResult { Recovered = true, MaxAltitude = altitude, MaxSpeed = speed, DaysInSpace = 0.1 };
+            result.Achievements.Add("Flight:Kerbin");
+            result.Achievements.Add("Suborbit:Kerbin");
+            result.Achievements.Add("Recover:-");
+            a.ResolveLive(p.Id, result);
+        }
+
+        [Test]
+        public void FirstsNameTheCrewAndRecordsAreKeptAndBroken()
+        {
+            var clock = new FakeClock();
+            Agency a = Staffed(clock);
+            Hop(a, "v1", 90000, 1200);
+            FirstClaim first = a.FirstFor("Suborbit:Kerbin");
+            Assert.That(first, Is.Not.Null);
+            Assert.That(first.Crew, Has.Member("Jeb Kerman"));
+            Assert.That(a.FirstByText(first), Does.Contain("Jeb Kerman"));
+            Assert.That(a.Records["HighestAltitude"].Value, Is.EqualTo(90).Within(0.01));
+            Assert.That(a.Records["HighestAltitude"].Holder, Is.EqualTo("Jeb Kerman"));
+            Assert.That(a.Records["MostMissions"].Value, Is.EqualTo(1));
+
+            Hop(a, "v2", 128000, 1400);
+            Assert.That(a.Records["HighestAltitude"].Value, Is.EqualTo(128).Within(0.01));
+            Assert.That(a.News.Items, Has.Some.Matches<KSA.Core.Narrative.NewsItem>(n => n.Headline.Contains("new record") && n.Headline.Contains("128")));
+            Hop(a, "v3", 50000, 900);
+            Assert.That(a.Records["HighestAltitude"].Value, Is.EqualTo(128).Within(0.01), "a lower flight does not lower the record");
+
+            var store = new MemoryPersistence();
+            a.Save(store);
+            Agency b = Make.Agency(clock, new ListLogger());
+            b.Load(store);
+            Assert.That(b.Records["HighestAltitude"].Value, Is.EqualTo(128).Within(0.01));
+            Assert.That(b.FirstFor("Suborbit:Kerbin").Crew, Has.Member("Jeb Kerman"));
+        }
+
         [Test]
         public void TheLeadEngineerIsPaidWhenTheDesignFlies()
         {

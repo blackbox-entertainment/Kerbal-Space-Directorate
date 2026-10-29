@@ -502,8 +502,11 @@ namespace KSA.Core
             if (r.Stranded.Count > 0) Strand(p, r, notices);
             if (string.Equals(p.ModuleRole, "rescue", StringComparison.OrdinalIgnoreCase)) ApplyRescue(p, r, notices);
             DriftAfterMission(r);
+            _firstContext = r; // firsts claimed now are credited to this crew
             ClaimPlayerFirsts(notices); // a first is claimed the moment it is flown, not at year end
+            _firstContext = null;
             AwardExperience(p, r, notices);
+            UpdateRecords(r, notices);
             ApplyPersonalityAfterMission(p, r, notices);
             AwardMissionScience(r, Catalogs.Missions.Get(p.MissionTypeId), notices);
             p.Report = r;

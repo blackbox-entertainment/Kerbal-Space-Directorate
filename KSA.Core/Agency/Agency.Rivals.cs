@@ -18,8 +18,12 @@ namespace KSA.Core
         /// <summary>"player" or a rival id.</summary>
         public string ClaimedBy { get; set; }
         public int Year { get; set; }
+        /// <summary>The kerbals who flew it, the mission and the day of the year (player firsts, 2026-10-28).</summary>
+        public List<string> Crew { get; } = new List<string>();
+        public string Mission { get; set; }
+        public int Day { get; set; }
 
-        public FirstClaim() { Achievement = string.Empty; ClaimedBy = string.Empty; }
+        public FirstClaim() { Achievement = string.Empty; ClaimedBy = string.Empty; Mission = string.Empty; }
     }
 
     /// <summary>
@@ -70,8 +74,11 @@ namespace KSA.Core
             {
                 if (FirstFor(rung.Achievement) != null) continue;
                 if (!HasAgencyAchievement(rung.Achievement)) continue;
-                Firsts.Add(new FirstClaim { Achievement = rung.Achievement, ClaimedBy = PlayerId, Year = CurrentYear });
-                Push(notices, AgencyName + " is first to " + MilestoneLadder.Describe(rung.Achievement));
+                var claim = new FirstClaim { Achievement = rung.Achievement, ClaimedBy = PlayerId, Year = CurrentYear };
+                CreditFirst(claim);
+                Firsts.Add(claim);
+                string who = claim.Crew.Count > 0 ? string.Join(" and ", claim.Crew.ToArray()) + " of " + AgencyName : AgencyName;
+                Push(notices, who + (claim.Crew.Count > 1 ? " are" : " is") + " first to " + MilestoneLadder.Describe(rung.Achievement));
             }
         }
 
