@@ -796,14 +796,19 @@ namespace KSA.KSP.Flight
             if (Live != null && Live.AutopilotOn && _program != null) _program.Engage();
         }
 
+        /// <summary>The flight toolbar's KSD button hides the Flight Director window (the crew keeps flying). Remembered for the session.</summary>
+        public static bool HudHidden { get; set; }
+
         private void OnGUI()
         {
             if (_offering && _offerVessel != null && KsaCore.Agency != null)
             {
+                // The pad offer needs an answer, so it shows even when the window is hidden.
                 _hud = GUILayout.Window(GetInstanceID(), _hud, DrawOffer, "KSA Flight Director");
                 KeepOnScreen();
                 return;
             }
+            if (HudHidden) return;
             if (Live == null || _vessel == null || KsaCore.Agency == null) return;
             _hud = GUILayout.Window(GetInstanceID(), _hud, DrawHud, "KSA Flight Director");
             KeepOnScreen();
