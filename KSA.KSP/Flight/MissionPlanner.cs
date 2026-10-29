@@ -78,6 +78,20 @@ namespace KSA.KSP.Flight
                 return prog;
             }
 
+            // Spaceplanes (2026-10-28): runway takeoff, jets then rockets, nose-high reentry, glide home.
+            if (ctx.IsPlane && target == home && (profile == MissionProfile.Suborbital || profile == MissionProfile.Orbit))
+            {
+                if (profile == MissionProfile.Suborbital) prog.Add(new PlaneAscentLeg(ctx.ParkingAltitude, false)).Add(new PlaneReturnLeg(pe));
+                else
+                {
+                    prog.Add(new PlaneAscentLeg(ctx.ParkingAltitude, true));
+                    if (type != null && type.Orbits > 0) prog.Add(new HoldOrbitLeg(type.Orbits)); else prog.Add(new HoldOrbitLeg(600));
+                    if (type != null && type.IsScience) prog.Add(new ScienceSweepLeg(1800));
+                    prog.Add(new PlaneReturnLeg(pe));
+                }
+                return prog;
+            }
+
             switch (profile)
             {
                 case MissionProfile.Suborbital:

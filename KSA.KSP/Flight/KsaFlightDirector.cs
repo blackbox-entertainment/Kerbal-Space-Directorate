@@ -40,6 +40,8 @@ namespace KSA.KSP.Flight
             public double MaxSlope = 0.3;
             public bool ManualAllowed;
             public string TargetBody = "Kerbin";
+            /// <summary>A spaceplane from the SPH (2026-10-28).</summary>
+            public bool IsPlane;
             public string DockTargetVesselId = string.Empty;
             public string ProgramId = string.Empty;
             public HashSet<string> Logged = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -135,10 +137,9 @@ namespace KSA.KSP.Flight
                     BodyOrbit = pending.BodyOrbitAltitude > 0 ? pending.BodyOrbitAltitude : agency.Settings.LiveTargetOrbitAltitude,
                     ReentryPe = pending.ReentryPeriapsis > 0 ? pending.ReentryPeriapsis : agency.Settings.LiveReentryPeriapsis,
                     MaxSlope = pending.MaxSiteSlope,
-                    // A plane (2026-10-28): no plane autopilot yet, so the Director flies it from the runway.
+                    // A plane (2026-10-28): the crew flies it with the plane legs; the Director may always take over.
                     ManualAllowed = pending.ManualOverrideAllowed || pending.IsPlane,
-                    AutopilotOn = !pending.IsPlane,
-                    DirectorFlown = pending.IsPlane,
+                    IsPlane = pending.IsPlane,
                     TargetBody = pending.Mission != null ? pending.Mission.Body : "Kerbin",
                     DockTargetVesselId = pending.DockTargetVesselId ?? string.Empty,
                     ProgramId = pending.ProgramId ?? string.Empty
@@ -177,7 +178,8 @@ namespace KSA.KSP.Flight
                     TargetOrbit = agency.Settings.LiveOrbitAltitude,
                     BodyOrbit = agency.Settings.LiveTargetOrbitAltitude,
                     ReentryPe = agency.Settings.LiveReentryPeriapsis,
-                    ManualAllowed = agency.Settings.ManualOverride,
+                    ManualAllowed = agency.Settings.ManualOverride || (p.Design != null && (p.Design.IsPlane || p.Design.Source == KSA.Core.Design.DesignSource.Player)),
+                    IsPlane = p.Design != null && p.Design.IsPlane,
                     DirectorFlown = p.DirectorFlown,
                     TargetBody = t != null ? t.Body : "Kerbin",
                     DockTargetVesselId = g != null ? g.VesselId : string.Empty,
@@ -192,17 +194,10 @@ namespace KSA.KSP.Flight
             _vessel = v;
             BuildProgram(agency, project, pending == null);
             bool onPad = v.situation == Vessel.Situations.PRELAUNCH || (v.srfSpeed < 1.0 && v.altitude - v.terrainAltitude < 60 && v.mainBody == FlightGlobals.GetHomeBody());
-            bool plane = pending != null && pending.IsPlane;
-            _holdForLaunch = onPad && agency.Settings.LaunchOnCommand && pending != null && !plane;
+            _holdForLaunch = onPad && agency.Settings.LaunchOnCommand && pending != null;
             _padStage = v.currentStage;
             if (onPad) PreflightChecks(v);
-            if (plane)
-            {
-                agency.SetDirectorFlown(Live.ProjectId, true);
-                _status = "Your plane is on the runway: you have the controls.";
-                Log("On the runway: the Director flies this plane (no plane autopilot yet). Land it, or reach the mission's goal and come home; recovery closes the flight.", null);
-                ScreenMessages.PostScreenMessage("[KSA] " + v.vesselName + " is on the runway: you have the controls. Recover it when you are down to close the mission.", 10f, ScreenMessageStyle.UPPER_CENTER);
-            }
+            if (Live.IsPlane && onPad) Log("On the runway: the crew takes off, climbs on the jets and switches to rockets. Without parachutes, you land it: the crew hands you the controls on final approach.", null);
             if (_holdForLaunch) { _status = "Holding on the pad. Press Launch (or the staging key) when you are ready."; Log("On the pad, holding for the Director's go.", null); }
             else if (Live.AutopilotOn && _program != null) _program.Engage();
             GameEvents.onVesselSOIChanged.Add(OnSoiChanged);
@@ -382,6 +377,15 @@ namespace KSA.KSP.Flight
             };
             string pid = project.Id;
             _ctx.AskCrew = (req, cb) => agency.AskCrew(pid, req, cb);
+            _ctx.IsPlane = Live.IsPlane;
+            _ctx.HandToDirector = () =>
+            {
+                if (Live == null) return;
+                Live.ManualAllowed = true;
+                TakeControl();
+                if (_ctx != null) _ctx.Control.StopWarp();
+                ScreenMessages.PostScreenMessage("[KSA] Final approach: you have the controls. Land the plane; recovery closes the mission.", 10f, ScreenMessageStyle.UPPER_CENTER);
+            };
             if (!resuming) Log(_ctx.Crew.Describe(), null);
             uint dockId;
             if (uint.TryParse(Live.DockTargetVesselId, out dockId)) _ctx.DockTargetId = dockId;

@@ -305,7 +305,7 @@ namespace KSA.KSP.UI
                 string path = d.CraftPath;
                 string unfit = d.Blocker(selected, need);
                 bool isSel = pickedMine != null && pickedMine.CraftPath == path;
-                string label = (isSel ? "> " : "") + d.Name + "  (" + (d.IsPlane ? "plane, you fly it; " + Math.Round(d.DeltaV) + " m/s rockets" + (d.HasJets ? " + jets" : string.Empty) : Math.Round(d.DeltaV) + " m/s, TWR " + d.LiftoffTwr.ToString("0.0")) + ", " + d.Seats + (d.Seats == 1 ? " seat" : " seats") + ")";
+                string label = (isSel ? "> " : "") + d.Name + "  (" + (d.IsPlane ? "plane" + (d.HasParachute ? ", lands on chutes" : ", you land it") + "; " + Math.Round(d.DeltaV) + " m/s rockets" + (d.HasJets ? " + jets" : string.Empty) : Math.Round(d.DeltaV) + " m/s, TWR " + d.LiftoffTwr.ToString("0.0")) + ", " + d.Seats + (d.Seats == 1 ? " seat" : " seats") + ")";
                 if (unfit != null) label = "<color=#888888>" + label + "  [" + unfit + "]</color>";
                 var b = new DialogGUIButton(label, () => OnSelectPlayerDesign(path), textWidth - 260f, ButtonHeight, false);
                 if (unfit != null) b.OptionInteractableCondition = () => false;
@@ -313,7 +313,7 @@ namespace KSA.KSP.UI
                 string mission = selected.Id, dname = d.Name;
                 bool preferred = _agency.PreferredDesigns.ContainsKey(mission) && string.Equals(_agency.PreferredDesigns[mission], dname, StringComparison.OrdinalIgnoreCase);
                 var pref = new DialogGUIButton((preferred ? "[x] " : "[  ] ") + "AI Director flies this", () => OnPreferDesign(mission, dname, !preferred), 200f, ButtonHeight, false);
-                if ((unfit != null || d.IsPlane) && !preferred) pref.OptionInteractableCondition = () => false; // planes: no plane autopilot yet
+                if ((unfit != null || (d.IsPlane && !d.HasParachute)) && !preferred) pref.OptionInteractableCondition = () => false; // a plane without chutes needs the human Director to land it
                 items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft, new DialogGUISpace(16f), b, pref));
             }
 

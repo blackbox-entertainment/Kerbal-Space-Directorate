@@ -51,7 +51,7 @@ namespace KSA.Core.Design
             if (IsPlane)
             {
                 // Planes (2026-10-28): Kerbin missions from the runway, landing on their wheels; the Director flies them.
-                if (!string.Equals(type.Body, "Kerbin", StringComparison.OrdinalIgnoreCase)) return "planes fly Kerbin missions only";
+                if (!string.Equals(type.Body, "Kerbin", StringComparison.OrdinalIgnoreCase) || (type.Profile != MissionProfile.Suborbital && type.Profile != MissionProfile.Orbit)) return "planes fly Kerbin suborbital and orbital missions only";
                 if (!HasWheels && !HasParachute) return "no landing gear or parachute: it could not land";
                 double dv = DeltaV + (HasJets ? JetCredit : 0);
                 if (need != null && dv < need.DeltaV) return Math.Round(dv) + " of " + Math.Round(need.DeltaV) + " m/s (rockets" + (HasJets ? " + jet climb" : string.Empty) + ")";

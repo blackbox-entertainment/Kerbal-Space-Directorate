@@ -102,6 +102,27 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void TheAiDirectorFliesYourDesignOnlyWhereYouTickedIt()
+        {
+            var transport = new ScriptedTransport();
+            var clock = new FakeClock();
+            Agency a = Staffed(clock, transport);
+            var hopper = new KSA.Core.Design.PlayerDesign { Name = "Jeb's Hopper", CraftPath = "C:/x/Ships/VAB/Hopper.craft", Seats = 1, DeltaV = 2500, LiftoffTwr = 2, HasParachute = true };
+            a.PlayerDesignSource = () => new List<KSA.Core.Design.PlayerDesign> { hopper };
+            Assert.That(a.DirectorBriefing(), Does.Not.Contain("Jeb's Hopper"), "not offered for missions it was not picked for");
+            transport.Replies.Enqueue(ScriptedTransport.Chat(Reply("{\"do\": \"start_project\", \"mission\": \"FleaHop\"}")));
+            string msg;
+            a.SetDirector(true, out msg);
+            a.Tick();
+            Project p = a.Projects.Find(x => x.MissionTypeId == "FleaHop");
+            Assert.That(p, Is.Not.Null);
+            Assert.That(p.Design == null || p.Design.Source != KSA.Core.Design.DesignSource.Player, "your design was not ticked for this mission");
+
+            a.SetPreferredDesign("FleaHop", "Jeb's Hopper");
+            Assert.That(a.DirectorBriefing(), Does.Contain("wants their design 'Jeb's Hopper'"));
+        }
+
+        [Test]
         public void TheBriefingShowsTheCampaignLadder()
         {
             var clock = new FakeClock();

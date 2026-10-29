@@ -4,7 +4,9 @@ Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the
 
 ## Unreleased
 
-- **Your planes fly missions:** craft saved in the spaceplane hangar (SPH) appear under "Your designs" for Kerbin missions. They roll out to the runway and you fly them (no plane autopilot yet); the crew, records and recovery count as usual. A plane fits a mission when its rockets plus a jet-climb allowance reach the mission's delta-v and it has landing gear or a parachute. The AI Director does not pick planes until a plane autopilot exists.
+- **The AI Director flies your design only where you ticked it.** It no longer offers or falls back on your saved designs for other missions (it flew one on a Kerbin biome survey it was never picked for).
+- **Spaceplane autopilot:** the crew now flies your SPH planes on Kerbin suborbital and orbital missions: runway takeoff, climb on the jets, switch to rockets when the jets fade (multi-mode engines are toggled, separate rockets staged), raise the apoapsis and circularise; coming home, a nose-high reentry and a glide. With parachutes it lands under them by itself; without, the crew hands you the controls on final approach for the runway landing. The AI Director may use planes that carry parachutes.
+- **Your planes fly missions:** craft saved in the spaceplane hangar (SPH) appear under "Your designs" for Kerbin suborbital and orbital missions and roll out to the runway; the crew, records and recovery count as usual. A plane fits a mission when its rockets plus a jet-climb allowance reach the mission's delta-v and it has landing gear or a parachute.
 
 ## 0.5.4 (2026-10-28), fifth test build
 

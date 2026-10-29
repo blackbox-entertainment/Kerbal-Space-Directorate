@@ -55,6 +55,10 @@ namespace KSA.KSP.Flight
         public KSA.Core.Flight.CrewFlightProfile Crew = KSA.Core.Flight.CrewFlightProfile.Neutral();
         /// <summary>Seeded per flight; used for pilot mistakes and the trait rule.</summary>
         public Random Rng = new Random();
+        /// <summary>A spaceplane: the plane legs fly it (2026-10-28).</summary>
+        public bool IsPlane;
+        /// <summary>Hands the controls to the Director (a plane's runway landing). Null when not possible.</summary>
+        public Action HandToDirector;
         /// <summary>The crew's judgement call (trait rule or a model in character). The callback may fire at once or later. Null when unavailable.</summary>
         public Action<KSA.Core.Flight.DecisionRequest, Action<KSA.Core.Flight.CrewDecision>> AskCrew;
 

@@ -47,7 +47,7 @@ namespace KSA.Core.Tests
             MissionType mun = a.Catalogs.Missions.Get("MunFlyby");
             MissionRequirements.Entry need = a.Requirements.For(orbit);
             Assert.That(plane.Blocker(orbit, need), Is.Null, "2600 m/s of rockets plus the jet climb reaches orbit");
-            Assert.That(plane.Blocker(mun, a.Requirements.For(mun)), Does.Contain("Kerbin missions only"));
+            Assert.That(plane.Blocker(mun, a.Requirements.For(mun)), Does.Contain("Kerbin suborbital and orbital missions only"));
             plane.HasWheels = false;
             Assert.That(plane.Blocker(orbit, need), Does.Contain("could not land"));
             plane.HasWheels = true;

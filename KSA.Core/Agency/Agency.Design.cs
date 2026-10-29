@@ -562,16 +562,16 @@ namespace KSA.Core
             if (type == null || !PreferredDesigns.TryGetValue(type.Id, out name)) return null;
             PlayerDesign d = FindPlayerDesign(name);
             // Planes need the Director at the stick until a plane autopilot exists, so the AI Director does not take them.
-            return d != null && !d.IsPlane && d.Blocker(type, Requirements.For(type)) == null ? d : null;
+            return d != null && (!d.IsPlane || d.HasParachute) && d.Blocker(type, Requirements.For(type)) == null ? d : null;
         }
 
-        /// <summary>The Director's saved designs that can fly a mission today. The AI Director gets rockets only (planes need a pilot at the stick).</summary>
+        /// <summary>The Director's saved designs that can fly a mission today. The AI Director only gets planes that carry parachutes (without, the human Director lands them).</summary>
         public List<PlayerDesign> PlayerDesignsFor(MissionType type, bool forAiDirector = false)
         {
             var fit = new List<PlayerDesign>();
             if (type == null) return fit;
             MissionRequirements.Entry need = Requirements.For(type);
-            foreach (PlayerDesign d in PlayerDesigns()) if ((!forAiDirector || !d.IsPlane) && d.Blocker(type, need) == null) fit.Add(d);
+            foreach (PlayerDesign d in PlayerDesigns()) if ((!forAiDirector || !d.IsPlane || d.HasParachute) && d.Blocker(type, need) == null) fit.Add(d);
             return fit;
         }
 
