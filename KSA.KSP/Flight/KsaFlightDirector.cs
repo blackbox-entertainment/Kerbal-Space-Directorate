@@ -23,6 +23,12 @@ namespace KSA.KSP.Flight
         /// <summary>Static so it survives scene changes; cleared when the project resolves.</summary>
         public static LiveFlightState Live { get; private set; }
 
+        /// <summary>Drops a live flight whose vessel no longer exists, seen from outside the flight scene (2026-10-28).</summary>
+        public static void ForgetStale(string projectId)
+        {
+            if (Live != null && Live.ProjectId == projectId && HighLogic.LoadedScene != GameScenes.FLIGHT) { KsaCore.Log.Warn("Live flight " + projectId + " has no vessel left; closing it."); Live = null; }
+        }
+
         public sealed class LiveFlightState
         {
             public string ProjectId;

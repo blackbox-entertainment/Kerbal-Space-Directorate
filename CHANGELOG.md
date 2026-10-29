@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## Unreleased
+
+- **Fixed: a live flight could stay "in flight" for ever** after its craft was gone (left falling, then removed by the game): the clean-up skipped it because the flight director still held it from the flight scene. Out of flight, a held flight with no vessel is now dropped and the project closed (crew lost, or back on the pad with the crew freed).
+
 ## 0.5.5 (2026-10-28), sixth test build
 
 - **The AI Director flies your design only where you ticked it.** It no longer offers or falls back on your saved designs for other missions (it flew one on a Kerbin biome survey it was never picked for).

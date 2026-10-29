@@ -211,7 +211,9 @@ namespace KSA.KSP
                 uint id;
                 if (uint.TryParse(p.VesselId, out id)) foreach (Vessel v in FlightGlobals.Vessels) if (v != null && v.persistentId == id) { found = true; break; }
                 if (found) continue;
-                if (Flight.KsaFlightDirector.Live != null && Flight.KsaFlightDirector.Live.ProjectId == p.Id) continue;
+                // The flight director may still hold this flight from the flight scene (2026-10-28: a craft left falling was removed
+                // by the game and the project stayed "in flight" for ever). Out of flight, with no vessel, that hold is stale.
+                if (Flight.KsaFlightDirector.Live != null && Flight.KsaFlightDirector.Live.ProjectId == p.Id) Flight.KsaFlightDirector.ForgetStale(p.Id);
                 // Dead or missing crew on the game roster: the flight ended badly without us seeing it. Close it as a loss.
                 var lost = new List<string>();
                 KerbalRoster roster = HighLogic.CurrentGame != null ? HighLogic.CurrentGame.CrewRoster : null;
