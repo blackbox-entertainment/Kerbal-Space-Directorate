@@ -106,6 +106,29 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void AFailedFlightLeavesALessonTheDirectorReadsAndKeeps()
+        {
+            var clock = new FakeClock();
+            Agency a = Staffed(clock);
+            string msg;
+            Project p = a.AdoptHangarLaunch("SuborbitalHop", "v1", "Hopper", new List<string> { "Jeb Kerman" }, out msg);
+            Assert.That(p, Is.Not.Null, msg);
+            a.LogFlightEvent(p.Id, "T+00:01:14 Propellant exhausted during ascent at 20 km.");
+            a.LogFlightEvent(p.Id, "T+00:03:07 Splashdown on Kerbin at 197.8 m/s.");
+            var result = new LiveFlightResult { Recovered = false, Crashed = true, MaxAltitude = 20000, MaxSpeed = 600 };
+            a.ResolveLive(p.Id, result);
+            Assert.That(a.LessonsLearned, Has.Count.EqualTo(1));
+            Assert.That(a.LessonsLearned[0], Does.Contain("Propellant exhausted during ascent at 20 km"));
+            Assert.That(a.DirectorBriefing(), Does.Contain("LESSONS LEARNED").And.Contain("Propellant exhausted"));
+
+            var store = new MemoryPersistence();
+            a.Save(store);
+            Agency b = Make.Agency(clock, new ListLogger());
+            b.Load(store);
+            Assert.That(b.LessonsLearned, Is.EqualTo(a.LessonsLearned));
+        }
+
+        [Test]
         public void TheLeadEngineerIsPaidWhenTheDesignFlies()
         {
             var clock = new FakeClock();

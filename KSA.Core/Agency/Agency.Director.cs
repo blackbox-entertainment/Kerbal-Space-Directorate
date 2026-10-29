@@ -621,6 +621,12 @@ namespace KSA.Core
                 for (int i = 0; i < options.Count && i < 12; i++) sb.AppendLine("  " + options[i].Id + " | " + options[i].Title + " | " + options[i].ScienceCost.ToString("0") + " | " + options[i].Unlocks);
             }
 
+            // Lessons learned stay for the whole game, newest first, so a mistake is not repeated (2026-10-28).
+            if (LessonsLearned.Count > 0)
+            {
+                sb.AppendLine("LESSONS LEARNED (from failed and partial flights this game, newest first; do not repeat these mistakes):");
+                for (int i = LessonsLearned.Count - 1; i >= 0; i--) sb.AppendLine("  " + LessonsLearned[i]);
+            }
             sb.AppendLine("RECENT RESULTS:");
             int shown = 0;
             for (int i = Reports.Count - 1; i >= 0 && shown < 5; i--, shown++)

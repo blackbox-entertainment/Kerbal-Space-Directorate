@@ -4,6 +4,7 @@ Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the
 
 ## Unreleased
 
+- **Lessons learned for the AI Director:** every flight that is not a clean success leaves one line (design and its delta-v, pilot and stars, outcome, and the key moments from the flight log such as "Propellant exhausted during ascent at 20 km"). The newest 12 stay for the whole game and are in the AI Director's briefing every turn, so it does not repeat a mistake once it drops out of recent results. Older saves are backfilled from their reports.
 - **No side tanks, no undroppable side boosters:** the design check rejects fuel tanks placed on the side (nothing can feed from them without fuel lines, yet their fuel was counted) and side boosters when no radial decoupler is researched (they ended up bolted to the core). Saved designs breaking these rules are redesigned on load.
 - **Fixed: Minmus orbit was approved with far too little delta-v.** dv_requirements.cfg listed it twice; a second, "from Kerbin orbit" figure (2400 m/s) overrode the 4900 m/s round trip, so a rocket that could not even reach Kerbin orbit was approved. Duplicates removed (Duna orbit, Dres landing, Jool orbit kept at the safer figure), and a test now keeps every other world at or above Kerbin orbit. Approved designs in a save are re-checked against the requirements on load and redesigned if short.
 

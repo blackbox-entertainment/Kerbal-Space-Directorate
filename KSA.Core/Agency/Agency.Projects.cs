@@ -512,6 +512,7 @@ namespace KSA.Core
             ReleaseStaff(p);
             Reports.Add(r);
             if (Reports.Count > MaxReports) Reports.RemoveRange(0, Reports.Count - MaxReports);
+            RecordLesson(p, r);
             Push(notices, p.Name + ": " + OutcomeText(r.Outcome));
             RaiseProjectChanged(p);
             RequestDirectorTurn(p.Name + " ended: " + OutcomeText(r.Outcome));

@@ -88,6 +88,7 @@ namespace KSA.Core
             if (_designsResumed) return;
             _designsResumed = true;
             RecheckApprovedDesigns(notices);
+            BackfillLessons();
             foreach (Project p in Projects)
             {
                 if (p.Status != ProjectStatus.Design || p.Design == null || p.Design.Verdict != DesignVerdict.Pending || DesignInProgress(p.Id)) continue;
