@@ -350,8 +350,13 @@ namespace KSA.Core
                 foreach (string id in p.Crew) { CrewProfile c = Crew.Get(id); if (c != null && !c.Departed) { c.InFlightSinceUT = Clock.UniversalTime; c.Status = CrewStatus.Assigned; } }
             }
             StartPostMortem(p, r, type);
+            Action<MissionReport> reported = LiveMissionReported;
+            if (reported != null) reported(r);
             return r;
         }
+
+        /// <summary>A live flight was resolved; the host shows the KSA mission report (experience, Science) next to the stock recovery screen (2026-10-28).</summary>
+        public event Action<MissionReport> LiveMissionReported;
 
         /// <summary>A crew member who stayed aboard a delivered station or base has come home: book the time, free them, no second mission credit.</summary>
         public void ReturnFromStation(string crewId)

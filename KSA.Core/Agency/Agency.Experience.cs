@@ -54,6 +54,7 @@ namespace KSA.Core
                 CrewProfile c = Crew.Get(id);
                 if (c == null || r.Deaths.Contains(id)) continue;
                 GrantExperience(c, points, notices);
+                r.Rewards.Add(c.Name + ": +" + points.ToString("0.#") + " experience" + (first ? " (incl. First bonus)" : string.Empty) + ", now " + c.Record.Experience.ToString("0.#") + " points, " + Math.Max(c.Stars, rules.StarsFor(c.Record.Experience)) + " stars");
             }
             if (p != null) p.Notes.Add("Crew experience: +" + points.ToString("0.#") + " each" + (first ? " (includes the First bonus)" : string.Empty) + ".");
             AwardDesignExperience(p, r, type, first, notices);
@@ -94,6 +95,7 @@ namespace KSA.Core
                 bool lead = id == p.LeadEngineer || (string.IsNullOrEmpty(p.LeadEngineer) && id == team[0]);
                 double points = Math.Round(design * (lead ? rules.DesignLeadFactor : rules.DesignTeamFactor), 1);
                 GrantExperience(c, points, notices);
+                if (points > 0) r.Rewards.Add(c.Name + " (" + (lead ? "lead engineer" : "design team") + "): +" + points.ToString("0.#") + " experience, now " + c.Record.Experience.ToString("0.#") + " points, " + Math.Max(c.Stars, rules.StarsFor(c.Record.Experience)) + " stars");
                 if (lead && r.IsSuccess) c.Record.DesignsFlown++;
                 if (points > 0) p.Notes.Add(c.Name + " (" + (lead ? "lead engineer" : "design team") + "): +" + points.ToString("0.#") + " experience.");
                 EvaluateProgress(c, p.MissionId ?? string.Empty, notices);

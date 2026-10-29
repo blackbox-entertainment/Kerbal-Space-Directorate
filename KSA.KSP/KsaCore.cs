@@ -94,6 +94,7 @@ namespace KSA.KSP
             a.YearEnded += OnYearEnded;
             a.TraitsChanged += OnTraitsChanged;
             a.ScienceEarned += OnScienceEarned; // lab, mission and colony Science into stock R&D (was never wired; fixed 2026-10-28)
+            a.LiveMissionReported += UI.MissionReportPopup.Enqueue; // KSA mission report beside the stock recovery screen (2026-10-28)
             Agency = a;
             return a;
         }

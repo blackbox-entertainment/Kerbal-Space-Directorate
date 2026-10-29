@@ -85,6 +85,8 @@ namespace KSA.Core.Projects
         public MissionMode Mode { get; set; }
         public List<string> Crew { get; } = new List<string>();
         public List<string> Lines { get; } = new List<string>();
+        /// <summary>What the mission paid, one line each ("Valentina Kerman: +7 experience (14, 2 stars)", "Science: +12"), for the KSA mission report (2026-10-28).</summary>
+        public List<string> Rewards { get; } = new List<string>();
         public List<string> Achievements { get; } = new List<string>();
         public List<IncidentKind> Incidents { get; } = new List<IncidentKind>();
         public List<string> Deaths { get; } = new List<string>();

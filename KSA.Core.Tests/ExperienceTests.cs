@@ -87,6 +87,25 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void ALiveReportListsWhatTheCrewEarned()
+        {
+            var clock = new FakeClock();
+            Agency a = Staffed(clock);
+            MissionReport shown = null;
+            a.LiveMissionReported += r => shown = r;
+            string msg;
+            Project p = a.AdoptHangarLaunch("SuborbitalHop", "v1", "Hopper", new List<string> { "Jeb Kerman" }, out msg);
+            Assert.That(p, Is.Not.Null, msg);
+            var result = new LiveFlightResult { Recovered = true, MaxAltitude = 90000, MaxSpeed = 1200, DaysInSpace = 0.1 };
+            result.Achievements.Add("Flight:Kerbin");
+            result.Achievements.Add("Suborbit:Kerbin");
+            result.Achievements.Add("Recover:-");
+            a.ResolveLive(p.Id, result);
+            Assert.That(shown, Is.Not.Null, "the host is told, to show the KSA mission report");
+            Assert.That(shown.Rewards, Has.Some.StartsWith("Jeb Kerman: +7 experience"));
+        }
+
+        [Test]
         public void TheLeadEngineerIsPaidWhenTheDesignFlies()
         {
             var clock = new FakeClock();

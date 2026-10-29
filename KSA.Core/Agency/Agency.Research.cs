@@ -235,6 +235,7 @@ namespace KSA.Core
             if (points <= 0) return;
             State.ScienceEarned += points;
             Push(notices, r.ProjectName + " returned " + points.ToString("0.#") + " Science");
+            r.Rewards.Add("Science: +" + points.ToString("0.#") + " (paid into R&D)");
             Action<double, string> h = ScienceEarned;
             if (h != null) h(points, r.ProjectName);
         }
