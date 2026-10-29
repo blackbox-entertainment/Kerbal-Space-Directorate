@@ -102,7 +102,14 @@ namespace KSA.KSP.Build
                 catch { continue; }
                 if (!stale) continue;
                 Result r = Write(d.Plan, agency.Parts, "KSA " + p.Id + " " + d.DesignName, "KSA " + p.Id + " " + p.Name);
-                if (!r.Ok) continue;
+                if (!r.Ok)
+                {
+                    KsaCore.Log.Warn("Re-assembly failed for " + p.Name + ": " + r.Error);
+                    if (File.Exists(path)) { d.CraftPath = path; continue; } // the older build of it still flies
+                    // No rocket at all: the engineers build one by hand, else back to design (never simulated).
+                    if (!KsaCore.AssembleByHand(p, "Vehicle assembly failed: " + r.Error)) agency.DesignWontAssemble(p.Id, r.Error);
+                    continue;
+                }
                 d.CraftPath = r.Path;
                 p.Notes.Add("Vehicle re-assembled after a mod update: " + r.Parts + " parts, saved to the VAB as \"KSA " + p.Id + " " + p.Name + "\".");
                 foreach (string w in r.Warnings) p.Notes.Add("Assembly note: " + w);

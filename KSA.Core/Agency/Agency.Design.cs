@@ -617,6 +617,32 @@ namespace KSA.Core
                 : "AI design is not available (AI Setup) and there is no fallback design";
             // Remember it, so the mission stays shut (and the AI Director stops retrying it) until new parts are researched.
             if (p.DesignAttempts >= MaxAiDesignAttempts && Parts != null) NoDesignAt[p.MissionTypeId] = Parts.All.Count;
+            CallOff(p, why, notices);
+            return false;
+        }
+
+        /// <summary>
+        /// The approved design could not be put together in the VAB (and the host's hand design could not either). A rocket
+        /// that cannot be built cannot fly, simulated or live (decided 2026-10-28): the project goes back to design with the
+        /// failure as a lesson, and when the attempts are used up it is called off with its budget returned.
+        /// </summary>
+        public void DesignWontAssemble(string projectId, string error)
+        {
+            Project p = GetProject(projectId);
+            if (p == null || !p.IsActive || p.Status == ProjectStatus.InFlight) return;
+            bool handFailed = p.Design != null && p.Design.Model == EngineersModel;
+            string name = p.Design != null ? p.Design.DesignName : "the design";
+            if (p.Design != null) { p.Design.Verdict = DesignVerdict.Failed; p.Design.Error = "it could not be assembled in the VAB: " + error; }
+            p.Notes.Add("'" + name + "' could not be assembled (" + error + "): nothing flies until a rocket is built.");
+            p.Status = ProjectStatus.Design;
+            p.PhaseStartDay = CurrentDay;
+            if (!handFailed && RetryAiDesign(p, null)) { RaiseProjectChanged(p); return; }
+            if (p.Status != ProjectStatus.Design) return; // RetryAiDesign called it off
+            CallOff(p, "no design the VAB can assemble from the parts researched", null);
+        }
+
+        private void CallOff(Project p, string why, List<string> notices)
+        {
             double refund = Math.Round(p.Budget);
             if (refund > 0) Ledger.Deposit(refund, LedgerCategory.Cancellation, "Called off " + p.Name, CurrentDay, CurrentYear);
             ReleaseStaff(p);
@@ -626,7 +652,6 @@ namespace KSA.Core
             Push(notices, p.Name + " called off: " + why + "; " + Money(refund) + " returned. Research more parts and try again.");
             RaiseProjectChanged(p);
             UpdateProgramFor(p, null);
-            return false;
         }
 
         /// <summary>Lets the host or tests attach a finished record directly (also used when loading saves).</summary>

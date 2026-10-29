@@ -422,6 +422,26 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void ARocketThatCannotBeAssembledIsNeverSimulated()
+        {
+            var clock = new FakeClock();
+            Agency a = Staffed(clock, new ListLogger());
+            a.TemplateCheck = t => "needs parts not researched";
+            a.Parts = TestParts.Catalog();
+            a.Requirements = MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
+            string msg;
+            Project p = a.CreateProject("Orbit", "KerbinOrbit", null, null, null, null, MissionMode.Simulate, out msg);
+            Assert.That(p, Is.Not.Null, msg);
+            Assert.That(p.Design.Model, Is.EqualTo(Agency.EngineersModel));
+            double before = a.Ledger.Balance;
+            // Even the engineers' hand design would not go together in the VAB: called off, money back, no flight.
+            a.DesignWontAssemble(p.Id, "no top node");
+            Assert.That(p.Status, Is.EqualTo(ProjectStatus.Cancelled));
+            Assert.That(a.Ledger.Balance, Is.GreaterThan(before));
+            Assert.That(p.MissionId, Is.Empty.Or.Null, "nothing flew");
+        }
+
+        [Test]
         public void WithAiOffTheEngineersStillDesignTheRocket()
         {
             var clock = new FakeClock();

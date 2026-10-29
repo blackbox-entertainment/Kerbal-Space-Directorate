@@ -2,8 +2,9 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
-## Unreleased
+## 0.5.6 (2026-10-28), seventh test build
 
+- **No rocket, no flight.** A design that cannot be assembled in the VAB is never simulated. The engineers first build one by hand from the researched parts; if that cannot be assembled either, the project goes back to design with the failure as a lesson, and when the design attempts run out it is called off with its budget returned. A launch with no craft file is scrubbed and sent back to the engineers the same way.
 - **Fixed: a stranded crew broke the Projects window and the AI Director.** Checking whether a rescue rocket can be built crashed (rescue missions are not in the mission catalog), so the Projects window failed to draw and its buttons did nothing, and the AI Director's turn crashed every 5 seconds.
 - **Watch Live flights no longer get simulated for want of a rocket:** the design review now rejects a radial (side) decoupler placed between two stages, which the VAB builder cannot assemble (two AI designs with one were approved, and their Mun flyby and Orbital spacewalk Firsts were simulated instead of flown). If a design still cannot be assembled, the engineering team draws one up by hand from the researched parts and that one flies live.
 - **The crew finishes the climb to orbit after coasting:** coasting to apoapsis with the engines idle no longer reads as "out of fuel" (it checks the delta-v left in the tanks), so the crew burns to circularise instead of turning for home. When the Director hands back on the way up, or already past apoapsis, the crew circularises from there.

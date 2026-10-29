@@ -41,9 +41,8 @@ namespace KSA.KSP.Flight
                 path = spec.CraftPath = spec.Project.Design.CraftPath;
             if (path == null)
             {
-                KsaCore.Log.Warn("No craft file for " + spec.Project.Name + " (AI: '" + spec.CraftPath + "', template: '" + spec.TemplateCraft + "'); simulating instead");
-                agency.SimulateInstead(spec.Project.Id, out msg);
-                ScreenMessages.PostScreenMessage("[KSA] No craft file for " + spec.Project.Name + "; " + msg, 8f, ScreenMessageStyle.UPPER_CENTER);
+                KsaCore.Log.Warn("No craft file for " + spec.Project.Name + " (AI: '" + spec.CraftPath + "', template: '" + spec.TemplateCraft + "'); back to design");
+                NoRocket(agency, spec, "no craft file could be built");
                 return;
             }
             try
@@ -65,9 +64,20 @@ namespace KSA.KSP.Flight
             {
                 KsaCore.Log.Error("Live launch failed for " + spec.Project.Name + ": " + e.Message);
                 Pending = null;
-                agency.SimulateInstead(spec.Project.Id, out msg);
-                ScreenMessages.PostScreenMessage("[KSA] Launch failed (" + e.Message + "); " + msg, 8f, ScreenMessageStyle.UPPER_CENTER);
+                NoRocket(agency, spec, e.Message);
             }
+        }
+
+        /// <summary>
+        /// No rocket to put on the pad: the launch is scrubbed and the project goes back to the engineers. Never simulated
+        /// (decided 2026-10-28: a rocket that cannot be built cannot fly).
+        /// </summary>
+        private static void NoRocket(Agency agency, LaunchSpec spec, string why)
+        {
+            string msg;
+            agency.ReturnToPad(spec.Project.Id, out msg);
+            agency.DesignWontAssemble(spec.Project.Id, why);
+            ScreenMessages.PostScreenMessage("[KSA] " + spec.Project.Name + ": launch scrubbed, " + why + ". Back to the engineers for a design that can be built.", 10f, ScreenMessageStyle.UPPER_CENTER);
         }
 
         public static void ClearPending() { Pending = null; }
