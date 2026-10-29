@@ -2,7 +2,7 @@
 
 A career mod for **Kerbal Space Program 1.12**. You are the Director of a space agency. You hire kerbals, give them projects and programs, and manage the government's budget. Your engineers design the rockets, your crews fly them, and every kerbal keeps a service record of ranks, medals, missions and, sometimes, an obituary.
 
-> Status: in development, test builds only (current: 0.5.2, see [CHANGELOG.md](CHANGELOG.md)). Test builds are on the [Releases](https://github.com/blackbox-entertainment/Kerbal-Space-Directorate/releases) page as a zip; a CKAN listing is pending. To build one yourself, see [Building from source](#building-from-source).
+> Status: in development, test builds only (current: 0.5.3, see [CHANGELOG.md](CHANGELOG.md)). Test builds are on the [Releases](https://github.com/blackbox-entertainment/Kerbal-Space-Directorate/releases) page as a zip; a CKAN listing is pending. To build one yourself, see [Building from source](#building-from-source).
 
 ## What it does
 

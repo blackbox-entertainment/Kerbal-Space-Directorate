@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.5.3 (2026-10-28), fourth test build
+
+- **Help brought up to date:** who designs the rockets (AI first, then the engineering team by hand), the design rules, how the crew flies (pre-launch SAS and RCS, pitch program, staging), the parachute safety net, the KSA mission report, and telling the AI Director to fly your design.
+- README status and feature list updated.
+
 ## 0.5.2 (2026-10-28), third test build
 
 - **Tell the AI Director to fly your design:** in Projects, pick a mission, then tick "AI Director flies this" next to one of your saved designs. Whenever the AI Director starts that mission it flies your rocket (as long as it still fits); its briefing says so. Saved with the game.
