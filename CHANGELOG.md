@@ -2,6 +2,17 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.6.1 (2026-10-29), release
+
+Everything since 0.5.10, from the test builds 0.5.11 to 0.5.25 below. In short:
+
+- **Rockets that can fly.** Fins on every launch stage; short, wide stacks (fewer, bigger tanks; no engine wider than its tanks); two-stage suborbital hops, solid then liquid; real decouplers between stages and under the capsule (a heat shield is no longer mistaken for one).
+- **Flights that reach orbit.** A proper gravity turn with the nose kept close to the flight path; the apoapsis held through the turn instead of cutting off steep; circularisation along the horizon, centred on apoapsis, only once the nose is there; engines get time to build thrust, so no stage is thrown away full.
+- **Crews that come home.** Everything below the capsule is dropped on the way down; parachutes sized for the capsule (no drogue-only landings); a pod-sized heat shield for returns from orbit once one is researched.
+- **Fair results.** A suborbital hop counts only if it reached space; a crash that kills the crew is reported as one.
+- **The Director in charge.** Take Control on every live flight; swap the rocket on any project before it launches; your own rockets are checked like the engineers' (parachutes, heat shield).
+- **Science.** Every crewed rocket carries one of each small instrument researched.
+
 ## 0.5.25 (2026-10-29), twenty-sixth test build
 
 - **A real gravity turn.** The crew no longer climbs straight up to 15 km: by then a finned rocket is going 600 m/s and the air holds its nose on the path, so it could not lean and never built sideways speed. Now: straight up to 100 m/s, a small kick east (at most 5 degrees) to 150 m/s, then a curve from the ground, about 77 degrees at 1 km, 50 at 10 km, 33 at 20 km, 23 at 30 km, flat at 55 km. To keep control the nose never leans more than 10 degrees off the flight path below 20 km (8 in the thickest air), opening up as the air thins. Suborbital hops still go straight up.
