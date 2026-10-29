@@ -3,6 +3,7 @@ using KSA.Core.Ai;
 using KSA.Core.Data;
 using KSA.Core.Design;
 using KSA.Core.Missions;
+using KSA.Core.Parts;
 using KSA.Core.Personnel;
 using KSA.Core.Projects;
 using NUnit.Framework;
@@ -142,6 +143,87 @@ namespace KSA.Core.Tests
             Assert.That(a.RequestRedesign(project.Id, out msg), Is.True, msg);
             Assert.That(project.Design.Verdict, Is.EqualTo(DesignVerdict.Approved));
             Assert.That(project.Status, Is.EqualTo(ProjectStatus.Design));
+        }
+
+        [Test]
+        public void WithAiOnTheEngineersDesignAMissionThatHasNoBuildableTemplate()
+        {
+            var clock = new FakeClock();
+            Agency a = Staffed(clock, new ListLogger());
+            a.TemplateCheck = t => "needs parts not researched";
+            KSA.Core.Missions.MissionType orbit = a.Catalogs.Missions.Get("KerbinOrbit");
+            Assert.That(a.MissionBlocker(orbit), Is.Not.Null, "AI off: no template, no mission");
+
+            var transport = new ScriptedTransport();
+            transport.Replies.Enqueue(ScriptedTransport.Chat(TestParts.GoodOrbitPlan()));
+            EnableAi(a, transport);
+            Assert.That(a.MissionBlocker(orbit), Is.Null, "AI on: the engineers design it");
+            string msg;
+            Project p = a.CreateProject("From scratch", "KerbinOrbit", null, null, null, null, MissionMode.Simulate, out msg);
+            Assert.That(p, Is.Not.Null, msg);
+            Assert.That(p.TemplateId, Is.Empty);
+            Assert.That(p.Design.Verdict, Is.EqualTo(DesignVerdict.Approved));
+            clock.AdvanceDays(p.DesignDays + 1);
+            a.Tick();
+            Assert.That(p.Status, Is.Not.EqualTo(ProjectStatus.Design));
+            Assert.That(a.DesignNameOf(p), Does.EndWith("(AI)"));
+        }
+
+        [Test]
+        public void TheBriefDemandsInstrumentsAndAHeatShieldAndTheReviewChecksThem()
+        {
+            var clock = new FakeClock();
+            Agency a = Staffed(clock, new ListLogger());
+            var transport = new ScriptedTransport();
+            transport.Fallback = ScriptedTransport.Chat(TestParts.WeakPlan());
+            EnableAi(a, transport);
+            var parts = (PartCatalog)a.Parts;
+            parts.Add(new PartInfo { Name = "sensorThermometer", Title = "Thermometer", Kind = PartKind.Science, Mass = 0.005 });
+            parts.Add(new PartInfo { Name = "HeatShield1", Title = "Heat Shield (1.25m)", Kind = PartKind.HeatShield, Mass = 0.1, Diameter = 1.25 });
+            var shielded = new PartInfo { Name = "kv1Pod", Title = "KV-1 Onion", Kind = PartKind.Command, Mass = 1.4, CrewCapacity = 1 };
+            shielded.Tags.Add("heatshielded");
+            parts.Add(shielded);
+            string msg;
+            Project p = a.CreateProject("Orbit", "KerbinOrbit", null, null, null, null, MissionMode.Simulate, out msg);
+            Assert.That(p, Is.Not.Null, msg);
+            DesignRequest req = a.BuildDesignRequest(p);
+            Assert.That(req.MustInclude.Exists(r => r.Key.Contains("science") && r.Value.Contains("sensorThermometer")));
+            Assert.That(req.MustInclude.Exists(r => r.Key.Contains("heat shield") && r.Value.Contains("HeatShield1") && r.Value.Contains("kv1Pod")));
+
+            StagePlan plan;
+            string error;
+            Assert.That(StagePlan.TryParse(TestParts.GoodOrbitPlan(), out plan, out error), Is.True, error);
+            Assert.That(DesignSession.MissingMustInclude(plan, req), Has.Count.EqualTo(1).And.Some.Contains("science"), "the plan has a shield but no instrument");
+            plan.Payload.Extras.Remove("HeatShield1");
+            Assert.That(DesignSession.MissingMustInclude(plan, req), Has.Count.EqualTo(2), "no instrument, no shield");
+            plan.Payload.Extras.Add("sensorThermometer");
+            plan.Payload.Command = "kv1Pod"; // a self-shielded pod satisfies the shield rule
+            Assert.That(DesignSession.MissingMustInclude(plan, req), Is.Empty);
+
+            // A suborbital hop comes in slowly: no shield demanded.
+            Project hop = a.CreateProject("Hop", "SuborbitalHop", null, new[] { "Jeb Kerman" }, new string[0], null, MissionMode.Simulate, out msg);
+            if (hop != null) Assert.That(a.BuildDesignRequest(hop).MustInclude.Exists(r => r.Key.Contains("heat shield")), Is.False);
+        }
+
+        [Test]
+        public void ANoTemplateProjectRetriesItsDesignThenIsCalledOffWithItsMoneyBack()
+        {
+            var clock = new FakeClock();
+            Agency a = Staffed(clock, new ListLogger());
+            a.TemplateCheck = t => "needs parts not researched";
+            var transport = new ScriptedTransport();
+            transport.Fallback = ScriptedTransport.Chat(TestParts.WeakPlan());
+            EnableAi(a, transport);
+            double before = a.Ledger.Balance;
+            string msg;
+            Project p = a.CreateProject("Too hard", "KerbinOrbit", null, null, null, null, MissionMode.Simulate, out msg);
+            Assert.That(p, Is.Not.Null, msg);
+            Assert.That(p.Design.Verdict, Is.EqualTo(DesignVerdict.Short));
+            for (int i = 0; i < 4; i++) { clock.AdvanceDays(p.DesignDays + 1); a.Tick(); }
+            Assert.That(p.DesignAttempts, Is.EqualTo(Agency.MaxAiDesignAttempts));
+            Assert.That(p.Status, Is.EqualTo(ProjectStatus.Cancelled));
+            Assert.That(a.Ledger.Balance, Is.EqualTo(before).Within(1));
+            Assert.That(a.Crew.Get("Jeb Kerman").ProjectId, Is.Empty);
         }
     }
 }

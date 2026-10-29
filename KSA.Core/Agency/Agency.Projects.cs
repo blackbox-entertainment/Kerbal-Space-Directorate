@@ -156,11 +156,22 @@ namespace KSA.Core
             if (why != null) { message = type.Name + " " + why + ". Earn Science (lab, missions) and unlock parts in R&D first."; return null; }
             if (type == null) { message = "Unknown mission type."; return null; }
             List<Template> able = TemplatesFor(type, moduleRole);
-            Template template = string.IsNullOrEmpty(templateId) ? (able.Count > 0 ? able[0] : null) : Catalogs.Templates.Get(templateId);
-            if (template == null) { message = "No design template can fly " + type.Name + " with the mods installed."; return null; }
-            if (!able.Exists(x => x.Id == template.Id) || !template.IsAvailable(InstalledMods)) { message = template.Name + " cannot fly " + type.Name + " here."; return null; }
-            string blocked = TemplateBlocker(template);
-            if (blocked != null) { message = template.Name + " " + blocked + ". Put scientists in the lab or fly missions to earn Science, then unlock the parts in R&D."; return null; }
+            Template template;
+            if (string.IsNullOrEmpty(templateId))
+            {
+                // No design picked: the first fallback design that can be built today, else (AI on) none at all and the
+                // engineering team designs the rocket from scratch (2026-10-28: templates are the AI-off fallback, not a gate).
+                template = able.Find(x => x.IsAvailable(InstalledMods) && TemplateBlocker(x) == null);
+                if (template == null && !AiDesignAvailable) { message = "No design template can fly " + type.Name + " with the parts researched, and AI design is off (AI Setup)."; return null; }
+            }
+            else
+            {
+                template = Catalogs.Templates.Get(templateId);
+                if (template == null) { message = "No design template can fly " + type.Name + " with the mods installed."; return null; }
+                if (!able.Exists(x => x.Id == template.Id) || !template.IsAvailable(InstalledMods)) { message = template.Name + " cannot fly " + type.Name + " here."; return null; }
+                string blocked = TemplateBlocker(template);
+                if (blocked != null) { message = template.Name + " " + blocked + ". Put scientists in the lab or fly missions to earn Science, then unlock the parts in R&D."; return null; }
+            }
 
             List<string> crew = crewIds != null ? new List<string>(crewIds) : AutoCrew(type);
             if (crew.Count != type.CrewSize) { message = type.Name + " needs " + type.CrewSize + " available crew (" + crew.Count + " chosen)."; return null; }
@@ -189,7 +200,7 @@ namespace KSA.Core
                 Id = "P" + NextProjectNumber++,
                 Name = string.IsNullOrEmpty(name) ? type.Name : name,
                 MissionTypeId = type.Id,
-                TemplateId = template.Id,
+                TemplateId = template != null ? template.Id : string.Empty,
                 Budget = cost,
                 Mode = mode.HasValue ? mode.Value : DefaultModeFor(type),
                 Status = ProjectStatus.Design,
@@ -212,6 +223,7 @@ namespace KSA.Core
             Push(null, message);
             RaiseProjectChanged(project);
             PublishProjectStart(project, type);
+            if (template == null) project.Notes.Add("No fallback design: the engineering team designs this rocket from scratch.");
             StartDesign(project, null);
             return project;
         }
@@ -310,12 +322,18 @@ namespace KSA.Core
                     switch (p.Status)
                     {
                         case ProjectStatus.Design:
+                            if (day >= p.PhaseStartDay + p.DesignDays && !DesignInProgress(p.Id) && NeedsAiDesign(p) && !HasApprovedDesign(p))
+                            {
+                                // Nothing to fall back on: the team keeps at it, or the project is called off with its money back.
+                                RetryAiDesign(p, notices);
+                                break;
+                            }
                             if (day >= p.PhaseStartDay + p.DesignDays && !DesignInProgress(p.Id))
                             {
                                 p.Status = ProjectStatus.Build; p.PhaseStartDay = p.PhaseStartDay + p.DesignDays; changed = true;
                                 string designName = p.Design != null && p.Design.IsAi && p.Design.Verdict == Design.DesignVerdict.Approved
                                     ? p.Design.DesignName + " (AI)"
-                                    : Catalogs.Templates.NameOf(p.TemplateId);
+                                    : DesignNameOf(p);
                                 p.Notes.Add("Design complete on day " + p.PhaseStartDay + " (" + designName + ").");
                                 Push(notices, p.Name + ": design complete, build started");
                                 OnEnteredBuild(p);

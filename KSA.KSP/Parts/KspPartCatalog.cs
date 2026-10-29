@@ -132,6 +132,8 @@ namespace KSA.KSP.Parts
             info.Diameter = size < 0 ? 0 : (size == 0 ? 0.625 : 1.25 * size);
             if (p.srfAttachNode != null && p.attachRules != null && p.attachRules.srfAttach) info.Tags.Add("radial");
             if (p.CrewCapacity > 0) info.Tags.Add("crew" + p.CrewCapacity);
+            // A crew pod with its own ablator (the Making History KV "Onion" pods) needs no separate heat shield.
+            if (p.CrewCapacity > 0 && p.Modules != null && p.Modules.Contains("ModuleAblator")) info.Tags.Add("heatshielded");
             return info;
         }
 
@@ -167,7 +169,7 @@ namespace KSA.KSP.Parts
             if (has("Greenhouse") || n.StartsWith("kerbalism-container") || n.StartsWith("kerbalism-lifesupport")) return PartKind.LifeSupport;
             if (has("ModuleDeployableSolarPanel") || has("ModuleGenerator") || (ap.category == PartCategories.Electrical)) return PartKind.Power;
             if (has("ModuleDataTransmitter") && ap.category == PartCategories.Communication) return PartKind.Antenna;
-            if (has("ModuleScienceLab") || has("ModuleScienceExperiment") || ap.category == PartCategories.Science) return PartKind.Science;
+            if (has("ModuleScienceLab") || has("ModuleScienceExperiment") || has("Experiment") || ap.category == PartCategories.Science) return PartKind.Science;
             if (ap.category == PartCategories.Ground || has("ModuleWheelBase"))
             {
                 if (n.Contains("leg") || n.Contains("gear")) return PartKind.LandingLeg;

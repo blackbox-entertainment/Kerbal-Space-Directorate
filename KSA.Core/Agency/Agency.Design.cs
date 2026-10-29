@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using KSA.Core.Ai;
 using KSA.Core.Design;
+using KSA.Core.Finance;
 using KSA.Core.Missions;
 using KSA.Core.Parts;
 using KSA.Core.Personnel;
@@ -111,6 +112,11 @@ namespace KSA.Core
             if (Parts != null) req.AllowedParts.AddRange(PartFilter.ForJob(Parts, JobFor(type), AllowDlcParts));
             AddMustCarry(p, type, req);
             req.Lessons.AddRange(Lessons(type, 8));
+            // A retry learns from the attempt before it.
+            if (p.Design != null && p.Design.IsAi && p.Design.Verdict == DesignVerdict.Short)
+                req.Lessons.Add("Your last design for this project, '" + p.Design.DesignName + "', had only " + p.Design.TotalDeltaV + " of the " + p.Design.RequiredDeltaV + " m/s needed: add stages, use more efficient engines or carry more fuel.");
+            else if (p.Design != null && p.Design.IsAi && p.Design.Verdict == DesignVerdict.Failed && !string.IsNullOrEmpty(p.Design.Error))
+                req.Lessons.Add("Your last design for this project was rejected: " + p.Design.Error);
             req.PriorDesigns = MissionsCompleted(type.Id);
             return req;
         }
@@ -124,6 +130,8 @@ namespace KSA.Core
                 req.MustCarry.Add("at least one drill and one ore converter (Industry parts) and a power source (solar panels or an RTG): this module makes the base self-sufficient, and it stays on the surface.");
                 if (LifeSupportOn) req.MustCarry.Add("at least one greenhouse (" + LifeSupportMod + " LifeSupport part) to grow food for the residents.");
             }
+            AddScienceInstruments(req);
+            AddHeatShield(type, req);
             if (!LifeSupportOn) return;
             int crew = Math.Max(1, type.CrewSize);
             int days = type.DurationDays + Math.Max(0, LifeSupport.MarginDays);
@@ -132,6 +140,56 @@ namespace KSA.Core
             // Offer life support parts even to launch vehicles, whose part list leaves them out.
             bool have = req.AllowedParts.Exists(x => x.Kind == PartKind.LifeSupport);
             if (!have) foreach (PartInfo part in PartFilter.ForJob(Parts, PartJob.StationModule, AllowDlcParts)) if (part.Kind == PartKind.LifeSupport) req.AllowedParts.Add(part);
+        }
+
+        /// <summary>
+        /// Every flight carries the small science instruments researched (thermometer, barometer, goo...), since live flights
+        /// run them all and recovery pays for them (2026-10-28). Labs and other heavy science parts are left to stations.
+        /// </summary>
+        private void AddScienceInstruments(DesignRequest req)
+        {
+            if (Parts == null || !Settings.ExperimentsOnEveryFlight) return;
+            var names = new List<string>();
+            foreach (PartInfo part in Parts.All)
+            {
+                if (part.Kind != PartKind.Science || part.Mass > 0.1 || part.CrewCapacity > 0) continue;
+                if (part.RequiresDlc && !AllowDlcParts) continue;
+                if (names.Count >= 6) break; // keep the brief short with science mods installed
+                if (!req.AllowedParts.Exists(x => x.Name == part.Name)) req.AllowedParts.Add(part);
+                names.Add(part.Name);
+            }
+            if (names.Count > 0)
+            {
+                req.MustCarry.Add("one of each science instrument, as payload extras on the crew pod: " + string.Join(", ", names.ToArray()) + ". The crew runs them during the flight and the data is paid on recovery.");
+                req.MustInclude.Add(new KeyValuePair<string, List<string>>("a science instrument", names));
+            }
+        }
+
+        /// <summary>
+        /// A crew coming home from orbit or beyond needs a heat shield under the pod, when one is researched (2026-10-28).
+        /// Suborbital hops come in slowly enough without one. Checked by the design review, not only asked for.
+        /// </summary>
+        private void AddHeatShield(MissionType type, DesignRequest req)
+        {
+            if (Parts == null || type == null || type.CrewSize <= 0 || type.Profile == MissionProfile.Suborbital) return;
+            if (type.ModuleRole.Length > 0 && type.Profile == MissionProfile.Base) return; // base modules stay on the surface
+            var shields = new List<string>();
+            foreach (PartInfo part in Parts.All)
+            {
+                if (part.Kind != PartKind.HeatShield || (part.RequiresDlc && !AllowDlcParts)) continue;
+                if (part.Diameter > 0 && part.Diameter < 1.0) continue; // too small for a crew pod
+                if (!req.AllowedParts.Exists(x => x.Name == part.Name)) req.AllowedParts.Add(part);
+                shields.Add(part.Name);
+            }
+            if (shields.Count == 0) return;
+            // Pods with a built-in ablator count as shielded.
+            var shieldedPods = new List<string>();
+            foreach (PartInfo part in req.AllowedParts) if (part.Kind == PartKind.Command && part.Tags.Contains("heatshielded")) shieldedPods.Add(part.Name);
+            req.MustCarry.Add("a heat shield matching the crew pod's diameter, as a payload extra (it is mounted under the pod): " + string.Join(", ", shields.ToArray()) + ". The crew comes home from orbit or beyond and an unshielded pod can burn up."
+                + (shieldedPods.Count > 0 ? " Not needed with a pod that has its own shield: " + string.Join(", ", shieldedPods.ToArray()) + "." : string.Empty));
+            var accepted = new List<string>(shields);
+            accepted.AddRange(shieldedPods);
+            req.MustInclude.Add(new KeyValuePair<string, List<string>>("a heat shield for re-entry", accepted));
         }
 
         /// <summary>Post-mortem lines from earlier flights of the same body/profile, oldest first.</summary>
@@ -174,6 +232,7 @@ namespace KSA.Core
 
             var session = new DesignSession(new LlmClient(Transport, Log), endpoint, Parts, Log, LaunchGravity);
             _designsInFlight.Add(p.Id);
+            p.DesignAttempts++;
             p.Design = new DesignRecord { Source = DesignSource.Ai, Verdict = DesignVerdict.Pending, PassesAllowed = passes, Model = endpoint.Model };
             p.Notes.Add("Engineering team (" + (lead != null ? lead.Name : "no lead") + ") requested an AI design via " + endpoint.Provider + " / " + endpoint.Model + ", up to " + passes + " pass(es).");
             Log.Info("Design session started for " + p.Name + " (" + passes + " passes, " + request.AllowedParts.Count + " parts offered)");
@@ -219,10 +278,11 @@ namespace KSA.Core
                     p.Notes.Add("AI design '" + record.DesignName + "' approved after " + record.PassesUsed + " pass(es): " + record.TotalDeltaV + " m/s, TWR " + record.LiftoffTwr + ", " + record.PartCount + " parts.");
                     break;
                 case DesignVerdict.Short:
-                    p.Notes.Add("AI design '" + record.DesignName + "' fell short after " + record.PassesUsed + " pass(es) (" + record.TotalDeltaV + " of " + record.RequiredDeltaV + " m/s). Flying the template " + (template != null ? template.Name : p.TemplateId) + " instead.");
+                    p.Notes.Add("AI design '" + record.DesignName + "' fell short after " + record.PassesUsed + " pass(es) (" + record.TotalDeltaV + " of " + record.RequiredDeltaV + " m/s). "
+                        + (template != null ? "Flying the template " + template.Name + " instead." : "No fallback design: the team goes back to the drawing board."));
                     break;
                 default:
-                    p.Notes.Add("AI design failed: " + record.Error + " Flying the template " + (template != null ? template.Name : p.TemplateId) + ".");
+                    p.Notes.Add("AI design failed: " + record.Error + " " + (template != null ? "Flying the template " + template.Name + "." : "No fallback design: the team goes back to the drawing board."));
                     break;
             }
             p.Design = record;
@@ -234,6 +294,51 @@ namespace KSA.Core
             var notices = new List<string>();
             TickProjects(CurrentDay, notices);
             foreach (string n in notices) Push(null, n);
+        }
+
+        /// <summary>Design attempts the engineering team gets on a rocket with no fallback template before the project is called off.</summary>
+        public const int MaxAiDesignAttempts = 3;
+
+        /// <summary>True when the project has no fallback template: only an approved AI design can fly it.</summary>
+        public bool NeedsAiDesign(Project p) { return p != null && Catalogs.Templates.Get(p.TemplateId) == null; }
+
+        public static bool HasApprovedDesign(Project p) { return p != null && p.Design != null && p.Design.IsAi && p.Design.Verdict == DesignVerdict.Approved; }
+
+        /// <summary>The design a project flies, for the UI: the approved AI design, else the template, else the team's work in progress.</summary>
+        public string DesignNameOf(Project p)
+        {
+            if (p == null) return string.Empty;
+            if (HasApprovedDesign(p)) return p.Design.DesignName + " (AI)";
+            Template t = Catalogs.Templates.Get(p.TemplateId);
+            return t != null ? t.Name : "engineering team design (AI)";
+        }
+
+        /// <summary>
+        /// A rocket with no fallback template whose design came up short: the team tries again with the shortfall as a lesson,
+        /// up to MaxAiDesignAttempts sessions. After that, or with AI unavailable, the project is called off and the whole
+        /// budget comes back (nothing was built). Returns true when another attempt started.
+        /// </summary>
+        private bool RetryAiDesign(Project p, List<string> notices)
+        {
+            if (p.DesignAttempts < MaxAiDesignAttempts && StartDesign(p, notices))
+            {
+                p.Notes.Add("Design attempt " + p.DesignAttempts + " of " + MaxAiDesignAttempts + " started.");
+                Push(notices, p.Name + ": the engineers try another design (attempt " + p.DesignAttempts + " of " + MaxAiDesignAttempts + ")");
+                return true;
+            }
+            string why = p.DesignAttempts >= MaxAiDesignAttempts
+                ? "the engineering team could not design a rocket that does the job with the parts researched (" + p.DesignAttempts + " attempts)"
+                : "AI design is not available (AI Setup) and there is no fallback design";
+            double refund = Math.Round(p.Budget);
+            if (refund > 0) Ledger.Deposit(refund, LedgerCategory.Cancellation, "Called off " + p.Name, CurrentDay, CurrentYear);
+            ReleaseStaff(p);
+            p.Status = ProjectStatus.Cancelled;
+            p.EndDay = CurrentDay;
+            p.Notes.Add("Called off: " + why + ". " + Money(refund) + " returned.");
+            Push(notices, p.Name + " called off: " + why + "; " + Money(refund) + " returned. Research more parts and try again.");
+            RaiseProjectChanged(p);
+            UpdateProgramFor(p, null);
+            return false;
         }
 
         /// <summary>Lets the host or tests attach a finished record directly (also used when loading saves).</summary>

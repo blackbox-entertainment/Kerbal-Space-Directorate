@@ -205,3 +205,12 @@ Part 1 runs on the current install (no Kerbalism). Part 2 needs Kerbalism, insta
 2. Put a scientist in the lab and let 30+ days pass. Expect their Experience to rise slowly (about 3 points a year).
 3. After a full year in the lab, expect a notice "<name> completes 1 year in the research lab"; the Service Record's "counts toward rank" figure goes up by 1.
 4. An engineer with 3 stars and 2 designs flown is promoted to Lead Engineer without flying; a scientist with 3 stars and 2 lab years becomes Principal Investigator.
+
+## I. AI designs first (added 2026-10-28)
+
+1. With AI design on (AI Setup key set), open Projects. Suborbital hop should be open once Basic Rocketry and Engineering 101 are researched, even though the stock Kerbal 1 craft is not buildable.
+2. Pick it. The Design section says "The engineering team designs this rocket from scratch (AI)" or, with a buildable fallback, that the picked design is the fallback.
+3. Start it. The project line shows "design engineering team design (AI)" until the design is approved, then the AI design's name.
+4. If the design falls short, expect "the engineers try another design (attempt 2 of 3)". After three failures: "called off ... returned", balance back to where it was.
+5. Open Design Review on the project: the plan should carry a thermometer/goo (whatever is researched), and for Kerbin orbit a heat shield under the pod.
+6. With AI off, the same mission stays "(research)" until a ready-made design can be built.

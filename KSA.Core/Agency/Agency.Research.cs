@@ -83,6 +83,9 @@ namespace KSA.Core
                 if (firstBlock == null) firstBlock = t.Name + " " + why;
             }
             if (anyBuildable) return null;
+            // With AI design on, the engineering team designs the rocket: templates are only the AI-off fallback
+            // (2026-10-28), so the researched part kinds decide.
+            if (AiDesignAvailable) return PartKindsBlocker(type);
             // Every project needs a design it can fall back on (an AI design that comes up short flies the template),
             // so a mission whose templates are all locked is locked, whatever part kinds are researched (fixed 2026-10-28:
             // Kerbin orbit showed as open and every start was refused).
@@ -109,6 +112,8 @@ namespace KSA.Core
             if (type.Profile == MissionProfile.Suborbital)
             {
                 if (!kinds.Contains(KSA.Core.Parts.PartKind.Engine) && !kinds.Contains(KSA.Core.Parts.PartKind.Booster)) missing.Add("an engine or booster");
+                // Day-one boosters alone do not reach space (the Flea cluster topped out at 41 km): space needs staging.
+                if (!kinds.Contains(KSA.Core.Parts.PartKind.Decoupler)) missing.Add("decouplers");
             }
             else
             {

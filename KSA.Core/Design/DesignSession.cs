@@ -197,6 +197,7 @@ namespace KSA.Core.Design
                     List<string> problems = StagePlanValidator.Validate(plan, _catalog, allowed);
                     DesignAnalysis analysis = StageAnalyzer.Analyze(plan, _catalog, request.Requirement, _surfaceGravity);
                     foreach (string p in problems) analysis.Problems.Add(p);
+                    foreach (string p in MissingMustInclude(plan, request)) analysis.Problems.Add(p);
                     record.Plan = plan;
                     record.PlanJson = plan.ToJsonText(false);
                     record.DesignName = plan.DesignName;
@@ -226,6 +227,32 @@ namespace KSA.Core.Design
                 }
                 Pass(request, system, record, plan, review, done);
             });
+        }
+
+        /// <summary>The request's MustInclude rules the plan breaks, as review lines.</summary>
+        public static List<string> MissingMustInclude(StagePlan plan, DesignRequest request)
+        {
+            var missing = new List<string>();
+            if (plan == null || request == null) return missing;
+            var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (plan.Payload != null)
+            {
+                if (!string.IsNullOrEmpty(plan.Payload.Command)) used.Add(plan.Payload.Command);
+                foreach (string e in plan.Payload.Extras) used.Add(e);
+            }
+            foreach (PlanStage s in plan.Stages)
+            {
+                foreach (PlanPart p in s.Core) used.Add(p.Part);
+                foreach (PlanPart p in s.Radial) used.Add(p.Part);
+                if (!string.IsNullOrEmpty(s.Decoupler)) used.Add(s.Decoupler);
+            }
+            foreach (KeyValuePair<string, List<string>> rule in request.MustInclude)
+            {
+                bool ok = false;
+                foreach (string part in rule.Value) if (used.Contains(part) || used.Contains(part.Replace('_', '.'))) { ok = true; break; }
+                if (!ok) missing.Add("Missing " + rule.Key + ": add one of " + string.Join(", ", rule.Value.ToArray()) + ".");
+            }
+            return missing;
         }
 
         private static string FirstLine(string text)

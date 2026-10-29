@@ -51,7 +51,9 @@ namespace KSA.Core.Tests
             GoalDefinition reachSpace = null, achieveOrbit = null;
             foreach (GoalDefinition g in a.Catalogs.Goals.Goals) { if (g.Id == "ReachSpace") reachSpace = g; if (g.Id == "AchieveOrbit") achieveOrbit = g; }
             Assert.That(a.GoalFeasible(achieveOrbit), Is.False, "nothing researched can reach orbit");
-            Assert.That(a.GoalFeasible(reachSpace), Is.True, "a pod on a booster can at least attempt a suborbital hop");
+            Assert.That(a.GoalFeasible(reachSpace), Is.False, "day-one boosters alone do not reach space: it needs staging (2026-10-28)");
+            ((PartCatalog)a.Parts).Add(new PartInfo { Name = "Decoupler_1", Title = "TD-12 Decoupler", Kind = PartKind.Decoupler, Mass = 0.04 });
+            Assert.That(a.GoalFeasible(reachSpace), Is.True, "with a decoupler a staged hop can reach space");
 
             string msg;
             Assert.That(a.CreateProject("Too soon", "KerbinOrbit", null, new[] { "Jeb Kerman" }, null, null, null, out msg), Is.Null);

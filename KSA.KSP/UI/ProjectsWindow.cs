@@ -138,7 +138,7 @@ namespace KSA.KSP.UI
                         int d = live.DaysRemaining(_agency.CurrentDay, duration);
                         return typeName + "  |  " + StatusText(live.Status) + "  |  " + d + " day" + (d == 1 ? "" : "s") + " left";
                     }, textWidth - 266f, LineHeight)));
-                Line(items, "Mode " + ModeText(p.Mode) + "  |  budget " + Agency.Money(p.Budget) + "  |  design " + _agency.Catalogs.Templates.NameOf(p.TemplateId), textWidth);
+                Line(items, "Mode " + ModeText(p.Mode) + "  |  budget " + Agency.Money(p.Budget) + "  |  design " + _agency.DesignNameOf(p), textWidth);
                 Line(items, "Crew: " + Names(p.Crew) + "  |  lead engineer: " + NameOf(p.LeadEngineer), textWidth);
                 Line(items, DesignLine(p), textWidth);
 
@@ -258,9 +258,19 @@ namespace KSA.KSP.UI
             Template selectedTemplate = null;
             foreach (Template t in templates)
                 if (string.Equals(t.Id, _selectedTemplateId, StringComparison.OrdinalIgnoreCase)) { selectedTemplate = t; break; }
-            if (selectedTemplate == null && templates.Count > 0) { selectedTemplate = templates[0]; _selectedTemplateId = selectedTemplate.Id; }
+            // Default to a fallback design that can be built today. With none, the engineering team designs it from scratch
+            // (AI on) and no template is picked (2026-10-28: templates are the AI-off fallback, not a gate).
+            Template buildable = templates.Find(t => t.IsAvailable(_agency.InstalledMods) && _agency.TemplateBlocker(t) == null);
+            if (selectedTemplate == null && buildable != null) { selectedTemplate = buildable; _selectedTemplateId = buildable.Id; }
+            if (buildable == null) { selectedTemplate = null; _selectedTemplateId = string.Empty; }
 
             Line(items, "Design:", textWidth);
+            if (_agency.AiDesignAvailable)
+                Line(items, buildable != null
+                    ? "The engineering team designs the rocket (AI). The design picked below is the fallback if theirs comes up short."
+                    : "<color=#8be28b>The engineering team designs this rocket from scratch (AI).</color> No fallback design can be built with today's parts, so they get " + Agency.MaxAiDesignAttempts + " attempts; if none works, the project is called off and the budget returned.", textWidth);
+            else if (buildable == null && templates.Count > 0)
+                Line(items, "<color=#ffd27f>No fallback design can be built with today's parts, and AI design is off. Turn it on in AI Setup to let the engineers design one.</color>", textWidth);
             if (templates.Count == 0) Line(items, "No design template can fly " + selected.Name + " with the mods installed.", textWidth);
             MissionType typeForCost = selected;
             ButtonRows(items, templates.Count, textWidth, 220f, i =>

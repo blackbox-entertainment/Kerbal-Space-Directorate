@@ -21,6 +21,8 @@ namespace KSA.Core.Projects
         public ProjectStatus Status { get; set; }
         public int CreatedDay { get; set; }
         public int DesignDays { get; set; }
+        /// <summary>AI design sessions started for this project (a rocket with no fallback template gets a few).</summary>
+        public int DesignAttempts { get; set; }
         public int BuildDays { get; set; }
         /// <summary>Day the current phase began.</summary>
         public int PhaseStartDay { get; set; }
