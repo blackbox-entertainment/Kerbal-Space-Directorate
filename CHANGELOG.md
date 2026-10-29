@@ -4,6 +4,8 @@ Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the
 
 ## Unreleased
 
+- **Fixed: missing the main objective was scored a partial success.** A live flight that missed its main objective (a Kerbin orbit flight that peaked at 82 km) counted as a partial success and showed as "done". It is now an abort with the crew safe, and "done" in Projects needs the agency to hold the mission's main achievement.
+- **Simulated reports say what was reached and missed** ("Reached: suborbital flight, orbit. Missed: a science return from Kerbin."), since simulated flights count as flown and their achievements meet goals.
 - **Fixed: a live flight could stay "in flight" for ever** after its craft was gone (left falling, then removed by the game): the clean-up skipped it because the flight director still held it from the flight scene. Out of flight, a held flight with no vessel is now dropped and the project closed (crew lost, or back on the pad with the crew freed).
 
 ## 0.5.5 (2026-10-28), sixth test build

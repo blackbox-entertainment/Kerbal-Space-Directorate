@@ -65,7 +65,7 @@ namespace KSA.Core.Tests
             string msg;
             Project p = a.AdoptHangarLaunch("SuborbitalHop", "7", "Hopper", new List<string> { "Jeb Kerman" }, out msg);
             var result = new LiveFlightResult { Recovered = true, MaxAltitude = 90000, MaxSpeed = 1200, DaysInSpace = 0.1 };
-            result.Achievements.Add("Suborbital:Kerbin");
+            result.Achievements.Add("Suborbit:Kerbin");
             result.Achievements.Add("Recover:-");
             MissionReport r = a.ResolveLive(p.Id, result);
             Assert.That(r, Is.Not.Null);

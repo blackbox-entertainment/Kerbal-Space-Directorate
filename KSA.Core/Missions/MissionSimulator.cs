@@ -165,6 +165,16 @@ namespace KSA.Core.Missions
                     break;
             }
             r.Lines.AddRange(MissionNarrator.Lines(input, outcome, rng));
+            // Say plainly what the flight reached and what it missed (2026-10-28: a partial science flight was credited
+            // with orbit while its report only said "aborted the final phase").
+            if (outcome == MissionOutcome.PartialSuccess || outcome == MissionOutcome.Abort || outcome == MissionOutcome.LossOfVehicle)
+            {
+                var reached = new List<string>();
+                foreach (string a in r.Achievements) if (!a.StartsWith("Recover", StringComparison.OrdinalIgnoreCase) && !a.StartsWith("Flight", StringComparison.OrdinalIgnoreCase)) reached.Add(KSA.Core.Rivals.MilestoneLadder.Describe(a));
+                string primary = input.Type != null ? input.Type.PrimaryAchievement : string.Empty;
+                r.Lines.Add("Reached: " + (reached.Count > 0 ? string.Join(", ", reached.ToArray()) : "nothing beyond the launch") + "."
+                    + (primary.Length > 0 && !r.Achievements.Contains(primary) ? " Missed: " + KSA.Core.Rivals.MilestoneLadder.Describe(primary) + "." : string.Empty));
+            }
             return r;
         }
 

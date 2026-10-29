@@ -50,7 +50,7 @@ namespace KSA.Core.Tests
 
             var sub = new LiveFlightResult { Recovered = true };
             sub.Achievements.Add("Suborbit:Kerbin");
-            Assert.That(LiveFlightResolver.Resolve(null, orbit, crew, sub, 10, 0.5, 0.5).Outcome, Is.EqualTo(MissionOutcome.PartialSuccess));
+            Assert.That(LiveFlightResolver.Resolve(null, orbit, crew, sub, 10, 0.5, 0.5).Outcome, Is.EqualTo(MissionOutcome.Abort), "orbit missed: an abort, not a partial success (2026-10-28)");
 
             var crash = new LiveFlightResult { Recovered = false, Crashed = true };
             Assert.That(LiveFlightResolver.Resolve(null, orbit, crew, crash, 10, 0.5, 0.5).Outcome, Is.EqualTo(MissionOutcome.LossOfVehicle));

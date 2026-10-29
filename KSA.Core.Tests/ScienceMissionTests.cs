@@ -72,7 +72,7 @@ namespace KSA.Core.Tests
             var crew = new List<string> { "Bob Kerman" };
             var dry = new LiveFlightResult { Recovered = true };
             dry.Achievements.Add("Suborbit:Kerbin");
-            Assert.That(LiveFlightResolver.Resolve(null, survey, crew, dry, 1, 0.6, 0.6).Outcome, Is.EqualTo(MissionOutcome.PartialSuccess), "flew but brought nothing back");
+            Assert.That(LiveFlightResolver.Resolve(null, survey, crew, dry, 1, 0.6, 0.6).Outcome, Is.EqualTo(MissionOutcome.Abort), "flew but brought nothing back: the main objective was missed (2026-10-28)");
             var full = new LiveFlightResult { Recovered = true, SciencePoints = 18.5 };
             full.Achievements.Add("Suborbit:Kerbin");
             MissionReport r = LiveFlightResolver.Resolve(null, survey, crew, full, 1, 0.6, 0.6);

@@ -59,6 +59,10 @@ namespace KSA.Core
         /// <summary>How many projects of this mission type finished successfully (for the "done before" marks).</summary>
         public int MissionsCompleted(string missionTypeId)
         {
+            // Done means the main objective was reached: no count while the agency does not hold the mission's main
+            // achievement (2026-10-28: two Kerbin orbit flights that never reached orbit showed as "done x2").
+            MissionType t = Catalogs.Missions.Get(missionTypeId);
+            if (t != null && !string.IsNullOrEmpty(t.PrimaryAchievement) && !HasAgencyAchievement(t.PrimaryAchievement)) return 0;
             int n = 0;
             foreach (Project p in Projects) if (p.Status == ProjectStatus.Complete && string.Equals(p.MissionTypeId, missionTypeId, StringComparison.OrdinalIgnoreCase)) n++;
             return n;

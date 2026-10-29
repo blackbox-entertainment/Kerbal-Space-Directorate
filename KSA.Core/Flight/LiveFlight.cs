@@ -102,16 +102,21 @@ namespace KSA.Core.Flight
                 r.Outcome = MissionOutcome.Success;
                 r.Lesson = "Nominal flight on " + r.ProjectName + ".";
             }
-            else if (gotPrimary || r.Achievements.Count > 0)
+            else if (gotPrimary)
             {
                 r.Outcome = MissionOutcome.PartialSuccess;
                 if (result.Crashed) r.Incidents.Add(IncidentKind.Crash); else r.Incidents.Add(IncidentKind.Other);
-                r.Lesson = gotPrimary ? "Objective met on " + r.ProjectName + " but the vehicle took damage." : "Primary objective missed on " + r.ProjectName + "; margins were thin.";
+                r.Lesson = "Objective met on " + r.ProjectName + " but the vehicle took damage.";
             }
             else
             {
+                // The main objective was missed: an abort with the crew safe, whatever else was logged on the way
+                // (2026-10-28: a Kerbin orbit flight that peaked at 82 km counted as a partial success and as "done").
                 r.Outcome = MissionOutcome.Abort;
-                r.Lesson = "Abort on " + r.ProjectName + "; nothing of note was achieved.";
+                r.Incidents.Add(IncidentKind.Other);
+                r.Lesson = r.Achievements.Count > 0
+                    ? "Main objective (" + primary + ") missed on " + r.ProjectName + "; the crew came home safe."
+                    : "Abort on " + r.ProjectName + "; nothing of note was achieved.";
             }
             if (result.DirectorFlown) r.Lesson += " Director-flown.";
             r.Lines.AddRange(CannedLines(r, result));
