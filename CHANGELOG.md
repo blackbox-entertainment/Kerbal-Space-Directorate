@@ -6,6 +6,7 @@ Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the
 
 - **One pad:** projects that are ready together launch 3 days apart (agency.cfg `launchSpacingDays`); simulated launches and live roll-outs wait their turn, time warp stops only when a live flight's window opens, and Launch now skips the queue.
 - README: install steps for the test zip; Kerbalism science notes brought up to date.
+- **No more tumbling capsules:** when a rookie pilot steers by hand (stock SAS gives retrograde hold only from one star), Stability Assist now stays on and stops any spin before the capsule is turned toward retrograde. Before, SAS was switched off and a craft spun past 90 degrees was never brought back.
 
 ## 0.5.0 (2026-10-28), first test build
 

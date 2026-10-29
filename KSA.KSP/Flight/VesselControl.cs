@@ -98,6 +98,17 @@ namespace KSA.KSP.Flight
             Vector3d? target = HoldTarget();
             Transform rt = _v.ReferenceTransform;
             if (target == null || rt == null || target.Value.magnitude < 1e-6) return;
+            // Spin first (2026-10-28: capsules tumbled out of control). Stock Stability Assist, which every pilot has, is on
+            // and damps rotation with the pod's reaction wheels; while the craft still turns faster than about 6 deg/s we
+            // give no input at all, so SAS can stop it. Only a steady craft is steered toward the target.
+            double rate = _v.angularVelocity.magnitude;
+            if (rate > 0.1)
+            {
+                s.yaw = 0; s.pitch = 0;
+                _prevTime = -1; _signCheckAt = -1; // start the steering fresh once steady
+                if (!_v.ActionGroups[KSPActionGroup.SAS]) _v.ActionGroups.SetGroup(KSPActionGroup.SAS, true);
+                return;
+            }
             Vector3 local = rt.InverseTransformDirection((Vector3)target.Value.normalized);
             // The control point's thrust axis is transform.up; x is right (yaw), z is dorsal (pitch).
             double yawErr = Math.Atan2(local.x, Math.Max(0.0001f, local.y));
@@ -108,9 +119,13 @@ namespace KSA.KSP.Flight
             double dYaw = _prevTime > 0 ? (yawErr - _prevYawErr) / dt : 0;
             double dPitch = _prevTime > 0 ? (pitchErr - _prevPitchErr) / dt : 0;
             _prevYawErr = yawErr; _prevPitchErr = pitchErr; _prevTime = now;
-            const double kp = 1.6, kd = 0.9;
-            float yaw = (float)Math.Max(-1, Math.Min(1, (kp * yawErr + kd * dYaw))) * _yawSign;
-            float pitch = (float)Math.Max(-1, Math.Min(1, (kp * pitchErr + kd * dPitch))) * _pitchSign;
+            // Within about 3 degrees: no input, and Stability Assist holds the attitude.
+            double err0 = Math.Sqrt(yawErr * yawErr + pitchErr * pitchErr);
+            if (err0 < 0.05) { s.yaw = 0; s.pitch = 0; _signCheckAt = -1; return; }
+            // Gentle steering: Stability Assist releases while there is input and holds wherever we stop.
+            const double kp = 1.0, kd = 0.9, limit = 0.5;
+            float yaw = (float)Math.Max(-limit, Math.Min(limit, (kp * yawErr + kd * dYaw))) * _yawSign;
+            float pitch = (float)Math.Max(-limit, Math.Min(limit, (kp * pitchErr + kd * dPitch))) * _pitchSign;
             s.yaw = yaw;
             s.pitch = pitch;
             // Learn the sign: if a steady command made the total error grow over a second, the axis is wired the other way.
@@ -132,7 +147,12 @@ namespace KSA.KSP.Flight
             if (!_manualHold || _mode != mode) { _prevTime = -1; _signCheckAt = -1; }
             _manualHold = true;
             _mode = mode;
-            if (_v != null) _v.ActionGroups.SetGroup(KSPActionGroup.SAS, false); // stock SAS would fight the hold
+            // Stability Assist stays on (2026-10-28): it damps spin and holds between our nudges instead of fighting them.
+            if (_v != null)
+            {
+                _v.ActionGroups.SetGroup(KSPActionGroup.SAS, true);
+                if (_v.Autopilot != null) _v.Autopilot.SetMode(VesselAutopilot.AutopilotMode.StabilityAssist);
+            }
         }
 
         private void EndManualHold()
