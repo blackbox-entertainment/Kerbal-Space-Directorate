@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+
+## Unreleased
+
+- **Save repair:** a crew stranded by a flight that was simulated without a rocket (before 0.5.6) is brought home on load, with no mission, medal or prestige from it, and the project is scrubbed with its budget returned.
 ## 0.5.7 (2026-10-28), eighth test build
 
 - **Fixed: designs were credited with fuel they could not burn.** The design review added up every tank in a stage, so liquid fuel tanks under a solid booster (with no liquid engine to burn them) counted as propellant, and rockets were approved on delta-v they never had. Tank propellant now counts only when the same stage has a liquid engine; otherwise the tanks are dead weight and the design goes back to the engineers.

@@ -36,6 +36,8 @@ namespace KSA.KSP
             // OnLoad runs before the roster is guaranteed complete; sync once the scene is up.
             if (!_loaded) KsaCore.CreateAgency();
             Roster.KspCrewFactory.RepairMisnamedHires(KsaCore.Agency); // hires the old rename bug left under random names
+            if (KsaCore.Agency != null)
+                foreach (string id in KsaCore.Agency.UndoPhantomStrandings()) KsaCore.Log.Info("Save repair: " + id + " never had a rocket; its stranding was undone");
             KsaCore.SyncRoster("scene start");
             KsaCore.TickAgency("scene start");
             Build.CraftWriter.PublishTemplates();
