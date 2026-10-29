@@ -754,6 +754,15 @@ namespace KSA.KSP.Flight
             // Destroyed without recovery: crash or lost. Recovery fires its own event before this one and resolves first.
             if (v.state == Vessel.State.DEAD || Live.Crashed || Live.Deaths.Count > 0)
             {
+                // Whoever is still aboard a craft that is being destroyed is lost with it. The game reports the deaths a
+                // moment after this, too late for the mission report (2026-10-29: "vehicle lost, crew safe", then the pilot
+                // was listed as killed on an unknown vessel).
+                try
+                {
+                    foreach (ProtoCrewMember c in v.GetVesselCrew())
+                        if (c != null && p.Crew.Contains(c.name) && !Live.Deaths.Contains(c.name)) { Live.Deaths.Add(c.name); Log(c.name + " was killed.", null); }
+                }
+                catch (Exception e) { KsaCore.Log.Warn("Crew check on a destroyed vessel failed: " + e.Message); }
                 Log("Vessel destroyed.", null);
                 Resolve(false);
             }
