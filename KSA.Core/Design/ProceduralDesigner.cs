@@ -43,7 +43,7 @@ namespace KSA.Core.Design
             // Payload: the lightest pod that seats the crew, then one of each thing the brief must carry.
             PartInfo pod = null;
             foreach (PartInfo p in allowed)
-                if (p.Kind == PartKind.Command && p.CrewCapacity >= Math.Max(1, crew) && (pod == null || p.Mass < pod.Mass)) pod = p;
+                if (p.Kind == PartKind.Command && p.CrewCapacity >= Math.Max(1, crew) && (pod == null || (pod.RequiresDlc && !p.RequiresDlc) || (pod.RequiresDlc == p.RequiresDlc && p.Mass < pod.Mass))) pod = p; // stock before DLC pods
             if (pod == null) { why = "no crew pod with " + Math.Max(1, crew) + " seats"; return null; }
             var plan = new StagePlan { DesignName = "Engineering team " + (req.Mission != null ? req.Mission.Name : "rocket"), Rationale = "Drawn up by the engineering team from the researched parts." };
             plan.Payload.Command = pod.Name;

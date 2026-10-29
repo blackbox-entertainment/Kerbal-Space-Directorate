@@ -67,7 +67,15 @@ namespace KSA.KSP.Flight
                     break;
                 case Phases.Climb:
                     c.AutoStage(ref line);
-                    if (alt > 1500 || v.srfSpeed > 90) { _phase = Phases.Kick; _phaseStart = ctx.Now; c.SasOffForKick(); c.Yaw = AirlessAscentLeg.KickSign(v); Status = "Pitching east."; }
+                    if (alt > 1500 || v.srfSpeed > 90)
+                    {
+                        // Pitch program (2026-10-28): hold a set angle for the altitude, east, instead of a yaw kick and
+                        // "follow prograde", which let heavy, slow rockets fall over and could kick the wrong way.
+                        _phase = Phases.Ascent; _phaseStart = ctx.Now;
+                        c.PointAlong(() => AscentDirection(v, _orbit));
+                        Status = "Gravity turn: pitching east on the program.";
+                        line = "Pitch program started.";
+                    }
                     break;
                 case Phases.Kick:
                     c.AutoStage(ref line);
@@ -82,7 +90,12 @@ namespace KSA.KSP.Flight
                     break;
                 case Phases.Ascent:
                     c.AutoStage(ref line);
-                    if (alt > 40000) c.Sas(VesselAutopilot.AutopilotMode.Prograde, false);
+                    if (alt > 45000) c.Sas(VesselAutopilot.AutopilotMode.Prograde, false);
+                    else
+                    {
+                        if (!c.ManualAttitude) c.PointAlong(() => AscentDirection(v, _orbit));
+                        Status = "Gravity turn: pitch " + Math.Round(TargetPitch(v, _orbit)) + " deg.";
+                    }
                     if (v.orbit.ApA >= _targetAp)
                     {
                         c.Throttle = 0;
@@ -132,6 +145,31 @@ namespace KSA.KSP.Flight
         }
 
         public void End(FlightContext ctx) { ctx.Control.Yaw = 0; }
+
+        /// <summary>
+        /// The ascent pitch, degrees above the horizon: 90 x (1 - sqrt(alt / 60 km)), at least 10, so about 78 at 1 km, 53 at
+        /// 10 km and 26 at 30 km. Once fast (over 150 m/s) it stays within 8 degrees of the surface flight path, so the air
+        /// never meets the rocket side-on.
+        /// </summary>
+        internal static double TargetPitch(Vessel v, bool orbit = true)
+        {
+            double alt = Math.Max(0, v.altitude);
+            // A suborbital hop goes nearly straight up (85 deg, a little east so it does not come down on the pad).
+            double program = orbit ? Math.Max(10, 90 * (1 - Math.Sqrt(Math.Min(1, alt / 60000.0)))) : 85;
+            if (v.srfSpeed < 150) return program;
+            Vector3d up = v.upAxis;
+            double pathPitch = 90 - Vector3d.Angle(v.srf_velocity, up);
+            return Math.Max(pathPitch - 8, Math.Min(pathPitch + 8, program));
+        }
+
+        /// <summary>World direction for the pitch program: east, tipped up by <see cref="TargetPitch"/>.</summary>
+        internal static Vector3d AscentDirection(Vessel v, bool orbit = true)
+        {
+            double p = TargetPitch(v, orbit) * Math.PI / 180;
+            Vector3d up = v.upAxis;
+            Vector3d east = v.east;
+            return (up * Math.Sin(p) + east * Math.Cos(p)).normalized;
+        }
     }
 
     /// <summary>Stay in orbit for a while (the "one full orbit" of an orbital mission), then hand over.</summary>

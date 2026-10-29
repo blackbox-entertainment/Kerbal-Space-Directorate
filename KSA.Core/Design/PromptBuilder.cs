@@ -64,8 +64,9 @@ namespace KSA.Core.Design
             sb.AppendLine("3. Each stage lists core parts (stacked, from the bottom of that stage upward) and optional radial parts with symmetry 2, 3, 4, 6 or 8.");
             sb.AppendLine("4. Every stage except the top one must name a decoupler that separates it from the stage above.");
             sb.AppendLine("5. The payload names one command part (it must seat the crew) and extras such as parachutes, heat shields, antennas.");
-            sb.AppendLine("6. Keep part counts realistic: a core tank list like [{\"part\":\"fuelTankLong\",\"count\":2}] stacks two of that tank.");
-            sb.AppendLine("7. Reply with ONE JSON object and nothing else. No prose, no markdown fences.");
+            sb.AppendLine("6. Prefer stock parts: use a part marked [DLC] only when no stock part does the job.");
+            sb.AppendLine("7. Keep part counts realistic: a core tank list like [{\"part\":\"fuelTankLong\",\"count\":2}] stacks two of that tank.");
+            sb.AppendLine("8. Reply with ONE JSON object and nothing else. No prose, no markdown fences.");
             sb.AppendLine();
             sb.AppendLine("JSON shape:");
             sb.AppendLine("{\"design_name\":\"...\",\"rationale\":\"one paragraph\",\"stages\":[{\"stage\":0,\"role\":\"launch\",\"core\":[{\"part\":\"name\",\"count\":1}],\"radial\":[{\"part\":\"name\",\"count\":4,\"symmetry\":4}],\"decoupler\":\"name\"}],\"payload\":{\"command\":\"name\",\"extras\":[\"name\"]}}");
@@ -104,6 +105,7 @@ namespace KSA.Core.Design
                   .Append(p.CrewCapacity).Append(" | ")
                   .Append(p.Cost.ToString("0", CultureInfo.InvariantCulture));
                 if (p.Title.Length > 0 && !string.Equals(p.Title, p.Name, StringComparison.OrdinalIgnoreCase)) sb.Append("  (").Append(p.Title).Append(')');
+                if (p.RequiresDlc) sb.Append("  [DLC]");
                 sb.AppendLine();
             }
             if (previous != null)
