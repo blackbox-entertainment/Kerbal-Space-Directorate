@@ -6,28 +6,36 @@ using KSA.Core.Parts;
 namespace KSA.Core.Design
 {
     /// <summary>
-    /// The engineering team's own drawing board (2026-10-28): a rule-based designer that stacks researched engines, tanks
-    /// and decouplers into 1 to 4 stages until the mission's delta-v and liftoff thrust are met, with the payload the brief
-    /// asks for (pod, parachute, heat shield, instruments, antenna, battery, landing legs). No AI involved, so it decides
-    /// whether a rocket can be built at all, steps in when the AI comes up short, and designs when AI is off.
-    /// Designs are checked with the same analysis, validation and must-carry rules as AI designs.
+    /// The engineering team's own drawing board: a rule-based designer, no AI. Rebuilt 2026-10-29 around the mission's
+    /// legs (<see cref="FlightBudget"/>): it tries every way of sharing the legs out among 1 to 5 stages, sizes each stage
+    /// from the top down (each one carries everything above it) with the lightest engine, tank stack and side boosters that
+    /// fly its legs with a 10% margin and enough thrust for the gravity each leg is flown in, and keeps the lightest
+    /// rocket. Solid boosters only help climb out of Kerbin (they cannot throttle for a landing); landing legs go on the
+    /// stage that touches down. Every design is then checked by the same analysis as an AI design.
     /// </summary>
     public static class ProceduralDesigner
     {
         private const double G0 = 9.80665;
-        private const double Margin = 1.10;      // aim 10% over the requirement
-        private const double LaunchTwr = 1.45;    // vacuum thrust figure; sea level is lower
-        private const double UpperTwr = 0.45;     // in space, slow but workable
+        private const double Margin = 1.10;      // aim 10% over every leg
         private const int MaxTanks = 8;
+        private const int MaxStages = 6;
+        private static readonly int[] SideCounts = { 2, 3, 4, 6, 8 };
 
         private sealed class Option
         {
             public PartInfo Engine;
             public PartInfo Tank;
             public int Tanks;
-            public PartInfo Booster;    // radial solid boosters on the launch stage
+            public PartInfo Booster;    // a core solid booster (Boosters == 1, no engine) or side boosters
             public int Boosters;
             public double Dry, Fuel, Thrust, IspNum, IspSlNum;
+            public double Wet { get { return Dry + Fuel; } }
+        }
+
+        private sealed class Pick
+        {
+            public Option Option;
+            public double Start;   // mass at ignition, everything above included
         }
 
         /// <summary>
@@ -92,68 +100,129 @@ namespace KSA.Core.Design
                 else if (p.Kind == PartKind.Decoupler && p.IsStackable && (decoupler == null || p.Mass < decoupler.Mass)) decoupler = p;
                 else if (p.Kind == PartKind.LandingLeg && (legs == null || p.Mass < legs.Mass)) legs = p;
             }
-            bool landing = req.Mission != null && (req.Mission.Profile == MissionProfile.Land || req.Mission.Profile == MissionProfile.Base);
-            if (landing && legs == null) { why = "no landing legs researched"; return null; }
             if (engines.Count == 0 && boosters.Count == 0) { why = "no engine or booster researched"; return null; }
 
-            double target = (need != null ? need.DeltaV : 3600) * Margin;
-            double twrNeed = Math.Max(LaunchTwr, need != null ? need.MinTwr + 0.25 : LaunchTwr);
-            var options = Options(engines, tanks, boosters, false);
-            // Side boosters only when a radial decoupler can drop them on their own (2026-10-28).
-            bool radialDecoupler = allowed.Exists(p => p.Kind == PartKind.Decoupler && !p.IsStackable);
-            var launchOptions = Options(engines, tanks, boosters, radialDecoupler);
+            // The legs to fly, each with the margin. A hop with no map gets one climb from the requirement.
+            var flight = new List<FlightLeg>();
+            if (need != null && need.Legs != null)
+                foreach (FlightLeg leg in need.Legs)
+                    flight.Add(new FlightLeg { Name = leg.Name, Body = leg.Body, DeltaV = leg.DeltaV * Margin, Gravity = leg.Gravity, MinTwr = leg.MinTwr, MaxTwr = leg.MaxTwr, Atmospheric = leg.Atmospheric, Landing = leg.Landing });
+            else
+            {
+                // One figure: a hop is one climb; anything bigger climbs through the air first, then burns in thin air.
+                double total = (need != null ? need.DeltaV : 1800) * Margin;
+                double twr = Math.Max(1.45, need != null ? need.MinTwr + 0.25 : 1.45);
+                if (total <= 2500) flight.Add(new FlightLeg { Name = "climb", DeltaV = total, Gravity = gravity, MinTwr = twr, Atmospheric = true });
+                else
+                {
+                    flight.Add(new FlightLeg { Name = "lift-off and climb through the air", DeltaV = 1800 * Margin, Gravity = gravity, MinTwr = twr, Atmospheric = true });
+                    flight.Add(new FlightLeg { Name = "rest of the flight", DeltaV = total - 1800 * Margin, Gravity = gravity, MinTwr = 0.3 });
+                }
+            }
+            int landingLeg = flight.FindIndex(x => x.Landing);
+            if (landingLeg >= 0 && legs == null) { why = "no landing legs researched"; return null; }
+            // Only the climb out of Kerbin may use solid boosters: they cannot throttle for a landing or restart.
+            int kerbinLegs = need != null && need.Legs != null ? Math.Min(2, flight.Count) : flight.Count;
 
-            StagePlan best = null;
-            double bestMass = double.MaxValue, closest = 0;
-            double[][] splits =
+            bool radialDecoupler = allowed.Exists(x => x.Kind == PartKind.Decoupler && !x.IsStackable);
+            List<Option> liquid = Options(engines, tanks, boosters, false, false);
+            List<Option> withSolids = Options(engines, tanks, boosters, true, radialDecoupler);
+            double decouplerMass = decoupler != null ? decoupler.Mass : 0;
+            double legsMass = legs != null ? legs.Mass * 4 : 0;
+
+            // Every way to cut the legs into consecutive stages: bit k set = a new stage starts after leg k.
+            int legCount = flight.Count;
+            var memo = new Dictionary<string, Pick>();
+            Pick[] bestStages = null;
+            int[][] bestChunks = null;
+            double bestMass = double.MaxValue;
+            // For the "why not": the leg where the try that got furthest (most stages sized) ran out of options.
+            string shortOn = null;
+            int furthest = -1;
+            for (int mask = 0; mask < (1 << (legCount - 1)); mask++)
             {
-                new[] { 1.0 },
-                new[] { 0.5, 0.5 }, new[] { 0.6, 0.4 }, new[] { 0.4, 0.6 },
-                new[] { 0.34, 0.33, 0.33 }, new[] { 0.45, 0.3, 0.25 }, new[] { 0.3, 0.35, 0.35 },
-                new[] { 0.25, 0.25, 0.25, 0.25 }, new[] { 0.35, 0.25, 0.2, 0.2 },
-            };
-            foreach (double[] split in splits)
-            {
-                // Build from the top stage down: each stage carries everything above it.
-                int n = split.Length;
-                var chosen = new Option[n];
+                var chunks = new List<int[]>();
+                int from = 0;
+                for (int k = 0; k < legCount - 1; k++) if ((mask & (1 << k)) != 0) { chunks.Add(new[] { from, k }); from = k + 1; }
+                chunks.Add(new[] { from, legCount - 1 });
+                if (chunks.Count > MaxStages) continue;
+
+                // Top stage first: it carries the payload, the one below carries it, and so on.
+                var picks = new Pick[chunks.Count];
                 double above = payload;
                 bool ok = true;
-                for (int k = n - 1; k >= 0; k--)
+                for (int c = chunks.Count - 1; c >= 0; c--)
                 {
-                    bool launch = k == 0;
-                    double stageTarget = target * split[k];
-                    double extraDry = (decoupler != null ? decoupler.Mass : 0) + (landing && k == n - 1 ? legs.Mass * 4 : 0);
-                    Option pick = null; double pickMass = double.MaxValue;
-                    foreach (Option o in launch ? launchOptions : options)
+                    int a = chunks[c][0], b = chunks[c][1];
+                    bool solidsOk = b < kerbinLegs;
+                    double extra = decouplerMass + (landingLeg >= a && landingLeg <= b ? legsMass : 0);
+                    string key = a + "-" + b + "-" + Math.Round(above, 3);
+                    Pick pick;
+                    if (!memo.TryGetValue(key, out pick))
                     {
-                        double start = above + o.Dry + extraDry + o.Fuel;
-                        double end = above + o.Dry + extraDry;
-                        // The launch stage burns mostly in thick air: count it at the mean of sea-level and vacuum Isp, not vacuum (2026-10-28).
-                        double isp = o.Thrust > 0 ? (launch ? 0.5 * (o.IspNum + o.IspSlNum) : o.IspNum) / o.Thrust : 0;
-                        double dv = isp * G0 * Math.Log(start / end);
-                        double twr = o.Thrust / (start * gravity);
-                        if (dv < stageTarget || twr < (launch ? twrNeed : UpperTwr)) continue;
-                        if (start < pickMass) { pick = o; pickMass = start; }
+                        pick = Size(flight, a, b, above + extra, solidsOk ? withSolids : liquid);
+                        memo[key] = pick;
                     }
-                    if (pick == null) { ok = false; break; }
-                    chosen[k] = pick;
-                    above = pickMass;
+                    if (pick == null)
+                    {
+                        ok = false;
+                        int sized = chunks.Count - 1 - c;
+                        if (sized > furthest) { furthest = sized; shortOn = flight[a].Name + (b > a ? " to the " + flight[b].Name : ""); }
+                        break;
+                    }
+                    picks[c] = pick;
+                    above = pick.Start;
                 }
                 if (!ok || above >= bestMass) continue;
-                StagePlan candidate = Build(plan, chosen, decoupler, landing ? legs : null);
-                DesignAnalysis a = StageAnalyzer.Analyze(candidate, catalog, need, gravity);
-                closest = Math.Max(closest, a.TotalDeltaV);
-                var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                foreach (PartInfo p in allowed) names.Add(p.Name);
-                if (!a.Passes || StagePlanValidator.Validate(candidate, catalog, names).Count > 0 || DesignSession.MissingMustInclude(candidate, req).Count > 0) continue;
-                best = candidate; bestMass = above;
+                bestMass = above;
+                bestStages = picks;
+                bestChunks = chunks.ToArray();
             }
-            if (best == null) why = "no stack of the researched parts reaches " + Math.Round(need != null ? need.DeltaV : 0) + " m/s";
+            if (bestStages == null)
+            {
+                why = "no stack of the researched parts flies the whole mission (" + Math.Round(need != null ? need.DeltaV : 0) + " m/s): with everything above it, no stage manages the " + (shortOn ?? "climb");
+                return null;
+            }
+
+            StagePlan best = Build(plan, bestStages, bestChunks, flight, decoupler, legs, landingLeg);
+            DesignAnalysis check = StageAnalyzer.Analyze(best, catalog, need, gravity);
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (PartInfo p in allowed) names.Add(p.Name);
+            List<string> invalid = StagePlanValidator.Validate(best, catalog, names);
+            if (!check.Passes || invalid.Count > 0 || DesignSession.MissingMustInclude(best, req).Count > 0)
+            {
+                why = check.Problems.Count > 0 ? check.Problems[0] : invalid.Count > 0 ? invalid[0] : "the design misses something the brief asks for";
+                return null;
+            }
             return best;
         }
 
-        private static List<Option> Options(List<PartInfo> engines, List<PartInfo> tanks, List<PartInfo> boosters, bool sideBoosters)
+        /// <summary>The lightest stage that flies legs a..b (inclusive) under <paramref name="above"/> tonnes, or null.</summary>
+        private static Pick Size(List<FlightLeg> flight, int a, int b, double above, List<Option> options)
+        {
+            foreach (Option o in options) // lightest first
+            {
+                double start = above + o.Wet;
+                double mass = start;
+                bool ok = true;
+                double ispVac = o.IspNum / o.Thrust, ispSl = o.IspSlNum / o.Thrust;
+                for (int k = a; k <= b && ok; k++)
+                {
+                    FlightLeg l = flight[k];
+                    double isp = l.Atmospheric ? 0.5 * (ispVac + ispSl) : ispVac;
+                    double thrust = l.Atmospheric ? o.Thrust * Math.Min(1, ispSl / ispVac) : o.Thrust;
+                    double twr = thrust / (mass * l.Gravity);
+                    if (twr < l.MinTwr) ok = false;
+                    else if (k == 0 && l.MaxTwr > 0 && twr > l.MaxTwr) ok = false; // lift-off: too hard in thick air
+                    mass *= Math.Exp(-l.DeltaV / (isp * G0));
+                }
+                if (!ok || start - mass > o.Fuel) continue;
+                return new Pick { Option = o, Start = start };
+            }
+            return null;
+        }
+
+        private static List<Option> Options(List<PartInfo> engines, List<PartInfo> tanks, List<PartInfo> boosters, bool solids, bool sideBoosters)
         {
             var list = new List<Option>();
             foreach (PartInfo e in engines)
@@ -163,10 +232,14 @@ namespace KSA.Core.Design
                         var o = new Option { Engine = e, Tank = t, Tanks = c };
                         Sum(o);
                         list.Add(o);
-                        if (sideBoosters) foreach (PartInfo b in boosters) foreach (int nb in new[] { 2, 4 }) { var ob = new Option { Engine = e, Tank = t, Tanks = c, Booster = b, Boosters = nb }; Sum(ob); list.Add(ob); }
+                        if (solids && sideBoosters)
+                            foreach (PartInfo b in boosters)
+                                foreach (int nb in SideCounts) { var ob = new Option { Engine = e, Tank = t, Tanks = c, Booster = b, Boosters = nb }; Sum(ob); list.Add(ob); }
                     }
             // A solid booster alone makes a stage too (stacked, if it can be).
-            foreach (PartInfo b in boosters) if (b.IsStackable) { var o = new Option { Booster = b, Boosters = 1 }; Sum(o); list.Add(o); }
+            if (solids) foreach (PartInfo b in boosters) if (b.IsStackable) { var o = new Option { Booster = b, Boosters = 1 }; Sum(o); list.Add(o); }
+            list.RemoveAll(o => o.Thrust <= 0 || o.IspNum <= 0);
+            list.Sort((x, y) => x.Wet.CompareTo(y.Wet));
             return list;
         }
 
@@ -184,15 +257,17 @@ namespace KSA.Core.Design
             o.IspSlNum += p.Thrust * n * (p.IspSeaLevel > 0 ? p.IspSeaLevel : p.IspVacuum);
         }
 
-        private static StagePlan Build(StagePlan template, Option[] stages, PartInfo decoupler, PartInfo legs)
+        private static StagePlan Build(StagePlan template, Pick[] stages, int[][] chunks, List<FlightLeg> flight, PartInfo decoupler, PartInfo legs, int landingLeg)
         {
-            var plan = new StagePlan { DesignName = template.DesignName, Rationale = template.Rationale };
+            var plan = new StagePlan { DesignName = template.DesignName };
             plan.Payload.Command = template.Payload.Command;
             plan.Payload.Extras.AddRange(template.Payload.Extras);
+            var why = new List<string>();
             for (int k = 0; k < stages.Length; k++)
             {
-                Option o = stages[k];
-                var s = new PlanStage { Stage = k, Role = k == 0 ? "launch" : (k == stages.Length - 1 ? "upper" : "transfer"), Decoupler = decoupler != null ? decoupler.Name : string.Empty };
+                Option o = stages[k].Option;
+                int a = chunks[k][0], b = chunks[k][1];
+                var s = new PlanStage { Stage = k, Role = k == 0 ? "launch" : RoleOf(flight, a, b), Decoupler = decoupler != null ? decoupler.Name : string.Empty };
                 if (o.Tank != null) s.Core.Add(new PlanPart { Part = o.Tank.Name, Count = o.Tanks });
                 if (o.Engine != null) s.Core.Add(new PlanPart { Part = o.Engine.Name, Count = 1 });
                 if (o.Booster != null)
@@ -200,10 +275,29 @@ namespace KSA.Core.Design
                     if (o.Engine == null && o.Boosters == 1) s.Core.Add(new PlanPart { Part = o.Booster.Name, Count = 1 });
                     else s.Radial.Add(new PlanPart { Part = o.Booster.Name, Count = o.Boosters, Symmetry = o.Boosters });
                 }
-                if (legs != null && k == stages.Length - 1) s.Radial.Add(new PlanPart { Part = legs.Name, Count = 4, Symmetry = 4 });
+                if (legs != null && landingLeg >= a && landingLeg <= b) s.Radial.Add(new PlanPart { Part = legs.Name, Count = 4, Symmetry = 4 });
                 plan.Stages.Add(s);
+                var names = new List<string>();
+                for (int i = a; i <= b; i++) names.Add(flight[i].Name);
+                why.Add("stage " + k + " flies the " + string.Join(", then the ", names.ToArray()));
             }
+            plan.Rationale = "Drawn up by the engineering team from the researched parts, leg by leg with a 10% margin: " + string.Join("; ", why.ToArray()) + ".";
             return plan;
+        }
+
+        /// <summary>A short stage role from the legs it flies (the validator only cares about "launch").</summary>
+        private static string RoleOf(List<FlightLeg> flight, int a, int b)
+        {
+            var tags = new List<string>();
+            for (int i = a; i <= b; i++)
+            {
+                string n = flight[i].Name;
+                string t = n.StartsWith("climb to") ? "ascent" : n.StartsWith("transfer") ? "transfer" : n.StartsWith("capture") ? "capture"
+                    : n.StartsWith("rendezvous") ? "rendezvous" : n.StartsWith("descent") ? "lander"
+                    : n.StartsWith("take-off") || n.StartsWith("climb out") ? "ascent stage" : "return";
+                if (!tags.Contains(t)) tags.Add(t);
+            }
+            return string.Join("+", tags.ToArray());
         }
     }
 }

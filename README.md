@@ -10,7 +10,7 @@ A career mod for **Kerbal Space Program 1.12**. You are the Director of a space 
 - **The agency.** Fiscal years, government goals, budget reviews, lean and crisis years, department heads and rival agencies.
 - **Projects and programs.** Missions go from design to build to launch. Programs build stations, bases and Eve and Jool cloud cities module by module. Bases grow into settlements and then self-sufficient colonies.
 - **Flights.** Missions fly simulated, or live with KSA's own flight director: launch on a pitch program, staging, transfers, landings, rendezvous and docking, reentry and recovery. The crew runs the science aboard, and the chutes always arm when a craft falls back through the air. Take the controls at any time (always on your own designs). Nothing flies, live or simulated, until its rocket has actually been built.
-- **Rockets.** The engineering team designs every rocket from the parts you have researched, with an AI or by hand when AI is off. Every design must carry a parachute, the instruments researched and, for returns from orbit, a heat shield. Or fly your own: rockets you save in the VAB and planes you save in the SPH appear under "Your designs" in Projects, and you can tell the AI Director to fly them. The crew flies spaceplanes too: runway takeoff, jets to rockets, orbit and a glide home.
+- **Rockets.** The engineering team designs every rocket from the parts you have researched. They work each mission out leg by leg from the stock delta-v map (climb, transfer, capture, landing, take-off, the trip home), with enough thrust for each world's gravity, and an AI helps with what they cannot draw up. Every design must carry a parachute, the instruments researched and, for returns from orbit, a heat shield. Or fly your own: rockets you save in the VAB and planes you save in the SPH appear under "Your designs" in Projects, and you can tell the AI Director to fly them. The crew flies spaceplanes too: runway takeoff, jets to rockets, orbit and a glide home.
 - **Rescues.** Crews stranded in odd orbits or on other worlds wait for a rescue mission: the engineers design a craft with a seat for everyone, or fly your own.
 - **AI, optional.** An AI engineering team designs rockets, and an optional AI Director can run the whole agency while you watch. The mod plays fully with AI off: the engineers design by hand and the text is written in.
 - **Records.** Every first is credited to the kerbals who flew it (or the rival that beat you to it), and an agency record book keeps the highest, fastest, farthest and longest flights and the career leaders. Broken records make the news.
@@ -23,7 +23,7 @@ A career mod for **Kerbal Space Program 1.12**. You are the Director of a space 
 | Kerbal Space Program | 1.12.x (developed on 1.12.5) | Everything |
 | ModuleManager | 4.2.x | Everything. KSA's careers, medals, goals and settings are ModuleManager configs |
 
-KSA never requires the Making History or Breaking Ground DLC. With AI on, the engineers design every rocket from the parts you have researched; with AI off, missions fly stock-parts template designs.
+KSA never requires the Making History or Breaking Ground DLC. The engineers design every rocket from the parts you have researched, AI on or off; stock-parts template designs fill in where they fit.
 
 **Computer.** 16 GB of RAM is the minimum, with AI through an online API. 32 GB is recommended if you also want to run a small AI model on your own machine.
 

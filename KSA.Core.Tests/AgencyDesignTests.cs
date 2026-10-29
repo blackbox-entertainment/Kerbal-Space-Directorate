@@ -32,6 +32,7 @@ namespace KSA.Core.Tests
             a.Transport = transport;
             a.Parts = TestParts.Catalog();
             a.Requirements = MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
+            a.Settings.EngineersDesignFirst = false; // these tests cover the AI path
         }
 
         [Test]
@@ -321,6 +322,7 @@ namespace KSA.Core.Tests
             a.Transport = transport;
             a.Parts = TestParts.Catalog();
             a.Requirements = MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
+            a.Settings.EngineersDesignFirst = false; // these tests cover the AI path
             string msg;
             Project p = a.CreateProject("Orbit", "KerbinOrbit", null, null, null, null, MissionMode.Simulate, out msg);
             Assert.That(p, Is.Not.Null, msg);
@@ -378,6 +380,7 @@ namespace KSA.Core.Tests
             Agency a = Staffed(clock, new ListLogger());
             a.Parts = TestParts.Catalog();
             a.Requirements = MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
+            a.Settings.EngineersDesignFirst = false; // these tests cover the AI path
             var rescue = new MissionType { Id = "rescue-test", Name = "Rescue at Minmus", Body = "Minmus", Profile = MissionProfile.Orbit, CrewSize = 1 };
             Assert.DoesNotThrow(() => a.DesignableBlocker(rescue));
         }
@@ -408,6 +411,7 @@ namespace KSA.Core.Tests
             Agency a = Staffed(clock, new ListLogger());
             a.Parts = TestParts.Catalog();
             a.Requirements = MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
+            a.Settings.EngineersDesignFirst = false; // these tests cover the AI path
             var rescue = new MissionType { Id = "rescue-seats", Name = "Rescue Jeb", Body = "Kerbin", Profile = MissionProfile.Orbit, CrewSize = 1, PassengerSeats = 1, Purpose = "Rescue" };
             Assert.That(rescue.Seats, Is.EqualTo(2));
             a.Catalogs.Missions.Add(rescue);
@@ -472,6 +476,7 @@ namespace KSA.Core.Tests
             a.TemplateCheck = t => "needs parts not researched";
             a.Parts = TestParts.Catalog();
             a.Requirements = MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
+            a.Settings.EngineersDesignFirst = false; // these tests cover the AI path
             string msg;
             Project p = a.CreateProject("Orbit", "KerbinOrbit", null, null, null, null, MissionMode.Simulate, out msg);
             Assert.That(p, Is.Not.Null, msg);
@@ -492,6 +497,7 @@ namespace KSA.Core.Tests
             a.TemplateCheck = t => "needs parts not researched";
             a.Parts = TestParts.Catalog();
             a.Requirements = MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
+            a.Settings.EngineersDesignFirst = false; // these tests cover the AI path
             Assert.That(a.AiDesignAvailable, Is.False);
             string msg;
             Project p = a.CreateProject("Orbit", "KerbinOrbit", null, null, null, null, MissionMode.Simulate, out msg);

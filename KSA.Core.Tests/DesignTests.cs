@@ -147,7 +147,7 @@ namespace KSA.Core.Tests
                 MissionRequirements.Entry e = req.For(t);
                 Assert.That(e.DeltaV, Is.GreaterThan(t.Id == "FleaHop" ? 300 : 1000), t.Id);
             }
-            Assert.That(req.For(ShippedConfigs.Missions().Get("MunLanding")).DeltaV, Is.EqualTo(6500));
+            Assert.That(req.For(ShippedConfigs.Missions().Get("MunLanding")).DeltaV, Is.EqualTo(6040)); // 3400 up, 860 + 310 out, 580 down, 580 up, 310 home
         }
 
         private static DesignRequest Request(PartCatalog catalog)
@@ -172,7 +172,7 @@ namespace KSA.Core.Tests
             Assert.That(system, Does.Contain("Cautious"));
             Assert.That(user, Does.Contain("liquidEngine2"));
             Assert.That(user, Does.Contain("LESSONS LEARNED"));
-            Assert.That(user, Does.Contain("3600"));
+            Assert.That(user, Does.Contain("climb to Kerbin orbit"));
             Assert.That(user, Does.Not.Contain("stationHab"));
             Assert.That(PromptBuilder.RevisionPasses(req.Engineers[0], 2), Is.EqualTo(4));
             req.Engineers[0].PersonalityTags.Add("Perfectionist");

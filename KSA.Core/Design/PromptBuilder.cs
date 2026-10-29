@@ -84,7 +84,19 @@ namespace KSA.Core.Design
                 sb.AppendLine("Destination: " + m.Body + ". Profile: " + ProfileText(m.Profile) + ". " + m.Description);
             }
             sb.AppendLine("Crew: " + Math.Max(1, req.CrewSize) + ". Budget: " + Math.Round(req.Budget) + " funds.");
-            if (req.Requirement != null)
+            if (req.Requirement != null && req.Requirement.Legs != null)
+            {
+                // Leg by leg (2026-10-29): the design review flies the stages through these in order and checks each one.
+                sb.AppendLine("Requirements: the rocket flies these legs in order, " + Math.Round(req.Requirement.DeltaV) + " m/s in all (vacuum figures). Stages fire from stage 0 up and each one drops away when empty, so give every leg to a stage that is still there:");
+                foreach (FlightLeg l in req.Requirement.Legs)
+                    sb.AppendLine("- " + l.Name + ": " + Math.Round(l.DeltaV) + " m/s"
+                        + (l.MinTwr > 0 ? ", thrust-to-weight at least " + l.MinTwr.ToString("0.0", CultureInfo.InvariantCulture) + (l.Gravity < 9 ? " in " + l.Body + "'s gravity (" + l.Gravity.ToString("0.00", CultureInfo.InvariantCulture) + " m/s2)" : l.Atmospheric ? " at sea level" : "") : "")
+                        + (l.MaxTwr > 0 ? " and at most " + l.MaxTwr.ToString("0.0", CultureInfo.InvariantCulture) + " at lift-off (more wastes the fuel on drag)" : "")
+                        + (l.Atmospheric ? "; flown in thick air, so count it at the engines' sea-level Isp" : "")
+                        + (l.Landing ? "; this stage touches down and needs landing legs (radial, symmetry 4)" : "") + ".");
+                sb.AppendLine("Aim for 10-20% spare on every leg. Solid boosters only for the climb out of Kerbin's air: they cannot throttle for a landing.");
+            }
+            else if (req.Requirement != null)
                 sb.AppendLine("Requirements: at least " + Math.Round(req.Requirement.DeltaV) + " m/s total delta-v across all stages, liftoff thrust-to-weight at least " + req.Requirement.MinTwr.ToString("0.0", CultureInfo.InvariantCulture) + ". Aim for a 15-25% delta-v margin.");
             foreach (string must in req.MustCarry) sb.AppendLine("Must carry: " + must);
             if (req.Lessons.Count > 0)

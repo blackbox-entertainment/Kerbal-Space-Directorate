@@ -89,7 +89,11 @@ namespace KSA.KSP.Ai
         {
             var nodes = new List<DataNode>();
             if (GameDatabase.Instance != null)
+            {
                 foreach (ConfigNode n in GameDatabase.Instance.GetConfigNodes(MissionRequirements.NodeName)) nodes.Add(ConfigNodeConverter.ToDataNode(n));
+                // The worlds on the delta-v map (2026-10-29).
+                foreach (ConfigNode n in GameDatabase.Instance.GetConfigNodes(DeltaVMap.NodeName)) nodes.Add(ConfigNodeConverter.ToDataNode(n));
+            }
             return MissionRequirements.Parse(nodes);
         }
 

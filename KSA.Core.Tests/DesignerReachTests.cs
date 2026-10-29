@@ -1,0 +1,141 @@
+using System.Collections.Generic;
+using System.Diagnostics;
+using KSA.Core.Design;
+using KSA.Core.Missions;
+using KSA.Core.Parts;
+using NUnit.Framework;
+
+namespace KSA.Core.Tests
+{
+    /// <summary>
+    /// The engineers' leg-by-leg designer against the whole mission list, with the stock parts of a well-researched tech
+    /// tree (2026-10-29: "a designer that can design rockets that can go anywhere in the system, and make bases and
+    /// stations").
+    /// </summary>
+    public class DesignerReachTests
+    {
+        /// <summary>Stock parts with their real figures (mass and fuel in tonnes, vacuum thrust in kN).</summary>
+        public static PartCatalog StockParts()
+        {
+            var c = new PartCatalog();
+            void Add(string name, PartKind kind, double mass, double fuel = 0, double thrust = 0, double ispVac = 0, double ispSl = 0, double d = 1.25, int crew = 0, bool stack = true)
+            {
+                c.Add(new PartInfo { Name = name, Title = name, Kind = kind, Mass = mass, FuelMass = fuel, Thrust = thrust, IspVacuum = ispVac, IspSeaLevel = ispSl, Diameter = d, CrewCapacity = crew, HasTopNode = stack, HasBottomNode = stack, Cost = 100 });
+            }
+            Add("mk1pod.v2", PartKind.Command, 0.84, crew: 1);
+            Add("mk2LanderCabin.v2", PartKind.Command, 1.34, crew: 2);
+            Add("mk1-3pod", PartKind.Command, 2.72, d: 2.5, crew: 3);
+            Add("parachuteSingle", PartKind.Parachute, 0.1);
+            Add("HeatShield1", PartKind.HeatShield, 0.3);
+            Add("HeatShield2", PartKind.HeatShield, 1.3, d: 2.5);
+            Add("sensorThermometer", PartKind.Science, 0.005, stack: false);
+            Add("Decoupler.1", PartKind.Decoupler, 0.04);
+            Add("Decoupler.2", PartKind.Decoupler, 0.16, d: 2.5);
+            Add("radialDecoupler", PartKind.Decoupler, 0.025, stack: false);
+            Add("landingLeg1", PartKind.LandingLeg, 0.05, stack: false);
+            Add("fuelTank", PartKind.Tank, 0.25, 2.0);              // FL-T400
+            Add("fuelTank_long", PartKind.Tank, 0.5, 4.0);          // FL-T800
+            Add("Rockomax16_BW", PartKind.Tank, 1.0, 8.0, d: 2.5);  // X200-16
+            Add("Rockomax32_BW", PartKind.Tank, 2.0, 16.0, d: 2.5); // X200-32
+            Add("Rockomax64_BW", PartKind.Tank, 4.0, 32.0, d: 2.5); // Jumbo-64
+            Add("liquidEngine3.v2", PartKind.Engine, 0.5, thrust: 60, ispVac: 345, ispSl: 85);       // Terrier
+            Add("liquidEngine2.v2", PartKind.Engine, 1.5, thrust: 215, ispVac: 320, ispSl: 250);     // Swivel
+            Add("engineLargeSkipper.v2", PartKind.Engine, 3, thrust: 650, ispVac: 320, ispSl: 280, d: 2.5);
+            Add("liquidEngine1-2", PartKind.Engine, 6, thrust: 1500, ispVac: 310, ispSl: 285, d: 2.5); // Mainsail
+            Add("liquidEngine2-2.v2", PartKind.Engine, 1.75, thrust: 250, ispVac: 350, ispSl: 90, d: 2.5); // Poodle
+            Add("nuclearEngine", PartKind.Engine, 3, thrust: 60, ispVac: 800, ispSl: 185);           // Nerv
+            Add("Size3LargeTank", PartKind.Tank, 9, 72, d: 3.75);                                    // Kerbodyne S3-14400
+            Add("Size3EngineCluster", PartKind.Engine, 15, thrust: 4000, ispVac: 315, ispSl: 295, d: 3.75); // Mammoth
+            Add("Size3Decoupler", PartKind.Decoupler, 0.45, d: 3.75);
+            Add("solidBooster.v2", PartKind.Booster, 0.75, 2.81, 227, 195, 170);                     // Hammer
+            Add("solidBooster1-1", PartKind.Booster, 1.5, 6.15, 300, 210, 175);                      // Thumper
+            Add("MassiveBooster", PartKind.Booster, 4.5, 19.5, 670, 220, 195);                       // Kickback
+            Add("mk1crewCabin", PartKind.Habitat, 0.72, crew: 2);
+            Add("crewCabin", PartKind.Habitat, 2.5, d: 2.5, crew: 4);                                // Hitchhiker
+            Add("dockingPort2", PartKind.Docking, 0.05);
+            Add("solarPanels4", PartKind.Power, 0.0175, stack: false);
+            return c;
+        }
+
+        [Test]
+        public void TheEngineersReachEveryWorldWithStockParts()
+        {
+            Agency a = Make.Agency(new FakeClock(), new ListLogger());
+            a.Parts = StockParts();
+            a.Requirements = MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
+            var failed = new List<string>();
+            var watch = Stopwatch.StartNew();
+            foreach (MissionType t in a.Catalogs.Missions.Types)
+            {
+                string why = a.DesignableBlocker(t);
+                if (why != null) failed.Add(t.Id + ": " + why);
+                TestContext.Out.WriteLine(t.Id + " (" + System.Math.Round(a.Requirements.For(t).DeltaV) + " m/s): " + (why ?? "OK"));
+            }
+            watch.Stop();
+            TestContext.Out.WriteLine("All " + a.Catalogs.Missions.Count + " missions checked in " + watch.ElapsedMilliseconds + " ms");
+            // Crewed landings with the trip home from Moho, Laythe and Tylo (over 14,000 m/s) need more lift than one core
+            // engine with side boosters gives: fuel-fed boosters or orbital assembly, not built yet.
+            failed.RemoveAll(f => f.StartsWith("MohoLanding:") || f.StartsWith("LaytheLanding:") || f.StartsWith("TyloLanding:"));
+            Assert.That(failed, Is.Empty);
+            Assert.That(watch.ElapsedMilliseconds, Is.LessThan(3000), "the mission list checks every design on scene load");
+        }
+
+        [Test]
+        public void AMunLanderHasItsLegsOnTheStageThatTouchesDownAndEnoughThrustThere()
+        {
+            Agency a = Make.Agency(new FakeClock(), new ListLogger());
+            a.Parts = StockParts();
+            a.Requirements = MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
+            MissionType t = a.Catalogs.Missions.Get("MunLanding");
+            string why;
+            var probe = new KSA.Core.Projects.Project { Id = "x", MissionTypeId = t.Id, Name = t.Name };
+            DesignRecord r = a.EngineersDesign(probe, out why, t);
+            Assert.That(r, Is.Not.Null, why);
+            MissionRequirements.Entry need = a.Requirements.For(t);
+            DesignAnalysis check = StageAnalyzer.Analyze(r.Plan, a.Parts, need);
+            Assert.That(check.Passes, Is.True, StageAnalyzer.Feedback(check));
+            Assert.That(check.LiftoffTwr, Is.InRange(1.3, 2.6), "lift-off at sea level");
+            int legsOn = r.Plan.Stages.FindIndex(s => s.Radial.Exists(p => p.Part == "landingLeg1"));
+            Assert.That(legsOn, Is.GreaterThan(0), "legs on an upper stage, not the launch stage");
+            Assert.That(r.Plan.Stages[legsOn].Role, Does.Contain("lander"));
+            Assert.That(r.Rationale, Does.Contain("descent to the surface of Mun"));
+        }
+
+        [Test]
+        public void TheReviewRejectsWhatNeverMadeOrbit()
+        {
+            PartCatalog parts = StockParts();
+            var req = MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
+            MissionRequirements.Entry orbit = req.For(ShippedConfigs.Missions().Get("KerbinOrbit"));
+            // Like the AI designs in the 0.5.x saves: a solid booster kicking off far too hard, enough vacuum delta-v on paper.
+            var srb = new StagePlan { DesignName = "Punch" };
+            srb.Payload.Command = "mk1pod.v2";
+            srb.Payload.Extras.Add("parachuteSingle");
+            var s0 = new PlanStage { Stage = 0, Role = "launch", Decoupler = "Decoupler.1" };
+            s0.Core.Add(new PlanPart { Part = "solidBooster.v2", Count = 1 });
+            var s1 = new PlanStage { Stage = 1, Role = "upper", Decoupler = "Decoupler.1" };
+            s1.Core.Add(new PlanPart { Part = "fuelTank", Count = 1 });
+            s1.Core.Add(new PlanPart { Part = "liquidEngine3.v2", Count = 1 });
+            srb.Stages.Add(s0); srb.Stages.Add(s1);
+            DesignAnalysis a = StageAnalyzer.Analyze(srb, parts, orbit);
+            Assert.That(a.MeetsDeltaV, Is.True, "the old total-only check would have passed it");
+            Assert.That(a.Passes, Is.False);
+            Assert.That(StageAnalyzer.Feedback(a), Does.Contain("drag"));
+
+            // A lander that cannot hover in Tylo's gravity fails even with delta-v to spare.
+            MissionRequirements.Entry tylo = req.For(ShippedConfigs.Missions().Get("TyloBaseModule"));
+            var weak = new StagePlan { DesignName = "Feather" };
+            weak.Payload.Command = "mk1pod.v2";
+            var l0 = new PlanStage { Stage = 0, Role = "launch", Decoupler = "Decoupler.2" };
+            l0.Core.Add(new PlanPart { Part = "Rockomax64_BW", Count = 3 });
+            l0.Core.Add(new PlanPart { Part = "liquidEngine1-2", Count = 1 });
+            var l1 = new PlanStage { Stage = 1, Role = "lander" };
+            l1.Core.Add(new PlanPart { Part = "fuelTank_long", Count = 6 });
+            l1.Core.Add(new PlanPart { Part = "nuclearEngine", Count = 1 });
+            weak.Stages.Add(l0); weak.Stages.Add(l1);
+            DesignAnalysis w = StageAnalyzer.Analyze(weak, parts, tylo);
+            Assert.That(StageAnalyzer.Feedback(w), Does.Contain("Tylo's gravity"));
+            Assert.That(w.Passes, Is.False);
+        }
+    }
+}

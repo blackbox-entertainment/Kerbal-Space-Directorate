@@ -120,9 +120,15 @@ namespace KSA.Core
                 problems.RemoveAll(x => x.Contains("not in the allowed part list")); // research is not lost; only real design faults count
                 // And against today's requirements (2026-10-28: Minmus orbit was approved against a wrong 2400 m/s figure).
                 MissionType mt = Catalogs.Missions.Get(p.MissionTypeId);
-                MissionRequirements.Entry need = Requirements.For(mt);
+                MissionRequirements.Entry need = Requirements.For(mt, p.ModuleRole);
                 if (need != null && p.Design.TotalDeltaV > 0 && p.Design.TotalDeltaV < need.DeltaV)
                     problems.Add("only " + Math.Round(p.Design.TotalDeltaV) + " of the " + Math.Round(need.DeltaV) + " m/s the mission needs");
+                // And leg by leg (2026-10-29): enough thrust for every world on the way and no fuel burned on drag.
+                else if (need != null && mt != null)
+                {
+                    DesignAnalysis check = StageAnalyzer.Analyze(p.Design.Plan, Parts, need, LaunchGravity);
+                    if (!check.Passes && check.Problems.Count > 0) problems.Add(check.Problems[0]);
+                }
                 if (problems.Count == 0) continue;
                 p.Design.Verdict = DesignVerdict.Failed;
                 p.Design.Error = problems[0];
@@ -132,7 +138,7 @@ namespace KSA.Core
                 p.DesignDays = Math.Max(1, p.DesignDays / 2);
                 p.Notes.Add("Design '" + p.Design.DesignName + "' failed a check added since it was approved (" + problems[0] + "); back to the drawing board.");
                 Push(notices, p.Name + ": its design failed a new check and goes back to the drawing board");
-                if (!StartDesign(p, notices))
+                if (!DesignByHandFirst(p) && !StartDesign(p, notices))
                 {
                     string why;
                     DesignRecord byHand = EngineersDesign(p, out why);
@@ -163,7 +169,7 @@ namespace KSA.Core
             var req = new DesignRequest
             {
                 Mission = type,
-                Requirement = Requirements.For(type),
+                Requirement = Requirements.For(type, p.ModuleRole),
                 LeadEngineerId = p.LeadEngineer,
                 Budget = p.Budget,
                 // Seats, not just the crew: a rescue also seats the kerbals it brings home (2026-10-28).
@@ -178,6 +184,11 @@ namespace KSA.Core
                 req.RankNames[e.Id] = Careers.RankName(e.Track, e.RankId);
             }
             if (Parts != null) req.AllowedParts.AddRange(PartFilter.ForJob(Parts, JobFor(type), AllowDlcParts));
+            // A crewed landing flies a launch vehicle, but it has to stand on the ground (2026-10-29: no legs were offered,
+            // so no lander could ever be drawn up).
+            if (Parts != null && type != null && type.IsLanding && !type.Floating)
+                foreach (PartInfo leg in Parts.All)
+                    if (leg.Kind == PartKind.LandingLeg && (AllowDlcParts || !leg.RequiresDlc) && !req.AllowedParts.Contains(leg)) req.AllowedParts.Add(leg);
             if (Parts != null && type != null && type.PassengerSeats > 0)
             {
                 // Crew cabins, in case no researched pod seats everyone.
@@ -349,6 +360,12 @@ namespace KSA.Core
                 if (best == null || q.EndDay > best.EndDay) best = q;
             }
             if (best == null) return false;
+            // Flown before is not proof (simulated flights forgave a lot): it must pass today's leg-by-leg check (2026-10-29).
+            if (best.Design.Plan != null)
+            {
+                DesignAnalysis check = StageAnalyzer.Analyze(best.Design.Plan, Parts, Requirements.For(Catalogs.Missions.Get(p.MissionTypeId), p.ModuleRole), LaunchGravity);
+                if (!check.Passes) return false;
+            }
             DesignRecord copy = DesignRecord.FromDataNode(best.Design.ToDataNode());
             copy.CraftPath = string.Empty; // the build writes this project's own craft
             p.Design = copy;
@@ -502,6 +519,23 @@ namespace KSA.Core
 
         /// <summary>Model name on designs the engineering team drew up without AI (ProceduralDesigner).</summary>
         public const string EngineersModel = "engineering team (by hand)";
+
+        /// <summary>
+        /// With engineersDesignFirst on (the default, 2026-10-29), the engineers' own leg-by-leg designer draws the rocket
+        /// before any AI is asked. True when it did; false leaves the project to the AI (or the template).
+        /// </summary>
+        private bool DesignByHandFirst(Project p)
+        {
+            if (!Settings.EngineersDesignFirst || Parts == null) return false;
+            string why;
+            DesignRecord byHand;
+            try { byHand = EngineersDesign(p, out why); }
+            catch (Exception e) { Log.Warn(p.Name + ": the engineers' designer failed (" + e.Message + ")"); return false; }
+            if (byHand == null) { p.Notes.Add("The engineers could not draw this one up by hand (" + why + "); the AI design team takes it."); return false; }
+            p.Design = byHand;
+            p.Notes.Add("The engineering team drew up '" + byHand.DesignName + "' (" + byHand.TotalDeltaV + " m/s, lift-off TWR " + byHand.LiftoffTwr + " at sea level). " + byHand.Rationale);
+            return true;
+        }
 
         /// <summary>
         /// The engineering team's own design for a project, without AI (2026-10-28), or null with the reason. Checked like an

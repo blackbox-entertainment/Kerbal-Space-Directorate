@@ -72,6 +72,11 @@ namespace KSA.Core
         public int DesignWaitSeconds { get; set; } = 120;
         /// <summary>Days between automatic launches: one pad, so projects ready together take turns (2026-10-28). 0 = no spacing.</summary>
         public int LaunchSpacingDays { get; set; } = 3;
+        /// <summary>
+        /// The engineers' own designer (leg by leg, no AI) draws the rocket first; the AI designs only what it cannot
+        /// (engineersDesignFirst, 2026-10-29: the AI's rockets passed a lax check and never reached a stable orbit).
+        /// </summary>
+        public bool EngineersDesignFirst { get; set; } = true;
         /// <summary>On the pad the crew waits for the Director's Launch button (or the staging key) before lighting the engines.</summary>
         public bool LaunchOnCommand { get; set; } = true;
         /// <summary>Research lab: Science per year per lab scientist = base + perStar x stars (RESEARCH block).</summary>
@@ -121,6 +126,7 @@ namespace KSA.Core
             s.AutoRolloutSeconds = node.GetInt("autoRolloutSeconds", s.AutoRolloutSeconds);
             s.DesignWaitSeconds = node.GetInt("designWaitSeconds", s.DesignWaitSeconds);
             s.LaunchSpacingDays = node.GetInt("launchSpacingDays", s.LaunchSpacingDays);
+            s.EngineersDesignFirst = node.GetBool("engineersDesignFirst", s.EngineersDesignFirst);
             s.LaunchOnCommand = node.GetBool("launchOnCommand", s.LaunchOnCommand);
             DataNode research = node.GetChild("RESEARCH");
             if (research != null)

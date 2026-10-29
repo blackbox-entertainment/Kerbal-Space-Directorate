@@ -32,6 +32,8 @@ namespace KSA.Core.Design
         public double RequiredDeltaV { get; set; }
         public double RequiredTwr { get; set; }
         public List<string> Problems { get; } = new List<string>();
+        /// <summary>Which stage flies which leg, one line per leg, when the mission has legs.</summary>
+        public List<string> Legs { get; } = new List<string>();
 
         public double DeltaVMargin { get { return RequiredDeltaV > 0 ? (TotalDeltaV - RequiredDeltaV) / RequiredDeltaV : 1; } }
         public bool MeetsDeltaV { get { return TotalDeltaV >= RequiredDeltaV; } }
@@ -64,9 +66,14 @@ namespace KSA.Core.Design
             public string MissionType = string.Empty;
             public double DeltaV;
             public double MinTwr;
+            /// <summary>The mission leg by leg (2026-10-29), from the delta-v map; null for a one-climb hop.</summary>
+            public List<FlightLeg> Legs;
         }
 
         private readonly List<Entry> _entries = new List<Entry>();
+
+        /// <summary>Where each world sits on the delta-v map (KSA_DV_BODY nodes override the stock figures).</summary>
+        public DeltaVMap Map { get; } = new DeltaVMap();
 
         public MissionRequirements() { AddDefaults(); }
 
@@ -104,11 +111,19 @@ namespace KSA.Core.Design
             _entries.Add(new Entry { Profile = profile, Body = body, DeltaV = deltaV, MinTwr = minTwr });
         }
 
-        public Entry For(MissionType type)
+        /// <summary>
+        /// What a mission needs. Everything past a suborbital hop is worked out leg by leg from the delta-v map (2026-10-29:
+        /// one total per mission approved rockets that could not climb out of the air or hover over the world they were
+        /// sent to land on). <paramref name="moduleRole"/> is the project's program role (see <see cref="FlightBudget.For"/>).
+        /// </summary>
+        public Entry For(MissionType type, string moduleRole = null)
         {
-            if (type == null) return new Entry { DeltaV = 3600, MinTwr = 1.2, Body = "Kerbin", Profile = MissionProfile.Orbit };
+            if (type == null) type = new MissionType { Id = "?", Profile = MissionProfile.Orbit, Body = "Kerbin" };
             foreach (Entry e in _entries)
                 if (e.MissionType.Length > 0 && string.Equals(e.MissionType, type.Id, StringComparison.OrdinalIgnoreCase)) return e;
+            List<FlightLeg> legs = FlightBudget.For(type, moduleRole, Map);
+            if (legs != null)
+                return new Entry { Profile = type.Profile, Body = type.Body, MissionType = string.Empty, DeltaV = FlightBudget.Total(legs), MinTwr = legs[0].MinTwr, Legs = legs };
             foreach (Entry e in _entries)
                 if (e.Profile == type.Profile && string.Equals(e.Body, type.Body, StringComparison.OrdinalIgnoreCase)) return e;
             // Unknown body: scale from the Kerbin orbit figure by profile.
@@ -129,6 +144,7 @@ namespace KSA.Core.Design
             if (nodes == null) return req;
             foreach (DataNode n in nodes)
             {
+                if (n != null && string.Equals(n.Name, DeltaVMap.NodeName, StringComparison.OrdinalIgnoreCase)) { req.Map.Read(n); continue; }
                 if (n == null || !string.Equals(n.Name, NodeName, StringComparison.OrdinalIgnoreCase)) continue;
                 MissionProfile profile;
                 if (!Enum.TryParse(n.GetValue("profile", "Orbit"), true, out profile)) continue;
@@ -167,14 +183,15 @@ namespace KSA.Core.Design
             var stageFuel = new double[plan.Stages.Count];
             var stageThrust = new double[plan.Stages.Count];
             var stageIspNum = new double[plan.Stages.Count];
+            var stageIspSlNum = new double[plan.Stages.Count];
             var stageCost = new double[plan.Stages.Count];
             for (int i = 0; i < plan.Stages.Count; i++)
             {
                 PlanStage s = plan.Stages[i];
                 double tankFuel = 0;
                 bool liquidEngine = false;
-                Accumulate(s.Core, catalog, false, ref stageDry[i], ref stageFuel[i], ref tankFuel, ref liquidEngine, ref stageThrust[i], ref stageIspNum[i], ref stageCost[i], ref parts);
-                Accumulate(s.Radial, catalog, true, ref stageDry[i], ref stageFuel[i], ref tankFuel, ref liquidEngine, ref stageThrust[i], ref stageIspNum[i], ref stageCost[i], ref parts);
+                Accumulate(s.Core, catalog, false, ref stageDry[i], ref stageFuel[i], ref tankFuel, ref liquidEngine, ref stageThrust[i], ref stageIspNum[i], ref stageIspSlNum[i], ref stageCost[i], ref parts);
+                Accumulate(s.Radial, catalog, true, ref stageDry[i], ref stageFuel[i], ref tankFuel, ref liquidEngine, ref stageThrust[i], ref stageIspNum[i], ref stageIspSlNum[i], ref stageCost[i], ref parts);
                 // Tank propellant burns only in a liquid engine of the same stage (2026-10-28: tanks hung under a solid
                 // booster were counted as fuel, so designs were approved on delta-v they could never have).
                 if (liquidEngine) stageFuel[i] += tankFuel;
@@ -225,10 +242,22 @@ namespace KSA.Core.Design
             a.TotalCost = payloadCost;
             foreach (double c in stageCost) a.TotalCost += c;
             a.PartCount = parts;
+            if (requirement != null && requirement.Legs != null && plan.Stages.Count > 0)
+            {
+                var burn = new LegWalk.Stage[plan.Stages.Count];
+                for (int i = 0; i < burn.Length; i++)
+                    burn[i] = new LegWalk.Stage { Label = plan.Stages[i].Stage, Dry = stageDry[i], Fuel = stageFuel[i], Thrust = stageThrust[i], IspVac = stageThrust[i] > 0 ? stageIspNum[i] / stageThrust[i] : 0, IspSl = stageThrust[i] > 0 ? stageIspSlNum[i] / stageThrust[i] : 0 };
+                LegWalk.Result walk = LegWalk.Run(burn, payloadMass, requirement.Legs);
+                a.Problems.AddRange(walk.Problems);
+                a.Legs.AddRange(walk.Lines);
+                // Lift-off is at sea level: the thrust the engines really give there, not their vacuum rating.
+                a.LiftoffTwr = walk.LiftoffTwr;
+                a.RequiredTwr = requirement.Legs[0].MinTwr;
+            }
             return a;
         }
 
-        private static void Accumulate(List<PlanPart> list, IPartCatalog catalog, bool radial, ref double dry, ref double fuel, ref double tankFuel, ref bool liquidEngine, ref double thrust, ref double ispNum, ref double cost, ref int parts)
+        private static void Accumulate(List<PlanPart> list, IPartCatalog catalog, bool radial, ref double dry, ref double fuel, ref double tankFuel, ref bool liquidEngine, ref double thrust, ref double ispNum, ref double ispSlNum, ref double cost, ref int parts)
         {
             foreach (PlanPart p in list)
             {
@@ -246,6 +275,7 @@ namespace KSA.Core.Design
                 {
                     thrust += info.Thrust * n;
                     ispNum += info.Thrust * n * (info.IspVacuum > 0 ? info.IspVacuum : info.IspSeaLevel);
+                    ispSlNum += info.Thrust * n * (info.IspSeaLevel > 0 ? info.IspSeaLevel : info.IspVacuum);
                 }
             }
         }
@@ -263,8 +293,9 @@ namespace KSA.Core.Design
             for (int i = 0; i < a.Stages.Count; i++)
             {
                 StageAnalysis s = a.Stages[i];
-                lines.Add("Stage " + s.Stage + " (" + s.Role + "): " + Math.Round(s.DeltaV) + " m/s, TWR " + s.Twr.ToString("0.00") + ", " + s.StartMass.ToString("0.0") + " t at ignition.");
+                lines.Add("Stage " + s.Stage + " (" + s.Role + "): " + Math.Round(s.DeltaV) + " m/s in vacuum, TWR " + s.Twr.ToString("0.00") + ", " + s.StartMass.ToString("0.0") + " t at ignition.");
             }
+            foreach (string l in a.Legs) lines.Add(l);
             if (a.Passes) lines.Insert(0, "The design meets the requirements.");
             return string.Join("\n", lines.ToArray());
         }

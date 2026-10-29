@@ -2,6 +2,21 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.5.9 (2026-10-29), tenth test build
+
+- **A designer that works the mission out leg by leg.** Every mission past a suborbital hop is now a list of burns from the stock delta-v map: lift-off through the thick air, the climb to orbit, transfer, capture, descent, take-off from the other world, the trip home. Each leg has its own thrust need, measured in the gravity of the world it is flown at: a lander has to hover over Tylo, not just carry enough fuel. The figures per world live in `dv_requirements.cfg` (`KSA_DV_BODY`) and can be edited without a build.
+- **The engineers draw the rocket first.** Their own designer (no AI) now goes first. It tries every way of sharing the legs among up to six stages, sizes each stage for its legs with 10% to spare, and keeps the lightest rocket. Landing legs go on the stage that touches down, and solid boosters only help climb out of Kerbin's air. With stock parts it designs 61 of the 64 missions: every station, base module and resupply, and crewed landings with the trip home on every world but Moho, Laythe and Tylo. Those three need more lift than one core engine with side boosters gives. The AI designs only what the engineers cannot (`agency.cfg engineersDesignFirst = false` puts the AI first again).
+- **The design review stops approving rockets that cannot reach orbit.** Every design, AI or engineers', is flown through the legs on paper, stage by stage:
+  - the first stage counts at sea-level performance;
+  - lift-off must be 1.3 to 2.6 times the rocket's weight at sea level (the 0.5.x AI rockets left the pad at 4 to 6 and wasted their fuel on drag);
+  - a stage too weak for the next leg is dropped, as a pilot would;
+  - running short anywhere sends the design back with which leg it failed and by how much.
+
+  Designs approved before, and proven designs about to be reused, are checked again the same way.
+- **Base modules fly one way;** a base's "return" module carries the fuel for the trip home. Cloud-city modules float down on their envelopes.
+- **Crewed landings can have legs:** landing legs were never offered for crewed landings, so no lander could be drawn up.
+- **The AI is told the legs:** the design prompt lists every leg with its delta-v and thrust need, so the AI aims at what it will be checked against.
+
 ## 0.5.8 (2026-10-28), ninth test build
 
 - **Rescue craft seat everyone:** a rescue now needs a seat for the pilot and for every stranded kerbal. The engineers' design is checked for it (a bigger pod, or crew cabins added when no researched pod is big enough), and templates with too few seats are not used.

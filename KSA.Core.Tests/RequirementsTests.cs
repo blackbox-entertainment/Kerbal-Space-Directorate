@@ -27,7 +27,7 @@ namespace KSA.Core.Tests
                 if (dv < orbit) low.Add(t.Id + " " + dv);
             }
             Assert.That(low, Is.Empty, "requirements below Kerbin orbit's " + orbit + " m/s");
-            Assert.That(req.For(a.Catalogs.Missions.Get("MinmusOrbit")).DeltaV, Is.EqualTo(4900));
+            Assert.That(req.For(a.Catalogs.Missions.Get("MinmusOrbit")).DeltaV, Is.EqualTo(4760)); // 3400 up, 1000 + 160 out, 200 home
         }
 
         [Test]

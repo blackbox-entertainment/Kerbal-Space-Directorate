@@ -246,7 +246,7 @@ namespace KSA.Core
             else
             {
                 if (template == null) project.Notes.Add("No ready-made design: the engineering team designs this rocket from scratch.");
-                if (!TryReuseDesign(project) && !StartDesign(project, null) && template == null)
+                if (!TryReuseDesign(project) && !DesignByHandFirst(project) && !StartDesign(project, null) && template == null)
                 {
                     // No AI: the engineers draw it up by hand (2026-10-28).
                     string handWhy;
