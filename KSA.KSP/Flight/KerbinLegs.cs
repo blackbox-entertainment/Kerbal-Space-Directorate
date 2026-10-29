@@ -178,6 +178,7 @@ namespace KSA.KSP.Flight
         private Phases _phase;
         private double _phaseStart;
         private double _lastShed;
+        private double _lastAttitudeLog = -1;
 
         public ReentryLeg(double targetPeriapsis) { _targetPe = targetPeriapsis; }
         public string Name { get { return "Reentry"; } }
@@ -227,6 +228,19 @@ namespace KSA.KSP.Flight
                     break;
                 case Phases.Reentry:
                     c.Sas(VesselAutopilot.AutopilotMode.Retrograde, alt < atmo * 0.5);
+                    {
+                        // Heat shield first: report how far the capsule is from retrograde, every 10 s in the log (2026-10-28).
+                        Vector3d retro = -(alt < atmo * 0.5 ? v.srf_velocity : v.obt_velocity);
+                        double off = c.AttitudeError(retro);
+                        double spin = v.angularVelocity.magnitude * 180 / Math.PI;
+                        Status = "Reentry: " + Math.Round(off) + " deg off retrograde" + (spin > 3 ? ", turning " + Math.Round(spin) + " deg/s" : string.Empty) + ".";
+                        if (ctx.Now - _lastAttitudeLog > 10)
+                        {
+                            _lastAttitudeLog = ctx.Now;
+                            KsaCore.Log.Info("Reentry attitude: " + Math.Round(off) + " deg off retrograde, spin " + Math.Round(spin, 1) + " deg/s, SAS " + (v.ActionGroups[KSPActionGroup.SAS] ? "on" : "off")
+                                + (c.ManualAttitude ? ", crew steering by hand" : ", stock retrograde hold") + ", alt " + Math.Round(alt / 1000, 1) + " km");
+                        }
+                    }
                     if (alt > atmo + 20000 && v.verticalSpeed > -50 && v.orbit.timeToPe > 120) c.WarpTo(ctx.Now + Math.Min(v.orbit.timeToPe, 600) - 90);
                     // Shed everything but the capsule once we are coming down, one stage every two seconds.
                     if (v.verticalSpeed < 0 && v.currentStage > 1 && ctx.Now - _lastShed > 2 && alt < atmo) { c.Stage(); _lastShed = ctx.Now; line = "Staged away the service section for reentry."; }
