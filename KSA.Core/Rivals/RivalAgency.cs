@@ -191,8 +191,8 @@ namespace KSA.Core.Rivals
             public List<string> Headlines = new List<string>();
         }
 
-        /// <summary>Flights a rival makes in a fiscal year: 1 + aggression x 3.</summary>
-        public static int MissionsPerYear(RivalDefinition def) { return 1 + (int)Math.Round(def.Aggression * 3); }
+        /// <summary>Flights a rival makes in a fiscal year: 2 + aggression x 4 (2 to 6; raised 2026-10-28 so the race is visible).</summary>
+        public static int MissionsPerYear(RivalDefinition def) { return 2 + (int)Math.Round(def.Aggression * 4); }
 
         /// <summary>
         /// Day of the fiscal year a rival's k-th flight of n goes: evenly spread, each rival a little offset from the

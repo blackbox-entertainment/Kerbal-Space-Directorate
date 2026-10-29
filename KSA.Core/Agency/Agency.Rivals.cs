@@ -30,6 +30,9 @@ namespace KSA.Core
     {
         public const string PlayerId = "player";
 
+        /// <summary>Rivals roll their own dice, so their flights never change the outcome of the agency's (2026-10-28).</summary>
+        public Random RivalRng { get; set; } = new Random();
+
         public List<RivalAgency> Rivals { get; } = new List<RivalAgency>();
         public List<YearSummary> YearHistory { get; } = new List<YearSummary>();
         public List<FirstClaim> Firsts { get; } = new List<FirstClaim>();
@@ -110,7 +113,7 @@ namespace KSA.Core
                     if (ladder == null) ladder = MilestoneLadder.Build(Catalogs.Missions);
                     var milestones = new List<string>();
                     var headlines = new List<string>();
-                    RivalSimulator.RunMission(def, r, ladder, r.YearRecord(year), Rng, milestones, headlines);
+                    RivalSimulator.RunMission(def, r, ladder, r.YearRecord(year), RivalRng, milestones, headlines);
                     r.FlownCount++;
                     foreach (string m in milestones)
                     {
@@ -139,7 +142,7 @@ namespace KSA.Core
             if (flown >= n) return null;
             int day = RivalSimulator.MissionDay(flown, n, Math.Max(10, Calendar.DaysPerYear), i);
             int wait = Math.Max(0, day - DayOfYear);
-            return "next flight in about " + wait + " day" + (wait == 1 ? "" : "s");
+            return "next flight in " + wait + " d";
         }
 
         // ------------------------------------------------------------------ analytics
@@ -225,6 +228,7 @@ namespace KSA.Core
                     LatestMilestone = r.Milestones.Count > 0 ? MilestoneLadder.Describe(r.Milestones[r.Milestones.Count - 1]) : string.Empty
                 };
                 foreach (FirstClaim f in Firsts) if (f.ClaimedBy == r.Id) row.Firsts++;
+                row.NextFlight = RivalNextFlight(r);
                 rows.Add(row);
             }
             rows.Sort((a, b) => b.Score.CompareTo(a.Score));

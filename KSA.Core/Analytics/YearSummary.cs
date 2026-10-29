@@ -74,6 +74,8 @@ namespace KSA.Core.Analytics
         public int Milestones { get; set; }
         public int Firsts { get; set; }
         public string LatestMilestone { get; set; }
+        /// <summary>Rivals: when the next flight goes this year ("next flight in 12 d"), or null.</summary>
+        public string NextFlight { get; set; }
 
         public LeagueRow() { Id = string.Empty; Name = string.Empty; Style = string.Empty; LatestMilestone = string.Empty; }
 

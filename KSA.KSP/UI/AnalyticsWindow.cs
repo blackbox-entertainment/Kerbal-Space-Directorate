@@ -136,7 +136,7 @@ namespace KSA.KSP.UI
                         Cell((i + 1).ToString(), ColRank), Cell(name, ColName), Cell(r.Style ?? string.Empty, ColStyle),
                         Cell(((int)Math.Round(r.Prestige)).ToString(), ColLPrestige), Cell(r.Milestones.ToString(), ColMilestones), Cell(r.Firsts.ToString(), ColFirsts),
                         Cell(r.Successes + "/" + r.Missions, ColLMissions), Cell(r.Deaths > 0 ? Color(r.Deaths.ToString(), Red) : r.Deaths.ToString(), ColLDeaths),
-                        Cell(string.IsNullOrEmpty(r.LatestMilestone) ? "no milestone yet" : r.LatestMilestone, ColLatest)));
+                        Cell((string.IsNullOrEmpty(r.LatestMilestone) ? "no milestone yet" : r.LatestMilestone) + (string.IsNullOrEmpty(r.NextFlight) ? string.Empty : Color("  (" + r.NextFlight + ")", "#999999")), ColLatest)));
                 }
                 AddLeagueChart(items, league, textWidth);
                 items.Add(new DialogGUISpace(4f));
