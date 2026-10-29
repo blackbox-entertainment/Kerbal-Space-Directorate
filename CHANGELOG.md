@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.5.17 (2026-10-29), eighteenth test build
+
+- **The turn actually turns.** Above 15 km the crew kept the nose within 8 degrees of the flight path, and a fast rocket going straight up hardly bends that way: a Kerbin orbit flight coasted to 84 km at only 386 m/s sideways, far short of orbit. The limit now opens as the air thins: 8 degrees at 25 kPa of dynamic pressure or more, none at 5 kPa or less.
+
 ## 0.5.16 (2026-10-29), seventeenth test build
 
 - **Swap the rocket before launch.** Every active project that has not flown has a Swap rocket button in Projects. It lists your saved VAB rockets that fit the mission (delta-v, lift-off thrust, seats) and a fresh design by the engineering team. A project still in design goes straight on to build; one in build or on the pad is rebuilt in half its build time. Any AI design under way is dropped.

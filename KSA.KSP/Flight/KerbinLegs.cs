@@ -160,8 +160,9 @@ namespace KSA.KSP.Flight
 
         /// <summary>
         /// The ascent pitch, degrees above the horizon. Straight up (88, a touch east) to 15 km, then an even turn that is
-        /// flat at 55 km. Above 15 km and over 150 m/s it stays within 8 degrees of the surface flight path, so the air
-        /// never meets the rocket side-on. A suborbital hop climbs at 88 all the way.
+        /// flat at 55 km. Above 15 km and over 150 m/s it stays close to the surface flight path while the air is thick
+        /// (within 8 degrees at 25 kPa of dynamic pressure or more), and is free to follow the program once the air is thin
+        /// (5 kPa or less). A suborbital hop climbs at 88 all the way.
         /// </summary>
         internal static double TargetPitch(Vessel v, bool orbit = true)
         {
@@ -173,7 +174,18 @@ namespace KSA.KSP.Flight
             if (v.srfSpeed < 150 || alt <= TurnStart || !orbit) return program;
             Vector3d up = v.upAxis;
             double pathPitch = 90 - Vector3d.Angle(v.srf_velocity, up);
-            return Math.Max(pathPitch - 8, Math.Min(pathPitch + 8, program));
+            // 2026-10-29: a fixed 8 degrees kept a fast rocket going straight up (the path hardly bends when the nose may
+            // lean only 8 degrees off it): Kerbin orbit coasted to 84 km at 386 m/s sideways. The band opens as the air thins.
+            double band = MaxLean(v.dynamicPressurekPa);
+            return Math.Max(pathPitch - band, Math.Min(pathPitch + band, program));
+        }
+
+        /// <summary>How far the nose may lean off the flight path, degrees: 8 in thick air (25 kPa or more), none in thin air (5 kPa or less).</summary>
+        internal static double MaxLean(double dynamicPressureKPa)
+        {
+            if (dynamicPressureKPa >= 25) return 8;
+            if (dynamicPressureKPa <= 5) return 90;
+            return 8 + (25 - dynamicPressureKPa) / 20.0 * 82;
         }
 
         /// <summary>World direction for the pitch program: east, tipped up by <see cref="TargetPitch"/>.</summary>
