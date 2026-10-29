@@ -2,7 +2,7 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
-## Unreleased
+## 0.5.2 (2026-10-28), third test build
 
 - **Tell the AI Director to fly your design:** in Projects, pick a mission, then tick "AI Director flies this" next to one of your saved designs. Whenever the AI Director starts that mission it flies your rocket (as long as it still fits); its briefing says so. Saved with the game.
 - **Built-in designs audited:** the Duna lander had two parachute-only stages between its engine and the pod's separation decoupler, which the crew never stages, so the capsule could not be freed from the lander; its drogues and side chutes now share the main chute's stage (the flight code opens them directly). The other five built-in designs and the Hammer-Flea plan checked clean: every engine staged, side boosters on radial decouplers, a parachute on every crewed return, heat shields on orbital returns, no stacked engines.

@@ -2,16 +2,18 @@
 
 A career mod for **Kerbal Space Program 1.12**. You are the Director of a space agency. You hire kerbals, give them projects and programs, and manage the government's budget. Your engineers design the rockets, your crews fly them, and every kerbal keeps a service record of ranks, medals, missions and, sometimes, an obituary.
 
-> Status: in development, test builds only (current: 0.5.x, see [CHANGELOG.md](CHANGELOG.md)). There is no public release or CKAN listing yet. Test builds are shared as a zip; to make one yourself, see [Building from source](#building-from-source).
+> Status: in development, test builds only (current: 0.5.2, see [CHANGELOG.md](CHANGELOG.md)). Test builds are on the [Releases](https://github.com/blackbox-entertainment/Kerbal-Space-Directorate/releases) page as a zip; a CKAN listing is pending. To build one yourself, see [Building from source](#building-from-source).
 
 ## What it does
 
 - **People.** Kerbals have careers, ranks, medals, morale, personalities, ages and a Hall of Fame. You recruit them through paid drives and interviews.
 - **The agency.** Fiscal years, government goals, budget reviews, lean and crisis years, department heads and rival agencies.
 - **Projects and programs.** Missions go from design to build to launch. Programs build stations, bases and Eve and Jool cloud cities module by module. Bases grow into settlements and then self-sufficient colonies.
-- **Flights.** Missions fly simulated, or live with KSA's own flight director: launch, transfers, landings, rendezvous and docking. Take the controls at any time.
+- **Flights.** Missions fly simulated, or live with KSA's own flight director: launch on a pitch program, staging, transfers, landings, rendezvous and docking, reentry and recovery. The crew runs the science aboard, and the chutes always arm when a craft falls back through the air. Take the controls at any time (always on your own designs).
+- **Rockets.** The engineering team designs every rocket from the parts you have researched, with an AI or by hand when AI is off. Every design must carry a parachute, the instruments researched and, for returns from orbit, a heat shield. Or fly your own: rockets you save in the VAB appear under "Your designs" in Projects, and you can tell the AI Director to fly them.
 - **Rescues.** Crews stranded in odd orbits or on other worlds wait for a rescue mission.
-- **AI, optional.** An AI engineering team designs rockets from the parts you have researched. An optional AI Director can run the whole agency while you watch. The mod plays fully with AI off, using built-in templates and written text.
+- **AI, optional.** An AI engineering team designs rockets, and an optional AI Director can run the whole agency while you watch. The mod plays fully with AI off: the engineers design by hand and the text is written in.
+- **Help.** A Help window in the Director's Office explains every part of the game.
 
 ## Requirements
 
