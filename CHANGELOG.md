@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.5.12 (2026-10-29), thirteenth test build
+
+- **A gentler turn.** The ascent now turns evenly from vertical at 15 km to flat at 60 km (was 55 km), so the rocket stays steeper through the upper air.
+
 ## 0.5.11 (2026-10-29), twelfth test build
 
 - **Straight up to 15 km.** The crew now holds the rocket vertical (88 degrees, a touch east) until 15 km, then turns evenly until it is flat at 55 km. A suborbital hop climbs at 88 degrees all the way. Below 15 km the rocket is pushed back upright if it drifts, instead of following its flight path down. A finless Suborbital hop had leaned over right off the pad and was flying flat, heading the wrong way, at 3 km.

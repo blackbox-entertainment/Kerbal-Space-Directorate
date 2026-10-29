@@ -156,11 +156,11 @@ namespace KSA.KSP.Flight
         /// <summary>No turning below this: the thick lower air tips a rocket that leans over (2026-10-29).</summary>
         internal const double TurnStart = 15000;
         /// <summary>The turn is flat by here; above it the rocket burns horizontally for apoapsis.</summary>
-        internal const double TurnEnd = 55000;
+        internal const double TurnEnd = 60000;
 
         /// <summary>
         /// The ascent pitch, degrees above the horizon. Straight up (88, a touch east) to 15 km, then an even turn that is
-        /// flat at 55 km. Above 15 km and over 150 m/s it stays within 8 degrees of the surface flight path, so the air
+        /// flat at 60 km. Above 15 km and over 150 m/s it stays within 8 degrees of the surface flight path, so the air
         /// never meets the rocket side-on. A suborbital hop climbs at 88 all the way.
         /// </summary>
         internal static double TargetPitch(Vessel v, bool orbit = true)
