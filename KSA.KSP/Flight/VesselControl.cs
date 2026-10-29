@@ -138,6 +138,20 @@ namespace KSA.KSP.Flight
             Vector3d? target = HoldTarget();
             Transform rt = _v.ReferenceTransform;
             if (target == null || rt == null || target.Value.magnitude < 1e-6) return;
+            // Point with stock SAS (2026-10-28): every pilot has Stability Assist, and it holds whatever attitude it is locked
+            // to with KSP's own controller, which knows the craft's axes and torque. Our own stick inputs guessed the axes
+            // and could drift the wrong way (a rocket ended up pointing northwest and down). Lock it to the wanted direction,
+            // keeping the current roll, and give no stick input so SAS does not let go.
+            if (_v.Autopilot != null && _v.Autopilot.SAS != null)
+            {
+                if (!_v.ActionGroups[KSPActionGroup.SAS]) _v.ActionGroups.SetGroup(KSPActionGroup.SAS, true);
+                if (_v.Autopilot.Mode != VesselAutopilot.AutopilotMode.StabilityAssist) _v.Autopilot.SetMode(VesselAutopilot.AutopilotMode.StabilityAssist);
+                Vector3 want = ((Vector3)target.Value).normalized;
+                Quaternion wanted = Quaternion.FromToRotation(rt.up, want) * rt.rotation;
+                _v.Autopilot.SAS.LockRotation(wanted);
+                s.yaw = 0; s.pitch = 0;
+                return;
+            }
             // Spin first (2026-10-28: capsules tumbled out of control). Stock Stability Assist, which every pilot has, is on
             // and damps rotation with the pod's reaction wheels; while the craft still turns faster than about 6 deg/s we
             // give no input at all, so SAS can stop it. Only a steady craft is steered toward the target.

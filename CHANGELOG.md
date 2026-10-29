@@ -4,6 +4,7 @@ Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the
 
 ## Unreleased
 
+- **Steering by stock SAS:** when the crew points the craft (pitch program, retrograde for a rookie, docking approaches), KSA now locks stock Stability Assist to the wanted direction instead of working the stick itself; KSP's own controller knows each craft's axes and torque. The old hand steering could guess an axis wrong and drift (a rocket ended up heading northwest and nose-down).
 - **One engine per stack:** the design check now rejects plans with several engines or boosters stacked in one column (the upper ones fire into the parts below and KSP blocks their thrust; an AI design stacked four Hammers and crawled to 8 km). Extra boosters go radially. Approved designs in a save are re-checked on load and redesigned if they break the rule.
 - **Pre-launch checks:** on the pad the crew switches SAS on (Stability Assist) and RCS on when the craft has thrusters, before the go.
 - **Pitch program on ascent:** the crew now holds a set nose angle for the altitude, pointing east (about 78 degrees at 1 km, 53 at 10 km, 26 at 30 km), staying within 8 degrees of the flight path once faster than 150 m/s; suborbital hops hold 85 degrees. Before, a yaw kick and "follow prograde" let heavy, slow rockets topple over (and on some pods kicked them west).
