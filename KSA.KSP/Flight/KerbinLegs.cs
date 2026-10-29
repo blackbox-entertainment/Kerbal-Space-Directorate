@@ -121,20 +121,29 @@ namespace KSA.KSP.Flight
                     c.DropSpentStage(ref line); // a burnt-out booster does not ride along
                     // Fuel left in the tanks, not an engine burning: the throttle is closed while coasting.
                     if (v.orbit.ApA < atmo + 5000 || c.OutOfDeltaV()) { State = LegState.Done; break; }
-                    // Burn at apoapsis, or at once if already past it (the Director handed back on the way down).
-                    if (alt > atmo && (v.orbit.timeToAp < 25 || v.verticalSpeed < 0))
+                    if (alt > atmo)
                     {
-                        c.Sas(VesselAutopilot.AutopilotMode.Prograde, false);
-                        _phase = Phases.Circularize; _phaseStart = ctx.Now;
-                        Status = "Circularising."; c.Throttle = 1f;
-                        c.EnsureEngine(ref line); // after the coast the next engine may not be lit yet
-                        line = line ?? "Circularisation burn.";
+                        // Out of the air: face along the horizon, the way the circularisation burn will push (2026-10-29:
+                        // the burn followed prograde, which still pointed mostly up, and raised the apoapsis instead of
+                        // the periapsis). Light the next engine ahead of the burn so its length can be worked out.
+                        if (!_pointedFlat) { c.PointAlong(() => Horizontal(v)); _pointedFlat = true; }
+                        if (v.orbit.timeToAp < 120) c.EnsureEngine(ref line);
+                        double halfBurn = CircularizeBurnTime(v, c) / 2;
+                        Status = "Coasting to apoapsis; circularisation burn in " + Math.Max(0, Math.Round(v.orbit.timeToAp - halfBurn)) + " s.";
+                        // Burn centred on apoapsis, or at once if already past it (the Director handed back on the way down).
+                        if (v.orbit.timeToAp <= Math.Max(5, halfBurn) || v.verticalSpeed < 0)
+                        {
+                            _phase = Phases.Circularize; _phaseStart = ctx.Now;
+                            Status = "Circularising."; c.Throttle = 1f;
+                            c.EnsureEngine(ref line);
+                            line = line ?? "Circularisation burn, " + Math.Round(CircularizeDeltaV(v)) + " m/s along the horizon.";
+                        }
                     }
-                    else if (alt > atmo) c.Sas(VesselAutopilot.AutopilotMode.Prograde, false);
                     break;
                 case Phases.Circularize:
                     c.AutoStage(ref line);
-                    if (v.orbit.PeA > atmo + 2000 || v.orbit.ApA > _targetAp * 1.6)
+                    if (!c.ManualAttitude) c.PointAlong(() => Horizontal(v));
+                    if (v.orbit.PeA > atmo + 2000)
                     {
                         c.Throttle = 0;
                         Status = "In orbit.";
@@ -155,14 +164,43 @@ namespace KSA.KSP.Flight
 
         public void End(FlightContext ctx) { ctx.Control.Yaw = 0; }
 
+        private bool _pointedFlat;
+
+        /// <summary>Along the horizon in the direction of travel: the orbital velocity with its up-down part taken out.</summary>
+        internal static Vector3d Horizontal(Vessel v)
+        {
+            Vector3d up = v.upAxis;
+            Vector3d vel = v.obt_velocity;
+            Vector3d flat = vel - up * Vector3d.Dot(vel, up);
+            return flat.magnitude > 1 ? flat.normalized : (Vector3d)v.east;
+        }
+
+        /// <summary>Speed to add at apoapsis for a circular orbit there, m/s.</summary>
+        internal static double CircularizeDeltaV(Vessel v)
+        {
+            double mu = v.mainBody.gravParameter;
+            double rAp = v.orbit.ApR;
+            double a = v.orbit.semiMajorAxis;
+            if (rAp <= 0 || a <= 0) return 0;
+            double vAp = Math.Sqrt(Math.Max(0, mu * (2 / rAp - 1 / a)));
+            return Math.Max(0, Math.Sqrt(mu / rAp) - vAp);
+        }
+
+        /// <summary>Seconds the circularisation burn takes at full throttle; a minute when no engine is lit yet.</summary>
+        private static double CircularizeBurnTime(Vessel v, VesselControl c)
+        {
+            double t = c.BurnTime(CircularizeDeltaV(v));
+            return double.IsInfinity(t) || double.IsNaN(t) ? 60 : Math.Min(t, 300);
+        }
+
         /// <summary>No turning below this: the thick lower air tips a rocket that leans over (2026-10-29).</summary>
         internal const double TurnStart = 15000;
         /// <summary>The turn is flat by here; above it the rocket burns horizontally for apoapsis.</summary>
         internal const double TurnEnd = 55000;
 
         /// <summary>
-        /// The ascent pitch, degrees above the horizon. Straight up (88, a touch east) to 15 km, then an even turn that is
-        /// flat at 55 km. Above 15 km and over 150 m/s it stays close to the surface flight path while the air is thick
+        /// The ascent pitch, degrees above the horizon. Straight up (88, a touch east) to 15 km, then a turn that drops
+        /// quickly and flattens out, flat at 55 km. Above 15 km and over 150 m/s it stays close to the surface flight path while the air is thick
         /// (within 8 degrees at 25 kPa of dynamic pressure or more), and is free to follow the program once the air is thin
         /// (5 kPa or less). A suborbital hop climbs at 88 all the way.
         /// </summary>
@@ -172,7 +210,10 @@ namespace KSA.KSP.Flight
             // 2026-10-29: the old program leaned 5 degrees at lift-off and then followed the flight path down; a finless
             // Suborbital hop was flying flat at 3 km. Below the turn the program holds, whatever the path does, so a rocket
             // that drifts is pushed back upright.
-            double program = orbit && alt > TurnStart ? Math.Max(0, 88 * (1 - Math.Min(1, (alt - TurnStart) / (TurnEnd - TurnStart)))) : 88;
+            // From 15 km the turn drops quickly at first, then flattens out: 44 degrees at 25 km, 26 at 35, 12 at 45, flat at
+            // 55 (2026-10-29: an even turn left a strong rocket steep when its apoapsis reached 75 km at about 30 km up, and the
+            // upper stage could not make up the sideways speed).
+            double program = orbit && alt > TurnStart ? Math.Max(0, 88 * (1 - Math.Sqrt(Math.Min(1, (alt - TurnStart) / (TurnEnd - TurnStart))))) : 88;
             if (v.srfSpeed < 150 || alt <= TurnStart || !orbit) return program;
             Vector3d up = v.upAxis;
             double pathPitch = 90 - Vector3d.Angle(v.srf_velocity, up);

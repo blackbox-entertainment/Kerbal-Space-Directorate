@@ -86,6 +86,8 @@ namespace KSA.Core.Design
                 if (pickPart == null) { why = "nothing researched for " + rule.Key; return null; }
                 plan.Payload.Extras.Add(pickPart.Name);
             }
+            // The whole science kit, one of each instrument (2026-10-29: only the lightest went along).
+            ScienceKit.AddMissing(plan, req);
             // RCS blocks come in fours, round the pod (2026-10-29).
             string block = plan.Payload.Extras.Find(e => { PartInfo x = catalog.Get(e); return x != null && x.Kind == PartKind.Rcs && !x.IsStackable; });
             if (block != null) for (int k = 0; k < 3; k++) plan.Payload.Extras.Add(block);

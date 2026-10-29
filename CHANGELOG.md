@@ -2,6 +2,13 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.5.23 (2026-10-29), twenty-fourth test build
+
+- **A sharper turn.** Still straight up to 15 km, then a turn that drops quickly and flattens out (44 degrees at 25 km, 26 at 35, 12 at 45, flat at 55) instead of an even one. A strong rocket reached its 75 km apoapsis at about 30 km up while still steep, and the upper stage could not make up the sideways speed.
+- **Circularisation along the horizon.** Out of the air the crew turns the nose to the horizon, lights the next engine ahead of time, works out how long the burn takes and starts it so it is centred on apoapsis, then burns along the horizon until the periapsis clears the atmosphere. Before, the burn followed the direction of travel, which still pointed mostly up: it raised the apoapsis to 125 km and stopped there with the periapsis far underground.
+- **No stage thrown away full.** Auto-staging no longer reads an engine that was just lit, or a throttle just opened, as dead: the crew had lit the second stage for the circularisation burn and dropped it, full, 1.5 seconds later.
+- **The whole science kit.** Every crewed rocket now carries one of each small science instrument researched (thermometer, barometer, goo, radiation counter and the rest, up to ten; labs and the heavy materials bay stay home), not just the lightest one. The AI is told to carry them all and the review adds any it leaves out.
+
 ## 0.5.22 (2026-10-29), twenty-third test build
 
 - **Parachutes sized for the capsule.** The engineers no longer snap on one parachute whatever the pod weighs. A main parachute lands about 22 times its own mass softly (a 0.1 t Mk16 or Mk2-R about 2.2 t, a 0.3 t Mk16-XL about 6.6 t); drogues count for nothing. The engineers weigh what comes down (pod, heat shield, instruments, the chutes themselves) and add radial chutes in pairs, or a bigger stack chute, until it lands softly. The design review checks AI designs the same way (adding chutes where it can), the AI is told the rule, and your own rockets show "parachutes too small" when the capsule they bring home is too heavy for them.

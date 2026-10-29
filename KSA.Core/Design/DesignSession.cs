@@ -209,6 +209,8 @@ namespace KSA.Core.Design
                     List<string> repairs = StagePlanValidator.Repair(plan, allowed);
                     string fins = Fins.AddIfMissing(plan, request.AllowedParts, _catalog);
                     if (fins != null) repairs.Add(fins);
+                    string kit = ScienceKit.AddMissing(plan, request);
+                    if (kit != null) repairs.Add(kit);
                     string chutes = NeedsChute(request) ? Parachutes.Fit(plan, request.AllowedParts, _catalog) : null;
                     if (chutes != null) repairs.Add(chutes);
                     foreach (string note in repairs) record.Feedback.Add("Pass " + record.PassesUsed + ": " + note);

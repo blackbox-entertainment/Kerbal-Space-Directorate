@@ -23,6 +23,8 @@ namespace KSA.Core.Design
         public string ProjectName { get; set; }
         /// <summary>Hardware the craft must carry, one plain sentence each (KSA-67: industry modules, life support supplies).</summary>
         public List<string> MustCarry { get; } = new List<string>();
+        /// <summary>Every small science instrument researched, one of each to carry (2026-10-29: designs carried only the lightest).</summary>
+        public List<string> ScienceKit { get; } = new List<string>();
         /// <summary>Checked, not just asked for (2026-10-28): each entry is a reason and the parts, any one of which satisfies it.</summary>
         public List<KeyValuePair<string, List<string>>> MustInclude { get; } = new List<KeyValuePair<string, List<string>>>();
         /// <summary>How many projects of this mission type the agency has flown before: later designs are asked to differ.</summary>

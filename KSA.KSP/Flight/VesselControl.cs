@@ -317,6 +317,10 @@ namespace KSA.KSP.Flight
             // While some engine still burns, stage only when the next stage throws away nothing that is burning (2026-10-28:
             // side boosters burnt out and the crew dropped the whole first stage with its main engine still running).
             if (anyActive && anyFlamedOut && anyThrust && !NextStageDropsOnlySpent()) return;
+            // Lit, not burnt out, but no thrust yet: an engine just lit or a throttle just opened is still building up, and a
+            // closed throttle gives none. Not a reason to stage (2026-10-29: the crew lit the second stage for the
+            // circularisation burn and dropped it, full, 1.5 s later).
+            if (anyActive && !anyFlamedOut && !anyThrust && (_throttle < 0.05f || Now - _lastStage < 3 || Now - _throttleUp < 3)) return;
             if ((anyActive && (anyFlamedOut || !anyThrust)) || (!anyActive && HasStagesLeft)) if (NextStageIsWorthFiring())
             {
                 Stage();

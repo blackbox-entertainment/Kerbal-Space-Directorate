@@ -244,14 +244,16 @@ namespace KSA.Core
             {
                 if (part.Kind != PartKind.Science || part.Mass > 0.1 || part.CrewCapacity > 0) continue;
                 if (part.RequiresDlc && !AllowDlcParts) continue;
-                if (names.Count >= 6) break; // keep the brief short with science mods installed
+                if (names.Contains(part.Name)) continue;
+                if (names.Count >= 10) break; // a full kit, but not every part of every science mod
                 if (!req.AllowedParts.Exists(x => x.Name == part.Name)) req.AllowedParts.Add(part);
                 names.Add(part.Name);
             }
             if (names.Count > 0)
             {
-                req.MustCarry.Add("one of each science instrument, as payload extras on the crew pod: " + string.Join(", ", names.ToArray()) + ". The crew runs them during the flight and the data is paid on recovery.");
+                req.MustCarry.Add("ONE OF EACH of these science instruments, as payload extras on the crew pod (all of them, not just one): " + string.Join(", ", names.ToArray()) + ". The crew runs them during the flight and the data is paid on recovery.");
                 req.MustInclude.Add(new KeyValuePair<string, List<string>>("a science instrument", names));
+                req.ScienceKit.AddRange(names);
             }
         }
 

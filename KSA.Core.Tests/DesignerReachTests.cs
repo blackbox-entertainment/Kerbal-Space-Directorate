@@ -30,6 +30,10 @@ namespace KSA.Core.Tests
             Add("HeatShield1", PartKind.HeatShield, 0.3);
             Add("HeatShield2", PartKind.HeatShield, 1.3, d: 2.5);
             Add("sensorThermometer", PartKind.Science, 0.005, stack: false);
+            Add("sensorBarometer", PartKind.Science, 0.005, stack: false);
+            Add("GooExperiment", PartKind.Science, 0.05, stack: false);
+            Add("kerbalism-geigercounter", PartKind.Science, 0.005, stack: false);
+            Add("science.module", PartKind.Science, 0.2);                                            // SC-9001 materials bay: too heavy for the kit
             Add("Decoupler.1", PartKind.Decoupler, 0.04);
             Add("Decoupler.2", PartKind.Decoupler, 0.16, d: 2.5);
             Add("radialDecoupler", PartKind.Decoupler, 0.025, stack: false);
@@ -190,6 +194,21 @@ namespace KSA.Core.Tests
             Assert.That(mine.Blocker(orbit, null), Does.Contain("parachutes too small"));
             mine.ChuteCapacity = 4.4;
             Assert.That(mine.Blocker(orbit, null), Is.Null);
+        }
+
+        [Test]
+        public void EveryCrewedFlightCarriesTheWholeScienceKit()
+        {
+            Agency a = Make.Agency(new FakeClock(), new ListLogger());
+            a.Parts = StockParts();
+            a.Requirements = MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
+            MissionType t = a.Catalogs.Missions.Get("KerbinOrbit");
+            string why;
+            DesignRecord r = a.EngineersDesign(new KSA.Core.Projects.Project { Id = "x", MissionTypeId = t.Id, Name = t.Name }, out why, t);
+            Assert.That(r, Is.Not.Null, why);
+            foreach (string s in new[] { "sensorThermometer", "sensorBarometer", "GooExperiment", "kerbalism-geigercounter" })
+                Assert.That(r.Plan.Payload.Extras.FindAll(e => e == s).Count, Is.EqualTo(1), s + " once");
+            Assert.That(r.Plan.Payload.Extras, Has.No.Member("science.module"), "heavy science stays home");
         }
 
         [Test]
