@@ -24,6 +24,10 @@ namespace KSA.Core.Missions
         public string Body { get; set; }
         public MissionProfile Profile { get; set; }
         public int CrewSize { get; set; }
+        /// <summary>Empty seats the craft must also carry: a rescue's stranded crew coming home (2026-10-28).</summary>
+        public int PassengerSeats { get; set; }
+        /// <summary>Seats the craft needs: the crew plus the passengers.</summary>
+        public int Seats { get { return Math.Max(1, CrewSize) + Math.Max(0, PassengerSeats); } }
         public int MinStars { get; set; }
         public int DurationDays { get; set; }
         public double BaseCost { get; set; }

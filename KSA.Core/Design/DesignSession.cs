@@ -207,6 +207,8 @@ namespace KSA.Core.Design
                     DesignAnalysis analysis = StageAnalyzer.Analyze(plan, _catalog, request.Requirement, _surfaceGravity);
                     foreach (string p in problems) analysis.Problems.Add(p);
                     foreach (string p in MissingMustInclude(plan, request)) analysis.Problems.Add(p);
+                    string seats = MissingSeats(plan, request, _catalog);
+                    if (seats != null) analysis.Problems.Add(seats);
                     record.Plan = plan;
                     record.PlanJson = plan.ToJsonText(false);
                     record.DesignName = plan.DesignName;
@@ -262,6 +264,32 @@ namespace KSA.Core.Design
                 if (!ok) missing.Add("Missing " + rule.Key + ": add one of " + string.Join(", ", rule.Value.ToArray()) + ".");
             }
             return missing;
+        }
+
+        /// <summary>Seats in the payload (the command part plus any crewed extras, such as a crew cabin).</summary>
+        public static int SeatsIn(StagePlan plan, IPartCatalog catalog)
+        {
+            if (plan == null || plan.Payload == null || catalog == null) return 0;
+            int seats = 0;
+            PartInfo cmd = catalog.Get(plan.Payload.Command);
+            if (cmd != null) seats += cmd.CrewCapacity;
+            foreach (string e in plan.Payload.Extras) { PartInfo x = catalog.Get(e); if (x != null) seats += x.CrewCapacity; }
+            return seats;
+        }
+
+        /// <summary>
+        /// Null when the payload seats everyone the mission needs (the crew, plus a rescue's stranded kerbals), else the
+        /// problem (2026-10-28: rescue craft were sized for the rescuers only).
+        /// </summary>
+        public static string MissingSeats(StagePlan plan, DesignRequest request, IPartCatalog catalog)
+        {
+            if (plan == null || request == null || catalog == null) return null;
+            int need = Math.Max(1, request.CrewSize);
+            int have = SeatsIn(plan, catalog);
+            if (have >= need) return null;
+            return "The payload seats " + have + " but " + need + " are needed" + (request.Mission != null && request.Mission.PassengerSeats > 0
+                ? " (" + request.Mission.CrewSize + " crew plus " + request.Mission.PassengerSeats + " stranded kerbal" + (request.Mission.PassengerSeats == 1 ? "" : "s") + " to bring home)"
+                : string.Empty) + ". Use a command pod with more seats, or add a crew cabin.";
         }
 
         private static string FirstLine(string text)

@@ -402,6 +402,30 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void ARescueCraftSeatsTheStrandedCrewToo()
+        {
+            var clock = new FakeClock();
+            Agency a = Staffed(clock, new ListLogger());
+            a.Parts = TestParts.Catalog();
+            a.Requirements = MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
+            var rescue = new MissionType { Id = "rescue-seats", Name = "Rescue Jeb", Body = "Kerbin", Profile = MissionProfile.Orbit, CrewSize = 1, PassengerSeats = 1, Purpose = "Rescue" };
+            Assert.That(rescue.Seats, Is.EqualTo(2));
+            a.Catalogs.Missions.Add(rescue);
+            var p = new Project { Id = "R1", MissionTypeId = rescue.Id, Name = rescue.Name };
+            DesignRequest req = a.BuildDesignRequest(p);
+            Assert.That(req.CrewSize, Is.EqualTo(2), "the design is asked for seats, not just the crew");
+            Assert.That(req.MustCarry, Has.Some.Contains("seats for 2"));
+            // The only pod seats one, so the engineers add a crew cabin.
+            string why;
+            DesignRecord r = a.EngineersDesign(p, out why);
+            Assert.That(r, Is.Not.Null, why);
+            Assert.That(DesignSession.SeatsIn(r.Plan, a.Parts), Is.GreaterThanOrEqualTo(2));
+            // A one-seat plan is turned back.
+            r.Plan.Payload.Extras.RemoveAll(x => x == "stationHab");
+            Assert.That(DesignSession.MissingSeats(r.Plan, req, a.Parts), Does.Contain("1 crew plus 1 stranded"));
+        }
+
+        [Test]
         public void RadialDecouplerBetweenStagesIsRejected()
         {
             PartCatalog c = TestParts.Catalog();

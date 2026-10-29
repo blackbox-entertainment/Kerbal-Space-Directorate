@@ -44,9 +44,22 @@ namespace KSA.Core.Design
             PartInfo pod = null;
             foreach (PartInfo p in allowed)
                 if (p.Kind == PartKind.Command && p.CrewCapacity >= Math.Max(1, crew) && (pod == null || (pod.RequiresDlc && !p.RequiresDlc) || (pod.RequiresDlc == p.RequiresDlc && p.Mass < pod.Mass))) pod = p; // stock before DLC pods
-            if (pod == null) { why = "no crew pod with " + Math.Max(1, crew) + " seats"; return null; }
+            // No pod seats everyone (a rescue brings the stranded home): the roomiest pod plus crew cabins (2026-10-28).
+            var cabins = new List<PartInfo>();
+            if (pod == null)
+            {
+                foreach (PartInfo p in allowed)
+                    if (p.Kind == PartKind.Command && p.CrewCapacity > 0 && (pod == null || p.CrewCapacity > pod.CrewCapacity || (p.CrewCapacity == pod.CrewCapacity && p.Mass < pod.Mass))) pod = p;
+                PartInfo cabin = null;
+                foreach (PartInfo p in allowed)
+                    if (p.Kind == PartKind.Habitat && p.CrewCapacity > 0 && (cabin == null || p.Mass / p.CrewCapacity < cabin.Mass / cabin.CrewCapacity)) cabin = p;
+                int seats = pod != null ? pod.CrewCapacity : 0;
+                while (pod != null && cabin != null && seats < crew && cabins.Count < 4) { cabins.Add(cabin); seats += cabin.CrewCapacity; }
+                if (pod == null || seats < Math.Max(1, crew)) { why = "no crew pod (or pod and crew cabin) with " + Math.Max(1, crew) + " seats"; return null; }
+            }
             var plan = new StagePlan { DesignName = "Engineering team " + (req.Mission != null ? req.Mission.Name : "rocket"), Rationale = "Drawn up by the engineering team from the researched parts." };
             plan.Payload.Command = pod.Name;
+            foreach (PartInfo c in cabins) plan.Payload.Extras.Add(c.Name); // first, so they stack straight on the pod
             foreach (KeyValuePair<string, List<string>> rule in req.MustInclude)
             {
                 if (rule.Value.Contains(pod.Name)) continue; // a self-shielded pod already counts

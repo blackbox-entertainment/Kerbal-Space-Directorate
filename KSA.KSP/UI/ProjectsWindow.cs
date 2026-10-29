@@ -185,24 +185,35 @@ namespace KSA.KSP.UI
                 Line(items, "<b>" + string.Join(", ", names.ToArray()) + "</b> stranded " + s.Where + " since day " + s.Day + " (" + _agency.DaysStranded(s) + " days, after " + s.Cause + ")" + clock, textWidth);
                 if (rescue != null && rescue.IsActive) { Line(items, "    Rescue under way: " + rescue.Name + " (" + rescue.Status + ")", textWidth); continue; }
                 string live = s.OnSurface ? "surface rescues fly simulated" : (s.VesselId.Length == 0 ? "no live vessel to meet; flies simulated" : "can be flown live");
+                MissionType need = _agency.RescueMissionFor(s, 1);
+                Line(items, "    A rescue craft needs " + need.Seats + " seats (1 pilot + " + s.Crew.Count + " to bring home) and about " + Math.Round(_agency.Requirements.For(need).DeltaV) + " m/s.", textWidth);
                 string rescueLocked = _agency.RescueBlocker(s);
-                if (rescueLocked != null)
+                if (rescueLocked != null) Line(items, "    <color=#888888>The engineers: a rescue " + rescueLocked + ".</color>", textWidth);
+                else
+                    items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                        new DialogGUISpace(16f),
+                        new DialogGUIButton("Launch rescue", () => OnRescue(id, MissionMode.Simulate, null), 140f, ButtonHeight, false),
+                        new DialogGUIButton("Rescue (Watch Live)", () => OnRescue(id, MissionMode.WatchLive, null), 170f, ButtonHeight, false),
+                        new DialogGUILabel("<color=#aaaaaa>" + live + "</color>", textWidth - 360f, ButtonHeight)));
+                // The Director's own rockets that fit: build one in the VAB with the seats and delta-v above, save it, and it shows here.
+                List<PlayerDesign> mine = _agency.RescueDesignsFor(s);
+                if (mine.Count == 0)
+                    Line(items, "    <color=#888888>None of your saved rockets fits. Build one in the VAB with those seats and that delta-v and save it in this game: it shows here.</color>", textWidth);
+                foreach (PlayerDesign d in mine)
                 {
-                    Line(items, "    <color=#888888>A rescue " + rescueLocked + ".</color>", textWidth);
-                    continue;
+                    string craft = d.CraftPath;
+                    items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                        new DialogGUISpace(16f),
+                        new DialogGUIButton("Rescue with " + d.Name, () => OnRescue(id, MissionMode.WatchLive, craft), 316f, ButtonHeight, false),
+                        new DialogGUILabel("<color=#aaaaaa>your design: " + d.Seats + " seats, " + Math.Round(d.DeltaV) + " m/s; " + live + "</color>", textWidth - 340f, ButtonHeight)));
                 }
-                items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
-                    new DialogGUISpace(16f),
-                    new DialogGUIButton("Launch rescue", () => OnRescue(id, MissionMode.Simulate), 140f, ButtonHeight, false),
-                    new DialogGUIButton("Rescue (Watch Live)", () => OnRescue(id, MissionMode.WatchLive), 170f, ButtonHeight, false),
-                    new DialogGUILabel("<color=#aaaaaa>" + live + "</color>", textWidth - 360f, ButtonHeight)));
             }
         }
 
-        private void OnRescue(string strandingId, MissionMode mode)
+        private void OnRescue(string strandingId, MissionMode mode, string playerDesign)
         {
             string message;
-            Project p = _agency.CreateRescue(strandingId, null, mode, out message);
+            Project p = _agency.CreateRescue(strandingId, null, mode, out message, playerDesign);
             Report(p != null, message);
         }
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using KSA.Core.Design;
 using KSA.Core.Missions;
 using KSA.Core.Personnel;
 using KSA.Core.Projects;
@@ -166,6 +167,12 @@ namespace KSA.Core
             if (t == null || t.ResupplyMissionType.Length == 0) return "it cannot be resupplied";
             MissionType mt = Catalogs.Missions.Get(t.ResupplyMissionType);
             return mt == null ? "its resupply mission is missing" : MissionBlocker(mt);
+        }
+
+        /// <summary>The Director's own saved rockets that can fly this rescue: seats for the rescuer and everyone stranded, and the delta-v to get there and back.</summary>
+        public List<PlayerDesign> RescueDesignsFor(Stranding s)
+        {
+            return s == null ? new List<PlayerDesign>() : PlayerDesignsFor(RescueMissionFor(s, 1));
         }
 
         /// <summary>Why a rescue for this stranding cannot fly yet, or null.</summary>

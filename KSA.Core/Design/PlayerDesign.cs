@@ -47,7 +47,7 @@ namespace KSA.Core.Design
         {
             if (ResearchBlocker != null) return ResearchBlocker;
             if (type == null) return "unknown mission";
-            if (type.CrewSize > Seats) return "seats " + Seats + ", the mission needs " + type.CrewSize;
+            if (type.Seats > Seats) return "seats " + Seats + ", the mission needs " + type.Seats + (type.PassengerSeats > 0 ? " (" + type.CrewSize + " crew plus " + type.PassengerSeats + " to bring home)" : string.Empty);
             if (IsPlane)
             {
                 // Planes (2026-10-28): Kerbin missions from the runway, landing on their wheels; the Director flies them.

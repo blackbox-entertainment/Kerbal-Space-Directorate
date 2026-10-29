@@ -166,7 +166,8 @@ namespace KSA.Core
                 Requirement = Requirements.For(type),
                 LeadEngineerId = p.LeadEngineer,
                 Budget = p.Budget,
-                CrewSize = type != null ? type.CrewSize : p.Crew.Count,
+                // Seats, not just the crew: a rescue also seats the kerbals it brings home (2026-10-28).
+                CrewSize = type != null ? type.Seats : p.Crew.Count,
                 ProjectName = p.Name
             };
             foreach (string id in p.Engineers)
@@ -177,6 +178,13 @@ namespace KSA.Core
                 req.RankNames[e.Id] = Careers.RankName(e.Track, e.RankId);
             }
             if (Parts != null) req.AllowedParts.AddRange(PartFilter.ForJob(Parts, JobFor(type), AllowDlcParts));
+            if (Parts != null && type != null && type.PassengerSeats > 0)
+            {
+                // Crew cabins, in case no researched pod seats everyone.
+                foreach (PartInfo cab in Parts.All)
+                    if (cab.Kind == PartKind.Habitat && cab.CrewCapacity > 0 && (AllowDlcParts || !cab.RequiresDlc) && !req.AllowedParts.Contains(cab)) req.AllowedParts.Add(cab);
+                req.MustCarry.Add("seats for " + type.Seats + ": " + type.CrewSize + " crew fly out and " + type.PassengerSeats + " stranded kerbal" + (type.PassengerSeats == 1 ? "" : "s") + " ride home. Pick a command pod with that many seats, or add crew cabins (as extras) to make up the seats.");
+            }
             AddMustCarry(p, type, req);
             req.Lessons.AddRange(Lessons(type, 8));
             // A retry learns from the attempt before it.

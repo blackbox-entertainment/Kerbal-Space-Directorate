@@ -2,10 +2,12 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.5.8 (2026-10-28), ninth test build
 
-## Unreleased
-
+- **Rescue craft seat everyone:** a rescue now needs a seat for the pilot and for every stranded kerbal. The engineers' design is checked for it (a bigger pod, or crew cabins added when no researched pod is big enough), and templates with too few seats are not used.
+- **Rescue with your own rocket:** the stranded crew's entry in Projects shows the seats and delta-v a rescue needs, and lists every rocket you saved in this game that fits, each with a "Rescue with" button. Your rocket can fly the rescue even when the engineers cannot design one.
 - **Save repair:** a crew stranded by a flight that was simulated without a rocket (before 0.5.6) is brought home on load, with no mission, medal or prestige from it, and the project is scrubbed with its budget returned.
+
 ## 0.5.7 (2026-10-28), eighth test build
 
 - **Fixed: designs were credited with fuel they could not burn.** The design review added up every tank in a stage, so liquid fuel tanks under a solid booster (with no liquid engine to burn them) counted as propellant, and rockets were approved on delta-v they never had. Tank propellant now counts only when the same stage has a liquid engine; otherwise the tanks are dead weight and the design goes back to the engineers.

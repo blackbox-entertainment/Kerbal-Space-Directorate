@@ -76,7 +76,7 @@ namespace KSA.Core
                 if (!mt.IsCustom) continue;
                 DataNode cm = root.AddChild("CUSTOM_MISSION");
                 cm.AddValue("id", mt.Id); cm.AddValue("name", mt.Name); cm.AddValue("description", mt.Description); cm.AddValue("tier", mt.Tier.ToString()); cm.AddValue("body", mt.Body);
-                cm.AddValue("profile", mt.Profile.ToString()); cm.AddValue("crew", mt.CrewSize); cm.AddValue("minStars", mt.MinStars); cm.AddValue("durationDays", mt.DurationDays);
+                cm.AddValue("profile", mt.Profile.ToString()); cm.AddValue("crew", mt.CrewSize); cm.AddValue("passengers", mt.PassengerSeats); cm.AddValue("minStars", mt.MinStars); cm.AddValue("durationDays", mt.DurationDays);
                 cm.AddValue("baseCost", mt.BaseCost); cm.AddValue("difficulty", mt.Difficulty); cm.AddValue("orbits", mt.Orbits); cm.AddValue("surfaceDays", mt.SurfaceDays);
                 cm.AddValue("purpose", mt.Purpose); cm.AddValue("scienceYield", mt.ScienceYield);
                 foreach (string a in mt.Achievements) cm.AddValue("achievement", a);
@@ -250,7 +250,7 @@ namespace KSA.Core
                 var mt = new MissionType
                 {
                     Id = cid, Name = cm.GetValue("name", cid), Description = cm.GetValue("description", string.Empty), Tier = ctier, Body = cm.GetValue("body", "Kerbin"), Profile = cprofile,
-                    CrewSize = cm.GetInt("crew", 1), MinStars = cm.GetInt("minStars", 0), DurationDays = cm.GetInt("durationDays", 1), BaseCost = cm.GetDouble("baseCost", 10000), Difficulty = cm.GetDouble("difficulty", 0.3),
+                    CrewSize = cm.GetInt("crew", 1), PassengerSeats = cm.GetInt("passengers", 0), MinStars = cm.GetInt("minStars", 0), DurationDays = cm.GetInt("durationDays", 1), BaseCost = cm.GetDouble("baseCost", 10000), Difficulty = cm.GetDouble("difficulty", 0.3),
                     Orbits = cm.GetInt("orbits", 0), SurfaceDays = cm.GetDouble("surfaceDays", 0), Purpose = cm.GetValue("purpose", string.Empty), ScienceYield = cm.GetDouble("scienceYield", 0), IsCustom = true
                 };
                 mt.Achievements.AddRange(cm.GetValues("achievement"));

@@ -159,6 +159,8 @@ namespace KSA.Core
                 }
             }
             byBody.AddRange(byProfile);
+            // Too few seats for the crew and the kerbals a rescue brings home: not a fit (2026-10-28).
+            byBody.RemoveAll(t => t.Seats > 0 && t.Seats < type.Seats);
             return byBody;
         }
     }

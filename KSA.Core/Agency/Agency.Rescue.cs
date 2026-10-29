@@ -118,6 +118,7 @@ namespace KSA.Core
                 CrewSize = Math.Max(1, rescuers)
             };
             MissionType t = PreviewCustom(spec);
+            t.PassengerSeats = s.Crew.Count; // the craft seats the stranded crew too
             t.Description = "Rescue: fly to " + CrewNames(s.Crew) + " " + s.Where + " and bring them home. Leave seats free for them (" + s.Crew.Count + ").";
             t.Purpose = "Rescue";
             t.Difficulty = Math.Min(0.95, t.Difficulty + 0.05);
@@ -126,17 +127,18 @@ namespace KSA.Core
         }
 
         /// <summary>Starts a rescue project for a stranding. Null crew = one auto-picked pilot.</summary>
-        public Project CreateRescue(string strandingId, IList<string> crewIds, MissionMode? mode, out string message)
+        public Project CreateRescue(string strandingId, IList<string> crewIds, MissionMode? mode, out string message, string playerDesign = null)
         {
             Stranding s = GetStranding(strandingId);
             if (s == null || s.Resolved) { message = "Nobody is waiting there."; return null; }
             if (s.RescueProjectId.Length > 0) { Project live = GetProject(s.RescueProjectId); if (live != null && live.IsActive) { message = "A rescue is already under way: " + live.Name + "."; return null; } }
             int rescuers = crewIds != null && crewIds.Count > 0 ? crewIds.Count : 1;
             MissionType t = RescueMissionFor(s, rescuers);
-            string blocked = MissionBlocker(t);
+            // The Director's own rocket only has to fit (seats, delta-v); otherwise the engineers must be able to build one.
+            string blocked = string.IsNullOrEmpty(playerDesign) ? MissionBlocker(t) : null;
             if (blocked != null) { message = t.Name + " " + blocked + "."; return null; }
             Catalogs.Missions.Add(t);
-            Project p = CreateProject(t.Name, t.Id, null, crewIds, null, null, mode, out message);
+            Project p = CreateProject(t.Name, t.Id, null, crewIds, null, null, mode, out message, null, playerDesign);
             if (p == null) { Catalogs.Missions.Remove(t.Id); return null; }
             p.ModuleRole = "rescue";
             p.RescueId = s.Id;
