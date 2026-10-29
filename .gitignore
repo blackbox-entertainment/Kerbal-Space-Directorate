@@ -15,3 +15,6 @@ GameData/KSA/PluginData/portraits/
 
 # Templates assembled in game from stage plans (KSA-67)
 GameData/KSA/PluginData/Templates/
+
+# Built mod zips for sharing (not committed)
+dist/
