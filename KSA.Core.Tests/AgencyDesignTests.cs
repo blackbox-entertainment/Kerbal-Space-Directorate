@@ -371,6 +371,21 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void RadialDecouplerBetweenStagesIsRejected()
+        {
+            PartCatalog c = TestParts.Catalog();
+            string json = "{\"design_name\":\"Loose\",\"rationale\":\"\",\"stages\":[" +
+                          "{\"stage\":0,\"role\":\"launch\",\"core\":[{\"part\":\"solidBooster\",\"count\":1}],\"radial\":[],\"decoupler\":\"radialDecoupler\"}," +
+                          "{\"stage\":1,\"role\":\"upper\",\"core\":[{\"part\":\"fuelTankLong\",\"count\":1},{\"part\":\"liquidEngine3\",\"count\":1}],\"radial\":[],\"decoupler\":\"\"}]," +
+                          "\"payload\":{\"command\":\"mk1pod\",\"extras\":[\"parachuteSingle\"]}}";
+            StagePlan plan; string error;
+            Assert.That(StagePlan.TryParse(json, out plan, out error), Is.True, error);
+            var names = new HashSet<string>();
+            foreach (PartInfo p in c.All) names.Add(p.Name);
+            Assert.That(StagePlanValidator.Validate(plan, c, names), Has.Some.Contains("cannot sit between stages"));
+        }
+
+        [Test]
         public void WhenTheAiFallsShortTheEngineersDesignItByHand()
         {
             var clock = new FakeClock();

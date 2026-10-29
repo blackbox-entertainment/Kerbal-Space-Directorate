@@ -35,6 +35,10 @@ namespace KSA.KSP.Flight
             if (agency == null || spec == null || spec.Project == null) return;
             string path = ResolveCraft(spec);
             string msg;
+            // No craft to fly (the design could not be assembled): the engineers build one by hand before giving up on
+            // a live flight (2026-10-28).
+            if (path == null && spec.Project.Design != null && KsaCore.AssembleByHand(spec.Project, "No craft file to launch."))
+                path = spec.CraftPath = spec.Project.Design.CraftPath;
             if (path == null)
             {
                 KsaCore.Log.Warn("No craft file for " + spec.Project.Name + " (AI: '" + spec.CraftPath + "', template: '" + spec.TemplateCraft + "'); simulating instead");

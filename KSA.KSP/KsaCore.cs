@@ -300,9 +300,31 @@ namespace KSA.KSP
             }
             else
             {
-                p.Notes.Add("Vehicle assembly failed: " + r.Error + " The template craft will fly instead.");
                 Log.Warn("Assembly failed for " + p.Name + ": " + r.Error);
+                if (AssembleByHand(p, "Vehicle assembly failed: " + r.Error)) return;
+                p.Notes.Add("Vehicle assembly failed: " + r.Error + " The template craft will fly instead.");
             }
+        }
+
+        /// <summary>
+        /// The design could not be put together in the VAB: the engineering team draws one up by hand from the researched
+        /// parts and assembles that, so the flight still flies live (2026-10-28: two Firsts were simulated for want of a
+        /// craft file). True when a craft file was written.
+        /// </summary>
+        internal static bool AssembleByHand(Project p, string reason)
+        {
+            if (Agency == null || p == null) return false;
+            string why;
+            Core.Design.DesignRecord byHand = Agency.EngineersDesign(p, out why);
+            if (byHand == null || byHand.Plan == null) { Log.Warn("No hand design for " + p.Name + ": " + why); return false; }
+            CraftWriter.Result r = CraftWriter.Write(byHand.Plan, Agency.Parts, "KSA " + p.Id + " " + byHand.DesignName, "KSA " + p.Id + " " + p.Name);
+            if (!r.Ok) { Log.Warn("Hand design for " + p.Name + " failed to assemble too: " + r.Error); return false; }
+            byHand.CraftPath = r.Path;
+            p.Design = byHand;
+            p.Notes.Add(reason + " The engineering team drew up '" + byHand.DesignName + "' by hand instead (" + byHand.TotalDeltaV + " of " + byHand.RequiredDeltaV + " m/s) and assembled it: " + r.Parts + " parts.");
+            Log.Info(p.Name + ": assembled the engineers' hand design '" + byHand.DesignName + "' (" + r.Parts + " parts) after: " + reason);
+            ScreenMessages.PostScreenMessage("[KSA] " + p.Name + ": vehicle assembled (" + r.Parts + " parts)", 6f, ScreenMessageStyle.UPPER_CENTER);
+            return true;
         }
 
         /// <summary>Always reflects the current game: parts researched later show up without a restart.</summary>

@@ -265,6 +265,14 @@ namespace KSA.Core.Design
                         problems.Add(label + " (launch) has no engine or booster.");
                     if (i < plan.Stages.Count - 1 && s.Decoupler.Length == 0)
                         problems.Add(label + " needs a decoupler to separate from the stage above.");
+                    // A side decoupler has no top and bottom node, so it cannot sit between two stages (2026-10-28: two
+                    // approved designs could not be assembled and their flights were simulated).
+                    if (s.Decoupler.Length > 0)
+                    {
+                        PartInfo dec = catalog.Get(s.Decoupler);
+                        if (dec != null && !dec.IsStackable)
+                            problems.Add(label + ": decoupler '" + s.Decoupler + "' is a radial (side) decoupler and cannot sit between stages. Use a stack decoupler there; radial decouplers are fitted automatically under side boosters.");
+                    }
                 }
             }
             return problems;
