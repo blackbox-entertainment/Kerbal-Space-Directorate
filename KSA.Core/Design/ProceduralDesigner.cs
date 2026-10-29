@@ -18,7 +18,7 @@ namespace KSA.Core.Design
         private const double G0 = 9.80665;
         private const double Margin = 1.10;      // aim 10% over every leg
         private const int MaxTanks = 8;
-        private const int MaxStages = 6;
+        private const int MaxStages = 8;
         private static readonly int[] SideCounts = { 2, 3, 4, 6, 8 };
 
         private sealed class Option
@@ -84,8 +84,35 @@ namespace KSA.Core.Design
                 if (pickPart == null) { why = "nothing researched for " + rule.Key; return null; }
                 plan.Payload.Extras.Add(pickPart.Name);
             }
+            // RCS blocks come in fours, round the pod (2026-10-29).
+            string block = plan.Payload.Extras.Find(e => { PartInfo x = catalog.Get(e); return x != null && x.Kind == PartKind.Rcs && !x.IsStackable; });
+            if (block != null) for (int k = 0; k < 3; k++) plan.Payload.Extras.Add(block);
+            // A docking port goes on the very top: nothing may sit on it (2026-10-29).
+            for (int k = plan.Payload.Extras.Count - 1, moved = 0; k >= 0 + moved; k--)
+            {
+                PartInfo x = catalog.Get(plan.Payload.Extras[k]);
+                if (x == null || x.Kind != PartKind.Docking) continue;
+                string port = plan.Payload.Extras[k];
+                plan.Payload.Extras.RemoveAt(k);
+                plan.Payload.Extras.Add(port);
+                moved++;
+            }
+            if (req.DepotTanks > 0)
+            {
+                // A fuel depot's core: the tank farm stacks on the pod, under the docking port (2026-10-29). The tank with
+                // the most propellant per tonne of tank, enough of them to hold what the depot is meant to.
+                PartInfo farm = null;
+                foreach (PartInfo p in allowed)
+                    if (p.Kind == PartKind.Tank && p.FuelMass > 0 && p.HasTopNode && p.HasBottomNode && (farm == null || p.FuelMass / Math.Max(0.01, p.Mass) > farm.FuelMass / Math.Max(0.01, farm.Mass) || (Math.Abs(p.FuelMass / Math.Max(0.01, p.Mass) - farm.FuelMass / Math.Max(0.01, farm.Mass)) < 0.01 && p.FuelMass > farm.FuelMass))) farm = p;
+                if (farm == null) { why = "no fuel tank researched for the depot"; return null; }
+                int at = plan.Payload.Extras.FindIndex(e => { PartInfo x = catalog.Get(e); return x != null && x.Kind == PartKind.Docking; });
+                if (at < 0) at = plan.Payload.Extras.Count;
+                int count = Math.Max(1, (int)Math.Ceiling(req.DepotTanks / farm.FuelMass - 1e-6));
+                for (int k = 0; k < Math.Min(count, 8); k++) plan.Payload.Extras.Insert(at, farm.Name);
+                plan.Payload.TanksEmpty = true; // it goes up empty; tankers fill it
+            }
             double payload = pod.Mass + pod.FuelMass;
-            foreach (string e in plan.Payload.Extras) { PartInfo x = catalog.Get(e); if (x != null) payload += x.Mass + x.FuelMass; }
+            foreach (string e in plan.Payload.Extras) { PartInfo x = catalog.Get(e); if (x != null) payload += x.Mass + (plan.Payload.TanksEmpty && x.Kind == PartKind.Tank ? 0 : x.FuelMass); }
 
             // Building blocks.
             var engines = new List<PartInfo>();
@@ -106,7 +133,7 @@ namespace KSA.Core.Design
             var flight = new List<FlightLeg>();
             if (need != null && need.Legs != null)
                 foreach (FlightLeg leg in need.Legs)
-                    flight.Add(new FlightLeg { Name = leg.Name, Body = leg.Body, DeltaV = leg.DeltaV * Margin, Gravity = leg.Gravity, MinTwr = leg.MinTwr, MaxTwr = leg.MaxTwr, Atmospheric = leg.Atmospheric, Landing = leg.Landing });
+                    flight.Add(new FlightLeg { Name = leg.Name, Body = leg.Body, DeltaV = leg.DeltaV * Margin, Gravity = leg.Gravity, MinTwr = leg.MinTwr, MaxTwr = leg.MaxTwr, Atmospheric = leg.Atmospheric, Landing = leg.Landing, Refuel = leg.Refuel, FuelDrop = leg.FuelDrop });
             else
             {
                 // One figure: a hop is one climb; anything bigger climbs through the air first, then burns in thin air.
@@ -132,6 +159,7 @@ namespace KSA.Core.Design
 
             // Every way to cut the legs into consecutive stages: bit k set = a new stage starts after leg k.
             int legCount = flight.Count;
+            int refuelLeg = flight.FindIndex(x => x.Refuel);
             var memo = new Dictionary<string, Pick>();
             Pick[] bestStages = null;
             int[][] bestChunks = null;
@@ -146,14 +174,19 @@ namespace KSA.Core.Design
                 for (int k = 0; k < legCount - 1; k++) if ((mask & (1 << k)) != 0) { chunks.Add(new[] { from, k }); from = k + 1; }
                 chunks.Add(new[] { from, legCount - 1 });
                 if (chunks.Count > MaxStages) continue;
+                // A stage either reaches the depot or leaves it (it cannot be both full at launch and filled there), and
+                // every stage burns something.
+                if (chunks.Exists(ch => ch[0] <= refuelLeg && ch[1] > refuelLeg) || chunks.Exists(ch => !Burns(flight, ch[0], ch[1]))) continue;
 
-                // Top stage first: it carries the payload, the one below carries it, and so on.
+                // Top stage first: it carries the payload, the one below carries it, and so on. Stages after the depot
+                // launch empty, so below the depot they weigh only their dry mass.
                 var picks = new Pick[chunks.Count];
-                double above = payload;
-                bool ok = true;
+                double above = payload, postFuel = 0;
+                bool ok = true, dry = false;
                 for (int c = chunks.Count - 1; c >= 0; c--)
                 {
                     int a = chunks[c][0], b = chunks[c][1];
+                    if (refuelLeg >= 0 && b <= refuelLeg && !dry) { above -= postFuel; dry = true; }
                     bool solidsOk = b < kerbinLegs;
                     double extra = decouplerMass + (landingLeg >= a && landingLeg <= b ? legsMass : 0);
                     string key = a + "-" + b + "-" + Math.Round(above, 3);
@@ -163,6 +196,7 @@ namespace KSA.Core.Design
                         pick = Size(flight, a, b, above + extra, solidsOk ? withSolids : liquid);
                         memo[key] = pick;
                     }
+
                     if (pick == null)
                     {
                         ok = false;
@@ -172,6 +206,7 @@ namespace KSA.Core.Design
                     }
                     picks[c] = pick;
                     above = pick.Start;
+                    if (refuelLeg >= 0 && a > refuelLeg) postFuel += pick.Option.Fuel;
                 }
                 if (!ok || above >= bestMass) continue;
                 bestMass = above;
@@ -184,14 +219,17 @@ namespace KSA.Core.Design
                 return null;
             }
 
-            StagePlan best = Build(plan, bestStages, bestChunks, flight, decoupler, legs, landingLeg);
+            StagePlan best = Build(plan, bestStages, bestChunks, flight, decoupler, legs, landingLeg, refuelLeg);
             DesignAnalysis check = StageAnalyzer.Analyze(best, catalog, need, gravity);
             var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (PartInfo p in allowed) names.Add(p.Name);
             List<string> invalid = StagePlanValidator.Validate(best, catalog, names);
-            if (!check.Passes || invalid.Count > 0 || DesignSession.MissingMustInclude(best, req).Count > 0)
+            string tanksShort = DesignSession.MissingDepotTanks(best, req, catalog);
+            if (!check.Passes || invalid.Count > 0 || DesignSession.MissingMustInclude(best, req).Count > 0 || tanksShort != null)
             {
-                why = check.Problems.Count > 0 ? check.Problems[0] : invalid.Count > 0 ? invalid[0] : "the design misses something the brief asks for";
+
+                List<string> missing = DesignSession.MissingMustInclude(best, req);
+                why = check.Problems.Count > 0 ? check.Problems[0] : invalid.Count > 0 ? invalid[0] : tanksShort ?? (missing.Count > 0 ? missing[0] : "the design misses something the brief asks for");
                 return null;
             }
             return best;
@@ -215,6 +253,7 @@ namespace KSA.Core.Design
                     if (twr < l.MinTwr) ok = false;
                     else if (k == 0 && l.MaxTwr > 0 && twr > l.MaxTwr) ok = false; // lift-off: too hard in thick air
                     mass *= Math.Exp(-l.DeltaV / (isp * G0));
+                    mass -= l.FuelDrop; // a tanker's cargo is fuel the stage carries and hands over
                 }
                 if (!ok || start - mass > o.Fuel) continue;
                 return new Pick { Option = o, Start = start };
@@ -257,17 +296,25 @@ namespace KSA.Core.Design
             o.IspSlNum += p.Thrust * n * (p.IspSeaLevel > 0 ? p.IspSeaLevel : p.IspVacuum);
         }
 
-        private static StagePlan Build(StagePlan template, Pick[] stages, int[][] chunks, List<FlightLeg> flight, PartInfo decoupler, PartInfo legs, int landingLeg)
+        /// <summary>True when legs a..b ask for some burning or carrying (not only a refuel stop).</summary>
+        private static bool Burns(List<FlightLeg> flight, int a, int b)
+        {
+            for (int k = a; k <= b; k++) if (flight[k].DeltaV > 0 || flight[k].FuelDrop > 0) return true;
+            return false;
+        }
+
+        private static StagePlan Build(StagePlan template, Pick[] stages, int[][] chunks, List<FlightLeg> flight, PartInfo decoupler, PartInfo legs, int landingLeg, int refuelLeg)
         {
             var plan = new StagePlan { DesignName = template.DesignName };
             plan.Payload.Command = template.Payload.Command;
             plan.Payload.Extras.AddRange(template.Payload.Extras);
+            plan.Payload.TanksEmpty = template.Payload.TanksEmpty;
             var why = new List<string>();
             for (int k = 0; k < stages.Length; k++)
             {
                 Option o = stages[k].Option;
                 int a = chunks[k][0], b = chunks[k][1];
-                var s = new PlanStage { Stage = k, Role = k == 0 ? "launch" : RoleOf(flight, a, b), Decoupler = decoupler != null ? decoupler.Name : string.Empty };
+                var s = new PlanStage { Stage = k, Role = k == 0 ? "launch" : RoleOf(flight, a, b), Decoupler = decoupler != null ? decoupler.Name : string.Empty, LaunchEmpty = refuelLeg >= 0 && a > refuelLeg };
                 if (o.Tank != null) s.Core.Add(new PlanPart { Part = o.Tank.Name, Count = o.Tanks });
                 if (o.Engine != null) s.Core.Add(new PlanPart { Part = o.Engine.Name, Count = 1 });
                 if (o.Booster != null)
@@ -279,7 +326,7 @@ namespace KSA.Core.Design
                 plan.Stages.Add(s);
                 var names = new List<string>();
                 for (int i = a; i <= b; i++) names.Add(flight[i].Name);
-                why.Add("stage " + k + " flies the " + string.Join(", then the ", names.ToArray()));
+                why.Add("stage " + k + " flies the " + string.Join(", then the ", names.ToArray()) + (s.LaunchEmpty ? " (it launches empty and fills at the depot)" : ""));
             }
             plan.Rationale = "Drawn up by the engineering team from the researched parts, leg by leg with a 10% margin: " + string.Join("; ", why.ToArray()) + ".";
             return plan;
@@ -292,7 +339,8 @@ namespace KSA.Core.Design
             for (int i = a; i <= b; i++)
             {
                 string n = flight[i].Name;
-                string t = n.StartsWith("climb to") ? "ascent" : n.StartsWith("transfer") ? "transfer" : n.StartsWith("capture") ? "capture"
+                if (flight[i].Refuel) continue;
+                string t = flight[i].FuelDrop > 0 ? "cargo" : n.StartsWith("climb to") ? "ascent" : n.StartsWith("transfer") ? "transfer" : n.StartsWith("capture") ? "capture"
                     : n.StartsWith("rendezvous") ? "rendezvous" : n.StartsWith("descent") ? "lander"
                     : n.StartsWith("take-off") || n.StartsWith("climb out") ? "ascent stage" : "return";
                 if (!tags.Contains(t)) tags.Add(t);

@@ -51,6 +51,24 @@ namespace KSA.KSP.Flight
         /// <summary>KSA-65: names of the stranded crew a rescue flight picks up (empty for every other flight).</summary>
         public System.Collections.Generic.List<string> RescueNames = new System.Collections.Generic.List<string>();
 
+        // --- Fuel depot (2026-10-29) ---
+        /// <summary>The depot vessel to dock with (0 = none).</summary>
+        public uint DepotTargetId;
+        /// <summary>Stops at the depot on the way out and fills the tanks that launched empty.</summary>
+        public bool Refuel;
+        /// <summary>A tanker: tonnes of cargo to pump into the depot.</summary>
+        public double CargoFuel;
+        /// <summary>A tanker: the depot keepers who fly home in it (its own crew stays at the depot).</summary>
+        public System.Collections.Generic.List<string> KeeperNames = new System.Collections.Generic.List<string>();
+        /// <summary>The launch id our own parts carry, to tell them from the depot's once docked.</summary>
+        public uint OwnLaunchId;
+        /// <summary>The flight's dock target before the depot stop (a base module's own target), restored after it.</summary>
+        public uint SavedDockTargetId;
+        /// <summary>Tells the agency what the depot holds now, tonnes (after a pump either way).</summary>
+        public Action<double> ReportDepot;
+        /// <summary>After undocking our ship is a vessel of its own again: the director follows it; the depot keeps the rest.</summary>
+        public Action<Vessel, Vessel> Undocked;
+
         /// <summary>The flying crew's numbers (decision 21): precision, margins, mistake chance. Never null.</summary>
         public KSA.Core.Flight.CrewFlightProfile Crew = KSA.Core.Flight.CrewFlightProfile.Neutral();
         /// <summary>Seeded per flight; used for pilot mistakes and the trait rule.</summary>

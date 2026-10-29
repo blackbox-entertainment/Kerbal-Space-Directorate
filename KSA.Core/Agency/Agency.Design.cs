@@ -169,7 +169,7 @@ namespace KSA.Core
             var req = new DesignRequest
             {
                 Mission = type,
-                Requirement = Requirements.For(type, p.ModuleRole),
+                Requirement = Requirements.For(type, p.ModuleRole, p.DepotId.Length > 0),
                 LeadEngineerId = p.LeadEngineer,
                 Budget = p.Budget,
                 // Seats, not just the crew: a rescue also seats the kerbals it brings home (2026-10-28).
@@ -221,6 +221,7 @@ namespace KSA.Core
             AddHeatShield(type, req);
             AddAntenna(type, req);
             AddBattery(type, req);
+            AddDockingGear(type, p, req);
             if (!LifeSupportOn) return;
             int crew = Math.Max(1, type.CrewSize);
             int days = type.DurationDays + Math.Max(0, LifeSupport.MarginDays);
@@ -331,15 +332,25 @@ namespace KSA.Core
         {
             if (Parts == null || type == null || type.CrewSize <= 0) return;
             if (type.Profile == MissionProfile.Base || (p != null && string.Equals(p.ModuleRole, "industry", StringComparison.OrdinalIgnoreCase))) return;
+            if (IsDepotCoreMission(type)) return; // the depot keeper stays aboard
+            // A craft that docks nose first keeps its nose free: side-mounted parachutes only (2026-10-29).
+            bool sides = DocksAtDepot(type, p);
             var chutes = new List<string>();
             foreach (PartInfo part in Parts.All)
             {
                 if (part.Kind != PartKind.Parachute || (part.RequiresDlc && !AllowDlcParts)) continue;
+                if (sides && part.IsStackable) continue;
                 if (!req.AllowedParts.Exists(x => x.Name == part.Name)) req.AllowedParts.Add(part);
                 chutes.Add(part.Name);
             }
-            if (chutes.Count == 0) return;
-            req.MustCarry.Add("a parachute, as a payload extra on top of the crew pod: " + string.Join(", ", chutes.ToArray()) + ". The crew comes home and lands under it; without one the landing kills them. Add a second for heavy pods.");
+            if (chutes.Count == 0)
+            {
+                // No side parachute researched: the docking craft cannot be built yet (the rule stays, so it says why).
+                if (sides) req.MustInclude.Add(new KeyValuePair<string, List<string>>("a radial (side) parachute, so the nose stays free for the docking port", chutes));
+                return;
+            }
+            if (sides) req.MustCarry.Add("parachutes on the sides of the pod (radial parachutes; the nose carries the docking port): " + string.Join(", ", chutes.ToArray()) + ".");
+            else req.MustCarry.Add("a parachute, as a payload extra on top of the crew pod: " + string.Join(", ", chutes.ToArray()) + ". The crew comes home and lands under it; without one the landing kills them. Add a second for heavy pods.");
             req.MustInclude.Add(new KeyValuePair<string, List<string>>("a parachute for landing", chutes));
         }
 
@@ -545,6 +556,28 @@ namespace KSA.Core
         {
             why = null;
             if (p == null || Parts == null) { why = "no parts list"; return null; }
+            // With a fuel depot in orbit (2026-10-29): straight there when the agency says so, else only when the
+            // flight cannot be designed without the stop.
+            MissionType type = mission ?? Catalogs.Missions.Get(p.MissionTypeId);
+            p.DepotId = string.Empty;
+            string depotWhy;
+            if (Settings.DepotForEverything)
+            {
+                DesignRecord via = DesignViaDepot(p, type, out depotWhy);
+                if (via != null) return via;
+            }
+            DesignRecord direct = DesignByHand(p, out why, mission);
+            if (direct != null || Settings.DepotForEverything) return direct;
+            DesignRecord viaDepot = DesignViaDepot(p, type, out depotWhy);
+            if (viaDepot != null) { why = null; return viaDepot; }
+            if (depotWhy != null) why += "; with a stop at the fuel depot, " + depotWhy;
+            return null;
+        }
+
+        /// <summary>The hand design for the project as it stands (with its depot stop, if DepotId is set).</summary>
+        private DesignRecord DesignByHand(Project p, out string why, MissionType mission)
+        {
+            why = null;
             DesignRequest req = BuildDesignRequest(p, mission);
             StagePlan plan = ProceduralDesigner.Design(req, Parts, req.Requirement, LaunchGravity, out why);
             if (plan == null) return null;
@@ -574,7 +607,8 @@ namespace KSA.Core
         public string DesignableBlocker(MissionType type)
         {
             if (type == null || Parts == null) return null;
-            string key = type.Id + "|" + Parts.All.Count + "|" + LifeSupportMod;
+            Program depot = Depot();
+            string key = type.Id + "|" + Parts.All.Count + "|" + LifeSupportMod + "|" + (depot != null ? Math.Round(depot.DepotCapacity).ToString() : "-");
             string cached;
             if (_designable.TryGetValue(key, out cached)) return cached.Length == 0 ? null : cached;
             string why;

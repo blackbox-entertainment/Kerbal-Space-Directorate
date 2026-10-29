@@ -92,6 +92,14 @@ namespace KSA.KSP.Flight
                 return prog;
             }
 
+            // A tanker (2026-10-29): meet the depot, pump the cargo across, relieve the keeper, come home.
+            if (ctx.CargoFuel > 0 && target == home)
+            {
+                prog.Add(new AscentLeg(Math.Max(75000, ctx.ParkingAltitude - 15000), true)).Add(new TargetDepotLeg()).Add(new RendezvousLeg()).Add(new DockingLeg())
+                    .Add(new PumpCargoLeg()).Add(new KeeperSwapLeg()).Add(new UndockLeg()).Add(new ReentryLeg(pe));
+                return prog;
+            }
+
             switch (profile)
             {
                 case MissionProfile.Suborbital:
@@ -110,13 +118,13 @@ namespace KSA.KSP.Flight
                     else prog.Add(new AscentLeg(Math.Max(75000, ctx.ParkingAltitude - 15000), true)).Add(new RendezvousLeg()).Add(new DockingLeg()).Add(new DeliverLeg("Station module"));
                     break;
                 case MissionProfile.Flyby:
-                    prog.Add(new AscentLeg(ctx.ParkingAltitude, true));
+                    Up(prog, ctx);
                     Outbound(prog, ctx, target, interplanetary, Math.Max(60000, floor), Math.Max(200000, floor + 150000));
                     prog.Add(new PassPeriapsisLeg());
                     Homebound(prog, ctx, target, interplanetary, false, peLo, peHi);
                     break;
                 case MissionProfile.OrbitBody:
-                    prog.Add(new AscentLeg(ctx.ParkingAltitude, true));
+                    Up(prog, ctx);
                     Outbound(prog, ctx, target, interplanetary, Math.Max(20000, floor), Math.Max(80000, floor + 50000));
                     prog.Add(new CaptureLeg(target, orbitAlt));
                     prog.Add(new HoldOrbitLeg(type != null ? Math.Max(1, type.Orbits) : 1)); // a full orbit of the target counts as orbit
@@ -125,7 +133,7 @@ namespace KSA.KSP.Flight
                     break;
                 case MissionProfile.Land:
                 case MissionProfile.Base:
-                    prog.Add(new AscentLeg(ctx.ParkingAltitude, true));
+                    Up(prog, ctx);
                     Outbound(prog, ctx, target, interplanetary, Math.Max(15000, floor), Math.Max(60000, floor + 40000));
                     prog.Add(new CaptureLeg(target, orbitAlt)).Add(new LandingLeg(ctx.MaxSiteSlope));
                     if (profile == MissionProfile.Base && type != null && string.Equals(type.ModuleRole, "resupply", StringComparison.OrdinalIgnoreCase))
@@ -141,6 +149,17 @@ namespace KSA.KSP.Flight
                     break;
             }
             return prog;
+        }
+
+        /// <summary>
+        /// The climb to a parking orbit, and for a flight that tops up at the fuel depot (2026-10-29) the stop there: a
+        /// lower orbit to catch the depot up, rendezvous, docking, filling the tanks that went up empty, and undocking.
+        /// </summary>
+        private static void Up(MissionProgram prog, FlightContext ctx)
+        {
+            if (!ctx.Refuel) { prog.Add(new AscentLeg(ctx.ParkingAltitude, true)); return; }
+            prog.Add(new AscentLeg(Math.Max(75000, ctx.ParkingAltitude - 15000), true)).Add(new TargetDepotLeg()).Add(new RendezvousLeg()).Add(new DockingLeg())
+                .Add(new RefuelLeg()).Add(new UndockLeg());
         }
 
         private static void Outbound(MissionProgram prog, FlightContext ctx, CelestialBody target, bool interplanetary, double peLo, double peHi)
@@ -212,7 +231,11 @@ namespace KSA.KSP.Flight
             {
                 if (down) { if (logged("Land:Kerbin") || logged("Suborbit:Kerbin")) prog.SkipTo(l => l is ReentryLeg); return; }
                 if (headingHome) { prog.SkipTo(l => l is ReentryLeg || (l is CorrectionLeg && IndexAfterHome(prog, l))); return; }
-                if (v.situation == Vessel.Situations.ORBITING && target == home) { prog.SkipTo(l => l is HoldOrbitLeg || l is RendezvousLeg || l is DeliverLeg || l is ReentryLeg); return; }
+                // The fuel depot (2026-10-29): a tanker that has pumped goes home; a ship that has not refuelled goes back to the depot.
+                if (v.situation == Vessel.Situations.ORBITING && ctx.CargoFuel > 0 && logged("Tanker:Kerbin")) { prog.SkipTo(l => l is UndockLeg); return; }
+                if (v.situation == Vessel.Situations.ORBITING && target == home) { prog.SkipTo(l => l is HoldOrbitLeg || l is TargetDepotLeg || l is RendezvousLeg || l is DeliverLeg || l is ReentryLeg); return; }
+                if (v.situation == Vessel.Situations.ORBITING && ctx.Refuel && !logged("Refuel:Kerbin") && Has(prog, l => l is TargetDepotLeg)) { prog.SkipTo(l => l is TargetDepotLeg); return; }
+                if (v.situation == Vessel.Situations.ORBITING && ctx.Refuel && DepotOps.Docked(ctx)) { prog.SkipTo(l => l is UndockLeg); return; }
                 if (v.situation == Vessel.Situations.ORBITING) { prog.SkipTo(l => l is TransferLeg || l is InterplanetaryTransferLeg); return; }
                 // Still climbing or coming down from a hop: the ascent leg's Begin sorts that out.
                 if (v.altitude < home.atmosphereDepth || v.orbit == null || v.orbit.ApA < ctx.ParkingAltitude * 0.9) return;

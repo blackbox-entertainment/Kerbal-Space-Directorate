@@ -23,6 +23,8 @@ namespace KSA.Core.Design
         public List<PlanPart> Core { get; } = new List<PlanPart>();
         public List<PlanPart> Radial { get; } = new List<PlanPart>();
         public string Decoupler { get; set; }
+        /// <summary>Launched with empty tanks and filled at the fuel depot in orbit (2026-10-29).</summary>
+        public bool LaunchEmpty { get; set; }
 
         public PlanStage() { Role = string.Empty; Decoupler = string.Empty; }
     }
@@ -31,6 +33,8 @@ namespace KSA.Core.Design
     {
         public string Command { get; set; }
         public List<string> Extras { get; } = new List<string>();
+        /// <summary>The payload's fuel tanks go up empty (a fuel depot's tank farm, 2026-10-29: tankers fill it).</summary>
+        public bool TanksEmpty { get; set; }
 
         public PlanPayload() { Command = string.Empty; }
     }
@@ -45,6 +49,13 @@ namespace KSA.Core.Design
         public PlanPayload Payload { get; } = new PlanPayload();
 
         public StagePlan() { DesignName = string.Empty; Rationale = string.Empty; }
+
+        private Dictionary<string, object> PayloadJson(List<object> extras)
+        {
+            var p = new Dictionary<string, object> { { "command", Payload.Command }, { "extras", extras } };
+            if (Payload.TanksEmpty) p["tanks_empty"] = true;
+            return p;
+        }
 
         /// <summary>Every part name the plan references.</summary>
         public List<string> AllPartNames()
@@ -95,7 +106,8 @@ namespace KSA.Core.Design
                     {
                         Stage = Json.GetInt(s, "stage", plan.Stages.Count),
                         Role = Json.GetString(s, "role", string.Empty),
-                        Decoupler = Json.GetString(s, "decoupler", string.Empty)
+                        Decoupler = Json.GetString(s, "decoupler", string.Empty),
+                        LaunchEmpty = Json.GetBool(s, "launch_empty", false)
                     };
                     ReadParts(Json.GetArray(s, "core"), stage.Core, false);
                     ReadParts(Json.GetArray(s, "radial"), stage.Radial, true);
@@ -107,6 +119,7 @@ namespace KSA.Core.Design
             if (payload != null)
             {
                 plan.Payload.Command = Json.GetString(payload, "command", string.Empty);
+                plan.Payload.TanksEmpty = Json.GetBool(payload, "tanks_empty", false);
                 List<object> extras = Json.GetArray(payload, "extras");
                 if (extras != null) foreach (object e in extras) if (e is string) plan.Payload.Extras.Add((string)e);
             }
@@ -142,10 +155,12 @@ namespace KSA.Core.Design
                 foreach (PlanPart p in s.Core) core.Add(new Dictionary<string, object> { { "part", p.Part }, { "count", (double)p.Count } });
                 var radial = new List<object>();
                 foreach (PlanPart p in s.Radial) radial.Add(new Dictionary<string, object> { { "part", p.Part }, { "count", (double)p.Count }, { "symmetry", (double)p.Symmetry } });
-                stages.Add(new Dictionary<string, object>
+                var st = new Dictionary<string, object>
                 {
                     { "stage", (double)s.Stage }, { "role", s.Role }, { "core", core }, { "radial", radial }, { "decoupler", s.Decoupler }
-                });
+                };
+                if (s.LaunchEmpty) st["launch_empty"] = true;
+                stages.Add(st);
             }
             var extras = new List<object>();
             foreach (string e in Payload.Extras) extras.Add(e);
@@ -154,7 +169,7 @@ namespace KSA.Core.Design
                 { "design_name", DesignName },
                 { "rationale", Rationale },
                 { "stages", stages },
-                { "payload", new Dictionary<string, object> { { "command", Payload.Command }, { "extras", extras } } }
+                { "payload", PayloadJson(extras) }
             };
         }
 

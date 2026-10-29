@@ -33,7 +33,17 @@ namespace KSA.Core
         /// <summary>The crew reduced to flight numbers: precision, margins, mistake chance (decision 21).</summary>
         public CrewFlightProfile FlightCrew { get; set; }
 
-        public LaunchSpec() { CraftPath = string.Empty; TemplateCraft = string.Empty; DockTargetVesselId = string.Empty; ProgramId = string.Empty; MaxSiteSlope = 0.3; }
+        /// <summary>The fuel depot this flight docks with (2026-10-29): its program and live vessel id, else empty.</summary>
+        public string DepotProgramId { get; set; }
+        public string DepotVesselId { get; set; }
+        /// <summary>Stops at the depot on the way out and fills its tanks there.</summary>
+        public bool Refuel { get; set; }
+        /// <summary>A tanker: tonnes to pump into the depot (0 = not a tanker).</summary>
+        public double CargoFuel { get; set; }
+        /// <summary>A tanker: the depot keepers it relieves (they fly home in it; its crew stays aboard).</summary>
+        public List<string> KeeperNames { get; } = new List<string>();
+
+        public LaunchSpec() { CraftPath = string.Empty; TemplateCraft = string.Empty; DockTargetVesselId = string.Empty; ProgramId = string.Empty; MaxSiteSlope = 0.3; DepotProgramId = string.Empty; DepotVesselId = string.Empty; }
     }
 
     /// <summary>
@@ -69,7 +79,12 @@ namespace KSA.Core
             if (type.Profile == MissionProfile.Station && !string.Equals(type.ModuleRole, "core", StringComparison.OrdinalIgnoreCase))
             {
                 Program g = p.ProgramId.Length > 0 ? GetProgram(p.ProgramId) : null;
-                if (g == null || g.VesselId.Length == 0) return "The station core was not flown live, so there is nothing in orbit to dock with; this module is simulated.";
+                if (g == null || g.VesselId.Length == 0) return (IsDepot(g) ? "The fuel depot" : "The station core") + " was not flown live, so there is nothing in orbit to dock with; this flight is simulated.";
+            }
+            if (p.DepotId.Length > 0)
+            {
+                Program d = GetProgram(p.DepotId);
+                if (d == null || d.VesselId.Length == 0) return "The fuel depot was not flown live, so there is nothing in orbit to refuel at; this flight is simulated.";
             }
             string supplies = LifeSupportBlocker(p, type);
             if (supplies != null) return supplies;
@@ -123,6 +138,8 @@ namespace KSA.Core
             Project p = GetProject(projectId);
             if (p == null) { message = "No such project."; return false; }
             if (p.Status != ProjectStatus.Ready) { message = p.Name + " is not ready to launch."; return false; }
+            string fuelWait = DepotBlocker(p);
+            if (fuelWait != null) { message = p.Name + " is " + fuelWait + "."; return false; }
             string blocker = LiveBlocker(p);
             if (blocker != null) { message = blocker; return false; }
             MissionType type = Catalogs.Missions.Get(p.MissionTypeId);
@@ -147,6 +164,17 @@ namespace KSA.Core
             if (program != null) { spec.DockTargetVesselId = program.VesselId; spec.MaxSiteSlope = Math.Max(0.1, Math.Min(0.6, program.SiteSlope + 0.15)); }
             Stranding rescue = p.RescueId.Length > 0 ? GetStranding(p.RescueId) : null;
             if (rescue != null) spec.DockTargetVesselId = rescue.VesselId; // KSA-65: meet the stranded vessel
+            // The fuel depot (2026-10-29): a refuelling stop on the way out, or a tanker's delivery.
+            Program depot = p.DepotId.Length > 0 ? GetProgram(p.DepotId) : null;
+            if (depot != null) { spec.DepotProgramId = depot.Id; spec.DepotVesselId = depot.VesselId; spec.Refuel = true; }
+            if (type != null && type.IsTanker && program != null && IsDepot(program))
+            {
+                spec.DepotProgramId = program.Id;
+                spec.DepotVesselId = program.VesselId;
+                spec.CargoFuel = type.CargoFuel;
+                spec.KeeperNames.Clear();
+                foreach (string id in program.CrewAboard) { CrewProfile c = Crew.Get(id); if (c != null) spec.KeeperNames.Add(c.Name); }
+            }
 
             p.Mode = MissionMode.WatchLive;
             var notices = new List<string>();

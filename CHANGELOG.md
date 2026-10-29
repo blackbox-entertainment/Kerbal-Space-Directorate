@@ -2,6 +2,20 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.5.10 (2026-10-29), eleventh test build
+
+- **Orbital fuel depot.** A new program in Kerbin orbit: a tank farm with a docking port on its nose and a keeper aboard. It goes up empty and holds about 64 t (`agency.cfg depotCapacity`).
+- **Tankers** are its resupply flights ("Send tanker" in Programs). Each docks, pumps its 16 t of cargo across, swaps its pilot for the keeper and flies the old keeper home. Simulated and live.
+- **Refuelling stops.** A flight to another world that the engineers cannot design in one piece now stops at the depot on the way out (`depotForEverything = true` sends every flight beyond Kerbin there).
+  - Its upper stages go up with empty tanks, so the launch from Kerbin lifts only empty tanks; the stages below take it to the depot.
+  - The crew docks, fills the empty stages, undocks and goes on.
+  - The flight waits on the pad until the depot holds the fuel it was designed to take. Projects shows how much and whether it is there.
+- **Live and simulated share one fuel figure.** Simulated tankers and departures move the agency's figure, and a live depot's tanks are set to match it. Live pumping is measured and reported back. A live flight refuels live only when the depot itself was flown live.
+- **Docking craft are designed for it:** a docking port on the very top, four RCS blocks round the pod, and side parachutes only (a nose parachute would block the port). The craft builder writes the depot's tanks and the stages that fill there as empty.
+- **The design review counts the stop:** stages marked to launch empty are filled at the depot, a tanker must still hold its cargo on arrival, and the leg-by-leg check, not the old vacuum total, decides whether the fuel lasts.
+- **What it opens:** with every part researched, the crewed Moho landing (about 250 t taken on in orbit, so raise `depotCapacity` and send tankers). Laythe and Tylo landings with the trip home still need more lift than one core engine with side boosters gives.
+- Stock templates for the depot core and the tanker, and the AI Director sees the depot's fuel and the flights waiting for it.
+
 ## 0.5.9 (2026-10-29), tenth test build
 
 - **A designer that works the mission out leg by leg.** Every mission past a suborbital hop is now a list of burns from the stock delta-v map: lift-off through the thick air, the climb to orbit, transfer, capture, descent, take-off from the other world, the trip home. Each leg has its own thrust need, measured in the gravity of the world it is flown at: a lander has to hover over Tylo, not just carry enough fuel. The figures per world live in `dv_requirements.cfg` (`KSA_DV_BODY`) and can be edited without a build.

@@ -73,7 +73,7 @@ namespace KSA.Core.Tests
             int bases = 0;
             foreach (ProgramType t in programs.Types)
             {
-                if (t.Kind == ProgramKind.OrbitalStation) continue;
+                if (t.Kind == ProgramKind.OrbitalStation || t.Kind == ProgramKind.FuelDepot) continue;
                 Assert.That(t.Modules[t.RequiredModuleCount - 1].Role, Is.EqualTo("return"), t.Id + ": the last required module is the stationed rocket");
                 if (t.Kind != ProgramKind.SurfaceBase) { Assert.That(t.RequiredModuleCount, Is.EqualTo(t.Modules.Count), t.Id); continue; }
                 bases++;

@@ -27,6 +27,8 @@ namespace KSA.Core.Design
         public List<KeyValuePair<string, List<string>>> MustInclude { get; } = new List<KeyValuePair<string, List<string>>>();
         /// <summary>How many projects of this mission type the agency has flown before: later designs are asked to differ.</summary>
         public int PriorDesigns { get; set; }
+        /// <summary>A fuel depot's core (2026-10-29): tonnes of propellant its payload tanks (above the pod) must hold.</summary>
+        public double DepotTanks { get; set; }
         /// <summary>Rank names for the engineers, by crew id (the catalog lives in the agency).</summary>
         public Dictionary<string, string> RankNames { get; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
@@ -89,11 +91,16 @@ namespace KSA.Core.Design
                 // Leg by leg (2026-10-29): the design review flies the stages through these in order and checks each one.
                 sb.AppendLine("Requirements: the rocket flies these legs in order, " + Math.Round(req.Requirement.DeltaV) + " m/s in all (vacuum figures). Stages fire from stage 0 up and each one drops away when empty, so give every leg to a stage that is still there:");
                 foreach (FlightLeg l in req.Requirement.Legs)
+                {
+                    // Depot stops (2026-10-29) burn nothing: say what happens there instead.
+                    if (l.Refuel) { sb.AppendLine("- " + l.Name + ": docked at the fuel depot in Kerbin orbit. Every stage that fires after this point should launch EMPTY (mark it \"launch_empty\": true) and is filled here, so the launch from Kerbin lifts only empty tanks. The stages without it must reach the depot."); continue; }
+                    if (l.FuelDrop > 0) { sb.AppendLine("- " + l.Name + ": " + l.FuelDrop.ToString("0.#", CultureInfo.InvariantCulture) + " t of propellant is pumped into the depot here, so the stage flying it must still hold that much on arrival, on top of what the legs after it need."); continue; }
                     sb.AppendLine("- " + l.Name + ": " + Math.Round(l.DeltaV) + " m/s"
                         + (l.MinTwr > 0 ? ", thrust-to-weight at least " + l.MinTwr.ToString("0.0", CultureInfo.InvariantCulture) + (l.Gravity < 9 ? " in " + l.Body + "'s gravity (" + l.Gravity.ToString("0.00", CultureInfo.InvariantCulture) + " m/s2)" : l.Atmospheric ? " at sea level" : "") : "")
                         + (l.MaxTwr > 0 ? " and at most " + l.MaxTwr.ToString("0.0", CultureInfo.InvariantCulture) + " at lift-off (more wastes the fuel on drag)" : "")
                         + (l.Atmospheric ? "; flown in thick air, so count it at the engines' sea-level Isp" : "")
                         + (l.Landing ? "; this stage touches down and needs landing legs (radial, symmetry 4)" : "") + ".");
+                }
                 sb.AppendLine("Aim for 10-20% spare on every leg. Solid boosters only for the climb out of Kerbin's air: they cannot throttle for a landing.");
             }
             else if (req.Requirement != null)

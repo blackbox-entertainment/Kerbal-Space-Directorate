@@ -48,6 +48,8 @@ namespace KSA.Core.Projects
         public List<string> FlightAchievements { get; } = new List<string>();
         /// <summary>Stranding this project is flying to rescue (KSA-65), or empty.</summary>
         public string RescueId { get; set; } = string.Empty;
+        /// <summary>The fuel depot this flight tops up at on its way out (2026-10-29), or empty.</summary>
+        public string DepotId { get; set; } = string.Empty;
 
         public Project()
         {

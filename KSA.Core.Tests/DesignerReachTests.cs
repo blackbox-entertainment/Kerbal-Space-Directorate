@@ -26,6 +26,7 @@ namespace KSA.Core.Tests
             Add("mk2LanderCabin.v2", PartKind.Command, 1.34, crew: 2);
             Add("mk1-3pod", PartKind.Command, 2.72, d: 2.5, crew: 3);
             Add("parachuteSingle", PartKind.Parachute, 0.1);
+            Add("parachuteRadial", PartKind.Parachute, 0.1, stack: false);                           // Mk2-R
             Add("HeatShield1", PartKind.HeatShield, 0.3);
             Add("HeatShield2", PartKind.HeatShield, 1.3, d: 2.5);
             Add("sensorThermometer", PartKind.Science, 0.005, stack: false);
@@ -34,26 +35,27 @@ namespace KSA.Core.Tests
             Add("radialDecoupler", PartKind.Decoupler, 0.025, stack: false);
             Add("landingLeg1", PartKind.LandingLeg, 0.05, stack: false);
             Add("fuelTank", PartKind.Tank, 0.25, 2.0);              // FL-T400
-            Add("fuelTank_long", PartKind.Tank, 0.5, 4.0);          // FL-T800
-            Add("Rockomax16_BW", PartKind.Tank, 1.0, 8.0, d: 2.5);  // X200-16
-            Add("Rockomax32_BW", PartKind.Tank, 2.0, 16.0, d: 2.5); // X200-32
-            Add("Rockomax64_BW", PartKind.Tank, 4.0, 32.0, d: 2.5); // Jumbo-64
+            Add("fuelTank.long", PartKind.Tank, 0.5, 4.0);          // FL-T800
+            Add("Rockomax16.BW", PartKind.Tank, 1.0, 8.0, d: 2.5);  // X200-16
+            Add("Rockomax32.BW", PartKind.Tank, 2.0, 16.0, d: 2.5); // X200-32
+            Add("Rockomax64.BW", PartKind.Tank, 4.0, 32.0, d: 2.5); // Jumbo-64
             Add("liquidEngine3.v2", PartKind.Engine, 0.5, thrust: 60, ispVac: 345, ispSl: 85);       // Terrier
             Add("liquidEngine2.v2", PartKind.Engine, 1.5, thrust: 215, ispVac: 320, ispSl: 250);     // Swivel
             Add("engineLargeSkipper.v2", PartKind.Engine, 3, thrust: 650, ispVac: 320, ispSl: 280, d: 2.5);
-            Add("liquidEngine1-2", PartKind.Engine, 6, thrust: 1500, ispVac: 310, ispSl: 285, d: 2.5); // Mainsail
+            Add("liquidEngineMainsail.v2", PartKind.Engine, 6, thrust: 1500, ispVac: 310, ispSl: 285, d: 2.5); // Mainsail
             Add("liquidEngine2-2.v2", PartKind.Engine, 1.75, thrust: 250, ispVac: 350, ispSl: 90, d: 2.5); // Poodle
             Add("nuclearEngine", PartKind.Engine, 3, thrust: 60, ispVac: 800, ispSl: 185);           // Nerv
             Add("Size3LargeTank", PartKind.Tank, 9, 72, d: 3.75);                                    // Kerbodyne S3-14400
             Add("Size3EngineCluster", PartKind.Engine, 15, thrust: 4000, ispVac: 315, ispSl: 295, d: 3.75); // Mammoth
-            Add("Size3Decoupler", PartKind.Decoupler, 0.45, d: 3.75);
+            Add("size3Decoupler", PartKind.Decoupler, 0.45, d: 3.75);
             Add("solidBooster.v2", PartKind.Booster, 0.75, 2.81, 227, 195, 170);                     // Hammer
             Add("solidBooster1-1", PartKind.Booster, 1.5, 6.15, 300, 210, 175);                      // Thumper
             Add("MassiveBooster", PartKind.Booster, 4.5, 19.5, 670, 220, 195);                       // Kickback
-            Add("mk1crewCabin", PartKind.Habitat, 0.72, crew: 2);
+            Add("MK1CrewCabin", PartKind.Habitat, 0.72, crew: 2);
             Add("crewCabin", PartKind.Habitat, 2.5, d: 2.5, crew: 4);                                // Hitchhiker
             Add("dockingPort2", PartKind.Docking, 0.05);
             Add("solarPanels4", PartKind.Power, 0.0175, stack: false);
+            Add("RCSBlock.v2", PartKind.Rcs, 0.04, stack: false);                                    // RV-105
             return c;
         }
 
@@ -118,7 +120,7 @@ namespace KSA.Core.Tests
             s1.Core.Add(new PlanPart { Part = "liquidEngine3.v2", Count = 1 });
             srb.Stages.Add(s0); srb.Stages.Add(s1);
             DesignAnalysis a = StageAnalyzer.Analyze(srb, parts, orbit);
-            Assert.That(a.MeetsDeltaV, Is.True, "the old total-only check would have passed it");
+            Assert.That(a.TotalDeltaV, Is.GreaterThanOrEqualTo(a.RequiredDeltaV), "the old total-only check would have passed it");
             Assert.That(a.Passes, Is.False);
             Assert.That(StageAnalyzer.Feedback(a), Does.Contain("drag"));
 
@@ -127,10 +129,10 @@ namespace KSA.Core.Tests
             var weak = new StagePlan { DesignName = "Feather" };
             weak.Payload.Command = "mk1pod.v2";
             var l0 = new PlanStage { Stage = 0, Role = "launch", Decoupler = "Decoupler.2" };
-            l0.Core.Add(new PlanPart { Part = "Rockomax64_BW", Count = 3 });
-            l0.Core.Add(new PlanPart { Part = "liquidEngine1-2", Count = 1 });
+            l0.Core.Add(new PlanPart { Part = "Rockomax64.BW", Count = 3 });
+            l0.Core.Add(new PlanPart { Part = "liquidEngineMainsail.v2", Count = 1 });
             var l1 = new PlanStage { Stage = 1, Role = "lander" };
-            l1.Core.Add(new PlanPart { Part = "fuelTank_long", Count = 6 });
+            l1.Core.Add(new PlanPart { Part = "fuelTank.long", Count = 6 });
             l1.Core.Add(new PlanPart { Part = "nuclearEngine", Count = 1 });
             weak.Stages.Add(l0); weak.Stages.Add(l1);
             DesignAnalysis w = StageAnalyzer.Analyze(weak, parts, tylo);

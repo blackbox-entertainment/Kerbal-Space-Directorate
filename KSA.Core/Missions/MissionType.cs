@@ -43,6 +43,9 @@ namespace KSA.Core.Missions
         public string Purpose { get; set; }
         /// <summary>Science missions: the points a textbook flight returns before crew and department multipliers.</summary>
         public double ScienceYield { get; set; }
+        /// <summary>Tanker flights (2026-10-29): tonnes of propellant pumped into the fuel depot on arrival.</summary>
+        public double CargoFuel { get; set; }
+        public bool IsTanker { get { return CargoFuel > 0; } }
         /// <summary>Custom and landing missions: orbits to complete around the target (0 = the profile default).</summary>
         public int Orbits { get; set; }
         /// <summary>Days to spend on the surface (0 = the profile default).</summary>
@@ -131,6 +134,7 @@ namespace KSA.Core.Missions
                     ModuleRole = node.GetValue("moduleRole", string.Empty),
                     Purpose = node.GetValue("purpose", string.Empty),
                     ScienceYield = node.GetDouble("scienceYield", 0),
+                    CargoFuel = node.GetDouble("cargoFuel", 0),
                     Orbits = node.GetInt("orbits", 0),
                     SurfaceDays = node.GetDouble("surfaceDays", 0),
                     Floating = node.GetBool("floating", false)

@@ -34,9 +34,16 @@ namespace KSA.Core.Design
         public List<string> Problems { get; } = new List<string>();
         /// <summary>Which stage flies which leg, one line per leg, when the mission has legs.</summary>
         public List<string> Legs { get; } = new List<string>();
+        /// <summary>Propellant the design takes on at the fuel depot, tonnes (2026-10-29).</summary>
+        public double DepotFuel { get; set; }
+        /// <summary>A tanker's cargo delivered to the depot, tonnes.</summary>
+        public double CargoDelivered { get; set; }
 
         public double DeltaVMargin { get { return RequiredDeltaV > 0 ? (TotalDeltaV - RequiredDeltaV) / RequiredDeltaV : 1; } }
-        public bool MeetsDeltaV { get { return TotalDeltaV >= RequiredDeltaV; } }
+        /// <summary>Flown leg by leg (2026-10-29): the walk, not the vacuum sum, says whether the fuel lasts.</summary>
+        public bool LegsChecked { get; set; }
+        public double LegShortfall { get; set; }
+        public bool MeetsDeltaV { get { return LegsChecked ? LegShortfall <= 0 : TotalDeltaV >= RequiredDeltaV; } }
         public bool MeetsTwr { get { return RequiredTwr <= 0 || LiftoffTwr >= RequiredTwr; } }
         public bool Passes { get { return MeetsDeltaV && MeetsTwr && Problems.Count == 0; } }
 
@@ -116,12 +123,12 @@ namespace KSA.Core.Design
         /// one total per mission approved rockets that could not climb out of the air or hover over the world they were
         /// sent to land on). <paramref name="moduleRole"/> is the project's program role (see <see cref="FlightBudget.For"/>).
         /// </summary>
-        public Entry For(MissionType type, string moduleRole = null)
+        public Entry For(MissionType type, string moduleRole = null, bool viaDepot = false)
         {
             if (type == null) type = new MissionType { Id = "?", Profile = MissionProfile.Orbit, Body = "Kerbin" };
             foreach (Entry e in _entries)
                 if (e.MissionType.Length > 0 && string.Equals(e.MissionType, type.Id, StringComparison.OrdinalIgnoreCase)) return e;
-            List<FlightLeg> legs = FlightBudget.For(type, moduleRole, Map);
+            List<FlightLeg> legs = FlightBudget.For(type, moduleRole, Map, viaDepot);
             if (legs != null)
                 return new Entry { Profile = type.Profile, Body = type.Body, MissionType = string.Empty, DeltaV = FlightBudget.Total(legs), MinTwr = legs[0].MinTwr, Legs = legs };
             foreach (Entry e in _entries)
@@ -175,7 +182,8 @@ namespace KSA.Core.Design
             foreach (string e in plan.Payload.Extras)
             {
                 PartInfo x = catalog.Get(e);
-                if (x != null) { payloadMass += x.Mass + x.FuelMass; payloadCost += x.Cost; parts++; }
+                // An empty tank farm (the fuel depot's) weighs only its tanks.
+                if (x != null) { payloadMass += x.Mass + (plan.Payload.TanksEmpty && x.Kind == PartKind.Tank ? 0 : x.FuelMass); payloadCost += x.Cost; parts++; }
             }
 
             // Per-stage dry mass, fuel, thrust, isp (thrust-weighted), cost.
@@ -246,10 +254,14 @@ namespace KSA.Core.Design
             {
                 var burn = new LegWalk.Stage[plan.Stages.Count];
                 for (int i = 0; i < burn.Length; i++)
-                    burn[i] = new LegWalk.Stage { Label = plan.Stages[i].Stage, Dry = stageDry[i], Fuel = stageFuel[i], Thrust = stageThrust[i], IspVac = stageThrust[i] > 0 ? stageIspNum[i] / stageThrust[i] : 0, IspSl = stageThrust[i] > 0 ? stageIspSlNum[i] / stageThrust[i] : 0 };
+                    burn[i] = new LegWalk.Stage { Label = plan.Stages[i].Stage, Dry = stageDry[i], Fuel = stageFuel[i], Thrust = stageThrust[i], IspVac = stageThrust[i] > 0 ? stageIspNum[i] / stageThrust[i] : 0, IspSl = stageThrust[i] > 0 ? stageIspSlNum[i] / stageThrust[i] : 0, LaunchEmpty = plan.Stages[i].LaunchEmpty };
                 LegWalk.Result walk = LegWalk.Run(burn, payloadMass, requirement.Legs);
                 a.Problems.AddRange(walk.Problems);
                 a.Legs.AddRange(walk.Lines);
+                a.DepotFuel = walk.DepotFuel;
+                a.LegsChecked = true;
+                a.LegShortfall = walk.Shortfall;
+                a.CargoDelivered = walk.CargoDelivered;
                 // Lift-off is at sea level: the thrust the engines really give there, not their vacuum rating.
                 a.LiftoffTwr = walk.LiftoffTwr;
                 a.RequiredTwr = requirement.Legs[0].MinTwr;
@@ -286,7 +298,7 @@ namespace KSA.Core.Design
             var lines = new List<string>();
             if (a == null) return "No analysis.";
             foreach (string p in a.Problems) lines.Add(p);
-            if (!a.MeetsDeltaV)
+            if (!a.MeetsDeltaV && !a.LegsChecked)
                 lines.Add("Total delta-v is " + Math.Round(a.TotalDeltaV) + " m/s; the mission needs " + Math.Round(a.RequiredDeltaV) + " m/s. Short by " + Math.Round(a.RequiredDeltaV - a.TotalDeltaV) + " m/s.");
             if (!a.MeetsTwr)
                 lines.Add("Liftoff TWR is " + a.LiftoffTwr.ToString("0.00") + "; it must be at least " + a.RequiredTwr.ToString("0.00") + ". Add thrust or shed mass in the launch stage.");

@@ -1,0 +1,11 @@
+{
+  "design_name": "Directorate fuel depot core",
+  "rationale": "2026-10-29 template, drawn up by the engineers' designer from mid-game stock parts. Two empty Jumbo-64 tanks (64 t of propellant when full) stack on the Mk1 pod under a Clamp-O-Tron docking port; tankers fill them. Launch: Mainsail on a Jumbo-64. Climb to orbit: Swivel on five FL-T400s. The keeper stays aboard.",
+  "stages": [
+    { "stage": 0, "role": "launch", "decoupler": "Decoupler.1",
+      "core": [ { "part": "Rockomax64.BW", "count": 1 }, { "part": "liquidEngineMainsail.v2", "count": 1 } ], "radial": [] },
+    { "stage": 1, "role": "ascent", "decoupler": "Decoupler.1",
+      "core": [ { "part": "fuelTank", "count": 5 }, { "part": "liquidEngine2.v2", "count": 1 } ], "radial": [] }
+  ],
+  "payload": { "command": "mk1pod.v2", "extras": [ "sensorThermometer", "HeatShield1", "Rockomax64.BW", "Rockomax64.BW", "dockingPort2" ], "tanks_empty": true }
+}

@@ -30,6 +30,8 @@ namespace KSA.KSP.Build
             public string OwnNode;      // node on this part used for the attachment
             public int Stage = -1;
             public bool Radial;
+            /// <summary>Goes up with its fuel tanks empty (filled at the fuel depot, or the depot's own tank farm, 2026-10-29).</summary>
+            public bool Empty;
             public List<Placed> Children = new List<Placed>();
             public List<Placed> Symmetry = new List<Placed>();
         }
@@ -200,6 +202,7 @@ namespace KSA.KSP.Build
                 if (bottom != null && Node(topMost.Ap, "top") != null)
                 {
                     Placed e = make(extra);
+                    e.Empty = plan.Payload.TanksEmpty && kind == PartKind.Tank;
                     StackAbove(topMost, e);
                     topMost = e;
                 }
@@ -267,6 +270,7 @@ namespace KSA.KSP.Build
                     for (int c = 0; c < Math.Max(1, pp.Count); c++)
                     {
                         Placed part = make(pp.Part);
+                        part.Empty = s.LaunchEmpty;
                         CorePart info = part.Info;
                         bool thrusts = Thrusts(pp.Part, catalog);
                         part.Stage = thrusts ? stageOf(engineSeq[i]) : -1;
@@ -515,6 +519,7 @@ namespace KSA.KSP.Build
             if (p.Parent != null && !p.Radial) sb.AppendLine("\tattN = " + p.OwnNode + "," + p.Parent.Id + NodeSuffix(p.Ap, p.OwnNode));
             foreach (Placed c in p.Children) if (!c.Radial) sb.AppendLine("\tattN = " + c.ParentNode + "," + c.Id + NodeSuffix(p.Ap, c.ParentNode));
             if (p.Radial && p.Parent != null) sb.AppendLine("\tsrfN = srfAttach," + p.Parent.Id);
+            if (p.Empty) WriteEmptyTanks(sb, p);
             sb.AppendLine("\tEVENTS");
             sb.AppendLine("\t{");
             sb.AppendLine("\t}");
@@ -525,6 +530,30 @@ namespace KSA.KSP.Build
             sb.AppendLine("\t{");
             sb.AppendLine("\t}");
             sb.AppendLine("}");
+        }
+
+        /// <summary>
+        /// Every resource the part carries, with liquid fuel and oxidizer at zero (2026-10-29): a stage that fills at the fuel
+        /// depot, or the depot's tank farm, goes up empty. Parts without these nodes load full from the prefab.
+        /// </summary>
+        private static void WriteEmptyTanks(StringBuilder sb, Placed p)
+        {
+            if (p.Ap == null || p.Ap.partPrefab == null || p.Ap.partPrefab.Resources == null) return;
+            foreach (PartResource r in p.Ap.partPrefab.Resources)
+            {
+                bool propellant = r.resourceName == "LiquidFuel" || r.resourceName == "Oxidizer";
+                sb.AppendLine("\tRESOURCE");
+                sb.AppendLine("\t{");
+                sb.AppendLine("\t\tname = " + r.resourceName);
+                sb.AppendLine("\t\tamount = " + F(propellant ? 0f : (float)r.amount));
+                sb.AppendLine("\t\tmaxAmount = " + F((float)r.maxAmount));
+                sb.AppendLine("\t\tflowState = True");
+                sb.AppendLine("\t\tisTweakable = " + (r.isTweakable ? "True" : "False"));
+                sb.AppendLine("\t\thideFlow = False");
+                sb.AppendLine("\t\tisVisible = True");
+                sb.AppendLine("\t\tflowMode = Both");
+                sb.AppendLine("\t}");
+            }
         }
 
         private static string NodeSuffix(AvailablePart ap, string nodeId)

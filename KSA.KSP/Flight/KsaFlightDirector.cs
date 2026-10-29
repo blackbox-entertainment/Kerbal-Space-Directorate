@@ -399,6 +399,7 @@ namespace KSA.KSP.Flight
             KSA.Core.Projects.Stranding stranding = project.RescueId.Length > 0 ? agency.GetStranding(project.RescueId) : null;
             if (!resuming) RescueTransferLeg.Aboard.Clear();
             if (stranding != null) foreach (string cid in stranding.Crew) { KSA.Core.Personnel.CrewProfile sc = agency.Crew.Get(cid); _ctx.RescueNames.Add(sc != null ? sc.Name : cid); }
+            WireDepot(agency, project, type, resuming);
             _program = MissionPlanner.Build(_ctx, type);
             Live.ScienceMission = type != null && type.IsScience;
             // Experiments run on every live flight (agency.cfg RESEARCH experimentsOnEveryFlight), not only on science
@@ -409,6 +410,45 @@ namespace KSA.KSP.Flight
             var names = new List<string>();
             foreach (IFlightLeg l in _program.Legs) names.Add(l.Name);
             KsaCore.Log.Info("Flight plan for " + project.Name + ": " + string.Join(" > ", names.ToArray()) + (resuming ? " (resuming at leg " + _program.NextLegNumber + ")" : string.Empty));
+        }
+
+        /// <summary>
+        /// The fuel depot (2026-10-29): a tanker's or a refuelling flight's depot, its keepers, which parts are ours once
+        /// docked, what the agency hears after a pump, and whom to follow after undocking.
+        /// </summary>
+        private void WireDepot(Agency agency, Project project, MissionType type, bool resuming)
+        {
+            Program depot = project.DepotId.Length > 0 ? agency.GetProgram(project.DepotId) : null;
+            Program own = project.ProgramId.Length > 0 ? agency.GetProgram(project.ProgramId) : null;
+            if (type != null && type.IsTanker && own != null && agency.IsDepot(own))
+            {
+                depot = own;
+                _ctx.CargoFuel = type.CargoFuel;
+                foreach (string id in own.CrewAboard) { KSA.Core.Personnel.CrewProfile c = agency.Crew.Get(id); if (c != null) _ctx.KeeperNames.Add(c.Name); }
+            }
+            else if (depot != null) _ctx.Refuel = true;
+            if (depot == null) return;
+            uint did;
+            if (uint.TryParse(depot.VesselId, out did)) _ctx.DepotTargetId = did;
+            string depotId = depot.Id, pid = project.Id;
+            _ctx.ReportDepot = t => agency.SetDepotFuel(depotId, t, 0);
+            _ctx.Undocked = (ours, left) =>
+            {
+                _vessel = ours;
+                if (Live != null) Live.VesselId = ours.persistentId;
+                agency.BindVessel(pid, ours.persistentId.ToString());
+                if (left != null) agency.BindProgramVessel(depotId, left.persistentId.ToString());
+            };
+            // Our parts carry our launch id. On the pad every part is ours; after a reload, the part with our crew is.
+            if (!resuming && _vessel.rootPart != null) { _ctx.OwnLaunchId = _vessel.rootPart.launchID; return; }
+            var names = new List<string>();
+            bool swapped = Live != null && Live.Logged.Contains("Tanker:Kerbin");
+            if (swapped) names.AddRange(_ctx.KeeperNames);
+            else foreach (string id in project.Crew) { KSA.Core.Personnel.CrewProfile c = agency.Crew.Get(id); if (c != null) names.Add(c.Name); }
+            foreach (Part p in _vessel.parts)
+                foreach (ProtoCrewMember c in p.protoModuleCrew)
+                    if (names.Contains(c.name)) { _ctx.OwnLaunchId = p.launchID; return; }
+            if (_vessel.rootPart != null) _ctx.OwnLaunchId = _vessel.rootPart.launchID;
         }
 
         private static Vessel FindVessel(uint persistentId)

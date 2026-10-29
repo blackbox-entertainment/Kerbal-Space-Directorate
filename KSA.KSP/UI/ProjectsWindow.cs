@@ -144,6 +144,14 @@ namespace KSA.KSP.UI
                 Line(items, "Mode " + ModeText(p.Mode) + "  |  budget " + Agency.Money(p.Budget) + "  |  design " + _agency.DesignNameOf(p), textWidth);
                 Line(items, "Crew: " + Names(p.Crew) + "  |  lead engineer: " + NameOf(p.LeadEngineer), textWidth);
                 Line(items, DesignLine(p), textWidth);
+                // The fuel depot stop (2026-10-29).
+                if (p.DepotId.Length > 0)
+                {
+                    KSA.Core.Projects.Program depot = _agency.GetProgram(p.DepotId);
+                    string wait = _agency.DepotBlocker(p);
+                    Line(items, "Tops up at " + (depot != null ? depot.Name : "the fuel depot") + ": " + (p.Design != null ? p.Design.DepotFuel.ToString("0.0") : "?") + " t"
+                        + (wait != null ? "  |  <color=#ffd27f>" + wait + "</color>" : "  |  <color=#8be28b>fuel waiting</color>"), textWidth);
+                }
 
                 var buttons = new List<DialogGUIBase>();
                 buttons.Add(new DialogGUISpace(16f));

@@ -25,6 +25,7 @@ namespace KSA.Core
                 n.AddValue("program", p.ProgramId);
                 n.AddValue("moduleRole", p.ModuleRole);
                 n.AddValue("rescue", p.RescueId);
+                if (p.DepotId.Length > 0) n.AddValue("depot", p.DepotId);
                 n.AddValue("budget", p.Budget);
                 n.AddValue("mode", p.Mode.ToString());
                 n.AddValue("status", p.Status.ToString());
@@ -111,6 +112,7 @@ namespace KSA.Core
                 n.AddValue("waterRecyclers", g.WaterRecyclers);
                 n.AddValue("rocket", g.HasRocket);
                 n.AddValue("extraRoom", g.ExtraRoom);
+                if (g.DepotCapacity > 0) { n.AddValue("depotFuel", g.DepotFuel); n.AddValue("depotCapacity", g.DepotCapacity); }
                 n.AddValue("colonyDay", g.ColonyDay);
                 foreach (string hp in g.HardwareCounted) n.AddValue("hardware", hp);
                 foreach (string pid in g.ModuleProjectIds) n.AddValue("module", pid);
@@ -179,6 +181,7 @@ namespace KSA.Core
                     ProgramId = n.GetValue("program", string.Empty),
                     ModuleRole = n.GetValue("moduleRole", string.Empty),
                     RescueId = n.GetValue("rescue", string.Empty),
+                    DepotId = n.GetValue("depot", string.Empty),
                     Budget = n.GetDouble("budget", 0),
                     Mode = ParseEnum(n.GetValue("mode"), MissionMode.Simulate),
                     Status = ParseEnum(n.GetValue("status"), ProjectStatus.Design),
@@ -298,6 +301,8 @@ namespace KSA.Core
                 g.WaterRecyclers = n.GetInt("waterRecyclers", 0);
                 g.HasRocket = n.GetBool("rocket", false);
                 g.ExtraRoom = n.GetInt("extraRoom", 0);
+                g.DepotFuel = n.GetDouble("depotFuel", 0);
+                g.DepotCapacity = n.GetDouble("depotCapacity", 0);
                 g.ColonyDay = n.GetInt("colonyDay", -1);
                 g.HardwareCounted.AddRange(n.GetValues("hardware"));
                 if (g.Stage == ColonyStage.None && g.Status == ProgramStatus.Complete) g.Stage = ColonyStage.Base; // saves from before KSA-64

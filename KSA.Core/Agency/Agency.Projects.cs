@@ -378,6 +378,19 @@ namespace KSA.Core
                             }
                             break;
                         case ProjectStatus.Ready:
+                            {
+                                // A depot stop waits until the depot holds the fuel (2026-10-29).
+                                string fuelWait = DepotBlocker(p);
+                                if (fuelWait != null)
+                                {
+                                    if (!p.Notes.Exists(n => n.StartsWith("Waiting for fuel")))
+                                    {
+                                        p.Notes.Add("Waiting for fuel: " + fuelWait + ".");
+                                        Push(notices, p.Name + ": " + fuelWait);
+                                    }
+                                    break;
+                                }
+                            }
                             if (p.Mode == MissionMode.WatchLive)
                             {
                                 string blocker = LiveBlocker(p);
@@ -422,6 +435,7 @@ namespace KSA.Core
 
         private void Launch(Project p, MissionType type, int day, List<string> notices)
         {
+            TakeDepotFuel(p);
             p.MissionId = BeginMission(p.Crew, p.Name);
             p.Status = ProjectStatus.InFlight;
             p.LaunchDay = day;
@@ -450,6 +464,8 @@ namespace KSA.Core
             if (p.Status != ProjectStatus.Ready) { message = p.Name + " is not ready to launch."; return false; }
             MissionType type = Catalogs.Missions.Get(p.MissionTypeId);
             if (type == null) { message = "Unknown mission type."; return false; }
+            string fuelWait = DepotBlocker(p);
+            if (fuelWait != null) { message = p.Name + " is " + fuelWait + "."; return false; }
             if (p.Mode == MissionMode.WatchLive)
             {
                 if (LiveBlocker(p) == null) return LaunchLive(projectId, out message);
@@ -576,7 +592,7 @@ namespace KSA.Core
                 Status = ProgramStatus.Active,
                 CreatedDay = CurrentDay
             };
-            if (type.Kind != ProgramKind.OrbitalStation)
+            if (type.Kind != ProgramKind.OrbitalStation && type.Kind != ProgramKind.FuelDepot)
             {
                 program.SiteSlope = Math.Round(Rng.NextDouble() * 0.5, 2);
                 program.Site = SiteDescription(program.SiteSlope, body);
@@ -643,6 +659,7 @@ namespace KSA.Core
             if (string.Equals(p.ModuleRole, "resupply", StringComparison.OrdinalIgnoreCase)) { if (r != null) ApplyResupply(p, r, program); return; }
             if (p.Status == ProjectStatus.Complete && r != null && r.Mode == MissionMode.WatchLive) NoteCrewAboard(p, program);
             if (p.Status == ProjectStatus.Complete) CountHardware(program, p, true); // KSA-64: what the module carried
+            if (p.Status == ProjectStatus.Complete && type.Kind == ProgramKind.FuelDepot) OnDepotCoreDelivered(p, program);
 
             if (p.Status == ProjectStatus.Complete)
             {

@@ -36,6 +36,10 @@ namespace KSA.KSP.Parts
                 if (ap == null || ap.partPrefab == null) continue;
                 h.Seats += Math.Max(0, ap.partPrefab.CrewCapacity);
                 if (kerbalism) CountSupplies(ap.partPrefab, h);
+                // Tank capacity (a fuel depot core of your own design, 2026-10-29).
+                if (ap.partPrefab.Resources != null)
+                    foreach (PartResource r in ap.partPrefab.Resources)
+                        if ((r.resourceName == "LiquidFuel" || r.resourceName == "Oxidizer") && r.info != null) h.FuelTonnes += r.maxAmount * r.info.density;
                 bool industry = false, power = false;
                 foreach (PartModule m in ap.partPrefab.Modules)
                 {

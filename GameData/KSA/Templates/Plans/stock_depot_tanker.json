@@ -1,0 +1,12 @@
+{
+  "design_name": "Directorate depot tanker",
+  "rationale": "2026-10-29 template, drawn up by the engineers' designer from mid-game stock parts. The upper stage (Skipper on five X200-16s, 40 t of propellant) climbs to orbit, meets the depot and pumps 16 t across, keeping enough to deorbit. The Mk1 pod docks nose first with a Clamp-O-Tron on four RV-105 RCS blocks and lands under a side-mounted Mk2-R parachute. Launch: Mainsail on four X200-32s with two Thumpers.",
+  "stages": [
+    { "stage": 0, "role": "launch", "decoupler": "Decoupler.1",
+      "core": [ { "part": "Rockomax32.BW", "count": 4 }, { "part": "liquidEngineMainsail.v2", "count": 1 } ],
+      "radial": [ { "part": "solidBooster1-1", "count": 2, "symmetry": 2 } ] },
+    { "stage": 1, "role": "ascent+rendezvous+cargo+return", "decoupler": "Decoupler.1",
+      "core": [ { "part": "Rockomax16.BW", "count": 5 }, { "part": "engineLargeSkipper.v2", "count": 1 } ], "radial": [] }
+  ],
+  "payload": { "command": "mk1pod.v2", "extras": [ "parachuteRadial", "sensorThermometer", "HeatShield1", "RCSBlock.v2", "RCSBlock.v2", "RCSBlock.v2", "RCSBlock.v2", "dockingPort2" ] }
+}

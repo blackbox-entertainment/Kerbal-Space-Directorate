@@ -40,6 +40,8 @@ namespace KSA.Core.Design
         public bool IsPlane { get; set; }
         /// <summary>How many parts were researched when the design was made; a proven design is reused until this changes (2026-10-28).</summary>
         public int PartsResearched { get; set; }
+        /// <summary>Propellant this design takes on at the fuel depot, tonnes (0 = it does not stop there).</summary>
+        public double DepotFuel { get; set; }
 
         public DesignRecord()
         {
@@ -59,6 +61,7 @@ namespace KSA.Core.Design
             TotalCost = Math.Round(a.TotalCost);
             PartCount = a.PartCount;
             DesignScore = Math.Round(a.DesignScore, 3);
+            DepotFuel = Math.Round(a.DepotFuel, 2);
             StageSummary.Clear();
             foreach (StageAnalysis s in a.Stages)
                 StageSummary.Add("Stage " + s.Stage + " (" + s.Role + "): " + Math.Round(s.DeltaV) + " m/s, TWR " + s.Twr.ToString("0.00") + ", " + s.StartMass.ToString("0.0") + " t");
@@ -86,6 +89,7 @@ namespace KSA.Core.Design
             n.AddValue("error", Error);
             n.AddValue("craft", CraftPath);
             n.AddValue("partsResearched", PartsResearched);
+            if (DepotFuel > 0) n.AddValue("depotFuel", DepotFuel);
             n.AddValue("isPlane", IsPlane);
             foreach (string f in Feedback) n.AddValue("feedback", f);
             foreach (string s in StageSummary) n.AddValue("stage", s);
@@ -121,6 +125,7 @@ namespace KSA.Core.Design
                 Error = n.GetValue("error", string.Empty),
                 CraftPath = n.GetValue("craft", string.Empty),
                 PartsResearched = n.GetInt("partsResearched", 0),
+                DepotFuel = n.GetDouble("depotFuel", 0),
                 IsPlane = n.GetBool("isPlane", false)
             };
             DesignSource src; DesignVerdict v;
@@ -209,6 +214,8 @@ namespace KSA.Core.Design
                     foreach (string p in MissingMustInclude(plan, request)) analysis.Problems.Add(p);
                     string seats = MissingSeats(plan, request, _catalog);
                     if (seats != null) analysis.Problems.Add(seats);
+                    string tanks = MissingDepotTanks(plan, request, _catalog);
+                    if (tanks != null) analysis.Problems.Add(tanks);
                     record.Plan = plan;
                     record.PlanJson = plan.ToJsonText(false);
                     record.DesignName = plan.DesignName;
@@ -281,6 +288,24 @@ namespace KSA.Core.Design
         /// Null when the payload seats everyone the mission needs (the crew, plus a rescue's stranded kerbals), else the
         /// problem (2026-10-28: rescue craft were sized for the rescuers only).
         /// </summary>
+        /// <summary>Propellant in the payload's tanks (extras), tonnes: what a fuel depot core keeps in orbit.</summary>
+        public static double PayloadTankFuel(StagePlan plan, IPartCatalog catalog)
+        {
+            double t = 0;
+            if (plan == null || catalog == null) return 0;
+            foreach (string e in plan.Payload.Extras) { PartInfo x = catalog.Get(e); if (x != null && x.Kind == PartKind.Tank) t += x.FuelMass; }
+            return t;
+        }
+
+        /// <summary>Null when a depot core's payload tanks hold what the brief asks, else what is short.</summary>
+        public static string MissingDepotTanks(StagePlan plan, DesignRequest request, IPartCatalog catalog)
+        {
+            if (plan == null || request == null || catalog == null || request.DepotTanks <= 0) return null;
+            double have = PayloadTankFuel(plan, catalog);
+            if (have >= request.DepotTanks * 0.9) return null;
+            return "The depot's tanks (payload extras, stacked above the pod and under the docking port) hold " + have.ToString("0.0") + " t of propellant; the depot needs about " + request.DepotTanks.ToString("0") + " t.";
+        }
+
         public static string MissingSeats(StagePlan plan, DesignRequest request, IPartCatalog catalog)
         {
             if (plan == null || request == null || catalog == null) return null;

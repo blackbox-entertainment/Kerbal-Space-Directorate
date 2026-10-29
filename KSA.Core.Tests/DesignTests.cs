@@ -134,7 +134,7 @@ namespace KSA.Core.Tests
             StagePlan weak; StagePlan.TryParse(TestParts.WeakPlan(), out weak, out err);
             DesignAnalysis w = StageAnalyzer.Analyze(weak, catalog, req);
             Assert.That(w.MeetsDeltaV, Is.False);
-            Assert.That(StageAnalyzer.Feedback(w), Does.Contain("Short by"));
+            Assert.That(StageAnalyzer.Feedback(w), Does.Contain("m/s short"));
             Assert.That(w.DesignScore, Is.LessThan(0.4));
         }
 
@@ -197,7 +197,7 @@ namespace KSA.Core.Tests
             Assert.That(result.PassesUsed, Is.EqualTo(2));
             Assert.That(result.DesignName, Is.EqualTo("Kerbal 1"));
             Assert.That(result.DesignScore, Is.GreaterThan(0.6));
-            Assert.That(transport.Sent[1].Body, Does.Contain("Short by"), "second pass carries the review");
+            Assert.That(transport.Sent[1].Body, Does.Contain("m/s short"), "second pass carries the review");
             Assert.That(transport.Sent[0].Headers["Authorization"], Is.EqualTo("Bearer k"));
             Assert.That(string.Join("\n", log.Lines.ToArray()), Does.Not.Contain("Bearer k"), "keys never reach the log");
 

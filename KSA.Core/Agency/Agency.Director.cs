@@ -582,13 +582,17 @@ namespace KSA.Core
             if (locked.Count > 0) sb.AppendLine("NEXT LOCKED MISSIONS: " + string.Join("; ", locked.ToArray()));
 
             sb.AppendLine("LIFE SUPPORT: " + LifeSupportText() + ". A base becomes a colony only once its optional industry module (extend_program) delivers a drill, an ore converter and power" + (LifeSupportOn ? " and a greenhouse" : string.Empty) + ".");
-            sb.AppendLine("PROGRAMS (stations, bases, cloud cities):");
+            sb.AppendLine("PROGRAMS (stations, bases, cloud cities, the fuel depot):");
             foreach (Program g in Programs)
             {
                 if (g.Status == ProgramStatus.Cancelled) continue;
                 sb.AppendLine("  " + g.Id + " | " + g.Name + " | " + g.Body + " | " + g.Status + ", " + StageText(g.Stage) + " | residents " + g.Residents + " | supplies: " + SupplyStatus(g)
-                    + (CanExtend(g) ? " | can add the " + NextModuleRole(g) + " module" : string.Empty) + (NextStageHint(g).Length > 0 ? " | " + NextStageHint(g) : string.Empty));
+                    + (CanExtend(g) ? " | can add the " + NextModuleRole(g) + " module" : string.Empty) + (NextStageHint(g).Length > 0 ? " | " + NextStageHint(g) : string.Empty)
+                    + (IsDepot(g) && g.DepotCapacity > 0 ? " | FUEL DEPOT: " + g.DepotFuel.ToString("0.0") + " of " + g.DepotCapacity.ToString("0") + " t, flights waiting need " + DepotFuelSpoken(g).ToString("0.0") + " t (resupply it to send a tanker)" : string.Empty));
             }
+            // The fuel depot (2026-10-29): flights that cannot be designed otherwise stop there on the way out.
+            foreach (Project p in Projects)
+                if (p.IsActive && p.DepotId.Length > 0 && DepotBlocker(p) != null) sb.AppendLine("  " + p.Name + " (" + p.Id + ") is " + DepotBlocker(p) + ".");
             var startable = new List<string>();
             foreach (ProgramType t in Catalogs.ProgramTypes.Types)
             {

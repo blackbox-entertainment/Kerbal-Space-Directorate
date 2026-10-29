@@ -25,6 +25,10 @@ namespace KSA.Core.Design
         public bool Atmospheric { get; set; }
         /// <summary>Ends on the ground: the stage that flies it carries the landing legs.</summary>
         public bool Landing { get; set; }
+        /// <summary>Docked at the fuel depot: every stage still aboard is filled to the brim (2026-10-29). No delta-v.</summary>
+        public bool Refuel { get; set; }
+        /// <summary>A tanker's cargo pumped into the depot here, tonnes (2026-10-29). No delta-v.</summary>
+        public double FuelDrop { get; set; }
 
         public FlightLeg() { Name = string.Empty; Body = "Kerbin"; Gravity = 9.81; }
 
@@ -122,7 +126,7 @@ namespace KSA.Core.Design
         /// one way and stay; the base's "return" module is the rocket that waits on the ground, so it carries the fuel home.
         /// Null for a profile with no map (a suborbital hop: one climb, from the requirement entry).
         /// </summary>
-        public static List<FlightLeg> For(MissionType type, string moduleRole, DeltaVMap map)
+        public static List<FlightLeg> For(MissionType type, string moduleRole, DeltaVMap map, bool viaDepot = false)
         {
             if (type == null || map == null || type.Profile == MissionProfile.Suborbital) return null;
             var legs = new List<FlightLeg>();
@@ -131,6 +135,20 @@ namespace KSA.Core.Design
             legs.Add(new FlightLeg { Name = "climb to Kerbin orbit", DeltaV = KerbinAscentHigh, MinTwr = 0.6 });
 
             bool kerbin = string.Equals(type.Body, "Kerbin", StringComparison.OrdinalIgnoreCase);
+            if (type.IsTanker)
+            {
+                // A tanker meets the depot, pumps its cargo across and comes home (2026-10-29).
+                legs.Add(new FlightLeg { Name = "rendezvous and docking with the depot", DeltaV = 200, MinTwr = 0.3 });
+                legs.Add(new FlightLeg { Name = "pumping the cargo into the depot", FuelDrop = type.CargoFuel });
+                legs.Add(new FlightLeg { Name = "deorbit burn", DeltaV = 150, MinTwr = 0.1 });
+                return legs;
+            }
+            if (viaDepot && !kerbin)
+            {
+                // Tops up at the fuel depot in Kerbin orbit: the stages after this launch empty and fill here (2026-10-29).
+                legs.Add(new FlightLeg { Name = "rendezvous and docking with the depot", DeltaV = 200, MinTwr = 0.3 });
+                legs.Add(new FlightLeg { Name = "refuelling at the depot", Refuel = true });
+            }
             BodyData b = kerbin ? null : map.Get(type.Body);
             string role = string.IsNullOrEmpty(moduleRole) ? type.ModuleRole ?? string.Empty : moduleRole;
             bool oneWay = type.Profile == MissionProfile.Base && !string.Equals(role, "return", StringComparison.OrdinalIgnoreCase);
@@ -144,7 +162,13 @@ namespace KSA.Core.Design
                 }
                 else
                 {
-                    if (type.Profile == MissionProfile.Station) legs.Add(new FlightLeg { Name = "rendezvous and docking", DeltaV = 200, MinTwr = 0.3 });
+                    if (type.Profile == MissionProfile.Station)
+                    {
+                        // A core stays in orbit; a module docks and stays; a resupply docks and its crew comes home.
+                        if (string.Equals(role, "core", StringComparison.OrdinalIgnoreCase)) return legs;
+                        legs.Add(new FlightLeg { Name = "rendezvous and docking", DeltaV = 200, MinTwr = 0.3 });
+                        if (!string.Equals(role, "resupply", StringComparison.OrdinalIgnoreCase)) return legs;
+                    }
                     legs.Add(new FlightLeg { Name = "deorbit burn", DeltaV = 100, MinTwr = 0.1 });
                     return legs;
                 }

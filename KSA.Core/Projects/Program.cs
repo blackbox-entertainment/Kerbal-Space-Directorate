@@ -4,7 +4,7 @@ using KSA.Core.Data;
 
 namespace KSA.Core.Projects
 {
-    public enum ProgramKind { OrbitalStation = 0, SurfaceBase = 1, CloudCity = 2 }
+    public enum ProgramKind { OrbitalStation = 0, SurfaceBase = 1, CloudCity = 2, FuelDepot = 3 }
 
     public enum ProgramStatus { Active = 0, Complete = 1, Stalled = 2, Cancelled = 3 }
 
@@ -33,6 +33,8 @@ namespace KSA.Core.Projects
         /// <summary>Food and water the craft carries when full (Kerbalism units), for the live-flight supply check.</summary>
         public double Food { get; set; }
         public double Water { get; set; }
+        /// <summary>Liquid fuel and oxidizer the craft's tanks hold when full, tonnes (a fuel depot core's capacity, 2026-10-29).</summary>
+        public double FuelTonnes { get; set; }
 
         public static ModuleHardware None() { return new ModuleHardware(); }
     }
@@ -186,6 +188,12 @@ namespace KSA.Core.Projects
         public List<string> HardwareCounted { get; } = new List<string>();
         /// <summary>Day the base became a colony, or -1.</summary>
         public int ColonyDay { get; set; }
+
+        // --- Fuel depot (2026-10-29) ---
+        /// <summary>Propellant (liquid fuel and oxidizer) held at a fuel depot, tonnes. The agency's figure is the truth; a live depot's tanks are kept matching it.</summary>
+        public double DepotFuel { get; set; }
+        /// <summary>What the depot's tanks hold when full, tonnes.</summary>
+        public double DepotCapacity { get; set; }
 
         public int Colonists { get { return ColonistsMale + ColonistsFemale; } }
         /// <summary>Everyone who lives there: agency crew aboard plus colonists.</summary>

@@ -102,6 +102,7 @@ namespace KSA.Core
         /// <summary>A resupply resolved: on success the program is supplied and the crews rotate.</summary>
         private void ApplyResupply(Project p, MissionReport r, Program g)
         {
+            ApplyTanker(p, r, g); // a fuel depot's resupply is a tanker (2026-10-29)
             if (!r.IsSuccess)
             {
                 g.Notes.Add("Resupply " + p.Id + " " + OutcomeText(r.Outcome) + " on day " + CurrentDay + ".");

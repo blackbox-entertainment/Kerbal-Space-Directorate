@@ -77,6 +77,13 @@ namespace KSA.Core
         /// (engineersDesignFirst, 2026-10-29: the AI's rockets passed a lax check and never reached a stable orbit).
         /// </summary>
         public bool EngineersDesignFirst { get; set; } = true;
+        /// <summary>Propellant a fuel depot's core is designed to hold, tonnes (depotCapacity, 2026-10-29).</summary>
+        public double DepotCapacity { get; set; } = 64;
+        /// <summary>
+        /// Every flight beyond Kerbin tops up at the fuel depot when there is one (depotForEverything); off, only the flights
+        /// the engineers cannot design otherwise do.
+        /// </summary>
+        public bool DepotForEverything { get; set; } = false;
         /// <summary>On the pad the crew waits for the Director's Launch button (or the staging key) before lighting the engines.</summary>
         public bool LaunchOnCommand { get; set; } = true;
         /// <summary>Research lab: Science per year per lab scientist = base + perStar x stars (RESEARCH block).</summary>
@@ -127,6 +134,8 @@ namespace KSA.Core
             s.DesignWaitSeconds = node.GetInt("designWaitSeconds", s.DesignWaitSeconds);
             s.LaunchSpacingDays = node.GetInt("launchSpacingDays", s.LaunchSpacingDays);
             s.EngineersDesignFirst = node.GetBool("engineersDesignFirst", s.EngineersDesignFirst);
+            s.DepotCapacity = node.GetDouble("depotCapacity", s.DepotCapacity);
+            s.DepotForEverything = node.GetBool("depotForEverything", s.DepotForEverything);
             s.LaunchOnCommand = node.GetBool("launchOnCommand", s.LaunchOnCommand);
             DataNode research = node.GetChild("RESEARCH");
             if (research != null)

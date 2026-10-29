@@ -136,8 +136,15 @@ namespace KSA.KSP.UI
                         : supply.StartsWith("supplied", StringComparison.Ordinal) ? "#8be28b" : "#aaaaaa";
                     Line(items, "Supplies: <color=" + colour + ">" + supply + "</color>" + (inFlight ? "  |  <color=#8be28b>resupply in flight</color>" : "")
                         + "  |  Crew aboard: " + Names(g.CrewAboard), textWidth);
+                    // The fuel depot (2026-10-29): what it holds, and what flights waiting on the pad have been designed to take.
+                    if (_agency.IsDepot(g) && g.DepotCapacity > 0)
+                    {
+                        double spoken = _agency.DepotFuelSpoken(g);
+                        Line(items, "Propellant: <b>" + g.DepotFuel.ToString("0.0") + " of " + g.DepotCapacity.ToString("0") + " t</b>"
+                            + (spoken > 0 ? "  |  flights waiting need " + spoken.ToString("0.0") + " t" : "") + "  |  each tanker brings " + TankerCargo(g) + " t", textWidth);
+                    }
                     // Growth (KSA-64).
-                    if (type != null && type.Kind != ProgramKind.OrbitalStation)
+                    if (type != null && type.Kind != ProgramKind.OrbitalStation && type.Kind != ProgramKind.FuelDepot)
                     {
                         string stage = Agency.StageText(g.Stage);
                         string stageColour = g.Stage == ColonyStage.Colony ? "#8be28b" : g.Stage == ColonyStage.Settlement ? "#ffd27f" : "#cccccc";
@@ -158,8 +165,10 @@ namespace KSA.KSP.UI
                 if (!inFlight && IsResupplyTarget(g.Id))
                 {
                     string supplyLocked = _agency.ResupplyBlocker(g);
-                    var send = new DialogGUIButton(supplyLocked != null ? "<color=#888888>Send resupply</color>" : "Send resupply", () => OnResupply(id, null), 130f, ButtonHeight, false);
-                    var sendLive = new DialogGUIButton(supplyLocked != null ? "<color=#888888>Resupply (Watch Live)</color>" : "Resupply (Watch Live)", () => OnResupply(id, MissionMode.WatchLive), 170f, ButtonHeight, false);
+                    // A fuel depot's resupply is a tanker (2026-10-29).
+                    string sendText = _agency.IsDepot(g) ? "Send tanker" : "Send resupply", liveText = _agency.IsDepot(g) ? "Tanker (Watch Live)" : "Resupply (Watch Live)";
+                    var send = new DialogGUIButton(supplyLocked != null ? "<color=#888888>" + sendText + "</color>" : sendText, () => OnResupply(id, null), 130f, ButtonHeight, false);
+                    var sendLive = new DialogGUIButton(supplyLocked != null ? "<color=#888888>" + liveText + "</color>" : liveText, () => OnResupply(id, MissionMode.WatchLive), 170f, ButtonHeight, false);
                     if (supplyLocked != null) { send.OptionInteractableCondition = () => false; sendLive.OptionInteractableCondition = () => false; Line(items, "<color=#888888>Resupply " + supplyLocked + ".</color>", textWidth); }
                     buttons.Add(send);
                     buttons.Add(sendLive);
@@ -305,6 +314,14 @@ namespace KSA.KSP.UI
             string message;
             Project p = _agency.CreateResupply(programId, null, mode, out message);
             Report(p != null, message);
+        }
+
+        /// <summary>Tonnes a depot's tanker flight carries (its resupply mission's cargo).</summary>
+        private string TankerCargo(Program g)
+        {
+            ProgramType t = _agency.Catalogs.ProgramTypes.Get(g.ProgramTypeId);
+            MissionType m = t != null ? _agency.Catalogs.Missions.Get(t.ResupplyMissionType) : null;
+            return m != null ? m.CargoFuel.ToString("0") : "?";
         }
 
         private string Names(List<string> ids)

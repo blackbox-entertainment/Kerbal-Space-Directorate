@@ -55,7 +55,7 @@ namespace KSA.Core.Tests
             ProgramCatalog programs = ShippedConfigs.ProgramTypes();
             foreach (ProgramType t in programs.Types)
             {
-                if (t.Kind == ProgramKind.OrbitalStation) { Assert.That(t.Colonize, Is.False, t.Id); continue; }
+                if (t.Kind == ProgramKind.OrbitalStation || t.Kind == ProgramKind.FuelDepot) { Assert.That(t.Colonize, Is.False, t.Id); continue; }
                 Assert.That(t.Colonize, Is.True, t.Id);
                 Assert.That(t.Modules[t.RequiredModuleCount - 1].Role, Is.EqualTo("return"), t.Id + " ends with its rocket (optional modules come after)");
             }
