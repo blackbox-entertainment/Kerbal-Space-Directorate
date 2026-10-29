@@ -8,6 +8,13 @@ $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
 Set-Location $repo
 
+# The build needs KSPDIR (the KSP dev copy it references and deploys to). Fall back to E:\KSP_dev.
+if (-not $env:KSPDIR) {
+    if (Test-Path 'E:\KSP_dev\KSP_x64_Data\Managed\Assembly-CSharp.dll') { $env:KSPDIR = 'E:\KSP_dev' }
+    else { throw "Set KSPDIR to your KSP dev install first, e.g.  `$env:KSPDIR = 'E:\KSP_dev'" }
+}
+Write-Host "Using KSP at $env:KSPDIR"
+
 # Version from Directory.Build.props; KSA.version must agree.
 [xml]$props = Get-Content (Join-Path $repo 'Directory.Build.props')
 $version = ($props.Project.PropertyGroup | Where-Object { $_.Version }).Version
