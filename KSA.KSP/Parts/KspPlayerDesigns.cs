@@ -30,6 +30,7 @@ namespace KSA.KSP.Parts
         {
             var list = new List<PlayerDesign>();
             var files = new List<string>();
+            bool shieldResearched = CrewShieldResearched();
             foreach (string building in new[] { "VAB", "SPH" })
             {
                 string folder = FolderFor(building);
@@ -53,6 +54,7 @@ namespace KSA.KSP.Parts
                 if (c.Design == null) continue;
                 // Research changes without the file changing: check it every time (cheap).
                 c.Design.ResearchBlocker = ResearchBlocker(c.Design.CraftPath);
+                c.Design.HeatShieldResearched = shieldResearched;
                 list.Add(c.Design);
             }
             list.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
@@ -91,6 +93,8 @@ namespace KSA.KSP.Parts
             var order = new List<P>();
             var d = new PlayerDesign { CraftPath = path, Name = craft.GetValue("ship") ?? Path.GetFileNameWithoutExtension(path) };
             d.IsPlane = string.Equals(craft.GetValue("type"), "SPH", StringComparison.OrdinalIgnoreCase);
+            int podSize = -1, shieldSize = -1;
+            bool selfShielded = false;
             foreach (ConfigNode n in craft.GetNodes("PART"))
             {
                 string raw = n.GetValue("part") ?? string.Empty;
@@ -130,12 +134,18 @@ namespace KSA.KSP.Parts
                 }
                 d.Seats += prefab.CrewCapacity;
                 d.Cost += ap.cost;
-                if (prefab.FindModuleImplementing<ModuleParachute>() != null) d.HasParachute = true;
+                // A drogue slows the pod but cannot land it: only main parachutes count (2026-10-29).
+                if (prefab.FindModuleImplementing<ModuleParachute>() != null && !ap.name.ToLowerInvariant().Contains("drogue")) d.HasParachute = true;
+                // Heat shields: one at least as wide as the widest crew pod, or a pod with its own ablator.
+                bool ablator = prefab.FindModuleImplementing<ModuleAblator>() != null;
+                if (prefab.CrewCapacity > 0) { podSize = Math.Max(podSize, StackSize(prefab)); if (ablator) selfShielded = true; }
+                else if (ablator) shieldSize = Math.Max(shieldSize, StackSize(prefab));
                 if (prefab.FindModuleImplementing<ModuleWheelBase>() != null) d.HasWheels = true;
                 parts[raw] = p;
                 order.Add(p);
             }
             if (order.Count == 0) return null;
+            d.HasHeatShield = selfShielded || (shieldSize >= 0 && shieldSize >= podSize);
             d.PartCount = order.Count;
             // Tree: a part lists its children with "link".
             foreach (ConfigNode n in craft.GetNodes("PART"))
@@ -195,6 +205,33 @@ namespace KSA.KSP.Parts
         private static bool HasFuel(P p, HashSet<string> used)
         {
             foreach (KeyValuePair<string, double> kv in p.Fuel) if (kv.Value > 0 && used.Contains(kv.Key)) return true;
+            return false;
+        }
+
+        /// <summary>The part's stack node size (0 = 0.625 m, 1 = 1.25 m, 2 = 2.5 m), -1 when it has none.</summary>
+        private static int StackSize(Part prefab)
+        {
+            int size = -1;
+            if (prefab.attachNodes != null)
+                foreach (AttachNode n in prefab.attachNodes)
+                    if (n != null && n.nodeType == AttachNode.NodeType.Stack) size = Math.Max(size, n.size);
+            return size;
+        }
+
+        /// <summary>True when a heat shield at least 1.25 m wide is researched and bought (career and science games).</summary>
+        private static bool CrewShieldResearched()
+        {
+            try
+            {
+                bool research = HighLogic.CurrentGame != null && (HighLogic.CurrentGame.Mode == Game.Modes.CAREER || HighLogic.CurrentGame.Mode == Game.Modes.SCIENCE_SANDBOX) && ResearchAndDevelopment.Instance != null;
+                foreach (AvailablePart ap in PartLoader.LoadedPartsList)
+                {
+                    if (ap == null || ap.partPrefab == null || ap.partPrefab.FindModuleImplementing<ModuleAblator>() == null || ap.partPrefab.CrewCapacity > 0) continue;
+                    if (StackSize(ap.partPrefab) < 1) continue;
+                    if (!research || (ResearchAndDevelopment.PartTechAvailable(ap) && ResearchAndDevelopment.PartModelPurchased(ap))) return true;
+                }
+            }
+            catch { }
             return false;
         }
 

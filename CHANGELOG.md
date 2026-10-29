@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.5.19 (2026-10-29), twentieth test build
+
+- **A decoupler under every capsule.** The design review now turns back any crewed design whose top stage has no decoupler under the pod and its heat shield: the capsule must be able to drop its last stage before it comes home. (Stack order: pod, heat shield, decoupler, upper stage, decoupler, first stage.)
+- **Your own rockets get the same checks.** A saved VAB rocket needs a main parachute (a drogue alone no longer counts) and, for flights home from orbit or beyond once a 1.25 m heat shield is researched, a heat shield at least as wide as the pod (or a pod with its own ablator). Rockets that fail say why under Your designs and in Swap rocket.
+
 ## 0.5.18 (2026-10-29), nineteenth test build
 
 - **The circularisation burn is flown.** The crew opened the throttle and, in the same instant, read "no thrust" as empty tanks: the burn was given up with 1,600 m/s still aboard and the flight came home from 84 km. Any burn now gets three seconds for the engine to build thrust, and the next engine is lit first if the coast left none burning.

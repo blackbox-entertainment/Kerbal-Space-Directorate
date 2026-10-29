@@ -37,6 +37,11 @@ namespace KSA.Core.Design
         /// <summary>Null when every part is researched (and bought), else why it cannot be built yet.</summary>
         public string ResearchBlocker { get; set; }
 
+        /// <summary>A heat shield as wide as the crew pod, or a pod with its own ablator.</summary>
+        public bool HasHeatShield { get; set; }
+        /// <summary>A heat shield wide enough for a crew pod is researched (the host sets it); only then is one demanded.</summary>
+        public bool HeatShieldResearched { get; set; }
+
         public PlayerDesign() { Name = string.Empty; CraftPath = string.Empty; }
 
         /// <summary>
@@ -57,7 +62,11 @@ namespace KSA.Core.Design
                 if (need != null && dv < need.DeltaV) return Math.Round(dv) + " of " + Math.Round(need.DeltaV) + " m/s (rockets" + (HasJets ? " + jet climb" : string.Empty) + ")";
                 return null;
             }
-            if (type.CrewSize > 0 && type.Profile != MissionProfile.Base && !HasParachute) return "no parachute: the crew could not land";
+            if (type.CrewSize > 0 && type.Profile != MissionProfile.Base && !HasParachute) return "no main parachute (a drogue alone cannot land it): the crew could not land";
+            // Home from orbit or beyond: a heat shield that fits the pod, once one is researched (2026-10-29: a Director's
+            // rocket flew with only 0.625 m shields between its stages and none under the pod).
+            if (type.CrewSize > 0 && type.Profile != MissionProfile.Suborbital && type.Profile != MissionProfile.Base && HeatShieldResearched && !HasHeatShield)
+                return "no heat shield under the pod (one as wide as the pod): the crew would burn up coming home";
             if (need != null && DeltaV < need.DeltaV) return Math.Round(DeltaV) + " of " + Math.Round(need.DeltaV) + " m/s";
             if (need != null && need.MinTwr > 0 && LiftoffTwr < need.MinTwr) return "liftoff TWR " + LiftoffTwr.ToString("0.00") + " of " + need.MinTwr.ToString("0.0");
             return null;

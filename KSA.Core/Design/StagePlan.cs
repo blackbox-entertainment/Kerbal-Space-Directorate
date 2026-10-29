@@ -209,6 +209,12 @@ namespace KSA.Core.Design
         }
 
         /// <summary>True when a radial (side) decoupler is among the allowed parts.</summary>
+        private static bool CrewedPod(StagePlan plan, IPartCatalog catalog)
+        {
+            PartInfo pod = catalog != null && !string.IsNullOrEmpty(plan.Payload.Command) ? catalog.Get(plan.Payload.Command) : null;
+            return pod != null && pod.CrewCapacity > 0;
+        }
+
         private static bool HasRadialDecoupler(IPartCatalog catalog, ICollection<string> allowedNames)
         {
             if (catalog == null) return true;
@@ -280,6 +286,9 @@ namespace KSA.Core.Design
                         problems.Add(label + " (launch) has no engine or booster.");
                     if (i < plan.Stages.Count - 1 && s.Decoupler.Length == 0)
                         problems.Add(label + " needs a decoupler to separate from the stage above.");
+                    // The capsule must be able to let go of the last stage before it comes home (2026-10-29).
+                    else if (i == plan.Stages.Count - 1 && s.Decoupler.Length == 0 && CrewedPod(plan, catalog))
+                        problems.Add(label + " (the top stage) needs a decoupler under the crew pod and its heat shield, so the capsule can drop it before reentry.");
                     // A side decoupler has no top and bottom node, so it cannot sit between two stages (2026-10-28: two
                     // approved designs could not be assembled and their flights were simulated).
                     if (s.Decoupler.Length > 0)
