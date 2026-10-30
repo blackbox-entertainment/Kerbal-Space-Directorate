@@ -2,6 +2,18 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.7.0 (2026-10-30), release
+
+Everything since 0.6.8, from the test builds 0.6.9 to 0.6.17 below. In short:
+
+- **Getting to orbit.** The flight director's biggest fixes yet: the crew now holds the rocket's roll (an undamped roll had stopped every pitch-over), never burns while the craft is turning, stops a burn that throws the apoapsis away, levels the gravity turn by 50 km, prefers engines that swivel and steers on a little throttle. Every 10 seconds of the climb, turn, coast and circularisation is in KSP.log.
+- **No paper firsts.** A mission that would do something the agency has never done in a real flight (orbit, a flyby, a landing, a spacewalk) flies live; a simulated success is not know-how.
+- **Aircraft.** Four missions flown in your own SPH planes, no rocket needed: First aircraft flight, Aerial biome survey (Science), High-altitude research flight (Science, above 18 km) and Rocket plane to 40 km (jets to their ceiling, then a rocket zoom climb). Goals for each, an Aviator's Wings medal, and RAPIERs counted as the rockets they also are.
+- **Launch, then choose.** A craft launched straight from the VAB or SPH with a KSA kerbal aboard offers every mission it can fly.
+- **Buildings.** The AI Director upgrades space center buildings when one is in the way, and a design too heavy for its pad or runway says which building to upgrade. Swap rocket lists every saved design with the reason it does not fit.
+- **Reports.** The flight safety office files an after-action report; it is a post-mortem only when crew died.
+- **Older designs are redrawn** by today's rules, and the engineers fix the cause of a failed flight in the next design (a roll is no longer mistaken for a tumble).
+
 ## 0.6.17 (2026-10-30), test build
 
 - **The AI Director upgrades buildings.** A new action, upgrade {facility}, raises a space center building one level, paid from the agency's funds (held to the saving rule once the year's goals are met; refunded if the game refuses). Its briefing lists every building with its level, what it allows now, what the next level allows and the price: launch pad and runway weight and size, VAB and SPH part counts, spacewalks (Astronaut Complex), flight planning (Mission Control), orbit patches (Tracking Station), research cost (R&D). Upgrades happen while the Space Center is on screen; prices are shown there.
