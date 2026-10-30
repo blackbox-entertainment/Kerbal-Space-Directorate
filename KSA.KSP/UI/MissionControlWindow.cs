@@ -163,7 +163,7 @@ namespace KSA.KSP.UI
                 }
                 if (!string.IsNullOrEmpty(r.PostMortem))
                 {
-                    Line(items, "After-action report:", textWidth);
+                    Line(items, KSA.Core.Flight.PostMortemWriter.TitleCap(r) + ":", textWidth);
                     foreach (string w in Wrap(r.PostMortem, WrapWidth))
                         Line(items, "<color=#aaaaaa>    " + w + "</color>", textWidth);
                 }

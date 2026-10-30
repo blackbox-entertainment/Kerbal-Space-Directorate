@@ -461,7 +461,7 @@ namespace KSA.Core
             PostMortemWriter.Run(new LlmClient(Transport, Log), endpoint, r, type, crew, log, ok =>
             {
                 if (!ok) return;
-                Log.Info("After-action report written for " + r.ProjectName);
+                Log.Info(KSA.Core.Flight.PostMortemWriter.TitleCap(r) + " written for " + r.ProjectName);
                 Action<MissionReport> handler = ReportUpdated;
                 if (handler != null) handler(r);
             });

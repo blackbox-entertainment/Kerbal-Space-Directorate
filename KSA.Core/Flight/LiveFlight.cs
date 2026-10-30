@@ -181,9 +181,17 @@ namespace KSA.Core.Flight
     /// <summary>Post-mortems: an AI write-up of what happened, or canned text when AI is off (GDD 5.6).</summary>
     public static class PostMortemWriter
     {
+        /// <summary>
+        /// What the write-up is called (2026-10-30, T: "only use post mortem if someone dies"): a post-mortem when crew
+        /// died, an after-action report otherwise. Lower case; see <see cref="TitleCap"/>.
+        /// </summary>
+        public static string Title(MissionReport r) { return r != null && r.Deaths.Count > 0 ? "post-mortem" : "after-action report"; }
+
+        public static string TitleCap(MissionReport r) { string t = Title(r); return char.ToUpperInvariant(t[0]) + t.Substring(1); }
+
         public static string SystemPrompt()
         {
-            return "You are the flight safety office of a small space agency. Write a short, plain-language after-action report of a crewed flight: " +
+            return "You are the flight safety office of a small space agency. Write a short, plain-language write-up of a crewed flight: " +
                    "what happened, why, and one concrete lesson for the next design. Four to six sentences, no headings, no bullet points, no markdown. " +
                    "Refer to crew by name. Keep a calm, professional tone; it may be dry or wry but never cruel about deaths.";
         }
@@ -204,7 +212,7 @@ namespace KSA.Core.Flight
             sb.AppendLine("FLIGHT LOG:");
             if (flightLog != null) foreach (string e in flightLog) sb.AppendLine("- " + e);
             sb.AppendLine();
-            sb.AppendLine("Write the after-action report now.");
+            sb.AppendLine("Write the " + Title(r) + " now.");
             return sb.ToString();
         }
 

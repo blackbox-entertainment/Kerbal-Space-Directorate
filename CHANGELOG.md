@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.6.16 (2026-10-30), test build
+
+- **Post-mortem only for a death.** The flight safety office's write-up is a post-mortem when crew died on the flight and an after-action report otherwise: in Mission Control, the Press Room, the screen message and what the AI is asked to write.
+
 ## 0.6.15 (2026-10-30), test build
 
 - **After-action reports.** The flight safety office's write-up of a flight is now called an after-action report everywhere you see it (Mission Control, the Press Room, screen messages, AI Setup, help). Save files and settings keep their old keys, so nothing needs redoing.

@@ -116,6 +116,17 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void TheWriteUpIsAPostMortemOnlyWhenCrewDied()
+        {
+            var safe = new MissionReport();
+            Assert.That(PostMortemWriter.TitleCap(safe), Is.EqualTo("After-action report"));
+            var lost = new MissionReport();
+            lost.Deaths.Add("Jeb Kerman");
+            Assert.That(PostMortemWriter.TitleCap(lost), Is.EqualTo("Post-mortem"));
+            Assert.That(PostMortemWriter.Title(lost), Is.EqualTo("post-mortem"));
+        }
+
+        [Test]
         public void ARocketPlaneNeedsRocketPowerForTheZoomTo40Km()
         {
             Agency a = Staffed(new FakeClock());
