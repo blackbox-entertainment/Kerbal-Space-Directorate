@@ -264,6 +264,25 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void TheEngineersPickEnginesThatSteer()
+        {
+            Agency a = Make.Agency(new FakeClock(), new ListLogger());
+            PartCatalog parts = StockParts();
+            PartInfo swivel = parts.Get("liquidEngine2.v2");
+            swivel.Tags.Add("gimbal");
+            // The LV-T30 Reliant: lighter and stronger than the Swivel, but it cannot swivel to steer.
+            parts.Add(new PartInfo { Name = "liquidEngine.v2", Title = "Reliant", Kind = PartKind.Engine, Mass = 1.25, Thrust = 240, IspVacuum = 310, IspSeaLevel = 265, Diameter = 1.25, HasTopNode = true, HasBottomNode = true });
+            a.Parts = parts;
+            a.Requirements = MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
+            MissionType orbit = a.Catalogs.Missions.Get("KerbinOrbit");
+            string why;
+            DesignRecord r = a.EngineersDesign(new KSA.Core.Projects.Project { Id = "x", MissionTypeId = orbit.Id, Name = orbit.Name }, out why, orbit);
+            Assert.That(r, Is.Not.Null, why);
+            foreach (PlanStage s in r.Plan.Stages)
+                Assert.That(s.Core.Exists(p => p.Part == "liquidEngine.v2"), Is.False, "no fixed Reliant while the Swivel is researched");
+        }
+
+        [Test]
         public void TheEngineersReachEveryWorldWithStockParts()
         {
             Agency a = Make.Agency(new FakeClock(), new ListLogger());

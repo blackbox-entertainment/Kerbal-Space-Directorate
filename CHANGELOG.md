@@ -2,6 +2,12 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.6.9 (2026-10-30), test build
+
+- **Engines that steer.** The engineers prefer engines that swivel (gimbal) whenever one is researched: a Kerbin orbit rocket on two LV-T30 Reliants (fixed nozzles) could not turn, climbed nearly straight up and needed 2,182 m/s to circularise. A Reliant is used only when nothing that swivels does the job.
+- **Steering on the engine.** A swivelling engine steers only while it burns, so the crew keeps 10% throttle while holding the apoapsis during the turn, and while swinging round to the horizon for the circularisation burn (it had sat at 45 degrees with the throttle closed).
+- **Power kept for steering (Kerbalism).** Below 40% electric charge the crew pauses Kerbalism experiments and restarts them above 60%: on a pod with no battery researched, the experiments drained the charge, the reaction wheel went dead and the capsule came in nose first. The attitude log lines now show the charge.
+
 ## 0.6.8 (2026-10-30), release
 
 Everything since 0.6.1, from the test builds 0.6.2 to 0.6.7 below. In short:

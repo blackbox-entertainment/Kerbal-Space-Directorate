@@ -109,6 +109,9 @@ namespace KSA.KSP.Flight
                     if (holding)
                     {
                         c.Throttle = (float)Math.Max(0, Math.Min(1, (_targetAp * 1.1 - v.orbit.ApA) / (_targetAp * 0.1)));
+                        // A swivelling engine steers only while it burns: keep a little throttle so the turn goes on
+                        // (2026-10-30: throttled to nothing, the rocket stayed steep and cut off at 66 deg).
+                        if (c.Throttle < SteerThrottle && c.CanSteerWithEngine()) c.Throttle = SteerThrottle;
                         Status = "Gravity turn: pitch " + Math.Round(TargetPitch(v, _orbit)) + " deg, holding apoapsis at " + Math.Round(v.orbit.ApA / 1000) + " km (throttle " + Math.Round(c.Throttle * 100) + "%).";
                     }
                     else if (_orbit && c.Throttle < 1f && v.orbit.ApA < _targetAp) c.Throttle = 1f;
@@ -162,8 +165,10 @@ namespace KSA.KSP.Flight
                         // (2026-10-29: a gimbal-less upper stage burned straight up to a 2,000 km apoapsis).
                         double offFlat = c.AttitudeError(Horizontal(v));
                         bool aligned = offFlat < 15;
-                        c.Throttle = v.orbit.PeA > atmo + 2000 ? 0f : aligned ? 1f : 0f;
-                        if (!aligned) Status = "Circularising: turning to the horizon (" + Math.Round(offFlat) + " deg to go).";
+                        // Off the horizon, a swivelling engine turns the rocket on a little throttle; the pod's reaction
+                        // wheel alone could not swing a full upper stage (2026-10-30: stuck at 45 deg, burn never lit).
+                        c.Throttle = v.orbit.PeA > atmo + 2000 ? 0f : aligned ? 1f : (c.CanSteerWithEngine() ? SteerThrottle : 0f);
+                        if (!aligned) Status = "Circularising: turning to the horizon (" + Math.Round(offFlat) + " deg to go" + (c.Throttle > 0 ? ", steering on the engine" : string.Empty) + ").";
                         else { Status = "Circularising."; c.AutoStage(ref line); }
                     }
                     if (v.orbit.PeA > atmo + 2000)
@@ -188,6 +193,9 @@ namespace KSA.KSP.Flight
 
         public void End(FlightContext ctx) { ctx.Control.Yaw = 0; }
 
+        /// <summary>The throttle a swivelling engine is given to steer while the burn waits (2026-10-30).</summary>
+        private const float SteerThrottle = 0.1f;
+
         private bool _pointedFlat;
         private double _lastAttitudeLog = -1;
 
@@ -201,7 +209,7 @@ namespace KSA.KSP.Flight
             double spin = v.angularVelocity.magnitude * 180 / Math.PI;
             KsaCore.Log.Info("Ascent " + what + ": nose " + Math.Round(off) + " deg from the horizon, turning " + Math.Round(spin, 1) + " deg/s, SAS "
                 + (v.ActionGroups[KSPActionGroup.SAS] ? "on" : "off") + (ctx.Control.ManualAttitude ? ", crew steering by hand" : ", stock hold")
-                + ", pitch input " + ctx.Control.Pitch.ToString("0.00") + ", yaw input " + ctx.Control.Yaw.ToString("0.00") + ", alt " + Math.Round(v.altitude / 1000, 1) + " km, apoapsis in " + Math.Round(v.orbit.timeToAp) + " s");
+                + ", pitch input " + ctx.Control.Pitch.ToString("0.00") + ", yaw input " + ctx.Control.Yaw.ToString("0.00") + ", alt " + Math.Round(v.altitude / 1000, 1) + " km, apoapsis in " + Math.Round(v.orbit.timeToAp) + " s" + ChargeLog.Note(v));
         }
 
         /// <summary>Along the horizon in the direction of travel: the orbital velocity with its up-down part taken out.</summary>
@@ -325,6 +333,16 @@ namespace KSA.KSP.Flight
     /// Home: a deorbit burn when in orbit, retrograde reentry shedding spent stages, parachutes, touchdown.
     /// Also the tail of a suborbital hop and the last leg of every return from another body.
     /// </summary>
+    internal static class ChargeLog
+    {
+        /// <summary>", charge 37%" for the attitude log lines: a flat battery leaves the reaction wheel dead (2026-10-30).</summary>
+        public static string Note(Vessel v)
+        {
+            double f = VesselControl.ChargeFraction(v);
+            return f < 0 ? ", no electric charge aboard" : ", charge " + Math.Round(f * 100) + "%";
+        }
+    }
+
     public sealed class ReentryLeg : IFlightLeg
     {
         private enum Phases { Deorbit, Burn, Reentry, Descent, Landed }
@@ -393,7 +411,7 @@ namespace KSA.KSP.Flight
                         {
                             _lastAttitudeLog = ctx.Now;
                             KsaCore.Log.Info("Reentry attitude: " + Math.Round(off) + " deg off retrograde, spin " + Math.Round(spin, 1) + " deg/s, SAS " + (v.ActionGroups[KSPActionGroup.SAS] ? "on" : "off")
-                                + (c.ManualAttitude ? ", crew steering by hand" : ", stock retrograde hold") + ", alt " + Math.Round(alt / 1000, 1) + " km");
+                                + (c.ManualAttitude ? ", crew steering by hand" : ", stock retrograde hold") + ", alt " + Math.Round(alt / 1000, 1) + " km" + ChargeLog.Note(v));
                         }
                     }
                     if (alt > atmo + 20000 && v.verticalSpeed > -50 && v.orbit.timeToPe > 120) c.WarpTo(ctx.Now + Math.Min(v.orbit.timeToPe, 600) - 90);

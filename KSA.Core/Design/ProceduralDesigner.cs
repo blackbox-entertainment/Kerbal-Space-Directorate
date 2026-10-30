@@ -31,6 +31,7 @@ namespace KSA.Core.Design
             public int Boosters;
             public double Dry, Fuel, Thrust, IspNum, IspSlNum;
             public bool Awkward;        // too tall and thin, or an engine wider than its tanks: tried last
+            public bool Fixed;          // a liquid engine that cannot swivel, when one that can is researched: tried after those
             public double Wet { get { return Dry + Fuel; } }
         }
 
@@ -344,9 +345,14 @@ namespace KSA.Core.Design
         private static List<Option> Options(List<PartInfo> engines, List<PartInfo> tanks, List<PartInfo> boosters, bool solids, bool sideBoosters)
         {
             var list = new List<Option>();
+            // A rocket steers with its engines: a stage on a fixed engine relies on the pod's small reaction wheel and cannot
+            // turn a full stage (2026-10-30: two LV-T30 Reliants climbed straight up and never turned for orbit). Engines that
+            // swivel ("gimbal") come first whenever one is researched.
+            bool anyGimbal = engines.Exists(x => x.Tags.Contains("gimbal"));
             foreach (PartInfo e in engines)
                 foreach (PartInfo t in tanks)
                 {
+                    bool fixedEngine = anyGimbal && !e.Tags.Contains("gimbal");
                     // An engine wider than its tanks is a wobbly, top-heavy stack (a Mainsail under 1.25 m tanks), and a
                     // stack more than MaxSlenderness times as tall as it is wide is hard to keep pointed: both only when
                     // nothing short and wide does the job (2026-10-29).
@@ -354,12 +360,12 @@ namespace KSA.Core.Design
                     for (int c = 1; c <= MaxTanks; c++)
                     {
                         bool awkward = wideEngine || (t.Diameter > 0 && c * TankLength(t) > MaxSlenderness * t.Diameter);
-                        var o = new Option { Engine = e, Tank = t, Tanks = c, Awkward = awkward };
+                        var o = new Option { Engine = e, Tank = t, Tanks = c, Awkward = awkward, Fixed = fixedEngine };
                         Sum(o);
                         list.Add(o);
                         if (solids && sideBoosters)
                             foreach (PartInfo b in boosters)
-                                foreach (int nb in SideCounts) { var ob = new Option { Engine = e, Tank = t, Tanks = c, Booster = b, Boosters = nb, Awkward = awkward }; Sum(ob); list.Add(ob); }
+                                foreach (int nb in SideCounts) { var ob = new Option { Engine = e, Tank = t, Tanks = c, Booster = b, Boosters = nb, Awkward = awkward, Fixed = fixedEngine }; Sum(ob); list.Add(ob); }
                     }
                 }
             // A solid booster alone makes a stage too (stacked, if it can be).
@@ -370,6 +376,7 @@ namespace KSA.Core.Design
             list.Sort((x, y) =>
             {
                 if (x.Awkward != y.Awkward) return x.Awkward ? 1 : -1; // short and wide first
+                if (x.Fixed != y.Fixed) return x.Fixed ? 1 : -1;       // then engines that steer
                 int byMass = Math.Round(x.Wet, 3).CompareTo(Math.Round(y.Wet, 3));
                 if (byMass != 0) return byMass;
                 int byCount = x.Tanks.CompareTo(y.Tanks);

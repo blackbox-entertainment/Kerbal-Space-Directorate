@@ -492,6 +492,36 @@ namespace KSA.KSP.Flight
             return !(anyPart && allChutes);
         }
 
+        /// <summary>Electric charge left aboard, 0 to 1; -1 when the vessel holds none at all.</summary>
+        public static double ChargeFraction(Vessel v)
+        {
+            if (v == null) return -1;
+            double amount = 0, max = 0;
+            foreach (Part p in v.parts)
+            {
+                PartResource r = p.Resources != null ? p.Resources.Get("ElectricCharge") : null;
+                if (r != null) { amount += r.amount; max += r.maxAmount; }
+            }
+            return max > 0 ? amount / max : -1;
+        }
+
+        /// <summary>
+        /// True when a lit engine can swivel (ModuleGimbal): it steers the rocket, but only while it burns, so a turn far
+        /// from the burn direction is made on a little throttle (2026-10-30).
+        /// </summary>
+        public bool CanSteerWithEngine()
+        {
+            if (_v == null) return false;
+            foreach (Part p in _v.parts)
+            {
+                ModuleEngines e = p.FindModuleImplementing<ModuleEngines>();
+                if (e == null || !e.EngineIgnited || e.flameout) continue;
+                ModuleGimbal g = p.FindModuleImplementing<ModuleGimbal>();
+                if (g != null && !g.gimbalLock && g.gimbalRange > 0) return true;
+            }
+            return false;
+        }
+
         /// <summary>True when nothing is burning and staging will not help (or has just been tried).</summary>
         public bool NoThrustAvailable()
         {

@@ -81,7 +81,14 @@ namespace KSA.KSP.Flight
             CelestialBody body = subject.mainBody;
             string biome = BiomeOf(subject);
 
-            if (Parts.KspLifeSupport.KerbalismInstalled) StartKerbalismExperiments(subject);
+            if (Parts.KspLifeSupport.KerbalismInstalled)
+            {
+                // Power for steering comes first (2026-10-30): Kerbalism experiments drained a battery-less Mk1 pod and the
+                // reaction wheel went dead, so the capsule came in nose first. Below 40% charge they pause; above 60% they run.
+                double charge = VesselControl.ChargeFraction(v);
+                if (charge >= 0 && charge < LowCharge) StopKerbalismExperiments(subject, charge);
+                else if (charge < 0 || charge > LowCharge + 0.2) { _pausedForPower = false; StartKerbalismExperiments(subject); }
+            }
             List<ModuleScienceExperiment> exps = subject.FindPartModulesImplementing<ModuleScienceExperiment>();
             if (exps == null) return;
             foreach (ModuleScienceExperiment exp in exps)
@@ -129,6 +136,35 @@ namespace KSA.KSP.Flight
         }
 
         private readonly Dictionary<string, int> _kerbalismTries = new Dictionary<string, int>();
+
+        private const double LowCharge = 0.4;
+        private bool _pausedForPower;
+
+        /// <summary>Switches every running Kerbalism experiment off to save electric charge for steering (2026-10-30).</summary>
+        private void StopKerbalismExperiments(Vessel subject, double charge)
+        {
+            int stopped = 0;
+            foreach (Part p in subject.parts)
+                foreach (PartModule m in p.Modules)
+                {
+                    if (m == null || m.moduleName != "Experiment") continue;
+                    try
+                    {
+                        System.Reflection.PropertyInfo running = m.GetType().GetProperty("Running");
+                        if (running != null && !(bool)running.GetValue(m, null)) continue;
+                        BaseAction stop = m.Actions != null ? m.Actions["StopAction"] : null;
+                        if (stop == null) continue;
+                        stop.Invoke(new KSPActionParam(KSPActionGroup.None, KSPActionType.Activate));
+                        stopped++;
+                    }
+                    catch (Exception e) { KsaCore.Log.Warn("ScienceRunner: could not pause a Kerbalism experiment: " + e.Message); }
+                }
+            if (stopped > 0 && !_pausedForPower)
+            {
+                _pausedForPower = true;
+                KsaCore.Log.Info("ScienceRunner: charge at " + Math.Round(charge * 100) + "%: " + stopped + " Kerbalism experiment(s) paused to keep power for steering.");
+            }
+        }
 
         /// <summary>Kerbalism's own reason an experiment cannot run ("no storage space", "requires ..."), if it shows one.</summary>
         private static string KerbalismIssue(PartModule m)

@@ -137,6 +137,9 @@ namespace KSA.KSP.Parts
             // Kerbalism sample experiments (goo, materials bay) take 10 minutes or more and need sample storage
             // (2026-10-30: the goo on a Suborbital hop showed "no storage space" and never ran). Read by name: no reference.
             if (IsKerbalismSampler(p)) info.Tags.Add("sample");
+            // Engines that swivel steer the rocket (2026-10-30: two gimbal-less Reliants could not turn an orbital rocket).
+            ModuleGimbal gimbal = p.FindModuleImplementing<ModuleGimbal>();
+            if (gimbal != null && gimbal.gimbalRange > 0) info.Tags.Add("gimbal");
             // A crew pod with its own ablator (the Making History KV "Onion" pods) needs no separate heat shield.
             if (p.CrewCapacity > 0 && p.Modules != null && p.Modules.Contains("ModuleAblator")) info.Tags.Add("heatshielded");
             return info;
