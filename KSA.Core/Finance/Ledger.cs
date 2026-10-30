@@ -10,7 +10,9 @@ namespace KSA.Core.Finance
         Recruiting = 2,
         Hiring = 3,
         Cancellation = 4,
-        Other = 5
+        Other = 5,
+        /// <summary>Space center building upgrades (2026-10-30).</summary>
+        Facilities = 6
     }
 
     public sealed class LedgerEntry

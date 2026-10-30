@@ -198,7 +198,7 @@ namespace KSA.KSP.UI
             foreach (PlayerDesign d in _agency.PlayerDesigns())
             {
                 if (fit.Contains(d)) continue;
-                string why = d.Blocker(type, need);
+                string why = _agency.DesignBlocker(d, type, need);
                 Line(items, "    <color=#888888>" + d.Name + ": " + (why ?? "does not fit") + ".</color>", textWidth);
             }
             if (fit.Count == 0)
@@ -339,7 +339,7 @@ namespace KSA.KSP.UI
             List<PlayerDesign> mine = _agency.PlayerDesigns();
             MissionRequirements.Entry need = _agency.Requirements.For(selected);
             PlayerDesign pickedMine = null;
-            foreach (PlayerDesign d in mine) if (string.Equals(d.CraftPath, _selectedPlayerDesign, StringComparison.OrdinalIgnoreCase) && d.Blocker(selected, need) == null) pickedMine = d;
+            foreach (PlayerDesign d in mine) if (string.Equals(d.CraftPath, _selectedPlayerDesign, StringComparison.OrdinalIgnoreCase) && _agency.DesignBlocker(d, selected, need) == null) pickedMine = d;
             if (pickedMine == null) _selectedPlayerDesign = string.Empty;
             string missionLocked = pickedMine != null ? null : _agency.MissionBlocker(selected);
             if (missionLocked != null && _agency.PlayerDesignsFor(selected).Count > 0) missionLocked = "can only be flown with one of your designs below for now";
@@ -381,7 +381,7 @@ namespace KSA.KSP.UI
             foreach (PlayerDesign d in mine)
             {
                 string path = d.CraftPath;
-                string unfit = d.Blocker(selected, need);
+                string unfit = _agency.DesignBlocker(d, selected, need);
                 bool isSel = pickedMine != null && pickedMine.CraftPath == path;
                 string label = (isSel ? "> " : "") + d.Name + "  (" + (d.IsPlane ? "plane" + (d.HasParachute ? ", lands on chutes" : ", you land it") + "; " + Math.Round(d.DeltaV) + " m/s rockets" + (d.HasJets ? " + jets" : string.Empty) : Math.Round(d.DeltaV) + " m/s, TWR " + d.LiftoffTwr.ToString("0.0")) + ", " + d.Seats + (d.Seats == 1 ? " seat" : " seats") + ")";
                 if (unfit != null) label = "<color=#888888>" + label + "  [" + unfit + "]</color>";

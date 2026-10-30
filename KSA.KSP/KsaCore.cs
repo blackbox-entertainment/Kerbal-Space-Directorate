@@ -84,6 +84,7 @@ namespace KSA.KSP
             a.TemplateCheck = Parts.KspTemplateCheck.Blocker; // career: a template needs every part researched and bought
             a.ModuleHardwareCheck = Parts.KspHardwareCheck.For; // KSA-64: drills, converters, power and seats in delivered craft
             a.ResearchHost = new Parts.KspResearchHost();       // KSA-68: the AI Director can spend Science in R&D
+            a.FacilityHost = new KspFacilityHost();             // 2026-10-30: the AI Director can upgrade buildings
             a.LiveLaunchRequested += Flight.LiveFlightLauncher.OnLaunchRequested;
             a.DepotChanged += Flight.DepotSync.Apply; // the fuel depot's tanks follow the agency's figure (2026-10-29)
             a.ReportUpdated += OnReportUpdated;

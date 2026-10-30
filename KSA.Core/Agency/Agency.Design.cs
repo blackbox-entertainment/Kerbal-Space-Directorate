@@ -704,7 +704,7 @@ namespace KSA.Core
             if (type == null || !PreferredDesigns.TryGetValue(type.Id, out name)) return null;
             PlayerDesign d = FindPlayerDesign(name);
             // Planes need the Director at the stick until a plane autopilot exists, so the AI Director does not take them.
-            return d != null && (!d.IsPlane || d.HasParachute) && d.Blocker(type, Requirements.For(type)) == null ? d : null;
+            return d != null && (!d.IsPlane || d.HasParachute) && DesignBlocker(d, type) == null ? d : null;
         }
 
         /// <summary>The Director's saved designs that can fly a mission today. The AI Director only gets planes that carry parachutes (without, the human Director lands them).</summary>
@@ -713,8 +713,29 @@ namespace KSA.Core
             var fit = new List<PlayerDesign>();
             if (type == null) return fit;
             MissionRequirements.Entry need = Requirements.For(type);
-            foreach (PlayerDesign d in PlayerDesigns()) if ((!forAiDirector || !d.IsPlane || d.HasParachute) && d.Blocker(type, need) == null) fit.Add(d);
+            foreach (PlayerDesign d in PlayerDesigns()) if ((!forAiDirector || !d.IsPlane || d.HasParachute) && DesignBlocker(d, type, need) == null) fit.Add(d);
             return fit;
+        }
+
+        /// <summary>Why a saved design cannot fly a mission: its own fit, then whether the pad or runway can take its weight (2026-10-30).</summary>
+        public string DesignBlocker(PlayerDesign d, MissionType type, MissionRequirements.Entry need = null)
+        {
+            if (d == null) return "no design";
+            string why = d.Blocker(type, need ?? Requirements.For(type));
+            return why ?? SiteBlocker(d);
+        }
+
+        /// <summary>Null when the launch site takes the craft's weight; else which building to upgrade.</summary>
+        public string SiteBlocker(PlayerDesign d)
+        {
+            if (d == null || FacilityHost == null || d.Mass <= 0) return null;
+            string site = d.IsPlane ? "Runway" : "LaunchPad";
+            foreach (FacilityOption f in FacilityHost.Facilities())
+            {
+                if (!string.Equals(f.Id, site, StringComparison.OrdinalIgnoreCase) || f.MassLimit <= 0 || d.Mass <= f.MassLimit) continue;
+                return Math.Round(d.Mass, 1) + " t, too heavy for the " + f.Title + " at level " + f.Level + " (" + Math.Round(f.MassLimit) + " t): upgrade the " + f.Title;
+            }
+            return null;
         }
 
         /// <summary>The design a project flies, for the UI: the approved AI design, else the template, else the team's work in progress.</summary>
@@ -835,7 +856,7 @@ namespace KSA.Core
             MissionType type = Catalogs.Missions.Get(p.MissionTypeId);
             PlayerDesign mine = FindPlayerDesign(designName);
             if (mine == null) { message = "No saved design called '" + designName + "'."; return false; }
-            string unfit = mine.Blocker(type, Requirements.For(type));
+            string unfit = DesignBlocker(mine, type);
             if (unfit != null) { message = mine.Name + " cannot fly " + p.Name + ": " + unfit + "."; return false; }
             DropDesignSession(p);
             p.Design = mine.ToRecord(Requirements.For(type));

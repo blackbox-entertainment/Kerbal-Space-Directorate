@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.6.17 (2026-10-30), test build
+
+- **The AI Director upgrades buildings.** A new action, upgrade {facility}, raises a space center building one level, paid from the agency's funds (held to the saving rule once the year's goals are met; refunded if the game refuses). Its briefing lists every building with its level, what it allows now, what the next level allows and the price: launch pad and runway weight and size, VAB and SPH part counts, spacewalks (Astronaut Complex), flight planning (Mission Control), orbit patches (Tracking Station), research cost (R&D). Upgrades happen while the Space Center is on screen; prices are shown there.
+- **Too heavy for the runway or pad.** A saved design heavier than its launch site takes is no longer offered, with the reason ("14 t, too heavy for the Runway at level 1 (10 t): upgrade the Runway"), and the AI Director's briefing names every design held back by a building.
+
 ## 0.6.16 (2026-10-30), test build
 
 - **Post-mortem only for a death.** The flight safety office's write-up is a post-mortem when crew died on the flight and an after-action report otherwise: in Mission Control, the Press Room, the screen message and what the AI is asked to write.

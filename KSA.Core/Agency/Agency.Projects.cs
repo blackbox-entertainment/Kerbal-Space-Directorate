@@ -195,7 +195,7 @@ namespace KSA.Core
             {
                 mine = FindPlayerDesign(playerDesign);
                 if (mine == null) { message = "No saved design called '" + playerDesign + "'."; return null; }
-                string unfit = mine.Blocker(type, Requirements.For(type));
+                string unfit = DesignBlocker(mine, type);
                 if (unfit != null) { message = mine.Name + " cannot fly " + type.Name + ": " + unfit + "."; return null; }
             }
             // Aircraft (2026-10-30): always one of the Director's planes; with none picked, the one ticked for it, else the first that fits.

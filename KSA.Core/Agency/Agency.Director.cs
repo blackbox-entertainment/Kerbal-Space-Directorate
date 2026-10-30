@@ -305,6 +305,7 @@ namespace KSA.Core
                         if (!p.ByAiDirector) { message = p.Name + " was started by the human Director; only they can cancel it"; return false; }
                         return CancelProject(p.Id, out message);
                     }
+                case "upgrade": return UpgradeFacility(Json.GetString(a, "facility", ""), true, out message);
                 case "research":
                     {
                         if (ResearchHost == null) { message = "research is not available in this game mode"; return false; }
@@ -543,6 +544,36 @@ namespace KSA.Core
         /// <summary>What the Director may spend while saving: the balance above the year's opening balance.</summary>
         public double DirectorSpendable() { return Math.Max(0, Ledger.Balance - State.YearStartBalance); }
 
+        /// <summary>The space center's buildings (2026-10-30). Null in tests and outside career.</summary>
+        public IFacilityHost FacilityHost { get; set; }
+
+        /// <summary>
+        /// Raises a space center building one level, paid from the ledger (2026-10-30). The AI Director is held to its
+        /// saving rule; the money comes back if the game refuses.
+        /// </summary>
+        public bool UpgradeFacility(string id, bool byAiDirector, out string message)
+        {
+            if (FacilityHost == null) { message = "buildings cannot be upgraded in this game mode"; return false; }
+            FacilityOption f = null;
+            foreach (FacilityOption o in FacilityHost.Facilities())
+                if (string.Equals(o.Id, id, StringComparison.OrdinalIgnoreCase) || string.Equals(o.Title, id, StringComparison.OrdinalIgnoreCase)) { f = o; break; }
+            if (f == null) { message = "no building called '" + id + "'"; return false; }
+            if (!f.CanUpgrade) { message = f.Title + " is already at its top level"; return false; }
+            if (byAiDirector && ConserveRefuses(f.UpgradeCost, "upgrading the " + f.Title, out message)) return false;
+            if (!Ledger.CanAfford(f.UpgradeCost)) { message = "upgrading the " + f.Title + " costs " + Money(f.UpgradeCost) + "; the agency has " + Money(Ledger.Balance); return false; }
+            Ledger.Withdraw(f.UpgradeCost, KSA.Core.Finance.LedgerCategory.Facilities, "Upgrade: " + f.Title + " to level " + (f.Level + 1), CurrentDay, CurrentYear);
+            string why;
+            if (!FacilityHost.RaiseLevel(f.Id, out why))
+            {
+                Ledger.Deposit(f.UpgradeCost, KSA.Core.Finance.LedgerCategory.Facilities, "Refund: " + f.Title + " upgrade refused", CurrentDay, CurrentYear);
+                message = "the " + f.Title + " upgrade was refused (" + why + "); refunded";
+                return false;
+            }
+            message = f.Title + " upgraded to level " + (f.Level + 1) + " for " + Money(f.UpgradeCost) + (f.NextLevel.Length > 0 ? ": " + f.NextLevel : string.Empty);
+            Push(null, message);
+            return true;
+        }
+
         private bool ConserveRefuses(double cost, string what, out string message)
         {
             message = null;
@@ -618,7 +649,8 @@ namespace KSA.Core
             sb.AppendLine("  dismiss {kerbal} | lab {kerbal, on: true|false} | appoint {department: Finances|Science|PublicRelations|Operations, kerbal} | vacate {department}");
             sb.AppendLine("  start_project {mission, crew?: [names], engineers?: [names]} | cancel_project {project}");
             sb.AppendLine("  start_program {program_type, body} | resupply {program} | extend_program {program} | resume_program {program} | evacuate {program} | cancel_program {program}");
-            sb.AppendLine("  rescue {stranding} | research {tech} | wait {}");
+            sb.AppendLine("  rescue {stranding} | research {tech} | upgrade {facility} | wait {}");
+            sb.AppendLine("Buildings limit what the agency can fly (see FACILITIES): the launch pad and runway cap a craft's mass, the VAB and SPH its part count and size, the Astronaut Complex spacewalks (level 2 for EVA in flight), Mission Control and the Tracking Station flight planning, R&D the costliest research. Upgrade the building that blocks the next mission or a goal; they are expensive, so not for their own sake.");
             return sb.ToString();
         }
 
@@ -738,6 +770,21 @@ namespace KSA.Core
             {
                 sb.AppendLine("STRANDED CREWS (rescue them):");
                 foreach (Stranding s in waiting) sb.AppendLine("  " + s.Id + " | " + CrewNames(s.Crew) + " | " + s.Where + " | " + DaysStranded(s) + " days | " + (s.RescueProjectId.Length > 0 ? "rescue " + s.RescueProjectId + " under way" : (RescueBlocker(s) ?? "rescue possible")));
+            }
+
+            if (FacilityHost != null)
+            {
+                List<FacilityOption> fac = FacilityHost.Facilities();
+                if (fac.Count > 0)
+                {
+                    sb.AppendLine("FACILITIES (id | level | limits now | next level | upgrade cost):");
+                    foreach (FacilityOption f in fac)
+                        sb.AppendLine("  " + f.Id + " | " + f.Level + " of " + f.MaxLevel + " | " + f.LimitNow + " | " + (f.Level >= f.MaxLevel ? "top level | -" : f.CanUpgrade ? f.NextLevel + " | " + Money(f.UpgradeCost) : f.NextLevel + " | priced only at the Space Center"));
+                    // The human Director's craft that only a building keeps on the ground: the clearest reason to upgrade.
+                    var held = new List<string>();
+                    foreach (PlayerDesign d in PlayerDesigns()) { string w = SiteBlocker(d); if (w != null) held.Add("'" + d.Name + "' " + w); }
+                    if (held.Count > 0) sb.AppendLine("HELD BACK BY A BUILDING: " + string.Join("; ", held.ToArray()) + ".");
+                }
             }
 
             if (ResearchHost != null)
