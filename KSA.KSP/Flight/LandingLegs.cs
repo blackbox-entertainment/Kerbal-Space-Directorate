@@ -180,6 +180,7 @@ namespace KSA.KSP.Flight
                             {
                                 State = LegState.Failed; Status = "Out of propellant in orbit.";
                                 ctx.Say("Propellant exhausted during the deorbit burn; the lander stays in orbit.");
+                                ctx.Cause(KSA.Core.Flight.FailureCause.OutOfFuel, "Propellant exhausted during the deorbit burn; the lander stays in orbit.");
                             }
                         }
                         break;
@@ -426,11 +427,13 @@ namespace KSA.KSP.Flight
                     if (above > 500)
                     {
                         ctx.Say("Propellant exhausted at " + Math.Round(above) + " m above terrain; holding retrograde and hoping.");
+                        ctx.Cause(KSA.Core.Flight.FailureCause.OutOfFuel, "Propellant exhausted at " + Math.Round(above) + " m above terrain; holding retrograde and hoping.");
                         Status = "Out of propellant.";
                         State = LegState.Failed;
                         return;
                     }
                     ctx.Say("Propellant exhausted at " + Math.Round(above) + " m; riding it down.");
+                    ctx.Cause(KSA.Core.Flight.FailureCause.OutOfFuel, "Propellant exhausted at " + Math.Round(above) + " m; riding it down.");
                 }
                 c.Throttle = 0;
                 Status = "Out of propellant, " + Math.Round(above) + " m.";
@@ -899,11 +902,13 @@ namespace KSA.KSP.Flight
                             {
                                 _phase = Phases.Coast; _phaseStart = ctx.Now;
                                 ctx.Say("Propellant exhausted during ascent at " + LandingHelpers.Km(v.altitude) + " km; coasting on what we have.");
+                                ctx.Cause(KSA.Core.Flight.FailureCause.OutOfFuel, "Propellant exhausted during ascent at " + LandingHelpers.Km(v.altitude) + " km; coasting on what we have.");
                             }
                             else
                             {
                                 State = LegState.Failed; Status = "Out of propellant.";
                                 ctx.Say("Propellant exhausted during ascent at " + LandingHelpers.Km(v.altitude) + " km; no orbit possible.");
+                                ctx.Cause(KSA.Core.Flight.FailureCause.OutOfFuel, "Propellant exhausted during ascent at " + LandingHelpers.Km(v.altitude) + " km; no orbit possible.");
                             }
                         }
                         break;
@@ -949,6 +954,7 @@ namespace KSA.KSP.Flight
                             {
                                 State = LegState.Failed; Status = "Out of propellant before orbit.";
                                 ctx.Say("Propellant exhausted before a stable orbit; periapsis " + LandingHelpers.Km(v.orbit.PeA) + " km. The lander will come back down.");
+                                ctx.Cause(KSA.Core.Flight.FailureCause.OutOfFuel, "Propellant exhausted before a stable orbit; periapsis " + LandingHelpers.Km(v.orbit.PeA) + " km. The lander will come back down.");
                             }
                         }
                         break;

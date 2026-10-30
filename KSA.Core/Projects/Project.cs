@@ -111,6 +111,10 @@ namespace KSA.Core.Projects
         public bool DirectorFlown { get; set; }
         /// <summary>AI post-mortem text (M5), empty when none was written.</summary>
         public string PostMortem { get; set; }
+        /// <summary>Why a live flight failed, as the flight director saw it (2026-10-30); None for successes and unknowns.</summary>
+        public KSA.Core.Flight.FailureCause Cause { get; set; }
+        /// <summary>What the flight director measured: "the second stage tumbled at 16 km (spinning 992 deg/s)".</summary>
+        public string CauseDetail { get; set; } = string.Empty;
         /// <summary>Survivors who could not get home (KSA-65): they wait for a rescue at <see cref="StrandedBody"/>.</summary>
         public List<string> Stranded { get; } = new List<string>();
         public string StrandedBody { get; set; } = string.Empty;

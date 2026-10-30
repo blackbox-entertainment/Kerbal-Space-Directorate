@@ -40,6 +40,10 @@ namespace KSA.Core.Flight
         public double SurfaceDays { get; set; }
         /// <summary>Science missions: points the experiments collected aboard (the host counts them); the primary is earned when > 0.</summary>
         public double SciencePoints { get; set; }
+        /// <summary>The first thing that went wrong, as the flight director saw it (2026-10-30); None when nothing did.</summary>
+        public FailureCause Cause { get; set; }
+        /// <summary>What it measured, in a sentence: "the second stage tumbled at 16 km (spinning 992 deg/s)".</summary>
+        public string CauseDetail { get; set; } = string.Empty;
     }
 
     /// <summary>Turns a live flight's facts into a MissionReport the agency can apply like a simulated one.</summary>
@@ -129,6 +133,20 @@ namespace KSA.Core.Flight
                 if (belowSpace && primary.StartsWith("Suborbit:", StringComparison.OrdinalIgnoreCase))
                     r.Lesson = "Space not reached on " + r.ProjectName + ": it peaked at " + FormatKm(result.MaxAltitude) + ", below the " + FormatKm(result.SpaceAltitude) + " where space begins; the crew came home safe.";
             }
+            // What went wrong, and what the engineers will change (2026-10-30). A suborbital flight short of space without a
+            // better cause was short of delta-v.
+            if (r.Outcome != MissionOutcome.Success)
+            {
+                r.Cause = result.Cause;
+                r.CauseDetail = result.CauseDetail ?? string.Empty;
+                if (r.Cause == FailureCause.None && belowSpace && primary.StartsWith("Suborbit:", StringComparison.OrdinalIgnoreCase))
+                {
+                    r.Cause = FailureCause.BelowSpace;
+                    r.CauseDetail = "it peaked at " + FormatKm(result.MaxAltitude) + ", below the " + FormatKm(result.SpaceAltitude) + " where space begins";
+                }
+                if (r.Cause != FailureCause.None)
+                    r.Lesson = (r.Deaths.Count > 0 ? "Crew lost. " : string.Empty) + FailureCauses.Lesson(r.Cause, r.CauseDetail, r.ProjectName);
+            }
             if (result.DirectorFlown) r.Lesson += " Director-flown.";
             r.Lines.AddRange(CannedLines(r, result));
             return r;
@@ -206,7 +224,8 @@ namespace KSA.Core.Flight
                     int prev = text.LastIndexOf('.', Math.Max(0, dot - 1));
                     lastSentence = text.Substring(prev + 1, dot - prev).Trim();
                 }
-                if (lastSentence.Length > 10 && lastSentence.Length < 240) r.Lesson = lastSentence;
+                // A measured cause beats the write-up's last sentence (2026-10-30).
+                if (lastSentence.Length > 10 && lastSentence.Length < 240 && r.Cause == FailureCause.None) r.Lesson = lastSentence;
                 done(true);
             });
         }

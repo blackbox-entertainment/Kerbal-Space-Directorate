@@ -270,6 +270,7 @@ namespace KSA.KSP.Flight
                         n.RemoveSelf();
                         Fail("propellant exhausted with " + Math.Round(remaining) + " m/s to go");
                         line = "Propellant exhausted mid-burn; " + Math.Round(remaining) + " m/s short.";
+                        ctx.Cause(KSA.Core.Flight.FailureCause.OutOfFuel, "Propellant exhausted mid-burn; " + Math.Round(remaining) + " m/s short.");
                     }
                     else if (now - _started > _burnTime * 3 + 60)
                     {

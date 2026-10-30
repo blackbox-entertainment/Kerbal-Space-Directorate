@@ -77,6 +77,9 @@ namespace KSA.KSP.Flight
         public bool IsPlane;
         /// <summary>A suborbital hop with the delta-v for orbit goes for it (2026-10-30).</summary>
         public bool TryOrbit;
+        /// <summary>Records why the flight is going wrong; the first cause wins (2026-10-30).</summary>
+        public Action<KSA.Core.Flight.FailureCause, string> NoteCause;
+        public void Cause(KSA.Core.Flight.FailureCause cause, string detail) { if (NoteCause != null) NoteCause(cause, detail); }
         /// <summary>Hands the controls to the Director (a plane's runway landing). Null when not possible.</summary>
         public Action HandToDirector;
         /// <summary>The crew's judgement call (trait rule or a model in character). The callback may fire at once or later. Null when unavailable.</summary>

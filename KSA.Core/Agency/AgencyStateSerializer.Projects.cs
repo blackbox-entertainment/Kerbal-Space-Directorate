@@ -153,6 +153,7 @@ namespace KSA.Core
                 n.AddValue("lesson", r.Lesson);
                 n.AddValue("directorFlown", r.DirectorFlown);
                 n.AddValue("postMortem", r.PostMortem);
+                if (r.Cause != KSA.Core.Flight.FailureCause.None) { n.AddValue("cause", r.Cause.ToString()); n.AddValue("causeDetail", r.CauseDetail); }
                 foreach (string c in r.Crew) n.AddValue("crew", c);
                 foreach (string l in r.Lines) n.AddValue("line", l);
                 foreach (string a in r.Achievements) n.AddValue("achievement", a);
@@ -348,7 +349,9 @@ namespace KSA.Core
                     SuccessChance = n.GetDouble("successChance", 0),
                     Lesson = n.GetValue("lesson", string.Empty),
                     DirectorFlown = n.GetBool("directorFlown", false),
-                    PostMortem = n.GetValue("postMortem", string.Empty)
+                    PostMortem = n.GetValue("postMortem", string.Empty),
+                    Cause = KSA.Core.Flight.FailureCauses.Parse(n.GetValue("cause", string.Empty)),
+                    CauseDetail = n.GetValue("causeDetail", string.Empty)
                 };
                 r.Crew.AddRange(n.GetValues("crew"));
                 r.Lines.AddRange(n.GetValues("line"));

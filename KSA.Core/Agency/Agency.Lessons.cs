@@ -39,9 +39,49 @@ namespace KSA.Core
         {
             if (p == null || r == null || r.Outcome == MissionOutcome.Success) return;
             string lesson = BuildLesson(p, r);
-            if (string.IsNullOrEmpty(lesson)) return;
-            LessonsLearned.Add(lesson);
-            if (LessonsLearned.Count > MaxLessons) LessonsLearned.RemoveRange(0, LessonsLearned.Count - MaxLessons);
+            if (!string.IsNullOrEmpty(lesson))
+            {
+                LessonsLearned.Add(lesson);
+                if (LessonsLearned.Count > MaxLessons) LessonsLearned.RemoveRange(0, LessonsLearned.Count - MaxLessons);
+            }
+            NoteDesignFix(r);
+        }
+
+        // ------------------------------------------------------------------ design fixes (2026-10-30)
+
+        /// <summary>
+        /// The causes of failed flights, per mission type, oldest first (saved). The engineers' next design for that mission
+        /// fixes each one (FailureCauses.Fix): fins higher up, more margin, bigger parachutes, a heat shield.
+        /// </summary>
+        public Dictionary<string, List<Flight.FailureCause>> DesignFixes { get; } = new Dictionary<string, List<Flight.FailureCause>>(StringComparer.OrdinalIgnoreCase);
+
+        private const int MaxFixesPerMission = 6;
+
+        private void NoteDesignFix(MissionReport r)
+        {
+            if (r == null || r.Cause == Flight.FailureCause.None || string.IsNullOrEmpty(r.MissionTypeId)) return;
+            if (r.DirectorFlown) return; // the Director had the stick: the rocket may not be to blame
+            List<Flight.FailureCause> list;
+            if (!DesignFixes.TryGetValue(r.MissionTypeId, out list)) DesignFixes[r.MissionTypeId] = list = new List<Flight.FailureCause>();
+            list.Add(r.Cause);
+            if (list.Count > MaxFixesPerMission) list.RemoveRange(0, list.Count - MaxFixesPerMission);
+            Log.Info("Design fix noted for " + r.MissionTypeId + ": " + r.Cause + " (" + Flight.FailureCauses.Fix(r.Cause) + ")");
+        }
+
+        /// <summary>The fixes the next design for a mission must make (empty when it never failed with a known cause).</summary>
+        public List<Flight.FailureCause> FixesFor(string missionTypeId)
+        {
+            List<Flight.FailureCause> list;
+            return !string.IsNullOrEmpty(missionTypeId) && DesignFixes.TryGetValue(missionTypeId, out list) ? new List<Flight.FailureCause>(list) : new List<Flight.FailureCause>();
+        }
+
+        /// <summary>True when the newest flight of a mission failed with a known cause: its old design is not reused.</summary>
+        public bool LastFlightFailed(string missionTypeId)
+        {
+            for (int i = Reports.Count - 1; i >= 0; i--)
+                if (string.Equals(Reports[i].MissionTypeId, missionTypeId, StringComparison.OrdinalIgnoreCase))
+                    return !Reports[i].IsSuccess && Reports[i].Cause != Flight.FailureCause.None;
+            return false;
         }
 
         /// <summary>One line: mission (design, delta-v, pilot): outcome. Key moments.</summary>
@@ -63,7 +103,10 @@ namespace KSA.Core
                 foreach (string k in KeyMoments)
                     if (line.IndexOf(k, StringComparison.Ordinal) >= 0) { string m = Trim(line); if (!moments.Contains(m)) moments.Add(m); break; }
             }
-            string text = head + (moments.Count > 0 ? " " + string.Join(" ", moments.ToArray()) : (!string.IsNullOrEmpty(r.Lesson) ? " " + r.Lesson : string.Empty));
+            // A known cause says it all, with the fix (2026-10-30); otherwise the key moments of the flight log.
+            string text = r.Cause != Flight.FailureCause.None
+                ? head + " Cause: " + (string.IsNullOrEmpty(r.CauseDetail) ? Flight.FailureCauses.Describe(r.Cause) : r.CauseDetail.TrimEnd('.')) + "; " + Flight.FailureCauses.Fix(r.Cause) + "."
+                : head + (moments.Count > 0 ? " " + string.Join(" ", moments.ToArray()) : (!string.IsNullOrEmpty(r.Lesson) ? " " + r.Lesson : string.Empty));
             return text.Length > 300 ? text.Substring(0, 297) + "..." : text;
         }
 

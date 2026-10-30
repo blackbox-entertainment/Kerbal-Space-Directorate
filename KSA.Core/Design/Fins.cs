@@ -59,7 +59,7 @@ namespace KSA.Core.Design
         /// stage is solid boosters only or has under 1,500 m/s at sea level: it burns out low and the next stage climbs on
         /// through the air (2026-10-30: a finless upper stage tumbled at 16 km; T's Suborbital hop mk I flew with fins on both).
         /// </summary>
-        public static List<int> StagesNeedingFins(StagePlan plan, IPartCatalog catalog)
+        public static List<int> StagesNeedingFins(StagePlan plan, IPartCatalog catalog, bool forceUpper = false)
         {
             var list = new List<int>();
             if (plan == null || plan.Stages.Count == 0) return list;
@@ -73,7 +73,8 @@ namespace KSA.Core.Design
                 if (x.Kind == PartKind.Engine) liquid = true;
                 if (x.Kind == PartKind.Booster) solid = true;
             }
-            if ((solid && !liquid) || LaunchStageDeltaV(plan, catalog) < LowStageDeltaV) list.Add(1);
+            // forceUpper: the mission tumbled before (2026-10-30), so the second stage gets fins whatever the first holds.
+            if (forceUpper || (solid && !liquid) || LaunchStageDeltaV(plan, catalog) < LowStageDeltaV) list.Add(1);
             return list;
         }
 
@@ -100,11 +101,11 @@ namespace KSA.Core.Design
         /// Adds fins to every stage that flies through thick air and has none, when a fin is allowed (the AI often leaves
         /// them out). Returns a note for the design log, or null when nothing changed.
         /// </summary>
-        public static string AddIfMissing(StagePlan plan, IEnumerable<PartInfo> allowed, IPartCatalog catalog, int maxStages = int.MaxValue)
+        public static string AddIfMissing(StagePlan plan, IEnumerable<PartInfo> allowed, IPartCatalog catalog, int maxStages = int.MaxValue, bool forceUpper = false)
         {
             if (plan == null || plan.Stages.Count == 0 || catalog == null) return null;
             var notes = new List<string>();
-            foreach (int s in StagesNeedingFins(plan, catalog))
+            foreach (int s in StagesNeedingFins(plan, catalog, forceUpper))
             {
                 if (s >= maxStages) break;
                 if (HasOn(plan, catalog, s)) continue;

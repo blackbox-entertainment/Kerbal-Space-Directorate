@@ -48,10 +48,13 @@ namespace KSA.Core.Design
             return c;
         }
 
-        /// <summary>Null when the payload's parachutes land it softly, else what is wrong.</summary>
-        public static string Shortfall(StagePlan plan, IPartCatalog catalog)
+        /// <summary>
+        /// Null when the payload's parachutes land it softly, else what is wrong. <paramref name="factor"/> asks for more
+        /// than the bare need: 1.5 after the mission landed too hard before (2026-10-30).
+        /// </summary>
+        public static string Shortfall(StagePlan plan, IPartCatalog catalog, double factor = 1)
         {
-            double land = LandingMass(plan, catalog), cap = CapacityOf(plan, catalog);
+            double land = LandingMass(plan, catalog) * Math.Max(1, factor), cap = CapacityOf(plan, catalog);
             if (cap + 1e-6 >= land) return null;
             return "The parachutes are too small: they land about " + cap.ToString("0.0") + " t softly, and the capsule coming down weighs "
                    + land.ToString("0.0") + " t. Add parachutes (radial ones round the pod) or a bigger one; each main parachute lands about "
@@ -63,9 +66,10 @@ namespace KSA.Core.Design
         /// biggest stack chute in place of a smaller one when no radial chute is allowed. Returns a note, or null if nothing
         /// changed.
         /// </summary>
-        public static string Fit(StagePlan plan, IEnumerable<PartInfo> allowed, IPartCatalog catalog, bool radialOnly = false)
+        public static string Fit(StagePlan plan, IEnumerable<PartInfo> allowed, IPartCatalog catalog, bool radialOnly = false, double factor = 1)
         {
             if (plan == null || catalog == null) return null;
+            factor = Math.Max(1, factor);
             if (!plan.Payload.Extras.Exists(e => { PartInfo x = catalog.Get(e); return x != null && x.Kind == PartKind.Parachute; })) return null;
             PartInfo radial = null, stack = null;
             foreach (PartInfo p in allowed)
@@ -79,12 +83,12 @@ namespace KSA.Core.Design
             if (radial == null && stack != null)
             {
                 int at = plan.Payload.Extras.FindIndex(e => { PartInfo x = catalog.Get(e); return x != null && x.Kind == PartKind.Parachute && x.IsStackable; });
-                if (at >= 0 && Capacity(catalog.Get(plan.Payload.Extras[at])) < Capacity(stack) && CapacityOf(plan, catalog) < LandingMass(plan, catalog))
+                if (at >= 0 && Capacity(catalog.Get(plan.Payload.Extras[at])) < Capacity(stack) && CapacityOf(plan, catalog) < LandingMass(plan, catalog) * factor)
                 { plan.Payload.Extras[at] = stack.Name; added++; }
             }
             // Radial chutes go on in pairs, opposite each other, so the drag pulls straight; before any docking port, which
             // stays the top of the stack.
-            while (radial != null && CapacityOf(plan, catalog) < LandingMass(plan, catalog) && added < 8)
+            while (radial != null && CapacityOf(plan, catalog) < LandingMass(plan, catalog) * factor && added < 8)
             {
                 int at = plan.Payload.Extras.FindIndex(e => { PartInfo x = catalog.Get(e); return x != null && x.Kind == PartKind.Docking; });
                 if (at < 0) at = plan.Payload.Extras.Count;

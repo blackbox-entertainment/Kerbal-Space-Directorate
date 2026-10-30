@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.6.7 (2026-10-30), test build
+
+- **Failures teach.** A live flight that goes wrong now records why, as the flight director saw it: the rocket (or the upper stage) tumbled, with the altitude, speed and spin; it ran out of propellant, and where; a part overheated coming down; the capsule hit the ground too fast, under parachutes that were too small or with none open; or a hop never reached space. The cause is the lesson (in the report, the lessons learned and the AI Director's briefing), saved with the game, and kept over the AI post-mortem's last sentence.
+- **The next design fixes it.** The engineers' next rocket for that mission: fins on the second stage after a tumble; 15% more delta-v margin after running dry or falling short of space (up to 55% in all); half as much parachute again after a hard landing; a heat shield after a burn-up, even on a hop (research one if none is available). The AI designer is told the same fixes. The old design of a mission whose last flight failed is not reused. Flights the Director flew by hand teach nothing about the rocket.
+
 ## 0.6.6 (2026-10-30), test build
 
 - **Four fins a stage again.** 0.6.4 put eight small fins on light rockets; with fins on the second stage as well, four per stage is enough.

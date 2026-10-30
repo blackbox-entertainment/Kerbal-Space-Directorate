@@ -37,6 +37,8 @@ namespace KSA.Core
             st.AddValue("scienceCredited", s.ScienceCredited);
             st.AddValue("lastLaunchDay", s.LastLaunchDay);
             foreach (string l in agency.LessonsLearned) st.AddValue("lessonLearned", l);
+            foreach (KeyValuePair<string, List<KSA.Core.Flight.FailureCause>> kv in agency.DesignFixes)
+                foreach (KSA.Core.Flight.FailureCause c in kv.Value) st.AddValue("designFix", kv.Key + "|" + c);
             foreach (KeyValuePair<string, string> kv in agency.PreferredDesigns) st.AddValue("preferDesign", kv.Key + "|" + kv.Value);
             foreach (KeyValuePair<string, int> kv in agency.NoDesignAt) st.AddValue("noDesign", kv.Key + "|" + kv.Value);
             st.AddValue("systemColonized", s.SystemColonized);
@@ -228,6 +230,16 @@ namespace KSA.Core
                 s.LastLaunchDay = st.GetInt("lastLaunchDay", -1);
                 agency.LessonsLearned.Clear();
                 agency.LessonsLearned.AddRange(st.GetValues("lessonLearned"));
+                agency.DesignFixes.Clear();
+                foreach (string v in st.GetValues("designFix"))
+                {
+                    int bar = v.IndexOf('|');
+                    KSA.Core.Flight.FailureCause c = bar > 0 ? KSA.Core.Flight.FailureCauses.Parse(v.Substring(bar + 1)) : KSA.Core.Flight.FailureCause.None;
+                    if (c == KSA.Core.Flight.FailureCause.None) continue;
+                    List<KSA.Core.Flight.FailureCause> list;
+                    if (!agency.DesignFixes.TryGetValue(v.Substring(0, bar), out list)) agency.DesignFixes[v.Substring(0, bar)] = list = new List<KSA.Core.Flight.FailureCause>();
+                    list.Add(c);
+                }
                 agency.PreferredDesigns.Clear();
                 foreach (string v in st.GetValues("preferDesign"))
                 {

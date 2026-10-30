@@ -16,7 +16,7 @@ namespace KSA.Core.Design
     public static class ProceduralDesigner
     {
         private const double G0 = 9.80665;
-        private const double Margin = 1.10;      // aim 10% over every leg
+        // The delta-v margin over every leg: 10%, more after a mission ran dry (DesignRequest.DeltaVMargin).
         private const int MaxTanks = 8;
         private const int MaxStages = 8;
         private const double MaxSlenderness = 10;
@@ -48,6 +48,8 @@ namespace KSA.Core.Design
             why = null;
             if (req == null || catalog == null) { why = "nothing to design with"; return null; }
             var allowed = req.AllowedParts;
+            // More margin after a flight of this mission ran dry (2026-10-30).
+            double margin = req.DeltaVMargin;
             int crew = Math.Max(0, req.CrewSize);
 
             // Payload: the lightest pod that seats the crew, then one of each thing the brief must carry.
@@ -116,7 +118,7 @@ namespace KSA.Core.Design
                 plan.Payload.TanksEmpty = true; // it goes up empty; tankers fill it
             }
             // Enough parachute for the capsule that comes down, not one small chute whatever it weighs (2026-10-29).
-            Parachutes.Fit(plan, allowed, catalog);
+            Parachutes.Fit(plan, allowed, catalog, false, req.ChuteFactor);
             double payload = pod.Mass + pod.FuelMass;
             foreach (string e in plan.Payload.Extras) { PartInfo x = catalog.Get(e); if (x != null) payload += x.Mass + (plan.Payload.TanksEmpty && x.Kind == PartKind.Tank ? 0 : x.FuelMass); }
 
@@ -139,17 +141,17 @@ namespace KSA.Core.Design
             var flight = new List<FlightLeg>();
             if (need != null && need.Legs != null)
                 foreach (FlightLeg leg in need.Legs)
-                    flight.Add(new FlightLeg { Name = leg.Name, Body = leg.Body, DeltaV = leg.DeltaV * Margin, Gravity = leg.Gravity, MinTwr = leg.MinTwr, MaxTwr = leg.MaxTwr, Atmospheric = leg.Atmospheric, Landing = leg.Landing, Refuel = leg.Refuel, FuelDrop = leg.FuelDrop });
+                    flight.Add(new FlightLeg { Name = leg.Name, Body = leg.Body, DeltaV = leg.DeltaV * margin, Gravity = leg.Gravity, MinTwr = leg.MinTwr, MaxTwr = leg.MaxTwr, Atmospheric = leg.Atmospheric, Landing = leg.Landing, Refuel = leg.Refuel, FuelDrop = leg.FuelDrop });
             else
             {
                 // One figure: a hop is one climb; anything bigger climbs through the air first, then burns in thin air.
-                double total = (need != null ? need.DeltaV : 1800) * Margin;
+                double total = (need != null ? need.DeltaV : 1800) * margin;
                 double twr = Math.Max(1.45, need != null ? need.MinTwr + 0.25 : 1.45);
                 if (total <= 2500) flight.Add(new FlightLeg { Name = "climb", DeltaV = total, Gravity = gravity, MinTwr = twr, Atmospheric = true });
                 else
                 {
-                    flight.Add(new FlightLeg { Name = "lift-off and climb through the air", DeltaV = 1800 * Margin, Gravity = gravity, MinTwr = twr, Atmospheric = true });
-                    flight.Add(new FlightLeg { Name = "rest of the flight", DeltaV = total - 1800 * Margin, Gravity = gravity, MinTwr = 0.3 });
+                    flight.Add(new FlightLeg { Name = "lift-off and climb through the air", DeltaV = 1800 * margin, Gravity = gravity, MinTwr = twr, Atmospheric = true });
+                    flight.Add(new FlightLeg { Name = "rest of the flight", DeltaV = total - 1800 * margin, Gravity = gravity, MinTwr = 0.3 });
                 }
             }
             // One climb (a hop) may be flown by two stages: split it in half so the search can drop the spent bottom half
@@ -221,7 +223,9 @@ namespace KSA.Core.Design
             DesignAnalysis check = StageAnalyzer.Analyze(best, catalog, need, gravity);
             // Fins on the stage above a weak launch stage too, when the rocket still makes the mission with them (2026-10-30;
             // a Moho rocket at the edge of reach could not carry them).
-            if (fin != null && check.Passes && best.Stages.Count > 1 && !Fins.HasOn(best, catalog, 1) && Fins.AddIfMissing(best, allowed, catalog) != null)
+            // After this mission tumbled before, the second stage gets fins whatever the launch stage holds (2026-10-30).
+            bool tumbled = req.Fixes.Contains(Flight.FailureCause.Tumbled);
+            if (fin != null && check.Passes && best.Stages.Count > 1 && !Fins.HasOn(best, catalog, 1) && Fins.AddIfMissing(best, allowed, catalog, int.MaxValue, tumbled) != null)
             {
                 DesignAnalysis withFins = StageAnalyzer.Analyze(best, catalog, need, gravity);
                 if (withFins.Passes) check = withFins;
@@ -442,7 +446,7 @@ namespace KSA.Core.Design
                 for (int i = a; i <= b; i++) names.Add(flight[i].Name);
                 why.Add("stage " + k + " flies the " + string.Join(", then the ", names.ToArray()) + (s.LaunchEmpty ? " (it launches empty and fills at the depot)" : ""));
             }
-            plan.Rationale = "Drawn up by the engineering team from the researched parts, leg by leg with a 10% margin: " + string.Join("; ", why.ToArray()) + ".";
+            plan.Rationale = "Drawn up by the engineering team from the researched parts, leg by leg with a delta-v margin: " + string.Join("; ", why.ToArray()) + ".";
             return plan;
         }
 

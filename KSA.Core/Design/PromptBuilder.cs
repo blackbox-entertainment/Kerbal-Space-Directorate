@@ -18,6 +18,20 @@ namespace KSA.Core.Design
         public string LeadEngineerId { get; set; }
         public List<PartInfo> AllowedParts { get; } = new List<PartInfo>();
         public List<string> Lessons { get; } = new List<string>();
+        /// <summary>Causes of earlier failures of this mission the design must fix (2026-10-30; FailureCauses.Fix).</summary>
+        public List<Flight.FailureCause> Fixes { get; } = new List<Flight.FailureCause>();
+
+        /// <summary>The delta-v margin the engineers aim for: 10%, plus 15% for each time the mission ran out of fuel or fell short of space (at most 55%).</summary>
+        public double DeltaVMargin
+        {
+            get { return 1.10 + 0.15 * Math.Min(3, Flight.FailureCauses.Count(Fixes, Flight.FailureCause.OutOfFuel) + Flight.FailureCauses.Count(Fixes, Flight.FailureCause.BelowSpace)); }
+        }
+
+        /// <summary>Parachute capacity over landing mass: 1, or 1.5 after a hard landing (2.25 after two).</summary>
+        public double ChuteFactor
+        {
+            get { return Math.Pow(1.5, Math.Min(2, Flight.FailureCauses.Count(Fixes, Flight.FailureCause.HardLanding))); }
+        }
         public double Budget { get; set; }
         public int CrewSize { get; set; }
         public string ProjectName { get; set; }
@@ -115,6 +129,12 @@ namespace KSA.Core.Design
                 sb.AppendLine("LESSONS LEARNED from earlier flights:");
                 int shown = 0;
                 for (int i = req.Lessons.Count - 1; i >= 0 && shown < 8; i--, shown++) sb.AppendLine("- " + req.Lessons[i]);
+            }
+            if (req.Fixes.Count > 0)
+            {
+                var said = new List<string>();
+                foreach (Flight.FailureCause c in req.Fixes) { string f = Flight.FailureCauses.Fix(c); if (f != null && !said.Contains(f)) said.Add(f); }
+                sb.AppendLine("THIS MISSION FAILED BEFORE. Fix it: " + string.Join("; ", said.ToArray()) + ".");
             }
             sb.AppendLine();
             sb.AppendLine("ALLOWED PARTS (name | kind | dry mass t | propellant t | thrust kN | Isp vac | crew | cost):");

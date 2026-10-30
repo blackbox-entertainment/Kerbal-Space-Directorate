@@ -207,11 +207,11 @@ namespace KSA.Core.Design
                 else
                 {
                     List<string> repairs = StagePlanValidator.Repair(plan, allowed);
-                    string fins = Fins.AddIfMissing(plan, request.AllowedParts, _catalog);
+                    string fins = Fins.AddIfMissing(plan, request.AllowedParts, _catalog, int.MaxValue, request.Fixes.Contains(Flight.FailureCause.Tumbled));
                     if (fins != null) repairs.Add(fins);
                     string kit = ScienceKit.AddMissing(plan, request);
                     if (kit != null) repairs.Add(kit);
-                    string chutes = NeedsChute(request) ? Parachutes.Fit(plan, request.AllowedParts, _catalog) : null;
+                    string chutes = NeedsChute(request) ? Parachutes.Fit(plan, request.AllowedParts, _catalog, false, request.ChuteFactor) : null;
                     if (chutes != null) repairs.Add(chutes);
                     foreach (string note in repairs) record.Feedback.Add("Pass " + record.PassesUsed + ": " + note);
                     List<string> problems = StagePlanValidator.Validate(plan, _catalog, allowed);
@@ -291,7 +291,7 @@ namespace KSA.Core.Design
         /// <summary>Null when the parachutes land the capsule softly (or none is asked for), else what is wrong (2026-10-29).</summary>
         public static string ChutesShort(StagePlan plan, DesignRequest request, IPartCatalog catalog)
         {
-            return NeedsChute(request) ? Parachutes.Shortfall(plan, catalog) : null;
+            return NeedsChute(request) ? Parachutes.Shortfall(plan, catalog, request.ChuteFactor) : null;
         }
 
         public static int SeatsIn(StagePlan plan, IPartCatalog catalog)

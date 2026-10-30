@@ -126,6 +126,7 @@ namespace KSA.KSP.Flight
                         _phase = Phases.Coast; _phaseStart = ctx.Now;
                         Status = "Out of propellant; coasting.";
                         line = "Propellant exhausted during ascent at " + Math.Round(alt / 1000) + " km.";
+                        ctx.Cause(KSA.Core.Flight.FailureCause.OutOfFuel, "Propellant exhausted during ascent at " + Math.Round(alt / 1000) + " km.");
                         if (!_orbit || v.orbit.ApA < atmo) State = LegState.Done;
                     }
                     break;
@@ -177,6 +178,7 @@ namespace KSA.KSP.Flight
                     {
                         Status = "Out of propellant before circular orbit.";
                         line = "Propellant exhausted during circularisation.";
+                        ctx.Cause(KSA.Core.Flight.FailureCause.OutOfFuel, "Propellant exhausted during circularisation.");
                         State = LegState.Done;
                     }
                     break;

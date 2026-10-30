@@ -50,7 +50,8 @@ namespace KSA.Core.Tests
             MissionReport r = LiveFlightResolver.Resolve(new Project { Id = "P1", Name = "Hop" }, hop, crew, low, 10, 0.7, 0.6);
             Assert.That(r.Outcome, Is.EqualTo(MissionOutcome.Abort), "4 km is not space");
             Assert.That(r.Achievements, Has.No.Member("Suborbit:Kerbin"));
-            Assert.That(r.Lesson, Does.Contain("Space not reached"));
+            Assert.That(r.Cause, Is.EqualTo(FailureCause.BelowSpace));
+            Assert.That(r.Lesson, Does.Contain("below the 70.0 km where space begins"));
         }
 
         [Test]

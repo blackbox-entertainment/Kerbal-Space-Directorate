@@ -56,6 +56,84 @@ namespace KSA.KSP.Flight
             public double MaxDistanceFromHomeKm;
             public double SurfaceSeconds;
             public double LastSurfaceSample = -1;
+            // Why it went wrong, for the lesson and the next design (2026-10-30). The first cause wins.
+            public KSA.Core.Flight.FailureCause Cause;
+            public string CauseDetail = string.Empty;
+            public int LaunchParts;
+            public double LastHeight = double.MaxValue;
+            public double LastSpeed;
+            public bool ChutesOpen;
+            public string HotDetail;
+            public double TumbleSince = -1;
+        }
+
+        /// <summary>Records why the live flight is going wrong; the first cause wins (2026-10-30).</summary>
+        public static void NoteCause(KSA.Core.Flight.FailureCause cause, string detail)
+        {
+            if (Live == null || cause == KSA.Core.Flight.FailureCause.None || Live.Cause != KSA.Core.Flight.FailureCause.None) return;
+            Live.Cause = cause;
+            Live.CauseDetail = detail ?? string.Empty;
+            KsaCore.Log.Info("Flight cause noted: " + cause + " (" + Live.CauseDetail + ")");
+        }
+
+        /// <summary>
+        /// Watches for what goes wrong, so the lesson names the cause (2026-10-30): a rocket that tumbles or flies sideways
+        /// while climbing under power through the air, a part near its heat limit coming down, and how high and fast it
+        /// was with the parachutes open or not (for a hard landing).
+        /// </summary>
+        private void WatchForFailure()
+        {
+            Vessel v = _vessel;
+            if (Live == null || v == null) return;
+            if (Live.LaunchParts == 0 && !v.LandedOrSplashed) Live.LaunchParts = v.parts.Count;
+            double height = v.radarAltitude > 0 ? Math.Min(v.altitude, v.radarAltitude) : v.altitude;
+            Live.LastHeight = height;
+            Live.LastSpeed = v.srfSpeed;
+            bool open = false;
+            foreach (Part p in v.parts)
+            {
+                ModuleParachute chute = p.FindModuleImplementing<ModuleParachute>();
+                if (chute != null && (chute.deploymentState == ModuleParachute.deploymentStates.DEPLOYED || chute.deploymentState == ModuleParachute.deploymentStates.SEMIDEPLOYED)) { open = true; break; }
+            }
+            Live.ChutesOpen = open;
+            CelestialBody b = v.mainBody;
+            bool inAir = b != null && b.atmosphere && v.altitude < b.atmosphereDepth && !v.LandedOrSplashed;
+            if (!inAir) { Live.TumbleSince = -1; return; }
+            string where = Math.Round(v.altitude / 1000.0, 1) + " km, " + Math.Round(v.srfSpeed) + " m/s";
+            if (Live.Cause == KSA.Core.Flight.FailureCause.None && v.verticalSpeed > 0 && v.srfSpeed > 50 && v.ctrlState.mainThrottle > 0.05f)
+            {
+                double spin = v.angularVelocity.magnitude * Mathf.Rad2Deg;
+                double off = Vector3.Angle(v.ReferenceTransform.up, (Vector3)v.srf_velocity);
+                bool bad = spin > 60 || (off > 45 && v.dynamicPressurekPa > 3);
+                if (!bad) Live.TumbleSince = -1;
+                else if (Live.TumbleSince < 0) Live.TumbleSince = Planetarium.GetUniversalTime();
+                else if (Planetarium.GetUniversalTime() - Live.TumbleSince > 1.0)
+                {
+                    string which = Live.LaunchParts > 0 && v.parts.Count < Live.LaunchParts ? "the upper stage" : "the rocket";
+                    NoteCause(KSA.Core.Flight.FailureCause.Tumbled, which + " tumbled at " + where + " (nose " + Math.Round(off) + " deg off the flight path, spinning " + Math.Round(spin) + " deg/s)");
+                }
+            }
+            if (Live.HotDetail == null && v.verticalSpeed < 0 && v.srfSpeed > 500)
+            {
+                foreach (Part p in v.parts)
+                {
+                    double ratio = Math.Max(p.maxTemp > 0 ? p.temperature / p.maxTemp : 0, p.skinMaxTemp > 0 ? p.skinTemperature / p.skinMaxTemp : 0);
+                    if (ratio < 0.95) continue;
+                    Live.HotDetail = p.partInfo.title + " reached " + Math.Round(ratio * 100) + "% of its heat limit at " + where + " coming down";
+                    KsaCore.Log.Info("Flight heat: " + Live.HotDetail);
+                    break;
+                }
+            }
+        }
+
+        /// <summary>A crash with no cause yet: burned up if a part ran hot on the way down, else a hard landing near the ground.</summary>
+        private static void CauseOfCrash()
+        {
+            if (Live == null || Live.Cause != KSA.Core.Flight.FailureCause.None || (!Live.Crashed && Live.Deaths.Count == 0)) return;
+            if (Live.HotDetail != null) NoteCause(KSA.Core.Flight.FailureCause.BurnedUp, Live.HotDetail);
+            else if (Live.LastHeight < 300)
+                NoteCause(KSA.Core.Flight.FailureCause.HardLanding, "the capsule hit the ground at " + Math.Round(Live.LastSpeed) + " m/s"
+                    + (Live.ChutesOpen ? " under open parachutes: they are too small for it" : " with no parachute open"));
         }
 
         private MissionProgram _program;
@@ -384,6 +462,7 @@ namespace KSA.KSP.Flight
             string pid = project.Id;
             _ctx.AskCrew = (req, cb) => agency.AskCrew(pid, req, cb);
             _ctx.IsPlane = Live.IsPlane;
+            _ctx.NoteCause = NoteCause;
             _ctx.TryOrbit = !Live.IsPlane && agency.TriesForOrbit(project);
             if (_ctx.TryOrbit && !resuming) Log("The rocket has the delta-v for orbit (" + project.Design.TotalDeltaV.ToString("0") + " m/s): the crew goes for orbit; the hop counts once they reach space.", null);
             _ctx.HandToDirector = () =>
@@ -570,6 +649,7 @@ namespace KSA.KSP.Flight
             if (speed > Live.MaxSpeed) Live.MaxSpeed = speed;
             TrackExploration();
             TrackFullOrbit();
+            WatchForFailure();
             if (_vessel.state == Vessel.State.DEAD) { Log("Vessel destroyed.", null); Resolve(false); return; }
             if (_science != null)
             {
@@ -794,8 +874,11 @@ namespace KSA.KSP.Flight
         {
             if (Live == null || KsaCore.Agency == null) return;
             if (!recovered) ScheduleReturn(); // recovery returns to the Space Center by itself
+            CauseOfCrash();
             var result = new LiveFlightResult
             {
+                Cause = Live.Cause,
+                CauseDetail = Live.CauseDetail,
                 Recovered = recovered,
                 Delivered = delivered,
                 Crashed = Live.Crashed,
@@ -891,6 +974,8 @@ namespace KSA.KSP.Flight
                 StrandedBody = _vessel.mainBody != null ? _vessel.mainBody.bodyName : "Kerbin",
                 StrandedOnSurface = down,
                 StrandedVesselId = _vessel.persistentId.ToString(),
+                Cause = Live.Cause,
+                CauseDetail = Live.CauseDetail,
                 Crashed = Live.Crashed,
                 DirectorFlown = Live.DirectorFlown,
                 MaxAltitude = Live.MaxAltitude,

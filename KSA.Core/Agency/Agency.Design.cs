@@ -213,6 +213,9 @@ namespace KSA.Core
                     if (cab.Kind == PartKind.Habitat && cab.CrewCapacity > 0 && (AllowDlcParts || !cab.RequiresDlc) && !req.AllowedParts.Contains(cab)) req.AllowedParts.Add(cab);
                 req.MustCarry.Add("seats for " + type.Seats + ": " + type.CrewSize + " crew fly out and " + type.PassengerSeats + " stranded kerbal" + (type.PassengerSeats == 1 ? "" : "s") + " ride home. Pick a command pod with that many seats, or add crew cabins (as extras) to make up the seats.");
             }
+            // What went wrong last time on this mission, for the engineers to fix (2026-10-30). Before AddMustCarry: a
+            // burn-up asks for a heat shield even on a hop.
+            if (type != null) req.Fixes.AddRange(FixesFor(type.Id));
             AddMustCarry(p, type, req);
             req.Lessons.AddRange(Lessons(type, 8));
             // A retry learns from the attempt before it.
@@ -284,7 +287,8 @@ namespace KSA.Core
         /// </summary>
         private void AddHeatShield(MissionType type, DesignRequest req)
         {
-            if (Parts == null || type == null || type.CrewSize <= 0 || type.Profile == MissionProfile.Suborbital) return;
+            bool burnedBefore = req.Fixes.Contains(KSA.Core.Flight.FailureCause.BurnedUp);
+            if (Parts == null || type == null || type.CrewSize <= 0 || (type.Profile == MissionProfile.Suborbital && !burnedBefore)) return;
             if (type.ModuleRole.Length > 0 && type.Profile == MissionProfile.Base) return; // base modules stay on the surface
             var shields = new List<string>();
             foreach (PartInfo part in Parts.All)
@@ -392,6 +396,7 @@ namespace KSA.Core
             {
                 if (q == p || q.MissionTypeId != p.MissionTypeId || q.ModuleRole != p.ModuleRole) continue;
                 if (q.Report == null || !q.Report.IsSuccess || !HasApprovedDesign(q) || string.IsNullOrEmpty(q.Design.PlanJson)) continue;
+                if (LastFlightFailed(p.MissionTypeId)) return false; // the last flight of this mission failed: design afresh, with the fix
                 if (Parts != null && q.Design.PartsResearched != parts) continue; // new parts since: worth a fresh look
                 if (best == null || q.EndDay > best.EndDay) best = q;
             }
