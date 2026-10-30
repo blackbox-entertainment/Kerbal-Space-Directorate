@@ -225,7 +225,7 @@ namespace KSA.Core.Tests
             s.Core.Add(new PlanPart { Part = "liquidEngine2.v2", Count = 1 });
             plan.Stages.Add(s);
             Assert.That(Fins.AddIfMissing(plan, parts.All, parts), Is.Not.Null);
-            Assert.That(plan.Stages[0].Radial.Exists(p => p.Part == "basicFin" && p.Symmetry == 8), Is.True, "a 5 t rocket gets the small fin, eight of them (four weigh under 2%)");
+            Assert.That(plan.Stages[0].Radial.Exists(p => p.Part == "basicFin" && p.Symmetry == 4), Is.True, "a 5 t rocket gets four of the small fin");
             Assert.That(Fins.AddIfMissing(plan, parts.All, parts), Is.Null, "never twice");
         }
 

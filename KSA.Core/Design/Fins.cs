@@ -6,8 +6,8 @@ namespace KSA.Core.Design
 {
     /// <summary>
     /// Fins at the base of the launch stage (2026-10-29). A rocket without them turns sideways in the air once it is going
-    /// fast (a finless Suborbital hop fell over at 3 km and flew flat). The biggest researched fin whose four weigh at most
-    /// 2% of the rocket, four of them, or eight when even four of the biggest are lighter than that.
+    /// fast (a finless Suborbital hop fell over at 3 km and flew flat). Four of the biggest researched fin whose four weigh
+    /// at most 2% of the rocket; the lightest fin when none is that light.
     /// </summary>
     public static class Fins
     {
@@ -28,13 +28,12 @@ namespace KSA.Core.Design
         }
 
         /// <summary>
-        /// How many of <paramref name="fin"/> a stack of <paramref name="tonnes"/> gets: four, or eight when four weigh less
-        /// than 2% of it (2026-10-30: four basic fins could not hold a 2-stage Suborbital hop straight; T added a second set).
+        /// How many of <paramref name="fin"/> a stage gets: four. (0.6.4 put eight on light rockets; T, 2026-10-30: "it only
+        /// needs 4 fins" once the second stage has its own set.)
         /// </summary>
         public static int CountFor(PartInfo fin, double tonnes)
         {
-            if (fin == null) return 0;
-            return fin.Mass * Count >= tonnes * MassShare ? Count : 2 * Count;
+            return fin == null ? 0 : Count;
         }
 
         /// <summary>True when the launch stage already carries fins.</summary>

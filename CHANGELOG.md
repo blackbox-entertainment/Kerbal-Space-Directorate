@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.6.6 (2026-10-30), test build
+
+- **Four fins a stage again.** 0.6.4 put eight small fins on light rockets; with fins on the second stage as well, four per stage is enough.
+
 ## 0.6.5 (2026-10-30), test build
 
 - **Fins on the tanks, not round the engine.** On a stack of short tanks the fins were hung on the bottom FL-T100 and stuck out below the stage, round the engine bell. Each fin now sits wholly on the stage's tanks, its lower edge level with the bottom of the stage, on whichever tank is there.
