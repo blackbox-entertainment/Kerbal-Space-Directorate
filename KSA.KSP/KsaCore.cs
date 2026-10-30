@@ -266,7 +266,7 @@ namespace KSA.KSP
             foreach (Project p in Agency.Projects)
             {
                 if (p.Status != ProjectStatus.Ready || p.Mode != MissionMode.WatchLive || Agency.LiveBlocker(p) != null) { ReadySince.Remove(p.Id); continue; }
-                if (Agency.LaunchWindowBlocker() != null) { ReadySince.Remove(p.Id); continue; } // one pad: wait for the next launch window, time warp runs on
+                if (Agency.LaunchWindowBlocker() != null || Agency.ProjectSiteBlocker(p) != null) { ReadySince.Remove(p.Id); continue; } // one pad: wait for the next launch window, time warp runs on
                 double since;
                 if (!ReadySince.TryGetValue(p.Id, out since))
                 {

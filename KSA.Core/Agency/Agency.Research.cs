@@ -85,7 +85,17 @@ namespace KSA.Core
                 if (why == null) { anyBuildable = true; break; }
                 if (firstBlock == null) firstBlock = t.Name + " " + why;
             }
-            if (anyBuildable) return null;
+            if (anyBuildable)
+            {
+                // Still has to fit on the launch pad (2026-10-30): a rocket heavier than the pad takes waits for the upgrade.
+                if (Parts != null && LaunchMassLimit(false) > 0)
+                {
+                    DesignableBlocker(type);
+                    double heavy;
+                    if (_tooHeavy.TryGetValue(type.Id, out heavy)) return "has no rocket the launch pad can take yet (" + PadBlocker(heavy) + ")";
+                }
+                return null;
+            }
             // With AI design on, the engineering team designs the rocket: templates are only the AI-off fallback
             // (2026-10-28), so the researched part kinds decide.
             // No ready-made design: open exactly when the engineering team can build a rocket for it from today's parts,

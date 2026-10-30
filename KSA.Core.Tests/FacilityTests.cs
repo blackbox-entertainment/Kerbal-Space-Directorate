@@ -14,6 +14,7 @@ namespace KSA.Core.Tests
         {
             public readonly List<FacilityOption> List = new List<FacilityOption>();
             public bool Refuse;
+            public bool CanUpgradeNow { get { return true; } }
             public List<FacilityOption> Facilities() { return List; }
             public bool RaiseLevel(string id, out string message)
             {
@@ -66,11 +67,61 @@ namespace KSA.Core.Tests
             Assert.That(a.DesignBlocker(plane, first), Does.Contain("too heavy for the Runway"));
             Assert.That(a.PlayerDesignsFor(first), Is.Empty);
             string brief = a.DirectorBriefing();
-            Assert.That(brief, Does.Contain("FACILITIES").And.Contain("HELD BACK BY A BUILDING: 'Big Plane'"));
+            Assert.That(brief, Does.Contain("FACILITIES").And.Contain("UPGRADE NEEDED: Runway").And.Contain("your plane 'Big Plane'").And.Contain("AFFORDABLE NOW"));
             Assert.That(a.DirectorSystemPrompt(), Does.Contain("upgrade {facility}"));
             string msg;
             Assert.That(a.UpgradeFacility("Runway", false, out msg), Is.True, msg);
             Assert.That(a.PlayerDesignsFor(first), Has.Count.EqualTo(1), "50 t runway takes it");
+        }
+
+        [Test]
+        public void AMissionWhoseRocketIsTooHeavyForThePadStaysLockedUntilTheUpgrade()
+        {
+            FakeHost host;
+            Agency a = Make1(out host);
+            host.List[1].Level = 1; host.List[1].MassLimit = 18; host.List[1].UpgradeCost = 75000;
+            a.Parts = DesignerReachTests.StockParts();
+            a.Requirements = MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
+            MissionType mun = a.Catalogs.Missions.Get("MunLanding");
+            string why = a.MissionBlocker(mun);
+            Assert.That(why, Does.Contain("Launch Pad takes 18 t").And.Contain("upgrade the Launch Pad"));
+            Assert.That(a.UpgradeNeeds().Exists(n => n.Facility.Id == "LaunchPad" && n.Unlocks.Exists(u => u.StartsWith("Mun landing"))), Is.True);
+            string msg;
+            Assert.That(a.UpgradeFacility("LaunchPad", true, out msg), Is.True, msg);
+            Assert.That(a.MissionBlocker(mun), Is.Null, "a 90 t pad takes it");
+        }
+
+        [Test]
+        public void ABuiltProjectTooHeavyForThePadWaitsAndCannotBeLaunched()
+        {
+            FakeHost host;
+            var clock = new FakeClock();
+            Agency a = Make.Agency(clock, new ListLogger());
+            a.SyncRoster(new List<CrewSnapshot> { Make.Snapshot("Jeb Kerman", CrewRole.Pilot, 3) });
+            a.Tick();
+            a.Ledger.SetBalance(500000);
+            a.LiveFlightAvailable = true;
+            host = new FakeHost();
+            host.List.Add(new FacilityOption { Id = "LaunchPad", Title = "Launch Pad", Level = 1, MaxLevel = 3, UpgradeCost = 75000, MassLimit = 18 });
+            a.FacilityHost = host;
+            var heavy = new PlayerDesign { Name = "K orbiter", CraftPath = "C:/x/VAB/K.craft", Seats = 1, DeltaV = 4000, LiftoffTwr = 1.5, HasParachute = true, Mass = 29.7 };
+            a.PlayerDesignSource = () => new List<PlayerDesign> { heavy };
+            string msg;
+            Assert.That(a.CreateProject(null, "KerbinOrbit", null, null, null, null, MissionMode.Simulate, out msg, null, heavy.CraftPath), Is.Null, "too heavy to start");
+            Assert.That(msg, Does.Contain("too heavy for the Launch Pad"));
+
+            // A project that was already built before the limit was known waits on the pad.
+            host.List[0].MassLimit = 100;
+            var p = a.CreateProject(null, "KerbinOrbit", null, null, null, null, MissionMode.WatchLive, out msg, null, heavy.CraftPath);
+            Assert.That(p, Is.Not.Null, msg);
+            host.List[0].MassLimit = 18;
+            clock.AdvanceDays(p.DesignDays + p.BuildDays + 2);
+            a.Tick();
+            Assert.That(p.Status, Is.EqualTo(KSA.Core.Projects.ProjectStatus.Ready));
+            Assert.That(p.Notes, Has.Some.StartsWith("Waiting for a building"));
+            Assert.That(a.LaunchLive(p.Id, out msg), Is.False);
+            Assert.That(msg, Does.Contain("upgrade the Launch Pad"));
+            Assert.That(a.UpgradeNeeds()[0].Unlocks, Has.Some.Contains("project"));
         }
     }
 }

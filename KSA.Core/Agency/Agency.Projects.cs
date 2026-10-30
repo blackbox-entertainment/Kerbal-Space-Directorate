@@ -429,6 +429,19 @@ namespace KSA.Core
                                     }
                                     break;
                                 }
+                                // Too heavy for the pad or runway: no launch of any kind until the building is upgraded
+                                // (2026-10-30, T: "it has to do the upgrades first").
+                                string site = ProjectSiteBlocker(p);
+                                if (site != null)
+                                {
+                                    if (!p.Notes.Exists(n => n.StartsWith("Waiting for a building")))
+                                    {
+                                        p.Notes.Add("Waiting for a building: " + site + ".");
+                                        Push(notices, p.Name + " cannot launch: " + site);
+                                    }
+                                    RequestDirectorTurn(p.Name + " is ready but " + site);
+                                    break;
+                                }
                             }
                             if (p.Mode == MissionMode.WatchLive)
                             {

@@ -670,7 +670,7 @@ namespace KSA.Core
             if (type == null || Parts == null) return null;
             if (type.IsAircraft) return "the engineers do not design planes";
             Program depot = Depot();
-            string key = type.Id + "|" + Parts.All.Count + "|" + LifeSupportMod + "|" + (depot != null ? Math.Round(depot.DepotCapacity).ToString() : "-");
+            string key = type.Id + "|" + Parts.All.Count + "|" + LifeSupportMod + "|" + (depot != null ? Math.Round(depot.DepotCapacity).ToString() : "-") + "|" + Math.Round(LaunchMassLimit(false));
             string cached;
             if (_designable.TryGetValue(key, out cached)) return cached.Length == 0 ? null : cached;
             string why;
@@ -679,6 +679,10 @@ namespace KSA.Core
             try { r = EngineersDesign(probe, out why, type); }
             catch (Exception e) { r = null; why = "the engineers could not check it (" + e.Message + ")"; }
             string result = r != null ? string.Empty : (why ?? "no rocket can be built for it");
+            // The launch pad has to take it (2026-10-30): the engineers' lightest rocket over the pad's limit waits for an upgrade.
+            string pad = r != null ? PadBlocker(r.TotalMass) : null;
+            NoteTooHeavy(type.Id, pad != null ? r.TotalMass : 0);
+            if (pad != null) result = pad;
             _designable[key] = result;
             return result.Length == 0 ? null : result;
         }

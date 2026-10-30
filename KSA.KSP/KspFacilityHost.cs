@@ -21,6 +21,8 @@ namespace KSA.KSP
 
         private static bool Career { get { return HighLogic.CurrentGame != null && HighLogic.CurrentGame.Mode == Game.Modes.CAREER && ScenarioUpgradeableFacilities.Instance != null; } }
 
+        public bool CanUpgradeNow { get { return Career && HighLogic.LoadedScene == GameScenes.SPACECENTER && Live(SpaceCenterFacility.LaunchPad) != null; } }
+
         public List<FacilityOption> Facilities()
         {
             var list = new List<FacilityOption>();

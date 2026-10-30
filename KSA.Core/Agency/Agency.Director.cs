@@ -559,7 +559,10 @@ namespace KSA.Core
                 if (string.Equals(o.Id, id, StringComparison.OrdinalIgnoreCase) || string.Equals(o.Title, id, StringComparison.OrdinalIgnoreCase)) { f = o; break; }
             if (f == null) { message = "no building called '" + id + "'"; return false; }
             if (!f.CanUpgrade) { message = f.Title + " is already at its top level"; return false; }
-            if (byAiDirector && ConserveRefuses(f.UpgradeCost, "upgrading the " + f.Title, out message)) return false;
+            // An upgrade that frees something held back is an investment, not spending: it is allowed while saving money as
+            // long as the agency keeps its reserve (2026-10-30).
+            bool needed = UpgradeNeeds().Exists(n => string.Equals(n.Facility.Id, f.Id, StringComparison.OrdinalIgnoreCase));
+            if (byAiDirector && !(needed && UpgradeAffordable(f)) && ConserveRefuses(f.UpgradeCost, "upgrading the " + f.Title, out message)) return false;
             if (!Ledger.CanAfford(f.UpgradeCost)) { message = "upgrading the " + f.Title + " costs " + Money(f.UpgradeCost) + "; the agency has " + Money(Ledger.Balance); return false; }
             Ledger.Withdraw(f.UpgradeCost, KSA.Core.Finance.LedgerCategory.Facilities, "Upgrade: " + f.Title + " to level " + (f.Level + 1), CurrentDay, CurrentYear);
             string why;
@@ -650,7 +653,8 @@ namespace KSA.Core
             sb.AppendLine("  start_project {mission, crew?: [names], engineers?: [names]} | cancel_project {project}");
             sb.AppendLine("  start_program {program_type, body} | resupply {program} | extend_program {program} | resume_program {program} | evacuate {program} | cancel_program {program}");
             sb.AppendLine("  rescue {stranding} | research {tech} | upgrade {facility} | wait {}");
-            sb.AppendLine("Buildings limit what the agency can fly (see FACILITIES): the launch pad and runway cap a craft's mass, the VAB and SPH its part count and size, the Astronaut Complex spacewalks (level 2 for EVA in flight), Mission Control and the Tracking Station flight planning, R&D the costliest research. Upgrade the building that blocks the next mission or a goal; they are expensive, so not for their own sake.");
+            sb.AppendLine("Buildings limit what the agency can fly (see FACILITIES): the launch pad and runway cap a craft's mass, the VAB and SPH its part count and size, the Astronaut Complex spacewalks (level 2 for EVA in flight), Mission Control and the Tracking Station flight planning, R&D the costliest research.");
+            sb.AppendLine("A rocket or plane heavier than its pad or runway cannot launch at all: such missions stay locked and such projects wait on the pad. When the briefing says UPGRADE NEEDED, the upgrade comes first: do it when it is affordable, and otherwise save for it (no optional projects, drives or hires) unless a goal flight that fits today's buildings needs the money. Do not upgrade a building nothing is waiting for.");
             return sb.ToString();
         }
 
@@ -780,10 +784,16 @@ namespace KSA.Core
                     sb.AppendLine("FACILITIES (id | level | limits now | next level | upgrade cost):");
                     foreach (FacilityOption f in fac)
                         sb.AppendLine("  " + f.Id + " | " + f.Level + " of " + f.MaxLevel + " | " + f.LimitNow + " | " + (f.Level >= f.MaxLevel ? "top level | -" : f.CanUpgrade ? f.NextLevel + " | " + Money(f.UpgradeCost) : f.NextLevel + " | priced only at the Space Center"));
-                    // The human Director's craft that only a building keeps on the ground: the clearest reason to upgrade.
-                    var held = new List<string>();
-                    foreach (PlayerDesign d in PlayerDesigns()) { string w = SiteBlocker(d); if (w != null) held.Add("'" + d.Name + "' " + w); }
-                    if (held.Count > 0) sb.AppendLine("HELD BACK BY A BUILDING: " + string.Join("; ", held.ToArray()) + ".");
+                    // What only a building keeps on the ground: the clearest reason to upgrade (2026-10-30).
+                    foreach (UpgradeNeed n in UpgradeNeeds())
+                    {
+                        FacilityOption f = n.Facility;
+                        string price = f.CanUpgrade ? Money(f.UpgradeCost) : "price shown at the Space Center";
+                        string verdict = !FacilityHost.CanUpgradeNow ? "upgrade it as soon as the Space Center is on screen"
+                            : UpgradeAffordable(f) ? "AFFORDABLE NOW: upgrade it this turn"
+                            : "SAVE FOR IT: you have " + Money(Ledger.Balance) + "; start nothing optional that keeps you from reaching " + Money(f.UpgradeCost + UpgradeReserve());
+                        sb.AppendLine("UPGRADE NEEDED: " + f.Id + " to level " + (f.Level + 1) + " (" + price + ") would free " + string.Join(", ", n.Unlocks.ToArray()) + ". " + verdict + ".");
+                    }
                 }
             }
 

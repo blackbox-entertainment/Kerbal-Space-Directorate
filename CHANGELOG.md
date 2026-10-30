@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.7.2 (2026-10-30), test build
+
+- **Upgrades first.** Nothing launches that its pad or runway cannot take. A mission whose lightest engineers' rocket (or ready-made design) is heavier than the launch pad takes stays locked, with the reason ("its lightest rocket weighs 24 t and the Launch Pad takes 18 t: upgrade the Launch Pad"); a saved design too heavy is not offered; and a project already built that is too heavy waits on the pad ("Waiting for a building") and cannot be launched, live or simulated, until the building is upgraded.
+- **The AI Director plans the upgrade.** Its briefing has an UPGRADE NEEDED line for each building in the way, with what the next level frees (missions, waiting projects, your saved craft), the price, and either "AFFORDABLE NOW: upgrade it this turn" or "SAVE FOR IT", in which case it starts nothing optional until it can pay (keeping half a year of salaries in reserve). A needed upgrade is allowed even while it is saving money at the year's end. When an upgrade is due and affordable at the Space Center, the Director takes a turn for it.
+
 ## 0.7.1 (2026-10-30), test build
 
 - **The crew can steer at last.** KSP runs a mod's fly-by-wire hook after SAS has written its corrections (checked in the game's own code: pre-autopilot, autopilot, post-autopilot, fly-by-wire). Since 2026-10-28 our hook set pitch and yaw to zero "so SAS would not let go", which wiped out every SAS correction: whenever the crew held an attitude of their own (the pitch program, facing the horizon, planes), nothing steered. The 0.7.0 log shows it plainly: the program asked for 85 degrees leaning east, the nose sat at 82-86 degrees leaning west and turned 0.1 deg/s, all the way up and through the coast. The hook now leaves SAS's commands alone. Stock SAS holds (prograde, retrograde) were never affected.

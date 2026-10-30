@@ -31,6 +31,8 @@ namespace KSA.Core
     public interface IFacilityHost
     {
         List<FacilityOption> Facilities();
+        /// <summary>True when buildings can be upgraded right now (the Space Center scene, where they are loaded).</summary>
+        bool CanUpgradeNow { get; }
         /// <summary>Raises the building one level. The agency has already paid. False with the reason when it cannot.</summary>
         bool RaiseLevel(string id, out string message);
     }

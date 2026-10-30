@@ -140,6 +140,8 @@ namespace KSA.Core
             if (p.Status != ProjectStatus.Ready) { message = p.Name + " is not ready to launch."; return false; }
             string fuelWait = DepotBlocker(p);
             if (fuelWait != null) { message = p.Name + " is " + fuelWait + "."; return false; }
+            string site = ProjectSiteBlocker(p);
+            if (site != null) { message = p.Name + " cannot launch: " + site + "."; return false; }
             string blocker = LiveBlocker(p);
             if (blocker != null) { message = blocker; return false; }
             MissionType type = Catalogs.Missions.Get(p.MissionTypeId);
