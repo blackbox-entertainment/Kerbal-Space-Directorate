@@ -278,6 +278,50 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void OnceEveryGoalIsMetTheDirectorSavesMoney()
+        {
+            Agency a = Staffed(new FakeClock(), new ScriptedTransport());
+            a.ActiveGoals.Clear();
+            a.ActiveGoals.Add(new KSA.Core.Goals.GoalState { GoalId = "StayUnderBudget", YearIssued = a.CurrentYear });
+            a.State.YearStartBalance = 500000;
+            Assert.That(a.DirectorConserving(), Is.True, "the only goal is met");
+            Assert.That(a.DirectorBriefing(), Does.Contain("SAVING MONEY"));
+            Assert.That(a.DirectorSystemPrompt(), Does.Contain("save money"));
+            string start = Reply("{\"do\": \"start_project\", \"mission\": \"FleaHop\", \"why\": \"keep flying\"}");
+            a.ApplyDirectorReply(start, new List<string>());
+            Assert.That(a.Projects, Is.Empty, "nothing earned above the opening balance");
+            Assert.That(a.DirectorLog, Has.Some.Matches<DirectorLogEntry>(e => e.Kind == "Failed" && e.Text.Contains("saving money")));
+            // Money earned during the year may be spent.
+            a.Ledger.SetBalance(900000);
+            a.ApplyDirectorReply(start, new List<string>());
+            Assert.That(a.Projects, Has.Count.EqualTo(1));
+            // An open goal means spending can still help.
+            a.ActiveGoals.Add(new KSA.Core.Goals.GoalState { GoalId = "ReachSpace", YearIssued = a.CurrentYear });
+            Assert.That(a.DirectorConserving(), Is.False);
+        }
+
+        [Test]
+        public void ASucceededMissionIsNotFlownAgainUnlessAGoalNeedsIt()
+        {
+            Agency a = Staffed(new FakeClock(), new ScriptedTransport());
+            a.ActiveGoals.Clear();
+            a.ActiveGoals.Add(new KSA.Core.Goals.GoalState { GoalId = "ReachSpace", YearIssued = a.CurrentYear });
+            string start = Reply("{\"do\": \"start_project\", \"mission\": \"FleaHop\", \"why\": \"again\"}");
+            a.ApplyDirectorReply(start, new List<string>());
+            Project p = a.Projects.Find(x => x.MissionTypeId == "FleaHop");
+            Assert.That(p, Is.Not.Null, "the first hop flies");
+            p.Status = ProjectStatus.Complete;
+            a.AddAchievements(a.Crew.Get("Jeb Kerman").Id, new[] { "Flight:Kerbin", "Recover:-" });
+            MissionType flea = a.Catalogs.Missions.Get("FleaHop");
+            Assert.That(a.RepeatBlocker(flea), Is.Not.Null);
+            Assert.That(a.DirectorBriefing(), Does.Contain("ALREADY DONE"));
+            a.ApplyDirectorReply(start, new List<string>());
+            Assert.That(a.Projects.FindAll(x => x.MissionTypeId == "FleaHop"), Has.Count.EqualTo(1), "no second hop for nothing");
+            a.ActiveGoals.Add(new KSA.Core.Goals.GoalState { GoalId = "ThreeMissions", YearIssued = a.CurrentYear });
+            Assert.That(a.RepeatBlocker(flea), Is.Null, "a goal that counts missions makes a repeat worth flying");
+        }
+
+        [Test]
         public void TheBriefingCoversTheWholeAgency()
         {
             var clock = new FakeClock();

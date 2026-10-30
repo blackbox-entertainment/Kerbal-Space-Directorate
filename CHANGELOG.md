@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.6.3 (2026-10-30), test build
+
+- **The AI Director saves money once the year is won.** When every goal of the year is met (or already lost), it spends only what the agency earned above the year's opening balance until the budget review: new projects, programs, recruitment drives and hires wait for next year unless they fit. Rescues, resupplies, research and lab work go on. The briefing says how much may be spent; agency.cfg AI_DIRECTOR conserveWhenGoalsMet turns it off.
+- **No more pointless repeat flights.** The AI Director no longer flies a mission again once it has succeeded, unless an open goal needs it (an achievement goal it earns, or a goal that counts missions flown). Such missions are listed as "already done" in its briefing, and an idle agency with nothing new to fly is told to research the next parts instead (it had flown three Flea test hops in a row, one fatal).
+
 ## 0.6.2 (2026-10-30), test build
 
 - **The OpenRouter key no longer gets lost on save.** The encrypted key was written in a form that could contain "//", which KSP's config reader takes for the start of a comment; about one save in ten cut the key short, it could not be read back ("Invalid length for a Base-64 char array"), and the AI Director quietly fell back to the local model. Keys are now stored without "/" characters; keys saved by older versions still load.

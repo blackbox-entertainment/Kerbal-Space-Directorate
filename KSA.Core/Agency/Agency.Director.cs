@@ -216,13 +216,20 @@ namespace KSA.Core
         {
             switch (verb)
             {
-                case "hire": { Applicant ap = FindApplicant(Json.GetString(a, "applicant", "")); if (ap == null) { message = "no such applicant"; return false; } return Hire(ap.Id, out message); }
+                case "hire":
+                    {
+                        Applicant ap = FindApplicant(Json.GetString(a, "applicant", ""));
+                        if (ap == null) { message = "no such applicant"; return false; }
+                        if (DirectorConserving()) { message = "saving money: every goal this year is met, so new salaries wait for next year"; return false; }
+                        return Hire(ap.Id, out message);
+                    }
                 case "interview": { Applicant ap = FindApplicant(Json.GetString(a, "applicant", "")); if (ap == null) { message = "no such applicant"; return false; } return Interview(ap.Id, out message); }
                 case "reject": { Applicant ap = FindApplicant(Json.GetString(a, "applicant", "")); if (ap == null) { message = "no such applicant"; return false; } return Reject(ap.Id, out message); }
                 case "recruit_drive":
                     {
                         RecruitSource src = FindSource(Json.GetString(a, "source", ""));
                         if (src == null || src.DriveCost <= 0) { message = "no such recruiting source"; return false; }
+                        if (ConserveRefuses(src.DriveCost, "a drive", out message)) return false;
                         return RunDrive(src.Id, out message);
                     }
                 case "dismiss": { CrewProfile c = FindCrew(Json.GetString(a, "kerbal", "")); if (c == null) { message = "no such kerbal"; return false; } return Fire(c.Id, out message); }
@@ -245,6 +252,7 @@ namespace KSA.Core
                     {
                         ProgramType t = FindProgramType(Json.GetString(a, "program_type", ""));
                         if (t == null) { message = "no such program type"; return false; }
+                        if (DirectorConserving()) { message = "saving money: every goal this year is met, so new programs wait for next year"; return false; }
                         string body = Json.GetString(a, "body", t.Bodies.Count > 0 ? t.Bodies[0] : string.Empty);
                         Program g = CreateProgram(null, t.Id, body, null, out message);
                         return g != null;
@@ -268,7 +276,13 @@ namespace KSA.Core
                         if (sp != null) sp.ByAiDirector = true;
                         return sp != null;
                     }
-                case "extend_program": { Program g = FindProgram(Json.GetString(a, "program", "")); if (g == null) { message = "no such program"; return false; } return ExtendProgram(g.Id, out message); }
+                case "extend_program":
+                    {
+                        Program g = FindProgram(Json.GetString(a, "program", ""));
+                        if (g == null) { message = "no such program"; return false; }
+                        if (DirectorConserving()) { message = "saving money: every goal this year is met, so extensions wait for next year"; return false; }
+                        return ExtendProgram(g.Id, out message);
+                    }
                 case "resume_program": { Program g = FindProgram(Json.GetString(a, "program", "")); if (g == null) { message = "no such program"; return false; } return ResumeProgram(g.Id, out message); }
                 case "cancel_program": { Program g = FindProgram(Json.GetString(a, "program", "")); if (g == null) { message = "no such program"; return false; } return CancelProgram(g.Id, out message); }
                 case "evacuate": { Program g = FindProgram(Json.GetString(a, "program", "")); if (g == null) { message = "no such program"; return false; } return Evacuate(g.Id, out message); }
@@ -364,6 +378,9 @@ namespace KSA.Core
             if (type.ModuleRole.Length > 0) { message = type.Name + " is part of a program; use start_program or resupply"; return false; }
             Template template = null;
             foreach (Template t in TemplatesFor(type)) if (TemplateBlocker(t) == null && t.IsAvailable(InstalledMods)) { template = t; break; }
+            if (ConserveRefuses(ProjectCost(type, template), type.Name, out message)) return false;
+            string repeat = RepeatBlocker(type);
+            if (repeat != null) { message = repeat; return false; }
             List<string> crew = CrewIdsFrom(Json.GetArray(a, "crew"));
             if (crew != null && crew.Count != type.CrewSize) crew = null;           // wrong count: let the agency pick
             List<string> engineers = CrewIdsFrom(Json.GetArray(a, "engineers"));
@@ -457,6 +474,50 @@ namespace KSA.Core
 
         // ------------------------------------------------------------------ the log
 
+        // ------------------------------------------------------------------ saving money once the year is won
+
+        /// <summary>
+        /// True when the AI Director should save money (2026-10-30, T): every goal this year is met or already lost, so more
+        /// spending cannot improve the budget review. It then spends only what the agency earned above the year's opening
+        /// balance, which also keeps "Stay under budget" met. Rescues, resupplies, research and lab work go on.
+        /// </summary>
+        public bool DirectorConserving()
+        {
+            if (!DirectorRules.ConserveWhenGoalsMet || ActiveGoals.Count == 0) return false;
+            foreach (GoalState gs in ActiveGoals) if (GoalFailure(gs) == null && !IsGoalCurrentlyMet(gs)) return false;
+            return true;
+        }
+
+        /// <summary>What the Director may spend while saving: the balance above the year's opening balance.</summary>
+        public double DirectorSpendable() { return Math.Max(0, Ledger.Balance - State.YearStartBalance); }
+
+        private bool ConserveRefuses(double cost, string what, out string message)
+        {
+            message = null;
+            if (!DirectorConserving() || cost <= DirectorSpendable()) return false;
+            message = "saving money: every goal this year is met, so only the " + Money(DirectorSpendable()) + " earned above the year's opening balance may be spent, and "
+                      + what + " costs " + Money(cost) + "; it waits for next year";
+            return true;
+        }
+
+        /// <summary>
+        /// Why the AI Director may not fly a mission again (2026-10-30, T: three Flea test hops in a row, one fatal, when
+        /// the first had already done the job): it has succeeded before and no open goal needs it. Null when it may.
+        /// </summary>
+        public string RepeatBlocker(MissionType t)
+        {
+            if (t == null || MissionsCompleted(t.Id) == 0) return null;
+            foreach (GoalState gs in ActiveGoals)
+            {
+                GoalDefinition g = Catalogs.Goals.Get(gs.GoalId);
+                if (g == null || IsGoalCurrentlyMet(gs) || GoalFailure(gs) != null) continue;
+                if (g.Condition == GoalConditionType.MissionsThisYear) return null;
+                if (g.Condition == GoalConditionType.Achievement && !string.IsNullOrEmpty(g.Pattern))
+                    foreach (string a in t.Achievements) if (PatternMatches(a, g.Pattern)) return null;
+            }
+            return t.Name + " has already succeeded and no open goal needs it again; research the parts for the next mission instead";
+        }
+
         private void DirectorNote(string text) { DirectorAdd("Note", text); }
 
         private void DirectorAdd(string kind, string text)
@@ -492,6 +553,8 @@ namespace KSA.Core
             sb.AppendLine("A failure is a lesson, not a reason to stop: fly the cheapest safe mission that moves a goal forward. Do not spend turn after turn only on interviews and drives.");
             sb.AppendLine("A goal is not lost when a flight toward it fails: it stays open until the year-end review. Try again, after fixing what went wrong if you can.");
             sb.AppendLine("Waiting is right only when projects are already under way and nothing needs deciding. Learn from the results of your last turn.");
+            sb.AppendLine("Do not fly the same mission again and again: once a mission has succeeded, repeat it only when an open goal needs it (or a goal counts missions flown). Otherwise move up the ladder: research the parts for the next mission instead.");
+            sb.AppendLine("Once every goal of the year is met, save money for next year: spend only what the agency earned above its opening balance (the briefing says how much); new projects, programs, drives and hires wait unless they fit in that. Rescues, resupplies, research and lab work go on.");
             sb.AppendLine("Answer with ONE JSON object and nothing else:");
             sb.AppendLine("{\"thoughts\": \"one or two sentences, in character\", \"plan\": \"your standing strategy in under 60 words (kept for next turn)\", \"actions\": [ {\"do\": \"...\", ...params, \"why\": \"short reason\"} ]}");
             sb.AppendLine("Actions:");
@@ -528,6 +591,10 @@ namespace KSA.Core
                 if (g == null) continue;
                 sb.AppendLine("  " + GoalStatusText(gs) + " " + g.Name + ": " + g.Description + GoalRoutes(g, gs));
             }
+            bool conserving = DirectorConserving();
+            if (conserving)
+                sb.AppendLine("SAVING MONEY: every goal this year is met. Until the review, spend only what the agency earned above its opening balance of " + Money(State.YearStartBalance)
+                    + " (" + Money(DirectorSpendable()) + " now). New projects, programs, drives and hires wait for next year unless they fit; rescues, resupplies, research and lab work go on.");
 
             sb.AppendLine("KERBALS (name | role | stars | morale | status | traits):");
             foreach (CrewProfile c in Crew.Active)
@@ -566,21 +633,25 @@ namespace KSA.Core
                 sb.AppendLine("  " + p.Id + " | " + p.Name + " | " + p.Status + (t != null ? ", " + p.DaysRemaining(CurrentDay, t.DurationDays) + " days left" : string.Empty) + " | " + (p.Mode == MissionMode.WatchLive ? "live" : "simulated")
                     + (p.ByAiDirector ? string.Empty : " | started by the human Director: leave it running and work around it"));
             }
-            if (active == 0) sb.AppendLine("  none: the agency is flying nothing. Start a mission this turn unless you cannot afford one or have no crew.");
+            if (active == 0 && conserving) sb.AppendLine("  none, and that is fine: every goal this year is met, so save money (see SAVING MONEY).");
+            else if (active == 0) sb.AppendLine("  none: the agency is flying nothing. Start a mission this turn unless you cannot afford one, have no crew, or every open mission has already succeeded (then research the next parts).");
 
             sb.AppendLine("MISSIONS YOU CAN START (id | name | cost | crew | min stars | days | done):");
             var locked = new List<string>();
+            var doneAlready = new List<string>();
             foreach (MissionType t in Catalogs.Missions.Types)
             {
                 if (t.ModuleRole.Length > 0 || t.IsRescue) continue;
                 string block = MissionBlocker(t);
                 PlayerDesign picked = PreferredDesignFor(t);
                 if (block != null && picked == null) { if (locked.Count < 10) locked.Add(t.Name + " (" + block + ")"); continue; }
+                if (RepeatBlocker(t) != null) { doneAlready.Add(t.Name); continue; }
                 Template best = null;
                 foreach (Template tp in TemplatesFor(t)) if (TemplateBlocker(tp) == null) { best = tp; break; }
                 sb.AppendLine("  " + t.Id + " | " + t.Name + " | " + Money(ProjectCost(t, best)) + " | " + t.CrewSize + " | " + t.MinStars + " | " + t.DurationDays + " | " + MissionsCompleted(t.Id) + (t.IsFirst && !HasAgencyAchievement(t.PrimaryAchievement) ? " | a First" : string.Empty)
                     + (picked != null ? " | the human Director wants their design '" + picked.Name + "' flown for this (used automatically)" : string.Empty));
             }
+            if (doneAlready.Count > 0) sb.AppendLine("ALREADY DONE (no open goal needs them again): " + string.Join("; ", doneAlready.ToArray()));
             if (locked.Count > 0) sb.AppendLine("NEXT LOCKED MISSIONS: " + string.Join("; ", locked.ToArray()));
 
             sb.AppendLine("LIFE SUPPORT: " + LifeSupportText() + ". A base becomes a colony only once its optional industry module (extend_program) delivers a drill, an ore converter and power" + (LifeSupportOn ? " and a greenhouse" : string.Empty) + ".");

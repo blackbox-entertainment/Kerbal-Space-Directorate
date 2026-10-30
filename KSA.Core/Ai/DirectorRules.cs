@@ -27,6 +27,11 @@ namespace KSA.Core.Ai
         public double CostPerTurnUsd { get; set; } = 0.002;
         /// <summary>Log entries kept in the save.</summary>
         public int LogKept { get; set; } = 120;
+        /// <summary>
+        /// Once every goal of the year is met, save money (2026-10-30): spend only what was earned above the year's opening
+        /// balance; new projects, programs, drives and hires wait for next year unless they fit in that.
+        /// </summary>
+        public bool ConserveWhenGoalsMet { get; set; } = true;
 
         public static DirectorRules Parse(DataNode node)
         {
@@ -40,6 +45,7 @@ namespace KSA.Core.Ai
             r.ReturnSeconds = node.GetInt("returnSeconds", r.ReturnSeconds);
             r.CostPerTurnUsd = node.GetDouble("costPerTurnUSD", r.CostPerTurnUsd);
             r.LogKept = node.GetInt("logKept", r.LogKept);
+            r.ConserveWhenGoalsMet = node.GetBool("conserveWhenGoalsMet", r.ConserveWhenGoalsMet);
             return r;
         }
     }
