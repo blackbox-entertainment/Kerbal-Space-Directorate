@@ -148,6 +148,8 @@ namespace KSA.KSP.Flight
                         LogAttitude(ctx, "coast");
                         if (v.orbit.timeToAp < 120) c.EnsureEngine(ref line);
                         double halfBurn = CircularizeBurnTime(v, c) / 2;
+                        // Out of warp well before the burn: engines do not fire on rails (2026-10-30).
+                        if (c.IsWarping && v.orbit.timeToAp - halfBurn < 30) c.StopWarp();
                         Status = "Coasting to apoapsis; circularisation burn in " + Math.Max(0, Math.Round(v.orbit.timeToAp - halfBurn)) + " s.";
                         // Burn centred on apoapsis, or at once if already past it (the Director handed back on the way down).
                         if (v.orbit.timeToAp <= Math.Max(5, halfBurn) || v.verticalSpeed < 0)
@@ -160,6 +162,7 @@ namespace KSA.KSP.Flight
                     }
                     break;
                 case Phases.Circularize:
+                    if (c.IsWarping) { c.StopWarp(); c.Throttle = 0; Status = "Circularising: coming out of time warp."; break; }
                     if (!c.ManualAttitude) c.PointAlong(() => Horizontal(v));
                     LogAttitude(ctx, "circularise");
                     {

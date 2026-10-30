@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.7.1 (2026-10-30), test build
+
+- **The crew can steer at last.** KSP runs a mod's fly-by-wire hook after SAS has written its corrections (checked in the game's own code: pre-autopilot, autopilot, post-autopilot, fly-by-wire). Since 2026-10-28 our hook set pitch and yaw to zero "so SAS would not let go", which wiped out every SAS correction: whenever the crew held an attitude of their own (the pitch program, facing the horizon, planes), nothing steered. The 0.7.0 log shows it plainly: the program asked for 85 degrees leaning east, the nose sat at 82-86 degrees leaning west and turned 0.1 deg/s, all the way up and through the coast. The hook now leaves SAS's commands alone. Stock SAS holds (prograde, retrograde) were never affected.
+- **No burn under time warp.** The circularisation burn started while the game was in on-rails warp, where engines cannot fire, and was given up as "out of propellant" with 2,770 m/s aboard; the crew went home without trying for orbit. Warp is now stopped before the burn, and no thrust under warp never counts as empty tanks.
+
 ## 0.7.0 (2026-10-30), release
 
 Everything since 0.6.8, from the test builds 0.6.9 to 0.6.17 below. In short:

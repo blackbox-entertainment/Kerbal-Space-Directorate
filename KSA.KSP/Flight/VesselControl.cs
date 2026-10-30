@@ -173,7 +173,10 @@ namespace KSA.KSP.Flight
                     _v.Autopilot.SAS.LockRotation(wanted);
                     _lastLock = wanted; _lockAt = lockNow;
                 }
-                s.yaw = 0; s.pitch = 0;
+                // Leave SAS's own commands alone (2026-10-30). KSP runs OnFlyByWire after SAS (Vessel.FeedInputFeed: pre-
+                // autopilot, autopilot, post-autopilot, fly-by-wire), so the zeroing of pitch and yaw that stood here wiped
+                // out every SAS correction: since 2026-10-28 no locked attitude was ever steered to (rockets climbed
+                // straight up and drifted west, the coast never faced the horizon).
                 return;
             }
             // Spin first (2026-10-28: capsules tumbled out of control). Stock Stability Assist, which every pilot has, is on
@@ -577,6 +580,9 @@ namespace KSA.KSP.Flight
         public bool NoThrustAvailable()
         {
             if (_v == null) return true;
+            // On-rails time warp: engines cannot fire, which is not empty tanks (2026-10-30: the circularisation burn was
+            // given up under 50x warp with 2,770 m/s aboard). The grace starts again when warp ends.
+            if (TimeWarp.CurrentRate > 1.01f) { _throttleUp = Now; return false; }
             if (_v.currentStage > 0 && Now - _lastStage < 3) return false;
             // Just opened the throttle: no thrust yet is the engine spooling up, not empty tanks (2026-10-29: the
             // circularisation burn was given up in the frame it started, with 1,600 m/s still aboard).
