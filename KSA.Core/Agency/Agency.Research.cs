@@ -74,6 +74,8 @@ namespace KSA.Core
         public string MissionBlocker(MissionType type)
         {
             if (type == null) return "Unknown mission.";
+            // Aircraft (2026-10-30): the engineers do not design planes; one of the Director's own planes flies it.
+            if (type.IsAircraft) return PlayerDesignsFor(type).Count > 0 ? null : (PartKindsBlocker(type) ?? AircraftHint);
             bool anyTemplate = false, anyBuildable = false;
             string firstBlock = null;
             foreach (Template t in TemplatesFor(type))
@@ -108,11 +110,20 @@ namespace KSA.Core
         public string PartKindsBlocker(MissionType type)
         {
             if (type == null) return "Unknown mission.";
-            if (Parts == null) return null;
+            // Aircraft need jets and wings, which only a known parts list can show (the government asks for no plane blind).
+            if (Parts == null) return type.IsAircraft ? "needs research: a jet engine and wings" : null;
             var kinds = new HashSet<KSA.Core.Parts.PartKind>();
             int engines = 0;
             foreach (KSA.Core.Parts.PartInfo p in Parts.All) { kinds.Add(p.Kind); if (p.Kind == KSA.Core.Parts.PartKind.Engine) engines++; }
             var missing = new List<string>();
+            if (type.IsAircraft)
+            {
+                if (!kinds.Contains(KSA.Core.Parts.PartKind.Command)) missing.Add("a cockpit or pod");
+                if (!kinds.Contains(KSA.Core.Parts.PartKind.Jet)) missing.Add("a jet engine");
+                if (!kinds.Contains(KSA.Core.Parts.PartKind.Wing)) missing.Add("wings");
+                if (!kinds.Contains(KSA.Core.Parts.PartKind.Wheel) && !kinds.Contains(KSA.Core.Parts.PartKind.LandingLeg) && !kinds.Contains(KSA.Core.Parts.PartKind.Parachute)) missing.Add("landing gear or a parachute");
+                return missing.Count == 0 ? null : "needs research: " + string.Join(", ", missing.ToArray());
+            }
             if (!kinds.Contains(KSA.Core.Parts.PartKind.Command)) missing.Add("a crew pod");
             if (!kinds.Contains(KSA.Core.Parts.PartKind.Parachute)) missing.Add("a parachute");
             bool beyond = type.Profile != MissionProfile.Suborbital && type.Profile != MissionProfile.Orbit && type.Profile != MissionProfile.Station;
@@ -134,6 +145,9 @@ namespace KSA.Core
             if (missing.Count == 0) return null;
             return "needs research: " + string.Join(", ", missing.ToArray());
         }
+
+        /// <summary>What an aircraft mission needs when the parts are researched but no plane is saved yet.</summary>
+        public const string AircraftHint = "needs one of your planes: build one in the spaceplane hangar (SPH) with a cockpit, a jet engine, wings, and landing gear or parachutes, and save it";
 
         /// <summary>
         /// Why a program type cannot start yet, or null (KSA-66). Every module must be buildable with what is researched,

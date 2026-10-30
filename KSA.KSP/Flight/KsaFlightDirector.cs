@@ -81,6 +81,8 @@ namespace KSA.KSP.Flight
         /// while climbing under power through the air, a part near its heat limit coming down, and how high and fast it
         /// was with the parachutes open or not (for a hard landing).
         /// </summary>
+        private bool _rollNoted;
+
         private void WatchForFailure()
         {
             Vessel v = _vessel;
@@ -102,7 +104,11 @@ namespace KSA.KSP.Flight
             string where = Math.Round(v.altitude / 1000.0, 1) + " km, " + Math.Round(v.srfSpeed) + " m/s";
             if (Live.Cause == KSA.Core.Flight.FailureCause.None && v.verticalSpeed > 0 && v.srfSpeed > 50 && v.ctrlState.mainThrottle > 0.05f)
             {
-                double spin = v.angularVelocity.magnitude * Mathf.Rad2Deg;
+                // A roll about the nose is not a tumble (2026-10-30: a rocket rolling at 156 deg/s with its nose dead on the
+                // flight path was logged as tumbling, and the fix added fins). Only the nose swinging counts; roll is noted.
+                double spin = VesselControl.TurnRate(v);
+                double roll = VesselControl.RollRate(v);
+                if (roll > 60 && !_rollNoted) { _rollNoted = true; KsaCore.Log.Info("Flight roll: rolling " + Math.Round(roll) + " deg/s about the nose at " + where + " (nose swinging " + Math.Round(spin) + " deg/s)"); }
                 double off = Vector3.Angle(v.ReferenceTransform.up, (Vector3)v.srf_velocity);
                 bool bad = spin > 60 || (off > 45 && v.dynamicPressurekPa > 3);
                 if (!bad) Live.TumbleSince = -1;
@@ -584,7 +590,8 @@ namespace KSA.KSP.Flight
             string line = null;
             // Only over the home world, where every landing is under parachutes: a lander coasting down to Duna before its
             // landing burn keeps its descent stage.
-            if (!_ctx.Control.DropSpentStage(ref line) && v.mainBody.isHomeWorld) _ctx.Control.ShedForReentry(ref line);
+            // A plane keeps its parts: nothing of it is a spent stage (2026-10-30).
+            if (!Live.IsPlane && !_ctx.Control.DropSpentStage(ref line) && v.mainBody.isHomeWorld) _ctx.Control.ShedForReentry(ref line);
             if (line != null) Log(line, null);
             double aboveGround = Math.Max(0, v.altitude - Math.Max(0, v.terrainAltitude));
             string chute = null;
@@ -649,6 +656,10 @@ namespace KSA.KSP.Flight
             if (speed > Live.MaxSpeed) Live.MaxSpeed = speed;
             TrackExploration();
             TrackFullOrbit();
+            // Aircraft (2026-10-30): a plane above the body's high-flight line (18 km on Kerbin) has flown high.
+            if (Live.IsPlane && _vessel.situation == Vessel.Situations.FLYING && _vessel.mainBody != null && _vessel.mainBody.atmosphere
+                && _vessel.mainBody.scienceValues != null && alt > _vessel.mainBody.scienceValues.flyingAltitudeThreshold && !Live.Logged.Contains("HighAir:" + _vessel.mainBody.bodyName))
+                Log("Above " + Math.Round(_vessel.mainBody.scienceValues.flyingAltitudeThreshold / 1000) + " km: high-altitude flight.", "HighAir:" + _vessel.mainBody.bodyName);
             WatchForFailure();
             if (_vessel.state == Vessel.State.DEAD) { Log("Vessel destroyed.", null); Resolve(false); return; }
             if (_science != null)
@@ -1040,7 +1051,7 @@ namespace KSA.KSP.Flight
             Project pr = KsaCore.Agency.GetProject(Live.ProjectId);
             if (pr == null) return;
             BuildProgram(KsaCore.Agency, pr, true);
-            _haltNoted = false;
+            _haltNoted = false; _rollNoted = false;
             _program.Engage();
             Log("Flight program restarted at " + _program.Phase + ".", null);
         }

@@ -399,6 +399,7 @@ namespace KSA.Core
             // The human Director's own designs are used only where they ticked "AI Director flies this" for that mission
             // (2026-10-28: the AI Director flew one on a mission it was never picked for). Nothing else picks them.
             PlayerDesign picked = PreferredDesignFor(type);
+            if (type.IsAircraft && picked == null) { message = type.Name + " needs one of the human Director's planes ticked for it (with parachutes)"; return false; }
             string pd = picked != null ? picked.CraftPath : null;
             Project p = CreateProject(null, type.Id, pd != null ? null : (template != null ? template.Id : null), crew, engineers, null, DirectorMode(type), out message, null, pd);
             if (p == null && (crew != null || engineers != null)) p = CreateProject(null, type.Id, pd != null ? null : (template != null ? template.Id : null), null, null, null, DirectorMode(type), out message, null, pd);
@@ -701,6 +702,7 @@ namespace KSA.Core
                 if (t.ModuleRole.Length > 0 || t.IsRescue) continue;
                 string block = MissionBlocker(t);
                 PlayerDesign picked = PreferredDesignFor(t);
+                if (t.IsAircraft && picked == null) block = "needs a plane the human Director ticks for it";
                 if (block != null && picked == null) { if (locked.Count < 10) locked.Add(t.Name + " (" + block + ")"); continue; }
                 if (RepeatBlocker(t) != null) { doneAlready.Add(t.Name); continue; }
                 Template best = null;

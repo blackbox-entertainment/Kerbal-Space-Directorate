@@ -163,6 +163,8 @@ namespace KSA.KSP.Parts
                 case PartKind.Antenna: return "antenna";
                 case PartKind.Industry: return "drill or ore converter";
                 case PartKind.Fin: return "fins";
+                case PartKind.Jet: return "jet engine";
+                case PartKind.Wing: return "wings";
                 default: return null;
             }
         }

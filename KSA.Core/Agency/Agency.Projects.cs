@@ -198,6 +198,13 @@ namespace KSA.Core
                 string unfit = mine.Blocker(type, Requirements.For(type));
                 if (unfit != null) { message = mine.Name + " cannot fly " + type.Name + ": " + unfit + "."; return null; }
             }
+            // Aircraft (2026-10-30): always one of the Director's planes; with none picked, the one ticked for it, else the first that fits.
+            if (type.IsAircraft && mine == null)
+            {
+                mine = PreferredDesignFor(type);
+                if (mine == null) { List<PlayerDesign> planes = PlayerDesignsFor(type); if (planes.Count > 0) mine = planes[0]; }
+                if (mine == null) { message = type.Name + " " + (PartKindsBlocker(type) ?? AircraftHint) + "."; return null; }
+            }
             string why = mine != null ? null : MissionBlocker(type);
             if (why != null) { message = type.Name + " " + why + ". Earn Science (lab, missions) and unlock parts in R&D first."; return null; }
             List<Template> able = TemplatesFor(type, moduleRole);

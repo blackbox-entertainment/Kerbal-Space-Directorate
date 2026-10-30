@@ -68,6 +68,7 @@ namespace KSA.KSP.Flight
                     else if (!c.HasStagesLeft) { Status = "No engine to light."; line = "No engine found in any stage; launch scrubbed."; State = LegState.Failed; }
                     break;
                 case Phases.Climb:
+                    LogAttitude(ctx, "climb");
                     c.AutoStage(ref line);
                     if (alt > 1500 || v.srfSpeed > 90)
                     {
@@ -164,12 +165,25 @@ namespace KSA.KSP.Flight
                         // Burn only with the nose on the horizon: thrust while still pointing up only raises the apoapsis
                         // (2026-10-29: a gimbal-less upper stage burned straight up to a 2,000 km apoapsis).
                         double offFlat = c.AttitudeError(Horizontal(v));
-                        bool aligned = offFlat < 15;
+                        // Steady first (2026-10-30): a craft swinging through the horizon at 100 deg/s was "aligned" for an
+                        // instant at a time and burned every which way, throwing the apoapsis out to 348 km.
+                        double turn = VesselControl.TurnRate(v);
+                        bool aligned = offFlat < 15 && turn < 5;
                         // Off the horizon, a swivelling engine turns the rocket on a little throttle; the pod's reaction
                         // wheel alone could not swing a full upper stage (2026-10-30: stuck at 45 deg, burn never lit).
-                        c.Throttle = v.orbit.PeA > atmo + 2000 ? 0f : aligned ? 1f : (c.CanSteerWithEngine() ? SteerThrottle : 0f);
-                        if (!aligned) Status = "Circularising: turning to the horizon (" + Math.Round(offFlat) + " deg to go" + (c.Throttle > 0 ? ", steering on the engine" : string.Empty) + ").";
+                        c.Throttle = v.orbit.PeA > atmo + 2000 ? 0f : aligned ? 1f : (c.CanSteerWithEngine() && turn < 10 ? SteerThrottle : 0f);
+                        if (turn >= 10) Status = "Circularising: engine off until the craft steadies (turning " + Math.Round(turn) + " deg/s).";
+                        else if (!aligned) Status = "Circularising: turning to the horizon (" + Math.Round(offFlat) + " deg to go" + (c.Throttle > 0 ? ", steering on the engine" : string.Empty) + ").";
                         else { Status = "Circularising."; c.AutoStage(ref line); }
+                        if (turn >= 10 && !_spinNoted) { _spinNoted = true; line = "Engine off: the craft is turning " + Math.Round(turn) + " deg/s; the crew steadies it before burning."; }
+                        // Never fling the apoapsis away chasing the periapsis.
+                        if (v.orbit.PeA <= atmo + 2000 && v.orbit.ApA > Math.Max(_targetAp * 2, _targetAp + 150000))
+                        {
+                            c.Throttle = 0;
+                            line = "Burn stopped: the apoapsis ran away to " + Math.Round(v.orbit.ApA / 1000) + " km with the periapsis still at " + Math.Round(v.orbit.PeA / 1000) + " km.";
+                            State = LegState.Done;
+                            break;
+                        }
                     }
                     if (v.orbit.PeA > atmo + 2000)
                     {
@@ -197,6 +211,7 @@ namespace KSA.KSP.Flight
         private const float SteerThrottle = 0.1f;
 
         private bool _pointedFlat;
+        private bool _spinNoted;
         private double _lastAttitudeLog = -1;
 
         /// <summary>Every 10 s in the log: how far the nose is from the horizon and how fast it turns (2026-10-29).</summary>
@@ -206,8 +221,8 @@ namespace KSA.KSP.Flight
             _lastAttitudeLog = ctx.Now;
             Vessel v = ctx.Vessel;
             double off = ctx.Control.AttitudeError(Horizontal(v));
-            double spin = v.angularVelocity.magnitude * 180 / Math.PI;
-            KsaCore.Log.Info("Ascent " + what + ": nose " + Math.Round(off) + " deg from the horizon, turning " + Math.Round(spin, 1) + " deg/s, SAS "
+            double spin = VesselControl.TurnRate(v);
+            KsaCore.Log.Info("Ascent " + what + ": nose " + Math.Round(off) + " deg from the horizon, turning " + Math.Round(spin, 1) + " deg/s, rolling " + Math.Round(VesselControl.RollRate(v), 1) + " deg/s, throttle " + ctx.Control.Throttle.ToString("0.00") + ", SAS "
                 + (v.ActionGroups[KSPActionGroup.SAS] ? "on" : "off") + (ctx.Control.ManualAttitude ? ", crew steering by hand" : ", stock hold")
                 + ", pitch input " + ctx.Control.Pitch.ToString("0.00") + ", yaw input " + ctx.Control.Yaw.ToString("0.00") + ", alt " + Math.Round(v.altitude / 1000, 1) + " km, apoapsis in " + Math.Round(v.orbit.timeToAp) + " s" + ChargeLog.Note(v));
         }
@@ -240,7 +255,7 @@ namespace KSA.KSP.Flight
         }
 
         /// <summary>The turn is flat by here; above it the rocket burns horizontally for apoapsis.</summary>
-        internal const double TurnEnd = 55000;
+        internal const double TurnEnd = 50000; // level by 50 km (2026-10-30, T: "turn the big rocket level at 50 to 55 km")
         /// <summary>Straight up until this surface speed, then the small kick east.</summary>
         internal const double KickSpeed = 100;
         /// <summary>Below this speed the kick leans at most 5 degrees off vertical.</summary>
@@ -249,8 +264,8 @@ namespace KSA.KSP.Flight
         /// <summary>
         /// The ascent pitch, degrees above the horizon: a classic gravity turn (2026-10-29, T: "fine as long as it can
         /// maintain control"). Straight up (88, a touch east) to 100 m/s, a kick of at most 5 degrees up to 150 m/s, then a
-        /// curve from the ground, 88 x (1 - sqrt(alt / 55 km)): about 77 at 1 km, 50 at 10 km, 33 at 20 km, 23 at 30 km, flat
-        /// at 55 km. To keep control the nose never leans far off the flight path: at most 10 degrees below 20 km, 8 while the
+        /// curve from the ground, 88 x (1 - sqrt(alt / 50 km)): about 76 at 1 km, 49 at 10 km, 32 at 20 km, 20 at 30 km, flat
+        /// at 50 km. To keep control the nose never leans far off the flight path: at most 10 degrees below 20 km, 8 while the
         /// air is thick (25 kPa or more), opening as it thins (free at 5 kPa). A suborbital hop climbs at 88 all the way.
         /// </summary>
         internal static double TargetPitch(Vessel v, bool orbit = true)

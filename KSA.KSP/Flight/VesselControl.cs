@@ -152,7 +152,23 @@ namespace KSA.KSP.Flight
                 if (_v.Autopilot.Mode != VesselAutopilot.AutopilotMode.StabilityAssist) _v.Autopilot.SetMode(VesselAutopilot.AutopilotMode.StabilityAssist);
                 Vector3 want = ((Vector3)target.Value).normalized;
                 Quaternion wanted = Quaternion.FromToRotation(rt.up, want) * rt.rotation;
-                _v.Autopilot.SAS.LockRotation(wanted);
+                // Planes (2026-10-30): a whole attitude, nose and wings, so the crew can bank to turn and keep the wings level.
+                Vector3d? fwd = null;
+                if (_customForward != null) { try { fwd = _customForward(); } catch { fwd = null; } }
+                if (fwd.HasValue)
+                {
+                    Vector3 f = (Vector3)fwd.Value;
+                    f = (f - want * Vector3.Dot(f, want));
+                    if (f.sqrMagnitude > 1e-6f) wanted = Quaternion.LookRotation(f.normalized, want);
+                }
+                // Re-lock only when the target has moved (2026-10-30): locking afresh every physics frame left SAS no
+                // time to work against a pushing engine, and an upper stage spun up to 100 deg/s under thrust.
+                double lockNow = Now;
+                if (_lockAt < 0 || Quaternion.Angle(wanted, _lastLock) > 0.5f || lockNow - _lockAt > 1.0)
+                {
+                    _v.Autopilot.SAS.LockRotation(wanted);
+                    _lastLock = wanted; _lockAt = lockNow;
+                }
                 s.yaw = 0; s.pitch = 0;
                 return;
             }
@@ -213,10 +229,15 @@ namespace KSA.KSP.Flight
             }
         }
 
+        private Quaternion _lastLock = Quaternion.identity;
+        private double _lockAt = -1;
+
         private void EndManualHold()
         {
             _manualHold = false;
             _customDir = null;
+            _customForward = null;
+            _lockAt = -1;
         }
 
         public float Throttle
@@ -259,7 +280,33 @@ namespace KSA.KSP.Flight
             if (_v == null || direction == null) return;
             BeginManualHold(VesselAutopilot.AutopilotMode.StabilityAssist);
             _customDir = direction;
+            _customForward = null;
         }
+
+        private Func<Vector3d> _customForward;
+
+        /// <summary>
+        /// Holds a whole attitude (2026-10-30, aircraft): the nose along <paramref name="nose"/> and the control point's
+        /// forward axis (belly or back, whichever the craft has) along <paramref name="forwardAxis"/>.
+        /// </summary>
+        public void PointAlong(Func<Vector3d> nose, Func<Vector3d> forwardAxis)
+        {
+            if (_v == null || nose == null) return;
+            BeginManualHold(VesselAutopilot.AutopilotMode.StabilityAssist);
+            _customDir = nose;
+            _customForward = forwardAxis;
+        }
+
+        /// <summary>How fast the nose swings, deg/s: the turn across the long axis, roll left out (2026-10-30).</summary>
+        public static double TurnRate(Vessel v)
+        {
+            if (v == null) return 0;
+            Vector3 w = v.angularVelocity; // vessel frame: x pitch, y roll (about the nose), z yaw
+            return Math.Sqrt(w.x * w.x + w.z * w.z) * Mathf.Rad2Deg;
+        }
+
+        /// <summary>Roll rate about the nose, deg/s.</summary>
+        public static double RollRate(Vessel v) { return v == null ? 0 : Math.Abs(v.angularVelocity.y) * Mathf.Rad2Deg; }
 
         /// <summary>SAS off entirely (used for the ascent kick).</summary>
         public void SasOffForKick() { EndManualHold(); SasOff(); }

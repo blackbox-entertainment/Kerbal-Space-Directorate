@@ -668,6 +668,7 @@ namespace KSA.Core
         public string DesignableBlocker(MissionType type)
         {
             if (type == null || Parts == null) return null;
+            if (type.IsAircraft) return "the engineers do not design planes";
             Program depot = Depot();
             string key = type.Id + "|" + Parts.All.Count + "|" + LifeSupportMod + "|" + (depot != null ? Math.Round(depot.DepotCapacity).ToString() : "-");
             string cached;
@@ -848,7 +849,7 @@ namespace KSA.Core
         public bool SwapToEngineersDesign(string projectId, out string message)
         {
             Project p = GetProject(projectId);
-            string tooLate = SwapBlocker(p);
+            string tooLate = SwapBlocker(p) ?? EngineersSwapBlocker(p);
             if (tooLate != null) { message = tooLate; return false; }
             string why;
             DesignRecord r = EngineersDesign(p, out why);
@@ -866,6 +867,13 @@ namespace KSA.Core
             if (p == null) return "No such project.";
             if (!p.IsActive || p.Status == ProjectStatus.InFlight) return "Too late to swap the rocket on " + p.Name + ": it has flown or is flying.";
             return null;
+        }
+
+        /// <summary>Aircraft fly the Director's planes only: the engineers do not draw planes (2026-10-30).</summary>
+        private string EngineersSwapBlocker(Project p)
+        {
+            MissionType t = p != null ? Catalogs.Missions.Get(p.MissionTypeId) : null;
+            return t != null && t.IsAircraft ? "The engineers do not design planes; pick another of your planes for " + p.Name + "." : null;
         }
 
         private void DropDesignSession(Project p)

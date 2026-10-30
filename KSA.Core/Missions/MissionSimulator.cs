@@ -195,7 +195,7 @@ namespace KSA.Core.Missions
             string crewList = JoinNames(input.Crew);
             MissionProfile profile = input.Type != null ? input.Type.Profile : MissionProfile.Orbit;
 
-            lines.Add(crewList + " launched on " + type + ".");
+            lines.Add(crewList + (profile == MissionProfile.Atmospheric ? " took off on " : " launched on ") + type + ".");
             switch (outcome)
             {
                 case MissionOutcome.Success:

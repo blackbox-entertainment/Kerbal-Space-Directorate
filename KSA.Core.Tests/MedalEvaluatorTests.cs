@@ -33,7 +33,7 @@ namespace KSA.Core.Tests
             var warnings = new List<string>();
             MedalCatalog c = ShippedConfigs.Medals(warnings);
             Assert.That(warnings, Is.Empty);
-            Assert.That(c.Count, Is.EqualTo(16)); // + ColonyFounder, SystemSettler, Castaway (KSA-64/65)
+            Assert.That(c.Count, Is.EqualTo(17)); // + AviatorWings (2026-10-30) + ColonyFounder, SystemSettler, Castaway (KSA-64/65)
             Assert.That(c.Get("ChiefsCommendation").Trigger, Is.EqualTo(MedalTrigger.Manual));
             Assert.That(c.Get("ChiefsCommendation").PerYearLimit, Is.EqualTo(2));
             Assert.That(c.Get("MemorialStar").Posthumous, Is.True);

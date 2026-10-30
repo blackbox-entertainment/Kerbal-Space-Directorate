@@ -194,6 +194,7 @@ namespace KSA.Core.Design
                 case MissionProfile.Land: return "land on the target body, EVA, and return";
                 case MissionProfile.Station: return "deliver a station module to orbit";
                 case MissionProfile.Base: return "deliver a base module to the surface";
+                case MissionProfile.Atmospheric: return "fly an aircraft in the home world's air and land";
                 default: return p.ToString();
             }
         }

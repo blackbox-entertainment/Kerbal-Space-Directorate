@@ -6,7 +6,8 @@ namespace KSA.Core.Missions
 {
     public enum MissionTier { Early = 0, Mid = 1, Late = 2 }
 
-    public enum MissionProfile { Suborbital = 0, Orbit = 1, Flyby = 2, OrbitBody = 3, Land = 4, Station = 5, Base = 6 }
+    /// <summary>Atmospheric (2026-10-30): an aircraft flight that never leaves the air, flown in one of the Director's planes.</summary>
+    public enum MissionProfile { Suborbital = 0, Orbit = 1, Flyby = 2, OrbitBody = 3, Land = 4, Station = 5, Base = 6, Atmospheric = 7 }
 
     /// <summary>How a project's mission is resolved.</summary>
     public enum MissionMode { Simulate = 0, WatchLive = 1 }
@@ -77,6 +78,15 @@ namespace KSA.Core.Missions
 
         public bool IsLanding { get { return Profile == MissionProfile.Land || Profile == MissionProfile.Base; } }
 
+        /// <summary>An aircraft mission: runway takeoff, a flight in the air, a landing (2026-10-30).</summary>
+        public bool IsAircraft { get { return Profile == MissionProfile.Atmospheric; } }
+        /// <summary>Aircraft: the height to cruise at, metres above sea level (the crew keeps clear of the ground ahead).</summary>
+        public double CruiseAltitude { get; set; }
+        /// <summary>Aircraft: the whole trip, out and back, km.</summary>
+        public double RangeKm { get; set; }
+        /// <summary>Aircraft: the compass heading flown outbound, degrees (90 = east, 270 = west).</summary>
+        public double Heading { get; set; }
+
         public override string ToString() { return Name + " (" + Id + ")"; }
     }
 
@@ -137,7 +147,10 @@ namespace KSA.Core.Missions
                     CargoFuel = node.GetDouble("cargoFuel", 0),
                     Orbits = node.GetInt("orbits", 0),
                     SurfaceDays = node.GetDouble("surfaceDays", 0),
-                    Floating = node.GetBool("floating", false)
+                    Floating = node.GetBool("floating", false),
+                    CruiseAltitude = node.GetDouble("cruiseAltitude", 2000),
+                    RangeKm = node.GetDouble("rangeKm", 100),
+                    Heading = node.GetDouble("heading", 90)
                 };
                 t.Achievements.AddRange(node.GetList("achievements"));
                 catalog.Add(t);

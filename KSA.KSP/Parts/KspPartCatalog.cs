@@ -171,6 +171,8 @@ namespace KSA.KSP.Parts
             ModuleEngines eng = p.FindModuleImplementing<ModuleEngines>();
             if (eng != null)
             {
+                // Air-breathers (2026-10-30): their own kind, for aircraft missions; the rocket designers never use them.
+                foreach (Propellant pr in eng.propellants) if (pr.name == "IntakeAir") return PartKind.Jet;
                 if (has("ModuleResourceIntake") || n.Contains("jet") || n.Contains("rapier") || n.Contains("turbo") || n.Contains("ion")) return PartKind.Other;
                 bool solid = false;
                 foreach (Propellant pr in eng.propellants) if (pr.name == "SolidFuel") solid = true;
@@ -198,6 +200,8 @@ namespace KSA.KSP.Parts
             if (has("ModuleScienceLab") || has("ModuleScienceExperiment") || has("Experiment") || ap.category == PartCategories.Science) return PartKind.Science;
             // Rocket fins (stock Basic Fin, AV-T1, AV-R8, Delta-Deluxe winglets; mod fins by name), not wings (2026-10-29).
             if (ap.category == PartCategories.Aero && (has("ModuleLiftingSurface") || has("ModuleControlSurface")) && (n.Contains("fin") || n.Contains("winglet"))) return PartKind.Fin;
+            // Wings and elevons (2026-10-30): plane parts, so the agency knows when aircraft missions are in reach.
+            if ((has("ModuleLiftingSurface") || has("ModuleControlSurface")) && (ap.category == PartCategories.Aero || n.Contains("wing"))) return PartKind.Wing;
             if (ap.category == PartCategories.Ground || has("ModuleWheelBase"))
             {
                 if (n.Contains("leg") || n.Contains("gear")) return PartKind.LandingLeg;

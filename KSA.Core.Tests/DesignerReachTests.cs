@@ -292,6 +292,7 @@ namespace KSA.Core.Tests
             var watch = Stopwatch.StartNew();
             foreach (MissionType t in a.Catalogs.Missions.Types)
             {
+                if (t.IsAircraft) continue; // planes are the Director's own (2026-10-30)
                 string why = a.DesignableBlocker(t);
                 if (why != null) failed.Add(t.Id + ": " + why);
                 TestContext.Out.WriteLine(t.Id + " (" + System.Math.Round(a.Requirements.For(t).DeltaV) + " m/s): " + (why ?? "OK"));

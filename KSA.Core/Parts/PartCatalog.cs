@@ -10,7 +10,11 @@ namespace KSA.Core.Parts
         /// <summary>Drills and ore converters (stock ISRU, Kerbalism chemical plants and harvesters). Appended so saved values stay put.</summary>
         Industry,
         /// <summary>Fins: small lifting surfaces at the base of a rocket that keep it flying nose first (2026-10-29).</summary>
-        Fin
+        Fin,
+        /// <summary>Air-breathing engines (2026-10-30): planes only; never part of a rocket design.</summary>
+        Jet,
+        /// <summary>Wings and control surfaces (2026-10-30): planes only.</summary>
+        Wing
     }
 
     public enum PartJob { LaunchVehicle = 0, StationModule = 1, BaseModule = 2, CloudCityModule = 3 }

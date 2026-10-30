@@ -126,6 +126,8 @@ namespace KSA.Core.Design
         public Entry For(MissionType type, string moduleRole = null, bool viaDepot = false)
         {
             if (type == null) type = new MissionType { Id = "?", Profile = MissionProfile.Orbit, Body = "Kerbin" };
+            // Aircraft never leave the air: no rocket delta-v, the jets do the work (2026-10-30).
+            if (type.IsAircraft) return new Entry { Profile = type.Profile, Body = type.Body, MissionType = string.Empty, DeltaV = 0, MinTwr = 0 };
             foreach (Entry e in _entries)
                 if (e.MissionType.Length > 0 && string.Equals(e.MissionType, type.Id, StringComparison.OrdinalIgnoreCase)) return e;
             List<FlightLeg> legs = FlightBudget.For(type, moduleRole, Map, viaDepot);

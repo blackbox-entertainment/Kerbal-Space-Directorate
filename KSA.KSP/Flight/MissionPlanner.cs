@@ -78,6 +78,9 @@ namespace KSA.KSP.Flight
                 return prog;
             }
 
+            // Aircraft missions (2026-10-30): takeoff, a flight in the air, home and land.
+            if (profile == MissionProfile.Atmospheric) { prog.Add(new AircraftLeg(type)); return prog; }
+
             // Spaceplanes (2026-10-28): runway takeoff, jets then rockets, nose-high reentry, glide home.
             if (ctx.IsPlane && target == home && (profile == MissionProfile.Suborbital || profile == MissionProfile.Orbit))
             {
@@ -202,6 +205,11 @@ namespace KSA.KSP.Flight
         {
             Vessel v = ctx.Vessel;
             if (v == null) return;
+            foreach (IFlightLeg l in prog.Legs)
+            {
+                AircraftLeg air = l as AircraftLeg;
+                if (air != null) { air.TurnedForHome = logged("Aircraft:" + v.mainBody.bodyName); return; }
+            }
             CelestialBody body = v.mainBody;
             CelestialBody home = ctx.Home;
             CelestialBody target = ctx.Target ?? home;

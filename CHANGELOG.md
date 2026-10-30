@@ -2,6 +2,14 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.6.12 (2026-10-30), test build
+
+- **Aircraft missions.** Three new missions fly in the air with no rocket: First aircraft flight, Aerial biome survey (Science, 400 km west over grasslands, highlands and mountains) and High-altitude research flight (Science, above 18 km). They fly one of the Director's own SPH planes (cockpit, jets, and wheels or parachutes); the engineers do not design planes. A new flight leg takes off, climbs, keeps clear of the ground ahead, banks to turn, heads home at half the range or half the fuel, and lands under parachutes by the Space Center or hands the Director the runway landing. New achievements Aircraft:, Survey: and HighAir:, three goals (Fly an aircraft, Aerial survey, High-altitude flight; issued once jets, wings and gear are researched) and the Aviator's Wings medal. Jets and wings are now part kinds of their own (Jet, Wing), never used in rockets. The AI Director flies them only in a plane ticked for that mission that carries parachutes.
+- **No burning while spinning.** Handed back from the Director past apoapsis, Valentina's circularisation burn opened the throttle each time the spinning craft swept past the horizon and threw the apoapsis to 348 km. The engine now stays off until the nose is within 15 degrees of the horizon and turning under 5 deg/s, steering on the engine only under 10 deg/s, and the burn stops if the apoapsis runs away (over twice the target) with the periapsis still in the air.
+- **SAS gets time to work.** The crew re-locked the SAS target every physics frame; now only when the target moves half a degree or a second has passed.
+- **Roll is not a tumble.** A rocket rolling about its nose with the nose on the flight path was logged as tumbling (and the fix added fins). Only the nose swinging counts as a tumble now; a fast roll is noted in KSP.log. The attitude log lines show turn rate, roll rate and throttle, and are written during the climb too.
+- **Level by 50 km.** The gravity turn now finishes flat at 50 km (was 55 km): 88 x (1 - sqrt(alt / 50 km)).
+
 ## 0.6.11 (2026-10-30), test build
 
 - **No paper firsts.** A mission that would earn something the agency has never done in a flight it actually flew (reaching orbit, a flyby, a landing, a spacewalk) now flies live under the Hybrid default and the AI Director's "Firsts live" setting, not only missions marked as a First. Orbital sounding had been simulated and the dice credited an orbit no rocket had flown, while every live orbit attempt was still failing. Simulated achievements no longer count as know-how for this; program modules and rescues keep their usual modes. The AI Director's briefing marks such missions "new ground: flies live".

@@ -128,7 +128,7 @@ namespace KSA.Core.Design
         /// </summary>
         public static List<FlightLeg> For(MissionType type, string moduleRole, DeltaVMap map, bool viaDepot = false)
         {
-            if (type == null || map == null || type.Profile == MissionProfile.Suborbital) return null;
+            if (type == null || map == null || type.Profile == MissionProfile.Suborbital || type.IsAircraft) return null;
             var legs = new List<FlightLeg>();
             // Up from Kerbin: the thick-air half at sea-level performance with a thrust cap, then the climb to orbit.
             legs.Add(new FlightLeg { Name = "lift-off and climb through the air", DeltaV = 1800, MinTwr = 1.3, MaxTwr = 2.6, Atmospheric = true });

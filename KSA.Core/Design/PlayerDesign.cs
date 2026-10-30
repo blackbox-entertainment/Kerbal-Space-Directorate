@@ -57,10 +57,18 @@ namespace KSA.Core.Design
             if (ResearchBlocker != null) return ResearchBlocker;
             if (type == null) return "unknown mission";
             if (type.Seats > Seats) return "seats " + Seats + ", the mission needs " + type.Seats + (type.PassengerSeats > 0 ? " (" + type.CrewSize + " crew plus " + type.PassengerSeats + " to bring home)" : string.Empty);
+            if (type.IsAircraft)
+            {
+                // Aircraft missions (2026-10-30): a plane from the spaceplane hangar with jets and a way to land.
+                if (!IsPlane) return "built in the VAB: aircraft take off from the runway, so build it in the spaceplane hangar (SPH)";
+                if (!HasJets) return "no jet engine: aircraft missions fly on jets";
+                if (!HasWheels && !HasParachute) return "no landing gear or parachute: it could not land";
+                return null;
+            }
             if (IsPlane)
             {
                 // Planes (2026-10-28): Kerbin missions from the runway, landing on their wheels; the Director flies them.
-                if (!string.Equals(type.Body, "Kerbin", StringComparison.OrdinalIgnoreCase) || (type.Profile != MissionProfile.Suborbital && type.Profile != MissionProfile.Orbit)) return "planes fly Kerbin suborbital and orbital missions only";
+                if (!string.Equals(type.Body, "Kerbin", StringComparison.OrdinalIgnoreCase) || (type.Profile != MissionProfile.Suborbital && type.Profile != MissionProfile.Orbit)) return "planes fly aircraft missions and Kerbin suborbital and orbital missions only";
                 if (!HasWheels && !HasParachute) return "no landing gear or parachute: it could not land";
                 double dv = DeltaV + (HasJets ? JetCredit : 0);
                 if (need != null && dv < need.DeltaV) return Math.Round(dv) + " of " + Math.Round(need.DeltaV) + " m/s (rockets" + (HasJets ? " + jet climb" : string.Empty) + ")";
