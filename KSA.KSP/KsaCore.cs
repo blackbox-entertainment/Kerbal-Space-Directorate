@@ -135,6 +135,8 @@ namespace KSA.KSP
 
         /// <summary>Pulls the current roster from the game into the Agency and logs what changed.</summary>
         private static int _lastSyncFrame = -1;
+        private static float _lastEventSync = -10f;
+        private static bool _syncPending;
 
         public static void SyncRoster(string reason)
         {
@@ -144,16 +146,24 @@ namespace KSA.KSP
             if (KspCrewFactory.Creating) return;
             // The game fires kerbal events in bursts (one per applicant, per status change); one sync per frame is plenty.
             if (UnityEngine.Time.frameCount == _lastSyncFrame) return;
+            // 2026-10-30: once a hop reached space the game fired kerbal added/removed events every frame (21,000 syncs and
+            // log lines in one flight). Event syncs run at most once a second; a skipped one runs at the next agency tick.
+            bool fromEvent = reason == "roster change";
+            if (fromEvent && UnityEngine.Time.realtimeSinceStartup - _lastEventSync < 1f) { _syncPending = true; return; }
+            if (fromEvent) _lastEventSync = UnityEngine.Time.realtimeSinceStartup;
+            _syncPending = false;
             _lastSyncFrame = UnityEngine.Time.frameCount;
             List<CrewSnapshot> snapshots = new KspRosterSource().GetSnapshots();
             var result = Agency.SyncRoster(snapshots);
-            Log.Info("Roster sync (" + reason + "): " + snapshots.Count + " crew, " + result.Hired.Count + " hired, " + result.Departed.Count + " departed");
+            if (!fromEvent || result.Hired.Count > 0 || result.Departed.Count > 0)
+                Log.Info("Roster sync (" + reason + "): " + snapshots.Count + " crew, " + result.Hired.Count + " hired, " + result.Departed.Count + " departed");
         }
 
         /// <summary>Advances agency time (fiscal years, quarterly applicants). Notices go to the screen and the log.</summary>
         public static void TickAgency(string reason)
         {
             if (Agency == null) return;
+            if (_syncPending) SyncRoster("roster change, deferred");
             StockSystems.Enforce(Agency.Settings);
             FlushScience();
             AutoRollout();

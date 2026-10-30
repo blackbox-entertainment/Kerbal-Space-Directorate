@@ -221,15 +221,26 @@ namespace KSA.Core
                         Applicant ap = FindApplicant(Json.GetString(a, "applicant", ""));
                         if (ap == null) { message = "no such applicant"; return false; }
                         if (DirectorConserving()) { message = "saving money: every goal this year is met, so new salaries wait for next year"; return false; }
+                        string staffed = HireBlocker(ap.Role);
+                        if (staffed != null) { message = staffed; return false; }
                         return Hire(ap.Id, out message);
                     }
-                case "interview": { Applicant ap = FindApplicant(Json.GetString(a, "applicant", "")); if (ap == null) { message = "no such applicant"; return false; } return Interview(ap.Id, out message); }
+                case "interview":
+                    {
+                        Applicant ap = FindApplicant(Json.GetString(a, "applicant", ""));
+                        if (ap == null) { message = "no such applicant"; return false; }
+                        string staffed = HireBlocker(ap.Role);
+                        if (staffed != null) { message = staffed + " (an interview costs money too)"; return false; }
+                        return Interview(ap.Id, out message);
+                    }
                 case "reject": { Applicant ap = FindApplicant(Json.GetString(a, "applicant", "")); if (ap == null) { message = "no such applicant"; return false; } return Reject(ap.Id, out message); }
                 case "recruit_drive":
                     {
                         RecruitSource src = FindSource(Json.GetString(a, "source", ""));
                         if (src == null || src.DriveCost <= 0) { message = "no such recruiting source"; return false; }
                         if (ConserveRefuses(src.DriveCost, "a drive", out message)) return false;
+                        if (HireBlocker(CrewRole.Pilot) != null && HireBlocker(CrewRole.Engineer) != null && HireBlocker(CrewRole.Scientist) != null)
+                        { message = "every role is staffed; a recruitment drive waits until someone is needed"; return false; }
                         return RunDrive(src.Id, out message);
                     }
                 case "dismiss": { CrewProfile c = FindCrew(Json.GetString(a, "kerbal", "")); if (c == null) { message = "no such kerbal"; return false; } return Fire(c.Id, out message); }
@@ -474,6 +485,46 @@ namespace KSA.Core
 
         // ------------------------------------------------------------------ the log
 
+        // ------------------------------------------------------------------ hiring only when needed
+
+        /// <summary>
+        /// How many of a role the agency wants (2026-10-30, T: "it should only hire if needed"): pilots for the biggest crew
+        /// of any mission open now plus one to rotate (at least 2); two engineers (one designs while another flies); two
+        /// scientists (the lab). Other roles are not limited.
+        /// </summary>
+        public int WantedCrew(CrewRole role)
+        {
+            switch (role)
+            {
+                case CrewRole.Pilot:
+                    int biggest = 1;
+                    foreach (MissionType t in Catalogs.Missions.Types)
+                        if (t.ModuleRole.Length == 0 && !t.IsRescue && t.CrewSize > biggest && MissionBlocker(t) == null) biggest = t.CrewSize;
+                    return Math.Max(2, biggest + 1);
+                case CrewRole.Engineer: return 2;
+                case CrewRole.Scientist: return 2;
+                default: return int.MaxValue;
+            }
+        }
+
+        /// <summary>Kerbals of a role on the books who can work (not dead or missing).</summary>
+        public int CrewCount(CrewRole role)
+        {
+            int n = 0;
+            foreach (CrewProfile c in Crew.Active) if (c.Role == role && c.Status != CrewStatus.Dead && c.Status != CrewStatus.Missing) n++;
+            return n;
+        }
+
+        /// <summary>Why the AI Director need not hire for a role now, or null when it is short.</summary>
+        public string HireBlocker(CrewRole role)
+        {
+            int want = WantedCrew(role);
+            if (want == int.MaxValue) return null;
+            int have = CrewCount(role);
+            if (have < want) return null;
+            return "the agency already has " + have + " " + role.ToString().ToLowerInvariant() + "s, enough for the missions open now (" + want + " wanted); hire when a mission needs more";
+        }
+
         // ------------------------------------------------------------------ saving money once the year is won
 
         /// <summary>
@@ -553,6 +604,7 @@ namespace KSA.Core
             sb.AppendLine("A failure is a lesson, not a reason to stop: fly the cheapest safe mission that moves a goal forward. Do not spend turn after turn only on interviews and drives.");
             sb.AppendLine("A goal is not lost when a flight toward it fails: it stays open until the year-end review. Try again, after fixing what went wrong if you can.");
             sb.AppendLine("Waiting is right only when projects are already under way and nothing needs deciding. Learn from the results of your last turn.");
+            sb.AppendLine("Hire only when a role is short (the briefing's STAFFING line): every kerbal draws a salary. A pilot short for a bigger crew, or a lost kerbal, is a reason; a good applicant alone is not.");
             sb.AppendLine("Do not fly the same mission again and again: once a mission has succeeded, repeat it only when an open goal needs it (or a goal counts missions flown). Otherwise move up the ladder: research the parts for the next mission instead.");
             sb.AppendLine("Once every goal of the year is met, save money for next year: spend only what the agency earned above its opening balance (the briefing says how much); new projects, programs, drives and hires wait unless they fit in that. Rescues, resupplies, research and lab work go on.");
             sb.AppendLine("Answer with ONE JSON object and nothing else:");
@@ -596,6 +648,8 @@ namespace KSA.Core
                 sb.AppendLine("SAVING MONEY: every goal this year is met. Until the review, spend only what the agency earned above its opening balance of " + Money(State.YearStartBalance)
                     + " (" + Money(DirectorSpendable()) + " now). New projects, programs, drives and hires wait for next year unless they fit; rescues, resupplies, research and lab work go on.");
 
+            sb.AppendLine("STAFFING: pilots " + CrewCount(CrewRole.Pilot) + " of " + WantedCrew(CrewRole.Pilot) + " wanted, engineers " + CrewCount(CrewRole.Engineer) + " of " + WantedCrew(CrewRole.Engineer)
+                + ", scientists " + CrewCount(CrewRole.Scientist) + " of " + WantedCrew(CrewRole.Scientist) + ". Hire, interview or run drives only for a role that is short.");
             sb.AppendLine("KERBALS (name | role | stars | morale | status | traits):");
             foreach (CrewProfile c in Crew.Active)
             {

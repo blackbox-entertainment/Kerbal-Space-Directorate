@@ -103,7 +103,9 @@ namespace KSA.KSP.Flight
             switch (profile)
             {
                 case MissionProfile.Suborbital:
-                    prog.Add(new AscentLeg(ctx.ParkingAltitude, false)).Add(new ReentryLeg(pe));
+                    // With the delta-v for orbit the crew goes for it: one orbit, then home (2026-10-30).
+                    if (ctx.TryOrbit) prog.Add(new AscentLeg(ctx.ParkingAltitude, true)).Add(new HoldOrbitLeg(1)).Add(new ReentryLeg(pe));
+                    else prog.Add(new AscentLeg(ctx.ParkingAltitude, false)).Add(new ReentryLeg(pe));
                     break;
                 case MissionProfile.Orbit:
                     prog.Add(new AscentLeg(ctx.ParkingAltitude, true));

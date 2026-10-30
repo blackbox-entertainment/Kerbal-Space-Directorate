@@ -384,6 +384,8 @@ namespace KSA.KSP.Flight
             string pid = project.Id;
             _ctx.AskCrew = (req, cb) => agency.AskCrew(pid, req, cb);
             _ctx.IsPlane = Live.IsPlane;
+            _ctx.TryOrbit = !Live.IsPlane && agency.TriesForOrbit(project);
+            if (_ctx.TryOrbit && !resuming) Log("The rocket has the delta-v for orbit (" + project.Design.TotalDeltaV.ToString("0") + " m/s): the crew goes for orbit; the hop counts once they reach space.", null);
             _ctx.HandToDirector = () =>
             {
                 if (Live == null) return;

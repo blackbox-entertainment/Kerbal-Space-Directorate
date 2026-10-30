@@ -134,9 +134,28 @@ namespace KSA.KSP.Parts
             // Drogues slow a fast capsule but cannot land it (2026-10-29: a Kerbin orbit design carried only a Mk25 drogue).
             if (p.Modules != null && p.Modules.Contains("ModuleParachute") && ap.name.ToLowerInvariant().Contains("drogue")) info.Tags.Add("drogue");
             if (p.CrewCapacity > 0) info.Tags.Add("crew" + p.CrewCapacity);
+            // Kerbalism sample experiments (goo, materials bay) take 10 minutes or more and need sample storage
+            // (2026-10-30: the goo on a Suborbital hop showed "no storage space" and never ran). Read by name: no reference.
+            if (IsKerbalismSampler(p)) info.Tags.Add("sample");
             // A crew pod with its own ablator (the Making History KV "Onion" pods) needs no separate heat shield.
             if (p.CrewCapacity > 0 && p.Modules != null && p.Modules.Contains("ModuleAblator")) info.Tags.Add("heatshielded");
             return info;
+        }
+
+        private static bool IsKerbalismSampler(Part p)
+        {
+            if (p == null || p.Modules == null) return false;
+            foreach (PartModule m in p.Modules)
+            {
+                if (m == null || m.moduleName != "Experiment") continue;
+                try
+                {
+                    System.Reflection.FieldInfo f = m.GetType().GetField("sample_amount");
+                    if (f != null && Convert.ToDouble(f.GetValue(m)) > 0) return true;
+                }
+                catch { }
+            }
+            return false;
         }
 
         internal static PartKind Classify(AvailablePart ap, Part p)

@@ -27,6 +27,23 @@ namespace KSA.Core
         public ILlmTransport Transport { get; set; }
         /// <summary>Delta-v and TWR targets per mission profile (dv_requirements.cfg).</summary>
         public MissionRequirements Requirements { get; set; } = new MissionRequirements();
+
+        /// <summary>
+        /// A suborbital hop whose rocket has the delta-v for orbit of the same world goes for orbit (2026-10-30, T: "it
+        /// should try to make orbit"). The hop still counts once it reaches space, and reaching orbit earns that too.
+        /// </summary>
+        public bool TriesForOrbit(Project p)
+        {
+            MissionType type = p != null ? Catalogs.Missions.Get(p.MissionTypeId) : null;
+            if (type == null || type.Profile != MissionProfile.Suborbital || p.Design == null || p.Design.TotalDeltaV <= 0) return false;
+            foreach (MissionType t in Catalogs.Missions.Types)
+            {
+                if (t.Profile != MissionProfile.Orbit || t.IsRescue || t.ModuleRole.Length > 0 || !string.Equals(t.Body, type.Body, StringComparison.OrdinalIgnoreCase)) continue;
+                MissionRequirements.Entry need = Requirements.For(t);
+                return need != null && need.DeltaV > 0 && p.Design.TotalDeltaV >= need.DeltaV;
+            }
+            return false;
+        }
         /// <summary>Whether DLC parts may be offered (the host sets it from what is installed).</summary>
         public bool AllowDlcParts { get; set; }
         /// <summary>Surface gravity of the launch site's body, m/s² (Kerbin by default).</summary>
@@ -217,7 +234,7 @@ namespace KSA.Core
                 if (LifeSupportOn) req.MustCarry.Add("at least one greenhouse (" + LifeSupportMod + " LifeSupport part) to grow food for the residents.");
             }
             AddParachute(type, p, req);
-            AddScienceInstruments(req);
+            AddScienceInstruments(type, req);
             AddHeatShield(type, req);
             AddAntenna(type, req);
             AddBattery(type, req);
@@ -236,13 +253,17 @@ namespace KSA.Core
         /// Every flight carries the small science instruments researched (thermometer, barometer, goo...), since live flights
         /// run them all and recovery pays for them (2026-10-28). Labs and other heavy science parts are left to stations.
         /// </summary>
-        private void AddScienceInstruments(DesignRequest req)
+        private void AddScienceInstruments(MissionType type, DesignRequest req)
         {
             if (Parts == null || !Settings.ExperimentsOnEveryFlight) return;
+            // Kerbalism sample experiments (tag "sample": the goo) run 10 minutes or more, longer than a suborbital hop,
+            // and need sample storage the pod barely has (2026-10-30). Orbital flights still carry them.
+            bool shortHop = type != null && type.Profile == MissionProfile.Suborbital;
             var names = new List<string>();
             foreach (PartInfo part in Parts.All)
             {
                 if (part.Kind != PartKind.Science || part.Mass > 0.1 || part.CrewCapacity > 0) continue;
+                if (shortHop && part.Tags.Contains("sample")) continue;
                 if (part.RequiresDlc && !AllowDlcParts) continue;
                 if (names.Contains(part.Name)) continue;
                 if (names.Count >= 10) break; // a full kit, but not every part of every science mod

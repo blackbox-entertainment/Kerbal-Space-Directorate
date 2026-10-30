@@ -80,7 +80,10 @@ namespace KSA.Core.Tests
                 DesignRecord r = a.EngineersDesign(new KSA.Core.Projects.Project { Id = "x", MissionTypeId = t.Id, Name = t.Name }, out why, t);
                 Assert.That(r, Is.Not.Null, id + ": " + why);
                 Assert.That(Fins.Has(r.Plan, a.Parts), Is.True, id + ": fins on the launch stage");
-                Assert.That(r.Plan.Stages.FindIndex(1, s => Fins.Has(new StagePlan { Stages = { s } }, a.Parts)) < 0 || r.Plan.Stages.Count == 1, Is.True, id + ": fins only at the bottom");
+                // Fins at the bottom, and on the stage above a solid launch stage (it climbs on through thick air; 2026-10-30).
+                List<int> finned = Fins.StagesNeedingFins(r.Plan, a.Parts);
+                for (int i = 0; i < r.Plan.Stages.Count; i++)
+                    Assert.That(Fins.HasOn(r.Plan, a.Parts, i), Is.EqualTo(finned.Contains(i)), id + ": fins on stage " + i);
                 foreach (PlanStage s in r.Plan.Stages)
                     foreach (PlanPart p in s.Core)
                     {
@@ -222,8 +225,25 @@ namespace KSA.Core.Tests
             s.Core.Add(new PlanPart { Part = "liquidEngine2.v2", Count = 1 });
             plan.Stages.Add(s);
             Assert.That(Fins.AddIfMissing(plan, parts.All, parts), Is.Not.Null);
-            Assert.That(plan.Stages[0].Radial.Exists(p => p.Part == "basicFin" && p.Symmetry == 4), Is.True, "a 5 t rocket gets the small fin");
+            Assert.That(plan.Stages[0].Radial.Exists(p => p.Part == "basicFin" && p.Symmetry == 8), Is.True, "a 5 t rocket gets the small fin, eight of them (four weigh under 2%)");
             Assert.That(Fins.AddIfMissing(plan, parts.All, parts), Is.Null, "never twice");
+        }
+
+        [Test]
+        public void TheStageAboveASolidBoosterGetsFinsToo()
+        {
+            PartCatalog parts = StockParts();
+            var plan = new StagePlan();
+            plan.Payload.Command = "mk1pod.v2";
+            var s0 = new PlanStage { Stage = 0, Role = "launch" };
+            s0.Core.Add(new PlanPart { Part = "solidBooster.v2", Count = 1 });
+            var s1 = new PlanStage { Stage = 1, Role = "upper" };
+            s1.Core.Add(new PlanPart { Part = "fuelTank", Count = 1 });
+            s1.Core.Add(new PlanPart { Part = "liquidEngine2.v2", Count = 1 });
+            plan.Stages.Add(s0); plan.Stages.Add(s1);
+            Assert.That(Fins.StagesNeedingFins(plan, parts), Is.EquivalentTo(new[] { 0, 1 }));
+            Assert.That(Fins.AddIfMissing(plan, parts.All, parts), Does.Contain("stage 2"));
+            Assert.That(Fins.HasOn(plan, parts, 0) && Fins.HasOn(plan, parts, 1), Is.True);
         }
 
         [Test]

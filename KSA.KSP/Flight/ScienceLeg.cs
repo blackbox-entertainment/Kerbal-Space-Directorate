@@ -120,6 +120,8 @@ namespace KSA.KSP.Flight
                         int n; _kerbalismTries.TryGetValue(key, out n); _kerbalismTries[key] = n + 1;
                         bool nowRunning = running == null || (bool)running.GetValue(m, null);
                         if (nowRunning && n == 0) { _runs++; KsaCore.Log.Info("ScienceRunner: started Kerbalism experiment " + id + " on " + p.partInfo.title); }
+                        // Say why it would not run, once (2026-10-30: the goo silently refused with "no storage space").
+                        if (!nowRunning && n == 2) KsaCore.Log.Info("ScienceRunner: Kerbalism experiment " + id + " on " + p.partInfo.title + " will not start" + KerbalismIssue(m) + ".");
                     }
                     catch (Exception e) { KsaCore.Log.Warn("ScienceRunner: Kerbalism experiment skipped: " + e.Message); }
                 }
@@ -127,6 +129,24 @@ namespace KSA.KSP.Flight
         }
 
         private readonly Dictionary<string, int> _kerbalismTries = new Dictionary<string, int>();
+
+        /// <summary>Kerbalism's own reason an experiment cannot run ("no storage space", "requires ..."), if it shows one.</summary>
+        private static string KerbalismIssue(PartModule m)
+        {
+            try
+            {
+                foreach (string name in new[] { "issue", "Issue" })
+                {
+                    System.Reflection.FieldInfo f = m.GetType().GetField(name);
+                    object v = f != null ? f.GetValue(m) : null;
+                    if (v == null) { System.Reflection.PropertyInfo pr = m.GetType().GetProperty(name); v = pr != null ? pr.GetValue(m, null) : null; }
+                    string s = v as string;
+                    if (!string.IsNullOrEmpty(s)) return ": " + s;
+                }
+            }
+            catch { }
+            return string.Empty;
+        }
 
         private bool TryDeploy(ModuleScienceExperiment exp, Vessel subject, ExperimentSituations sit, CelestialBody body, string biome, bool onEva, double now)
         {

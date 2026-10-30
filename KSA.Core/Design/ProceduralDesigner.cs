@@ -191,14 +191,14 @@ namespace KSA.Core.Design
             int[][] bestChunks;
             double bestMass;
             string shortOn;
-            Search(flight, payload, decouplerMass, legsMass, fin != null ? fin.Mass * Fins.Count : 0, landingLeg, refuelLeg, kerbinLegs, liquid, withSolids, solidLaunch, out bestStages, out bestChunks, out bestMass, out shortOn);
+            Search(flight, payload, decouplerMass, legsMass, fin != null ? fin.Mass * Fins.Count * 2 : 0, landingLeg, refuelLeg, kerbinLegs, liquid, withSolids, solidLaunch, out bestStages, out bestChunks, out bestMass, out shortOn);
             if (bestStages == null)
             {
                 // Nothing short and wide does it: the lightest stacks, whatever their shape (a rocket at the edge of reach).
                 liquid = LightestFirst(liquid); withSolids = LightestFirst(withSolids);
                 if (solidLaunch != null) { solidLaunch = new List<Option>(withSolids.FindAll(o => o.Engine == null)); solidLaunch.AddRange(withSolids.FindAll(o => o.Engine != null)); }
                 string shortAgain;
-                Search(flight, payload, decouplerMass, legsMass, fin != null ? fin.Mass * Fins.Count : 0, landingLeg, refuelLeg, kerbinLegs, liquid, withSolids, solidLaunch, out bestStages, out bestChunks, out bestMass, out shortAgain);
+                Search(flight, payload, decouplerMass, legsMass, fin != null ? fin.Mass * Fins.Count * 2 : 0, landingLeg, refuelLeg, kerbinLegs, liquid, withSolids, solidLaunch, out bestStages, out bestChunks, out bestMass, out shortAgain);
             }
             if (fin != null && bestStages != null)
             {
@@ -206,7 +206,7 @@ namespace KSA.Core.Design
                 if (sized != null && sized != fin)
                 {
                     Pick[] s2; int[][] c2; double m2; string short2;
-                    Search(flight, payload, decouplerMass, legsMass, sized.Mass * Fins.Count, landingLeg, refuelLeg, kerbinLegs, liquid, withSolids, solidLaunch, out s2, out c2, out m2, out short2);
+                    Search(flight, payload, decouplerMass, legsMass, sized.Mass * Fins.Count * 2, landingLeg, refuelLeg, kerbinLegs, liquid, withSolids, solidLaunch, out s2, out c2, out m2, out short2);
                     if (s2 != null) { fin = sized; bestStages = s2; bestChunks = c2; bestMass = m2; }
                 }
             }
@@ -217,7 +217,7 @@ namespace KSA.Core.Design
             }
 
             StagePlan best = Build(plan, bestStages, bestChunks, flight, decoupler, legs, landingLeg, refuelLeg);
-            if (fin != null) best.Stages[0].Radial.Add(new PlanPart { Part = fin.Name, Count = Fins.Count, Symmetry = Fins.Count });
+            if (fin != null) Fins.AddIfMissing(best, allowed, catalog);
             DesignAnalysis check = StageAnalyzer.Analyze(best, catalog, need, gravity);
             var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (PartInfo p in allowed) names.Add(p.Name);

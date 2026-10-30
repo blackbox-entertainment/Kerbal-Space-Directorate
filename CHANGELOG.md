@@ -2,6 +2,14 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.6.4 (2026-10-30), test build
+
+- **Fins where the air is.** The stage above a solid booster gets fins too: solids burn out at 10-15 km and the liquid stage climbs on through thick air (a finless upper stage tumbled at 16 km, spinning at almost 1,000 degrees a second). Eight fins instead of four when four of the biggest fin researched weigh under 2% of the stack they steer.
+- **A suborbital hop goes for orbit when it can.** If the rocket's delta-v covers orbit of the same world, the crew flies the orbital ascent, one orbit and reentry instead; the hop still counts once they reach space, and the orbit is earned too. A hop rocket with less (the 1,667 m/s Suborbital hop mk I needs about 3,400 for orbit) flies the hop as before.
+- **No goo on short hops with Kerbalism.** Kerbalism's sample experiments (Mystery Goo; tagged "sample") run about 10 minutes and need sample storage, so they stay off suborbital hops; orbital flights still carry them. When a Kerbalism experiment will not start, KSP.log now says why.
+- **The AI Director hires only when a role is short.** Pilots for the biggest crew of any open mission plus one to rotate (at least 2), two engineers, two scientists; hires, interviews and recruitment drives for a role that is already staffed are refused, and its briefing shows the staffing.
+- **Quieter, lighter roster syncs.** Kerbal added/removed events (the game fired them every frame after a hop reached space) sync the roster at most once a second, and the log line only appears when someone joined or left.
+
 ## 0.6.3 (2026-10-30), test build
 
 - **The AI Director saves money once the year is won.** When every goal of the year is met (or already lost), it spends only what the agency earned above the year's opening balance until the budget review: new projects, programs, recruitment drives and hires wait for next year unless they fit. Rescues, resupplies, research and lab work go on. The briefing says how much may be spent; agency.cfg AI_DIRECTOR conserveWhenGoalsMet turns it off.

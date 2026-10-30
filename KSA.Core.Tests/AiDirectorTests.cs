@@ -4,6 +4,7 @@ using KSA.Core.Missions;
 using KSA.Core.Parts;
 using KSA.Core.Personnel;
 using KSA.Core.Projects;
+using KSA.Core.Recruiting;
 using NUnit.Framework;
 
 namespace KSA.Core.Tests
@@ -319,6 +320,22 @@ namespace KSA.Core.Tests
             Assert.That(a.Projects.FindAll(x => x.MissionTypeId == "FleaHop"), Has.Count.EqualTo(1), "no second hop for nothing");
             a.ActiveGoals.Add(new KSA.Core.Goals.GoalState { GoalId = "ThreeMissions", YearIssued = a.CurrentYear });
             Assert.That(a.RepeatBlocker(flea), Is.Null, "a goal that counts missions makes a repeat worth flying");
+        }
+
+        [Test]
+        public void TheDirectorHiresOnlyForARoleThatIsShort()
+        {
+            Agency a = Staffed(new FakeClock(), new ScriptedTransport());
+            a.Applicants.Applicants.Clear();
+            a.Applicants.Applicants.Add(new Applicant { Id = "A90", Name = "Second Engineer", Role = CrewRole.Engineer, Stars = 1 });
+            a.Applicants.Applicants.Add(new Applicant { Id = "A91", Name = "Spare Engineer", Role = CrewRole.Engineer, Stars = 1 });
+            Assert.That(a.HireBlocker(CrewRole.Engineer), Is.Null, "one engineer of two wanted");
+            Assert.That(a.WantedCrew(CrewRole.Pilot), Is.GreaterThanOrEqualTo(2));
+            Assert.That(a.DirectorBriefing(), Does.Contain("engineers 1 of 2"));
+            a.ApplyDirectorReply(Reply("{\"do\": \"hire\", \"applicant\": \"Second Engineer\"}, {\"do\": \"hire\", \"applicant\": \"Spare Engineer\"}"), new List<string>());
+            Assert.That(a.CrewCount(CrewRole.Engineer), Is.EqualTo(2), "the short role is filled, and no more");
+            Assert.That(a.HireBlocker(CrewRole.Engineer), Is.Not.Null);
+            Assert.That(a.DirectorLog, Has.Some.Matches<DirectorLogEntry>(e => e.Kind == "Failed" && e.Text.Contains("enough for the missions open now")));
         }
 
         [Test]
