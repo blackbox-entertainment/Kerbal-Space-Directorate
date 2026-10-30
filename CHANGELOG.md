@@ -2,6 +2,16 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.6.8 (2026-10-30), release
+
+Everything since 0.6.1, from the test builds 0.6.2 to 0.6.7 below. In short:
+
+- **Failures teach.** A live flight that goes wrong records why (tumbled, ran out of fuel, burned up, landed too hard, never reached space) and the next design for that mission fixes it: fins on the second stage, more delta-v margin, bigger parachutes, a heat shield. The cause is the lesson the AI Director and the AI designer read.
+- **A smarter AI Director.** It saves money once the year's goals are met, hires only for a role that is short, never repeats a mission that already succeeded unless a goal needs it, and runs one of each mission at a time. Everything it does is in KSP.log too.
+- **Rockets that hold together.** Four fins per stage, seated on the tanks; the second stage gets its own set when the first burns out in thick air. A suborbital hop with the delta-v for orbit goes for orbit.
+- **Kerbalism.** No 10-minute goo on 4-minute hops; KSP.log says why an experiment will not start.
+- **Fixes.** The OpenRouter key no longer gets lost on save (a "//" in the stored key was read as a comment); roster syncs no longer flood the log.
+
 ## 0.6.7 (2026-10-30), test build
 
 - **Failures teach.** A live flight that goes wrong now records why, as the flight director saw it: the rocket (or the upper stage) tumbled, with the altitude, speed and spin; it ran out of propellant, and where; a part overheated coming down; the capsule hit the ground too fast, under parachutes that were too small or with none open; or a hop never reached space. The cause is the lesson (in the report, the lessons learned and the AI Director's briefing), saved with the game, and kept over the AI post-mortem's last sentence.
