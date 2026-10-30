@@ -8,7 +8,7 @@ Everything since 0.7.0, from the test builds 0.7.1 and 0.7.2 below. In short:
 
 - **The crew can steer.** KSP runs a mod's fly-by-wire hook after SAS, and ours had been zeroing SAS's pitch and yaw since 2026-10-28, so no attitude the crew chose (the gravity turn, facing the horizon, planes) was ever steered to. Fixed. The circularisation burn also no longer starts under time warp and gives up as "out of propellant".
 - **Upgrades first.** Nothing launches that its pad or runway cannot take: such missions stay locked, too-heavy saved designs are not offered, and built projects wait on the pad. The AI Director sees an UPGRADE NEEDED line for each building in the way, upgrades when it can afford it and saves for it when it cannot.
-- **Plane mods.** README and help list Airplane Plus /L (propeller planes fly the aircraft missions like jets) and Un Kerballed Start (a planes-first tech tree) as optional and supported, and name the mods that clash with KSA (Bureaucracy, Strategia, contract packs, Kerbal Construction Time, Custom Barn Kit, EVARepairs).
+- **Plane mods.** README and help list Airplane Plus /L (propeller planes fly the aircraft missions like jets) as optional and supported, and name the mods that clash with KSA (Un Kerballed Start, Bureaucracy, Strategia, contract packs, Kerbal Construction Time, Custom Barn Kit, EVARepairs). Un Kerballed Start was listed as supported in the first 0.7.3 notes; it is not: a career under it starts with only a probe core.
 
 ## 0.7.2 (2026-10-30), test build
 
