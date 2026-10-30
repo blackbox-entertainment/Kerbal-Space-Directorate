@@ -2,6 +2,12 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.7.4 (2026-10-30), test build
+
+- **Probe missions.** Missions can now have no crew. Three uncrewed missions: Sounding rocket (a probe on a small booster), Probe to space (above the air) and First satellite (a probe in orbit), each paying Science. The engineers fit the lightest probe core and an antenna (the data goes home by radio) and no parachute. Probes fly simulated for now. A probe science mission may be flown again for more data, each success paying 60% of the last (never under a quarter), so a probe career can earn its way to the first crew pod. Goals: Launch a probe, A probe in space, First satellite. Probe achievements count for the agency even with no crew to carry them.
+- **Un Kerballed Start works.** Its career opens with only the Stayputnik: KSA now flies probe missions from day one, and a ModuleManager patch (applied only with Un Kerballed Start) moves the Mk16 parachute, the RT-5 Flea and the TD-06 decoupler to the start node. README and help list it as supported again.
+- **A crew pod means seats.** Crewed missions now need a pod with seats researched; a probe core no longer counts as one.
+
 ## 0.7.3 (2026-10-30), release
 
 Everything since 0.7.0, from the test builds 0.7.1 and 0.7.2 below. In short:

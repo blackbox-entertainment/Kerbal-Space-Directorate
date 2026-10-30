@@ -28,7 +28,9 @@ namespace KSA.Core.Missions
         /// <summary>Empty seats the craft must also carry: a rescue's stranded crew coming home (2026-10-28).</summary>
         public int PassengerSeats { get; set; }
         /// <summary>Seats the craft needs: the crew plus the passengers.</summary>
-        public int Seats { get { return Math.Max(1, CrewSize) + Math.Max(0, PassengerSeats); } }
+        public int Seats { get { return CrewSize <= 0 && PassengerSeats <= 0 ? 0 : Math.Max(1, CrewSize) + Math.Max(0, PassengerSeats); } }
+        /// <summary>A probe flight with nobody aboard (crew = 0; 2026-10-30, for probe-first tech trees such as Un Kerballed Start).</summary>
+        public bool IsUncrewed { get { return CrewSize <= 0; } }
         public int MinStars { get; set; }
         public int DurationDays { get; set; }
         public double BaseCost { get; set; }
@@ -142,7 +144,7 @@ namespace KSA.Core.Missions
                     Tier = tier,
                     Body = node.GetValue("body", "Kerbin"),
                     Profile = profile,
-                    CrewSize = Math.Max(1, node.GetInt("crew", 1)),
+                    CrewSize = Math.Max(0, node.GetInt("crew", 1)),
                     MinStars = node.GetInt("minStars", 0),
                     DurationDays = Math.Max(1, node.GetInt("durationDays", 1)),
                     BaseCost = node.GetDouble("baseCost", 10000),

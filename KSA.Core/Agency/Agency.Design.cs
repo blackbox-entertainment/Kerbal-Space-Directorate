@@ -345,8 +345,9 @@ namespace KSA.Core
         /// </summary>
         private void AddAntenna(MissionType type, DesignRequest req)
         {
-            if (Parts == null || type == null || type.CrewSize <= 0) return;
-            if (!string.Equals(LifeSupportMod, "Kerbalism", StringComparison.OrdinalIgnoreCase)) return;
+            if (Parts == null || type == null) return;
+            // A probe always carries one (2026-10-30): with nobody to recover, its data goes home by radio.
+            if (!type.IsUncrewed && !string.Equals(LifeSupportMod, "Kerbalism", StringComparison.OrdinalIgnoreCase)) return;
             var antennas = new List<string>();
             foreach (PartInfo part in Parts.All)
             {

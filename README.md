@@ -39,11 +39,11 @@ Install these through CKAN. Use the CKAN identifier shown to find each one.
 | Kerbal Planetary Base Systems | `KerbalPlanetaryBaseSystems` | Surface base module designs (planned) |
 | HL Airships Core | `HooliganLabsAirships` | Eve cloud city designs (planned; cloud cities fly simulated today) |
 | Airplane Plus /L | `AirplanePlusL` | Propeller engines, small cockpits and early plane parts. Its propellers burn fuel with intake air like jets, so prop planes fly KSA's aircraft missions. Pulls in Firespitter. Pick this one, not the old "Airplane Plus" (KSP 1.8 only) |
+| Un Kerballed Start | `UnKerballedStart` | A probes-first, planes-first tech tree. A career opens with the Stayputnik probe core: KSA flies uncrewed probe missions (sounding rocket, probe to space, first satellite) to earn the Science for the first crew pod, and moves the Mk16 parachute, the Flea booster and the TD-06 decoupler to the start node. Pulls in Community Tech Tree. Start a new career with it. When CKAN offers recommended mods, click Uncheck All (see below) |
 
 KSA does not need MechJeb or kOS. It has its own flight director.
 
-**Mods that clash with KSA.** Leave these off:
-- **Un Kerballed Start** begins a career with only an uncrewed probe core: the first crew pod is about 150 Science away. Every KSA mission has a crew, so a KSA career cannot get started with it (2026-10-30).
+**Mods that clash with KSA.** Leave these off (CKAN offers several as recommendations with Un Kerballed Start):
 - **Bureaucracy and Strategia** replace the budget and strategy systems. KSA runs its own fiscal years, budgets and departments.
 - **Contract packs** (Career Evolution, Exploration Plus, Research Advancement Division, the GAP packs) add contracts. KSA switches stock contracts off and issues government goals instead.
 - **Kerbal Construction Time** adds its own build and roll-out times. KSA has its own design and build days and launch queue.

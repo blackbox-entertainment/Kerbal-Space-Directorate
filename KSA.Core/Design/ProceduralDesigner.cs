@@ -60,11 +60,23 @@ namespace KSA.Core.Design
 
             // Payload: the lightest pod that seats the crew, then one of each thing the brief must carry.
             PartInfo pod = null;
-            foreach (PartInfo p in allowed)
-                if (p.Kind == PartKind.Command && p.CrewCapacity >= Math.Max(1, crew) && (pod == null || (pod.RequiresDlc && !p.RequiresDlc) || (pod.RequiresDlc == p.RequiresDlc && p.Mass < pod.Mass))) pod = p; // stock before DLC pods
+            if (crew == 0)
+            {
+                // A probe flight (2026-10-30): the lightest probe core, else the lightest pod flying empty.
+                foreach (PartInfo p in allowed)
+                {
+                    if (p.Kind != PartKind.Command) continue;
+                    bool probe = p.CrewCapacity == 0, podProbe = pod != null && pod.CrewCapacity == 0;
+                    if (pod == null || (probe && !podProbe) || (probe == podProbe && ((pod.RequiresDlc && !p.RequiresDlc) || (pod.RequiresDlc == p.RequiresDlc && p.Mass < pod.Mass)))) pod = p;
+                }
+                if (pod == null) { why = "no probe core or pod researched"; return null; }
+            }
+            else
+                foreach (PartInfo p in allowed)
+                    if (p.Kind == PartKind.Command && p.CrewCapacity >= Math.Max(1, crew) && (pod == null || (pod.RequiresDlc && !p.RequiresDlc) || (pod.RequiresDlc == p.RequiresDlc && p.Mass < pod.Mass))) pod = p; // stock before DLC pods
             // No pod seats everyone (a rescue brings the stranded home): the roomiest pod plus crew cabins (2026-10-28).
             var cabins = new List<PartInfo>();
-            if (pod == null)
+            if (pod == null && crew > 0)
             {
                 foreach (PartInfo p in allowed)
                     if (p.Kind == PartKind.Command && p.CrewCapacity > 0 && (pod == null || p.CrewCapacity > pod.CrewCapacity || (p.CrewCapacity == pod.CrewCapacity && p.Mass < pod.Mass))) pod = p;

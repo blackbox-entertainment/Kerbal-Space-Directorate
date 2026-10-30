@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using KSA.Core.Design;
 using KSA.Core.Missions;
+using KSA.Core.Parts;
 using KSA.Core.Personnel;
+using KSA.Core.Projects;
 using NUnit.Framework;
 
 namespace KSA.Core.Tests
@@ -89,6 +91,58 @@ namespace KSA.Core.Tests
             string msg;
             Assert.That(a.UpgradeFacility("LaunchPad", true, out msg), Is.True, msg);
             Assert.That(a.MissionBlocker(mun), Is.Null, "a 90 t pad takes it");
+        }
+
+        /// <summary>Un Kerballed Start's opening, with KSA's patch (2026-10-30): a probe core and small rockets, no crew pod.</summary>
+        private static PartCatalog ProbeStart()
+        {
+            var c = new PartCatalog();
+            c.Add(new PartInfo { Name = "probeCoreSphere.v2", Title = "Stayputnik", Kind = PartKind.Command, Mass = 0.05, Diameter = 0.625, HasTopNode = true, HasBottomNode = true });
+            c.Add(new PartInfo { Name = "solidBooster.sm.v2", Title = "RT-5 Flea", Kind = PartKind.Booster, Mass = 0.45, FuelMass = 1.05, Thrust = 192, IspVacuum = 165, IspSeaLevel = 140, Diameter = 0.625, HasTopNode = true, HasBottomNode = true });
+            c.Add(new PartInfo { Name = "Decoupler.0", Title = "TD-06", Kind = PartKind.Decoupler, Mass = 0.01, Diameter = 0.625, HasTopNode = true, HasBottomNode = true });
+            c.Add(new PartInfo { Name = "parachuteSingle", Title = "Mk16", Kind = PartKind.Parachute, Mass = 0.1, Diameter = 0.625, HasBottomNode = true });
+            c.Add(new PartInfo { Name = "basicFin", Title = "Basic Fin", Kind = PartKind.Fin, Mass = 0.01 });
+            c.Add(new PartInfo { Name = "sensorThermometer", Title = "2HOT Thermometer", Kind = PartKind.Science, Mass = 0.005 });
+            c.Add(new PartInfo { Name = "SurfAntenna", Title = "Communotron 16-S", Kind = PartKind.Antenna, Mass = 0.015 });
+            return c;
+        }
+
+        [Test]
+        public void AProbeStartCanFlySoundingRocketsButNoCrewedMission()
+        {
+            var clock = new FakeClock();
+            Agency a = Make.Agency(clock, new ListLogger());
+            a.SyncRoster(new List<CrewSnapshot> { Make.Snapshot("Jeb Kerman", CrewRole.Pilot, 3), Make.Snapshot("Bill Kerman", CrewRole.Engineer, 2) });
+            a.Tick();
+            a.Ledger.SetBalance(500000);
+            a.Parts = ProbeStart();
+            a.TemplateCheck = t => "needs research: Mk1 Command Pod"; // as the host says: no template's parts are researched
+            a.Requirements = MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
+            MissionType sounding = a.Catalogs.Missions.Get("SoundingRocketKerbin");
+            MissionType space = a.Catalogs.Missions.Get("ProbeToSpaceKerbin");
+            Assert.That(sounding.IsUncrewed && sounding.Seats == 0, Is.True);
+            Assert.That(a.MissionBlocker(a.Catalogs.Missions.Get("FleaHop")), Is.Not.Null, "a probe core is no crew pod");
+            Assert.That(a.MissionBlocker(sounding), Is.Null, "a Flea and a Stayputnik fly a sounding rocket");
+            Assert.That(a.MissionBlocker(space), Does.Contain("climb"), "two Fleas fall short of space: the next research step opens it");
+
+            string msg;
+            Project p = a.CreateProject(null, sounding.Id, null, null, null, null, null, out msg);
+            Assert.That(p, Is.Not.Null, msg);
+            Assert.That(p.Crew, Is.Empty);
+            Assert.That(p.Mode, Is.EqualTo(MissionMode.Simulate), "probes fly simulated");
+            Assert.That(p.Design.DesignName, Is.Not.Empty);
+            Assert.That(p.Design.Plan.Payload.Command, Is.EqualTo("probeCoreSphere.v2"));
+            Assert.That(p.Design.Plan.Payload.Extras, Has.Some.EqualTo("SurfAntenna"), "the data goes home by radio");
+
+            // A success counts for the probe goal and pays Science; the next one pays 60% of it.
+            var won = new MissionReport { MissionTypeId = sounding.Id, Mode = MissionMode.Simulate, Outcome = MissionOutcome.Success };
+            won.Achievements.Add("Probe:Kerbin"); won.Achievements.Add("Science:Kerbin");
+            a.Reports.Add(won);
+            Assert.That(a.HasAgencyAchievement("Probe:Kerbin"), Is.True);
+            Assert.That(a.RepeatScienceFactor(sounding), Is.EqualTo(0.6).Within(1e-9));
+            Assert.That(a.RepeatBlocker(sounding), Does.Contain("under way"), "one at a time");
+            a.CancelProject(p.Id, out msg);
+            Assert.That(a.RepeatBlocker(sounding), Is.Null, "a probe may fly again for more data");
         }
 
         [Test]
