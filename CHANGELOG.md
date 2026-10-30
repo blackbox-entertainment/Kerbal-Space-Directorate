@@ -2,6 +2,14 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.7.3 (2026-10-30), release
+
+Everything since 0.7.0, from the test builds 0.7.1 and 0.7.2 below. In short:
+
+- **The crew can steer.** KSP runs a mod's fly-by-wire hook after SAS, and ours had been zeroing SAS's pitch and yaw since 2026-10-28, so no attitude the crew chose (the gravity turn, facing the horizon, planes) was ever steered to. Fixed. The circularisation burn also no longer starts under time warp and gives up as "out of propellant".
+- **Upgrades first.** Nothing launches that its pad or runway cannot take: such missions stay locked, too-heavy saved designs are not offered, and built projects wait on the pad. The AI Director sees an UPGRADE NEEDED line for each building in the way, upgrades when it can afford it and saves for it when it cannot.
+- **Plane mods.** README and help list Airplane Plus /L (propeller planes fly the aircraft missions like jets) and Un Kerballed Start (a planes-first tech tree) as optional and supported, and name the mods that clash with KSA (Bureaucracy, Strategia, contract packs, Kerbal Construction Time, Custom Barn Kit, EVARepairs).
+
 ## 0.7.2 (2026-10-30), test build
 
 - **Upgrades first.** Nothing launches that its pad or runway cannot take. A mission whose lightest engineers' rocket (or ready-made design) is heavier than the launch pad takes stays locked, with the reason ("its lightest rocket weighs 24 t and the Launch Pad takes 18 t: upgrade the Launch Pad"); a saved design too heavy is not offered; and a project already built that is too heavy waits on the pad ("Waiting for a building") and cannot be launched, live or simulated, until the building is upgraded.
