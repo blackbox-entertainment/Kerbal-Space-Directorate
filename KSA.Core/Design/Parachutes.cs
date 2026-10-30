@@ -96,6 +96,11 @@ namespace KSA.Core.Design
                 plan.Payload.Extras.Insert(at, radial.Name);
                 added += 2;
             }
+            // Never one radial chute on its own: it would pull the capsule over (2026-10-30, a probe's single Mk2-R).
+            var lone = new Dictionary<string, int>();
+            foreach (string e in plan.Payload.Extras) { PartInfo x = catalog.Get(e); if (x != null && x.Kind == PartKind.Parachute && !x.IsStackable) lone[e] = (lone.ContainsKey(e) ? lone[e] : 0) + 1; }
+            foreach (KeyValuePair<string, int> kv in lone)
+                if (kv.Value % 2 == 1) { plan.Payload.Extras.Insert(plan.Payload.Extras.IndexOf(kv.Key), kv.Key); added++; }
             return added > 0 ? "Parachutes sized for a " + LandingMass(plan, catalog).ToString("0.0") + " t capsule (" + CapacityOf(plan, catalog).ToString("0.0") + " t of soft landing)." : null;
         }
     }

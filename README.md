@@ -39,7 +39,7 @@ Install these through CKAN. Use the CKAN identifier shown to find each one.
 | Kerbal Planetary Base Systems | `KerbalPlanetaryBaseSystems` | Surface base module designs (planned) |
 | HL Airships Core | `HooliganLabsAirships` | Eve cloud city designs (planned; cloud cities fly simulated today) |
 | Airplane Plus /L | `AirplanePlusL` | Propeller engines, small cockpits and early plane parts. Its propellers burn fuel with intake air like jets, so prop planes fly KSA's aircraft missions. Pulls in Firespitter. Pick this one, not the old "Airplane Plus" (KSP 1.8 only) |
-| Un Kerballed Start | `UnKerballedStart` | A probes-first, planes-first tech tree. A career opens with the Stayputnik probe core: KSA flies uncrewed probe missions (sounding rocket, probe to space, first satellite) to earn the Science for the first crew pod, and moves the Mk16 parachute, the Flea booster and the TD-06 decoupler to the start node. Pulls in Community Tech Tree. Start a new career with it. When CKAN offers recommended mods, click Uncheck All (see below) |
+| Un Kerballed Start | `UnKerballedStart` | A probes-first, planes-first tech tree. A career opens with the Stayputnik probe core: KSA flies uncrewed probe missions (sounding rocket, probe to space, first satellite) to earn the Science for the first crew pod, and moves the Mk2-R radial and Mk16 parachutes, the Flea booster and the TD-06 decoupler to the start node. Pulls in Community Tech Tree. Start a new career with it. When CKAN offers recommended mods, click Uncheck All (see below) |
 
 KSA does not need MechJeb or kOS. It has its own flight director.
 

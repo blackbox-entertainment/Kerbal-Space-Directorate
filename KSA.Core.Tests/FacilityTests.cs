@@ -101,6 +101,7 @@ namespace KSA.Core.Tests
             c.Add(new PartInfo { Name = "solidBooster.sm.v2", Title = "RT-5 Flea", Kind = PartKind.Booster, Mass = 0.45, FuelMass = 1.05, Thrust = 192, IspVacuum = 165, IspSeaLevel = 140, Diameter = 0.625, HasTopNode = true, HasBottomNode = true });
             c.Add(new PartInfo { Name = "Decoupler.0", Title = "TD-06", Kind = PartKind.Decoupler, Mass = 0.01, Diameter = 0.625, HasTopNode = true, HasBottomNode = true });
             c.Add(new PartInfo { Name = "parachuteSingle", Title = "Mk16", Kind = PartKind.Parachute, Mass = 0.1, Diameter = 0.625, HasBottomNode = true });
+            c.Add(new PartInfo { Name = "parachuteRadial", Title = "Mk2-R", Kind = PartKind.Parachute, Mass = 0.1 });
             c.Add(new PartInfo { Name = "basicFin", Title = "Basic Fin", Kind = PartKind.Fin, Mass = 0.01 });
             c.Add(new PartInfo { Name = "sensorThermometer", Title = "2HOT Thermometer", Kind = PartKind.Science, Mass = 0.005 });
             c.Add(new PartInfo { Name = "SurfAntenna", Title = "Communotron 16-S", Kind = PartKind.Antenna, Mass = 0.015 });
@@ -136,6 +137,8 @@ namespace KSA.Core.Tests
             Assert.That(p.Design.DesignName, Is.Not.Empty);
             Assert.That(p.Design.Plan.Payload.Command, Is.EqualTo("probeCoreSphere.v2"));
             Assert.That(p.Design.Plan.Payload.Extras, Has.Some.EqualTo("SurfAntenna"), "the data goes home by radio");
+            Assert.That(p.Design.Plan.Payload.Extras.FindAll(e => e == "parachuteRadial"), Has.Count.EqualTo(2), "a pair of radial chutes on the Stayputnik");
+            Assert.That(p.Design.Plan.Payload.Extras, Has.None.EqualTo("parachuteSingle"), "no stack chute on a sphere");
 
             // A success counts for the probe goal and pays Science; the next one pays 60% of it.
             var won = new MissionReport { MissionTypeId = sounding.Id, Mode = MissionMode.Simulate, Outcome = MissionOutcome.Success };

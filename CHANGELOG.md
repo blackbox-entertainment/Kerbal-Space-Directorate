@@ -2,6 +2,12 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.7.7 (2026-10-30), test build
+
+- **Radial chutes for probes.** The Stayputnik is a sphere with no nose for a stack parachute, so a probe now carries a pair of radial parachutes (Mk2-R) on its sides, never a stack chute, whenever radial chutes are researched. With Un Kerballed Start, KSA moves the Mk2-R to the start node along with the Mk16, the Flea and the TD-06.
+- **Chutes in pairs.** A design never carries a single radial parachute: an odd one gets a partner on the other side, so the drag pulls straight.
+- **Older designs redrawn.** The engineers' design rules moved to revision 2, so a probe rocket drawn before this build (no parachute) is redrawn when the game loads, if it has not flown yet.
+
 ## 0.7.6 (2026-10-30), test build
 
 - **Watch your probes.** Sounding rockets and Probe to space now fly live under the same rules as any first (they had been switched to simulated once built, so a project marked Watch Live never flew). The launcher puts a craft with no crew on the pad, nothing waits for food or water, and a probe that lands is recovered automatically like a crewed capsule. First satellite stays simulated for now: a Stayputnik cannot steer to orbit.

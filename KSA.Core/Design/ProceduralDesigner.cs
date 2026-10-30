@@ -19,7 +19,7 @@ namespace KSA.Core.Design
         /// Raise this whenever the rules the engineers design by change (fins, engines, parachutes, margins): designs drawn
         /// up by an older revision that have not flown yet are drawn again on load (2026-10-30). 1 = 0.6.9.
         /// </summary>
-        public const int Revision = 1;
+        public const int Revision = 2; // 2: probes, with a pair of radial chutes (2026-10-30)
 
         private const double G0 = 9.80665;
         private const int MaxTanks = 8;
@@ -136,7 +136,7 @@ namespace KSA.Core.Design
                 plan.Payload.TanksEmpty = true; // it goes up empty; tankers fill it
             }
             // Enough parachute for the capsule that comes down, not one small chute whatever it weighs (2026-10-29).
-            Parachutes.Fit(plan, allowed, catalog, false, req.ChuteFactor);
+            Parachutes.Fit(plan, allowed, catalog, crew == 0, req.ChuteFactor); // a probe takes radial chutes only (2026-10-30)
             double payload = pod.Mass + pod.FuelMass;
             foreach (string e in plan.Payload.Extras) { PartInfo x = catalog.Get(e); if (x != null) payload += x.Mass + (plan.Payload.TanksEmpty && x.Kind == PartKind.Tank ? 0 : x.FuelMass); }
 
