@@ -342,7 +342,8 @@ namespace KSA.KSP.Flight
                 BodyOrbit = agency.Settings.LiveTargetOrbitAltitude,
                 ReentryPe = agency.Settings.LiveReentryPeriapsis,
                 ManualAllowed = true, // the Director built it; touching the controls takes it back
-                TargetBody = t != null ? t.Body : "Kerbin"
+                TargetBody = t != null ? t.Body : "Kerbin",
+                IsPlane = IsPlaneVessel(v)
             };
             _vessel = v;
             BuildProgram(agency, p, false);
@@ -364,6 +365,36 @@ namespace KSA.KSP.Flight
             GameEvents.onPartCouple.Add(OnPartCouple);
         }
 
+        /// <summary>A plane: built in the SPH, or sitting on the runway.</summary>
+        private static bool IsPlaneVessel(Vessel v)
+        {
+            if (v == null) return false;
+            if (v.vesselType == VesselType.Plane) return true;
+            return !string.IsNullOrEmpty(v.landedAt) && v.landedAt.IndexOf("Runway", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        /// <summary>
+        /// Missions a hangar craft can fly: seats for the crew, the delta-v the mission asks for (10% grace), from the home
+        /// world. Planes get the aircraft missions and Kerbin hops and orbits; rockets everything else. At most ten, hardest first.
+        /// </summary>
+        private static List<MissionType> HangarMissions(Agency agency, Vessel v, double dv, bool plane)
+        {
+            var list = new List<MissionType>();
+            int seats = Math.Max(1, v.GetCrewCapacity());
+            foreach (MissionType t in agency.Catalogs.Missions.Types)
+            {
+                if (t.ModuleRole.Length > 0 || t.IsRescue || t.IsCustom || t.Floating) continue;
+                if (t.Seats > seats) continue;
+                bool kerbinRocket = string.Equals(t.Body, "Kerbin", StringComparison.OrdinalIgnoreCase) && (t.Profile == MissionProfile.Suborbital || t.Profile == MissionProfile.Orbit);
+                if (plane ? !(t.IsAircraft || kerbinRocket) : t.IsAircraft) continue;
+                if (!t.IsAircraft && agency.Requirements.For(t).DeltaV > dv * 1.1) continue;
+                list.Add(t);
+            }
+            list.Sort((a, b) => (b.IsAircraft ? 0 : agency.Requirements.For(b).DeltaV).CompareTo(a.IsAircraft ? 0 : agency.Requirements.For(a).DeltaV));
+            if (list.Count > 10) list.RemoveRange(10, list.Count - 10);
+            return list;
+        }
+
         private void DeclineHangarFlight()
         {
             if (_offerVessel != null) Declined.Add(_offerVessel.persistentId);
@@ -378,14 +409,19 @@ namespace KSA.KSP.Flight
             CrewProfile pilot = agency != null && v != null ? HangarPilot(agency, v) : null;
             if (pilot == null) { _offering = false; return; }
             double dv = VacuumDeltaV(v);
-            bool orbitable = dv >= 3300;
+            bool plane = IsPlaneVessel(v);
             GUILayout.Label("<b>" + pilot.Name + "</b> is aboard " + v.vesselName + ". What should the crew fly?");
-            GUILayout.Label("Vacuum delta-v " + Math.Round(dv) + " m/s. Suggested: " + (orbitable ? "orbit and return." : "suborbital hop."));
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button((orbitable ? "" : "> ") + "Suborbital hop", GUILayout.Height(30f))) StartHangarFlight("SuborbitalHop");
-            if (GUILayout.Button((orbitable ? "> " : "") + "Orbit and return", GUILayout.Height(30f))) StartHangarFlight("KerbinOrbit");
+            GUILayout.Label((plane ? "A plane on the runway. " : string.Empty) + "Vacuum delta-v " + Math.Round(dv) + " m/s.");
+            // Every mission this craft can fly (2026-10-30, T: "what if I build a rocket and launch, can I attach it to a mission?").
+            List<MissionType> options = HangarMissions(agency, v, dv, plane);
+            if (options.Count == 0) GUILayout.Label("Nothing the agency flies fits this craft: too little delta-v or too few seats.");
+            for (int i = 0; i < options.Count; i++)
+            {
+                MissionType t = options[i];
+                double need = t.IsAircraft ? 0 : agency.Requirements.For(t).DeltaV;
+                if (GUILayout.Button(t.Name + (need > 0 ? " (" + Math.Round(need) + " m/s)" : string.Empty) + (agency.MissionsCompleted(t.Id) > 0 ? ", done before" : string.Empty), GUILayout.Height(26f))) StartHangarFlight(t.Id);
+            }
             if (GUILayout.Button("Let me fly", GUILayout.Height(30f))) DeclineHangarFlight();
-            GUILayout.EndHorizontal();
             GUILayout.Label("The crew flies until you touch the stick, throttle or staging; then it is logged as Director-flown.");
             GUI.DragWindow();
         }

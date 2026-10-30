@@ -121,6 +121,7 @@ namespace KSA.Core
                 if (!kinds.Contains(KSA.Core.Parts.PartKind.Command)) missing.Add("a cockpit or pod");
                 if (!kinds.Contains(KSA.Core.Parts.PartKind.Jet)) missing.Add("a jet engine");
                 if (!kinds.Contains(KSA.Core.Parts.PartKind.Wing)) missing.Add("wings");
+                if (type.IsZoomClimb && !kinds.Contains(KSA.Core.Parts.PartKind.Engine)) missing.Add("a liquid rocket engine");
                 if (!kinds.Contains(KSA.Core.Parts.PartKind.Wheel) && !kinds.Contains(KSA.Core.Parts.PartKind.LandingLeg) && !kinds.Contains(KSA.Core.Parts.PartKind.Parachute)) missing.Add("landing gear or a parachute");
                 return missing.Count == 0 ? null : "needs research: " + string.Join(", ", missing.ToArray());
             }

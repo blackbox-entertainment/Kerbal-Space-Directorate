@@ -18,6 +18,12 @@ namespace KSA.KSP.Parts
         private sealed class Cached { public DateTime Time; public PlayerDesign Design; }
         private static readonly Dictionary<string, Cached> Cache = new Dictionary<string, Cached>(StringComparer.OrdinalIgnoreCase);
 
+        private static bool EngineBreathes(ModuleEngines m)
+        {
+            foreach (Propellant pr in m.propellants) if (pr.name == "IntakeAir") return true;
+            return false;
+        }
+
         public static string Folder { get { return FolderFor("VAB"); } }
 
         /// <summary>This game's craft folder for a building: "VAB" (rockets) or "SPH" (planes, 2026-10-28).</summary>
@@ -104,7 +110,18 @@ namespace KSA.KSP.Parts
                 int istg; p.Stage = int.TryParse(n.GetValue("istg"), out istg) ? istg : -1;
                 Part prefab = ap.partPrefab;
                 p.Decoupler = prefab.FindModuleImplementing<ModuleDecouple>() != null || prefab.FindModuleImplementing<ModuleAnchoredDecoupler>() != null;
-                ModuleEngines e = prefab.FindModuleImplementing<ModuleEngines>();
+                // A dual-mode engine (RAPIER) is a jet and a rocket: rate it by its rocket mode, and mark the plane as
+                // having jets (2026-10-30: its first module is the air-breathing one, so its rocket delta-v was ignored).
+                ModuleEngines e = null;
+                bool breathes = false;
+                foreach (ModuleEngines m in prefab.FindModulesImplementing<ModuleEngines>())
+                {
+                    bool air = false;
+                    foreach (Propellant pr in m.propellants) if (pr.name == "IntakeAir") air = true;
+                    if (air) { breathes = true; if (e == null) e = m; }
+                    else if (e == null || EngineBreathes(e)) e = m;
+                }
+                if (breathes) d.HasJets = true;
                 if (e != null && e.atmosphereCurve != null)
                 {
                     p.Engine = true;
@@ -121,7 +138,7 @@ namespace KSA.KSP.Parts
                     p.Propellants = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                     foreach (Propellant pr in e.propellants) if (pr.name != "ElectricCharge" && pr.name != "IntakeAir") p.Propellants.Add(pr.name);
                     // Jets breathe air: their thrust is not rocket delta-v (a plane gets a climb credit instead).
-                    foreach (Propellant pr in e.propellants) if (pr.name == "IntakeAir") { p.Engine = false; d.HasJets = true; }
+                    if (EngineBreathes(e)) p.Engine = false;
                 }
                 foreach (ConfigNode r in n.GetNodes("RESOURCE"))
                 {

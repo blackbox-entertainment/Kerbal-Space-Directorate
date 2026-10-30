@@ -193,9 +193,17 @@ namespace KSA.KSP.UI
                 new DialogGUIButton("New engineers' design", () => OnSwapEngineers(id), 200f, ButtonHeight, false),
                 new DialogGUILabel("<color=#aaaaaa>the team draws a fresh rocket from today's parts</color>", textWidth - 250f, ButtonHeight)));
             List<PlayerDesign> fit = _agency.PlayerDesignsFor(type);
+            // Say why the others do not fit (2026-10-30, T: "swap rocket is not finding my designs").
+            MissionRequirements.Entry need = _agency.Requirements.For(type);
+            foreach (PlayerDesign d in _agency.PlayerDesigns())
+            {
+                if (fit.Contains(d)) continue;
+                string why = d.Blocker(type, need);
+                Line(items, "    <color=#888888>" + d.Name + ": " + (why ?? "does not fit") + ".</color>", textWidth);
+            }
             if (fit.Count == 0)
             {
-                Line(items, "    <color=#888888>None of your saved rockets fits this mission. Build one in the VAB and save it in this game: it shows here.</color>", textWidth);
+                Line(items, "    <color=#888888>None of your saved " + (type.IsAircraft ? "planes" : "rockets") + " fits this mission" + (type.IsAircraft ? "." : " (" + Math.Round(need.DeltaV) + " m/s needed). Build one in the " + (type.IsAircraft ? "SPH" : "VAB") + " and save it in this game: it shows here.") + "</color>", textWidth);
                 return;
             }
             foreach (PlayerDesign d in fit)

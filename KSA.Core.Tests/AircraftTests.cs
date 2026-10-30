@@ -114,5 +114,31 @@ namespace KSA.Core.Tests
             Assert.That(r.Achievements, Does.Contain("Survey:Kerbin").And.Contain("Aircraft:Kerbin").And.Contain("Science:Kerbin"));
             Assert.That(r.Cause, Is.EqualTo(FailureCause.None), "a low flight is not 'below space'");
         }
+
+        [Test]
+        public void ARocketPlaneNeedsRocketPowerForTheZoomTo40Km()
+        {
+            Agency a = Staffed(new FakeClock());
+            MissionType zoom = a.Catalogs.Missions.Get("RocketPlaneKerbin");
+            Assert.That(zoom.IsZoomClimb, Is.True);
+            Assert.That(zoom.CruiseAltitude, Is.EqualTo(40000));
+            Assert.That(zoom.PrimaryAchievement, Is.EqualTo("RocketPlane:Kerbin"));
+            MissionRequirements.Entry need = a.Requirements.For(zoom);
+            PlayerDesign jetOnly = Plane();
+            Assert.That(jetOnly.Blocker(zoom, need), Does.Contain("rocket power"));
+            PlayerDesign rocketPlane = Plane(); rocketPlane.DeltaV = 900;
+            Assert.That(rocketPlane.Blocker(zoom, need), Is.Null);
+            Assert.That(jetOnly.Blocker(a.Catalogs.Missions.Get("FirstFlightKerbin"), need), Is.Null, "the other aircraft missions need no rockets");
+
+            var parts = new PartCatalog();
+            parts.Add(new PartInfo { Name = "mk1pod", Kind = PartKind.Command, CrewCapacity = 1 });
+            parts.Add(new PartInfo { Name = "chute", Kind = PartKind.Parachute });
+            parts.Add(new PartInfo { Name = "JetEngine", Kind = PartKind.Jet });
+            parts.Add(new PartInfo { Name = "wing", Kind = PartKind.Wing });
+            a.Parts = parts;
+            Assert.That(a.PartKindsBlocker(zoom), Does.Contain("rocket engine"));
+            parts.Add(new PartInfo { Name = "liquidEngine2.v2", Kind = PartKind.Engine });
+            Assert.That(a.PartKindsBlocker(zoom), Is.Null);
+        }
     }
 }

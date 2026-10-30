@@ -63,6 +63,9 @@ namespace KSA.Core.Design
                 if (!IsPlane) return "built in the VAB: aircraft take off from the runway, so build it in the spaceplane hangar (SPH)";
                 if (!HasJets) return "no jet engine: aircraft missions fly on jets";
                 if (!HasWheels && !HasParachute) return "no landing gear or parachute: it could not land";
+                // Above the jets' ceiling only rockets get there (2026-10-30, T: "what about a 36 km plane? or 40 km?").
+                if (type.RocketDeltaV > 0 && DeltaV < type.RocketDeltaV)
+                    return Math.Round(DeltaV) + " of " + Math.Round(type.RocketDeltaV) + " m/s of rocket power: jets stall near 20 km, so add rocket engines or RAPIERs with oxidizer for the zoom climb";
                 return null;
             }
             if (IsPlane)

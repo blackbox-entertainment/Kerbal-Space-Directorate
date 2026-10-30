@@ -86,6 +86,13 @@ namespace KSA.Core.Missions
         public double RangeKm { get; set; }
         /// <summary>Aircraft: the compass heading flown outbound, degrees (90 = east, 270 = west).</summary>
         public double Heading { get; set; }
+        /// <summary>
+        /// Aircraft above the jets' ceiling (about 20-25 km): rocket delta-v the plane must carry for the zoom climb, m/s
+        /// (0 = jets only). With it the crew climbs on jets, lights the rockets and zooms up to CruiseAltitude (2026-10-30).
+        /// </summary>
+        public double RocketDeltaV { get; set; }
+        /// <summary>A zoom climb on rockets above the jets' ceiling.</summary>
+        public bool IsZoomClimb { get { return IsAircraft && RocketDeltaV > 0; } }
 
         public override string ToString() { return Name + " (" + Id + ")"; }
     }
@@ -150,7 +157,8 @@ namespace KSA.Core.Missions
                     Floating = node.GetBool("floating", false),
                     CruiseAltitude = node.GetDouble("cruiseAltitude", 2000),
                     RangeKm = node.GetDouble("rangeKm", 100),
-                    Heading = node.GetDouble("heading", 90)
+                    Heading = node.GetDouble("heading", 90),
+                    RocketDeltaV = node.GetDouble("rocketDeltaV", 0)
                 };
                 t.Achievements.AddRange(node.GetList("achievements"));
                 catalog.Add(t);

@@ -13,7 +13,7 @@ namespace KSA.KSP.Flight
     /// </summary>
     public sealed class AircraftLeg : IFlightLeg
     {
-        private enum Phases { Roll, Climb, Outbound, Homebound, Approach, Chutes }
+        private enum Phases { Roll, Climb, Outbound, Homebound, Approach, Chutes, Zoom, Apex }
 
         // Kerbin's Space Center, for a flight resumed in the air (on the runway the start point is used).
         private const double KscLat = -0.0972, KscLon = -74.5577;
@@ -34,6 +34,9 @@ namespace KSA.KSP.Flight
         private bool _chutes;
         private double _throttleCutAt = -1;
         private string _body = "Kerbin";
+        // Zoom climb (2026-10-30, T: "what about a 36 km plane? or 40 km?"): jets to their ceiling, then rockets.
+        private readonly double _zoomTo;
+        private double _peak;
 
         /// <summary>Set by the planner on a resume when the outbound half was already flown.</summary>
         public bool TurnedForHome { get; set; }
@@ -44,6 +47,7 @@ namespace KSA.KSP.Flight
             _halfRange = Math.Max(10000, (type != null && type.RangeKm > 0 ? type.RangeKm : 100) * 500);
             _outHeading = type != null ? type.Heading : 90;
             if (type != null) foreach (string a in type.Achievements) if (a.StartsWith("Survey:", StringComparison.OrdinalIgnoreCase)) _survey = true;
+            if (type != null && type.IsZoomClimb) { _zoomTo = _cruise; _cruise = 18000; } // the jets climb as high as they go first
         }
 
         public string Name { get { return "Aircraft flight"; } }
@@ -94,7 +98,9 @@ namespace KSA.KSP.Flight
             double hdgNow = v.srfSpeed > 20 ? HeadingOf(v, v.srf_velocity) : _runwayHeading;
 
             // Out of fuel or every engine flamed out in the air: chutes if there are any, else the Director lands it.
-            if (_phase != Phases.Roll && _phase != Phases.Chutes && !v.LandedOrSplashed && ((_startFuel > 1 && Fuel(v) < 0.5) || (c.Throttle > 0.05f && c.NoThrustAvailable() && now - _phaseStart > 5)))
+            // High up the jets starve of air: that is not an engine failure (they relight lower down).
+            bool zooming = _phase == Phases.Zoom || _phase == Phases.Apex;
+            if (_phase != Phases.Roll && _phase != Phases.Chutes && !v.LandedOrSplashed && ((_startFuel > 1 && Fuel(v) < 0.5) || (!zooming && alt < 15000 && c.Throttle > 0.05f && c.NoThrustAvailable() && now - _phaseStart > 5)))
             {
                 c.Throttle = 0;
                 string where = Math.Round(dist / 1000) + " km from the Space Center at " + Math.Round(alt) + " m";
@@ -112,6 +118,7 @@ namespace KSA.KSP.Flight
                     if (!v.LandedOrSplashed && agl > 20)
                     {
                         c.Gear(false);
+                        if (_zoomTo > 0 && ShutRockets(v) > 0) line = "Rockets off until the zoom climb.";
                         _phase = Phases.Climb; _phaseStart = now;
                         line = "Airborne at " + Math.Round(v.srfSpeed) + " m/s; gear up.";
                     }
@@ -126,8 +133,16 @@ namespace KSA.KSP.Flight
                     if (_phase == Phases.Climb)
                     {
                         if (alt > _bestAlt + 50) { _bestAlt = alt; _bestAltAt = now; }
+                        bool stalled = now - _bestAltAt > 90;
+                        if (_zoomTo > 0 && (alt >= _cruise - 150 || stalled))
+                        {
+                            int lit = LightRockets(v);
+                            _phase = Phases.Zoom; _phaseStart = now; _peak = alt;
+                            return lit > 0 ? "Jets at their ceiling (" + Math.Round(alt / 1000, 1) + " km, " + Math.Round(v.srfSpeed) + " m/s): rockets lit, zoom climb to " + Math.Round(_zoomTo / 1000) + " km."
+                                           : "No rocket engine would light at " + Math.Round(alt / 1000, 1) + " km; the zoom climb is off.";
+                        }
                         if (alt >= _cruise - 150) { _phase = Phases.Outbound; line = "Cruising at " + Math.Round(alt / 1000, 1) + " km, heading " + Math.Round(_outHeading) + "."; }
-                        else if (now - _bestAltAt > 90)
+                        else if (stalled)
                         {
                             _cruise = Math.Max(1000, alt - 200);
                             _phase = Phases.Outbound;
@@ -143,6 +158,45 @@ namespace KSA.KSP.Flight
                         if (_survey && dist >= _halfRange * 0.6) ctx.Say("Aerial survey flown: " + Math.Round(dist / 1000) + " km out over " + _body + ".", "Survey:" + _body);
                     }
                     Status = (_phase == Phases.Climb ? "Climbing" : "Outbound") + ": " + Math.Round(alt / 1000, 1) + " km, " + Math.Round(v.srfSpeed) + " m/s, " + Math.Round(dist / 1000) + " of " + Math.Round(_halfRange / 1000) + " km out.";
+                    return line;
+                }
+
+                case Phases.Zoom:
+                {
+                    c.Throttle = 1f;
+                    double zerr = Wrap(_outHeading - hdgNow);
+                    SetAttitude(v, hdgNow + Clamp(zerr, -3, 3), 30, 0, 0);
+                    if (alt > _peak) _peak = alt;
+                    bool high = v.orbit != null && v.orbit.ApA >= _zoomTo + 500;
+                    bool dry = Oxidizer(v) < 0.5;
+                    if (high || dry || now - _phaseStart > 150)
+                    {
+                        ShutRockets(v);
+                        _phase = Phases.Apex; _phaseStart = now;
+                        double apA = v.orbit != null ? v.orbit.ApA : alt;
+                        line = high ? "Rockets off: the climb carries on to " + Math.Round(apA / 1000, 1) + " km."
+                                    : "Rockets " + (dry ? "dry" : "off") + " at " + Math.Round(alt / 1000, 1) + " km; coasting up to " + Math.Round(apA / 1000, 1) + " km.";
+                    }
+                    Status = "Zoom climb: " + Math.Round(alt / 1000, 1) + " km, " + Math.Round(v.srfSpeed) + " m/s.";
+                    return line;
+                }
+
+                case Phases.Apex:
+                {
+                    // Nose along the flight path, wings level, jets left open to relight lower down.
+                    c.Throttle = 1f;
+                    double path = v.srfSpeed > 1 ? Math.Asin(Clamp(v.verticalSpeed / v.srfSpeed, -1, 1)) * 180 / Math.PI : 0;
+                    SetAttitude(v, hdgNow, path, 0, 0);
+                    if (alt > _peak) _peak = alt;
+                    if (v.verticalSpeed < 0)
+                    {
+                        bool made = _peak >= _zoomTo * 0.95;
+                        ctx.Say("Peak altitude " + Math.Round(_peak / 1000, 1) + " km" + (made ? "." : ", short of the " + Math.Round(_zoomTo / 1000) + " km aimed for."), made ? "RocketPlane:" + _body : null);
+                        _cruise = 12000;
+                        _phase = Phases.Homebound; TurnedForHome = true;
+                        ctx.Say("Turning for home " + Math.Round(dist / 1000) + " km out.", "Aircraft:" + _body);
+                    }
+                    Status = "Coasting up: " + Math.Round(alt / 1000, 1) + " km.";
                     return line;
                 }
 
@@ -299,6 +353,57 @@ namespace KSA.KSP.Flight
                 foreach (PartResource r in p.Resources)
                     if (r.resourceName == "LiquidFuel") total += r.amount;
             return total;
+        }
+
+        private static double Oxidizer(Vessel v)
+        {
+            double total = 0;
+            foreach (Part p in v.parts)
+                foreach (PartResource r in p.Resources)
+                    if (r.resourceName == "Oxidizer") total += r.amount;
+            return total;
+        }
+
+        private static bool Breathes(ModuleEngines e)
+        {
+            foreach (Propellant p in e.propellants) if (p.name == "IntakeAir") return true;
+            return false;
+        }
+
+        /// <summary>Dual-mode engines to closed cycle, plain rocket engines started. Returns how many.</summary>
+        private static int LightRockets(Vessel v)
+        {
+            int n = 0;
+            foreach (MultiModeEngine m in v.FindPartModulesImplementing<MultiModeEngine>())
+            {
+                if (!m.runningPrimary) continue;
+                BaseEvent e = m.Events["ModeEvent"];
+                if (e != null) { e.Invoke(); n++; }
+            }
+            foreach (ModuleEngines e in v.FindPartModulesImplementing<ModuleEngines>())
+            {
+                if (Breathes(e) || e.part.FindModuleImplementing<MultiModeEngine>() != null || e.EngineIgnited) continue;
+                e.Activate(); n++;
+            }
+            return n;
+        }
+
+        /// <summary>Dual-mode engines back to air-breathing, plain rocket engines shut down. Returns how many.</summary>
+        private static int ShutRockets(Vessel v)
+        {
+            int n = 0;
+            foreach (MultiModeEngine m in v.FindPartModulesImplementing<MultiModeEngine>())
+            {
+                if (m.runningPrimary) continue;
+                BaseEvent e = m.Events["ModeEvent"];
+                if (e != null) { e.Invoke(); n++; }
+            }
+            foreach (ModuleEngines e in v.FindPartModulesImplementing<ModuleEngines>())
+            {
+                if (Breathes(e) || e.part.FindModuleImplementing<MultiModeEngine>() != null || !e.EngineIgnited) continue;
+                e.Shutdown(); n++;
+            }
+            return n;
         }
 
         private static bool AnyEngineLit(Vessel v)

@@ -2,6 +2,13 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.6.13 (2026-10-30), test build
+
+- **Rocket plane to 40 km.** A new aircraft mission (Mid tier) and goal: climb on the jets to their ceiling (about 18 to 22 km), light the rockets and zoom to 40 km, then glide home on the jets. Needs a plane with 600 m/s of rocket power (rocket engines or RAPIERs with oxidizer; mission field rocketDeltaV). The crew keeps the rockets off from takeoff until the zoom, switches RAPIERs to closed cycle and back, and earns RocketPlane:Kerbin at 95% of the height. Jets starving of air up high no longer count as an engine failure.
+- **RAPIERs counted as rockets too.** A dual-mode engine was read only as a jet, so its rocket delta-v was left out; now it is rated by its rocket mode and the plane still counts as having jets.
+- **Launch anything, then pick the mission.** A craft launched straight from the VAB or SPH with a free KSA kerbal aboard now offers every mission it can fly (seats, and the mission's delta-v within 10%), hardest first, up to ten, instead of only a hop or an orbit. A plane on the runway gets the aircraft missions plus Kerbin hops and orbits, and the crew now knows it is flying a plane.
+- **Swap rocket says why.** Every saved design that does not fit the mission is listed with the reason (for example "3202 of 3500 m/s"), and the delta-v the mission needs is shown.
+
 ## 0.6.12 (2026-10-30), test build
 
 - **Aircraft missions.** Three new missions fly in the air with no rocket: First aircraft flight, Aerial biome survey (Science, 400 km west over grasslands, highlands and mountains) and High-altitude research flight (Science, above 18 km). They fly one of the Director's own SPH planes (cockpit, jets, and wheels or parachutes); the engineers do not design planes. A new flight leg takes off, climbs, keeps clear of the ground ahead, banks to turn, heads home at half the range or half the fuel, and lands under parachutes by the Space Center or hands the Director the runway landing. New achievements Aircraft:, Survey: and HighAir:, three goals (Fly an aircraft, Aerial survey, High-altitude flight; issued once jets, wings and gear are researched) and the Aviator's Wings medal. Jets and wings are now part kinds of their own (Jet, Wing), never used in rockets. The AI Director flies them only in a plane ticked for that mission that carries parachutes.
