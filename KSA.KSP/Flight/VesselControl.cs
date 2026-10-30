@@ -151,7 +151,11 @@ namespace KSA.KSP.Flight
                 if (!_v.ActionGroups[KSPActionGroup.SAS]) _v.ActionGroups.SetGroup(KSPActionGroup.SAS, true);
                 if (_v.Autopilot.Mode != VesselAutopilot.AutopilotMode.StabilityAssist) _v.Autopilot.SetMode(VesselAutopilot.AutopilotMode.StabilityAssist);
                 Vector3 want = ((Vector3)target.Value).normalized;
-                Quaternion wanted = Quaternion.FromToRotation(rt.up, want) * rt.rotation;
+                // Hold the roll SAS was locked to, not the roll of the moment (2026-10-30): taking the current roll every
+                // frame told SAS the roll was always right, so nothing damped it; rockets spun up to 60-156 deg/s at max q
+                // and, spinning, could not pitch over (both Kerbin orbit attempts climbed nearly straight up).
+                Quaternion baseRot = _lockAt >= 0 ? _lastLock : rt.rotation;
+                Quaternion wanted = Quaternion.FromToRotation(baseRot * Vector3.up, want) * baseRot;
                 // Planes (2026-10-30): a whole attitude, nose and wings, so the crew can bank to turn and keep the wings level.
                 Vector3d? fwd = null;
                 if (_customForward != null) { try { fwd = _customForward(); } catch { fwd = null; } }

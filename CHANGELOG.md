@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.6.14 (2026-10-30), test build
+
+- **The roll is held.** The crew pointed the rocket by locking SAS to the wanted direction "keeping the current roll", taken afresh each time. SAS was therefore always told the roll was right, so nothing damped a roll: at maximum dynamic pressure the rockets spun up to 60-156 deg/s, and a spinning rocket cannot pitch over (both Kerbin orbit attempts climbed nearly straight up, the second drifting west, periapsis -600 km at 57 km up). The crew now holds the roll SAS was locked to and turns the nose from there, so SAS fights any roll.
+- **The gravity turn is in the log.** Every 10 s during the turn KSP.log has an "Ascent turn" line: the program's pitch, the nose's actual pitch and heading, turn and roll rates, throttle, speed and apoapsis.
+
 ## 0.6.13 (2026-10-30), test build
 
 - **Rocket plane to 40 km.** A new aircraft mission (Mid tier) and goal: climb on the jets to their ceiling (about 18 to 22 km), light the rockets and zoom to 40 km, then glide home on the jets. Needs a plane with 600 m/s of rocket power (rocket engines or RAPIERs with oxidizer; mission field rocketDeltaV). The crew keeps the rockets off from takeoff until the zoom, switches RAPIERs to closed cycle and back, and earns RocketPlane:Kerbin at 95% of the height. Jets starving of air up high no longer count as an engine failure.

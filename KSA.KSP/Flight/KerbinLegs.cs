@@ -94,6 +94,7 @@ namespace KSA.KSP.Flight
                 case Phases.Ascent:
                     c.AutoStage(ref line);
                     if (!c.ManualAttitude) c.PointAlong(() => AscentDirection(v, _orbit));
+                    LogAttitude(ctx, "turn (program " + Math.Round(TargetPitch(v, _orbit)) + " deg)");
                     Status = "Gravity turn: pitch " + Math.Round(TargetPitch(v, _orbit)) + " deg.";
                     // Side boosters pulling the rocket off course that SAS cannot hold: drop them, as a pilot would
                     // (2026-10-28: heavy side boosters tipped a rocket over until the Director dropped them by hand).
@@ -224,7 +225,24 @@ namespace KSA.KSP.Flight
             double spin = VesselControl.TurnRate(v);
             KsaCore.Log.Info("Ascent " + what + ": nose " + Math.Round(off) + " deg from the horizon, turning " + Math.Round(spin, 1) + " deg/s, rolling " + Math.Round(VesselControl.RollRate(v), 1) + " deg/s, throttle " + ctx.Control.Throttle.ToString("0.00") + ", SAS "
                 + (v.ActionGroups[KSPActionGroup.SAS] ? "on" : "off") + (ctx.Control.ManualAttitude ? ", crew steering by hand" : ", stock hold")
-                + ", pitch input " + ctx.Control.Pitch.ToString("0.00") + ", yaw input " + ctx.Control.Yaw.ToString("0.00") + ", alt " + Math.Round(v.altitude / 1000, 1) + " km, apoapsis in " + Math.Round(v.orbit.timeToAp) + " s" + ChargeLog.Note(v));
+                + ", nose pitch " + Math.Round(NosePitch(v)) + " deg heading " + Math.Round(NoseHeading(v))
+                + ", pitch input " + ctx.Control.Pitch.ToString("0.00") + ", yaw input " + ctx.Control.Yaw.ToString("0.00") + ", alt " + Math.Round(v.altitude / 1000, 1) + " km, " + Math.Round(v.srfSpeed) + " m/s, apoapsis " + Math.Round(v.orbit.ApA / 1000, 1) + " km in " + Math.Round(v.orbit.timeToAp) + " s" + ChargeLog.Note(v));
+        }
+
+        /// <summary>The nose above the horizon, degrees.</summary>
+        private static double NosePitch(Vessel v)
+        {
+            if (v.ReferenceTransform == null) return 0;
+            return Math.Asin(Math.Max(-1, Math.Min(1, Vector3d.Dot((Vector3d)v.ReferenceTransform.up, v.upAxis)))) * 180 / Math.PI;
+        }
+
+        /// <summary>The nose's compass heading, degrees (90 east, 270 west).</summary>
+        private static double NoseHeading(Vessel v)
+        {
+            if (v.ReferenceTransform == null) return 0;
+            Vector3d n = v.ReferenceTransform.up;
+            double h = Math.Atan2(Vector3d.Dot(n, v.east), Vector3d.Dot(n, v.north)) * 180 / Math.PI;
+            return h < 0 ? h + 360 : h;
         }
 
         /// <summary>Along the horizon in the direction of travel: the orbital velocity with its up-down part taken out.</summary>
