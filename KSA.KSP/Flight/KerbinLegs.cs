@@ -263,7 +263,11 @@ namespace KSA.KSP.Flight
             double program = Math.Max(0, 88 * (1 - Math.Sqrt(Math.Min(1, alt / TurnEnd))));
             if (v.srfSpeed < KickDone) return Math.Max(85, program);
             Vector3d up = v.upAxis;
-            double pathPitch = 90 - Vector3d.Angle(v.srf_velocity, up);
+            // The flight path's pitch from the eastern horizon, in the up-east plane: over 90 means it leans west
+            // (2026-10-30: a rocket on fixed engines drifted west; the unsigned angle read that as leaning east, so the
+            // "stay near the path" band kept it going west and it climbed past vertical).
+            Vector3d vel = v.srf_velocity;
+            double pathPitch = Math.Atan2(Vector3d.Dot(vel, up), Vector3d.Dot(vel, (Vector3d)v.east)) * 180 / Math.PI;
             double band = MaxLean(v.dynamicPressurekPa);
             if (alt < 20000) band = Math.Min(band, 10);
             return Math.Max(pathPitch - band, Math.Min(pathPitch + band, program));

@@ -105,6 +105,7 @@ namespace KSA.Core
             if (_designsResumed) return;
             _designsResumed = true;
             RecheckApprovedDesigns(notices);
+            RedrawOutdatedDesigns(notices);
             BackfillLessons();
             BackfillRecords();
             foreach (Project p in Projects)
@@ -117,6 +118,34 @@ namespace KSA.Core
                     p.Design.Error = "Design session interrupted by save/load and AI design is not available now; the template flies.";
                     p.Notes.Add(p.Design.Error);
                 }
+            }
+        }
+
+        /// <summary>True for an engineers' design drawn up by an older revision of their rules.</summary>
+        public static bool IsOutdatedEngineersDesign(DesignRecord d)
+        {
+            return d != null && d.Model == EngineersModel && d.DesignerRevision < ProceduralDesigner.Revision;
+        }
+
+        /// <summary>
+        /// After a load, an engineers' design drawn up by older rules that has not flown yet is drawn again by today's
+        /// (2026-10-30, T: P7 kept 8 fins and fixed Reliants after the rules changed). Like Swap rocket: half the build time
+        /// when it was already building. If the engineers cannot draw one now, the old design stays.
+        /// </summary>
+        private void RedrawOutdatedDesigns(List<string> notices)
+        {
+            if (Parts == null) return;
+            foreach (Project p in Projects)
+            {
+                if (p.Status != ProjectStatus.Build && p.Status != ProjectStatus.Ready) continue;
+                if (p.Design == null || p.Design.Verdict != DesignVerdict.Approved || !IsOutdatedEngineersDesign(p.Design)) continue;
+                string old = p.Design.DesignName, msg;
+                if (SwapToEngineersDesign(p.Id, out msg))
+                {
+                    p.Notes.Add("The engineers redrew '" + old + "' by their current rules.");
+                    Push(notices, p.Name + ": the engineers redrew its rocket by their current rules (" + msg + ")");
+                }
+                else Log.Info(p.Name + ": outdated design kept: " + msg);
             }
         }
 
@@ -397,6 +426,7 @@ namespace KSA.Core
                 if (q == p || q.MissionTypeId != p.MissionTypeId || q.ModuleRole != p.ModuleRole) continue;
                 if (q.Report == null || !q.Report.IsSuccess || !HasApprovedDesign(q) || string.IsNullOrEmpty(q.Design.PlanJson)) continue;
                 if (LastFlightFailed(p.MissionTypeId)) return false; // the last flight of this mission failed: design afresh, with the fix
+                if (IsOutdatedEngineersDesign(q.Design)) continue;   // drawn by older rules
                 if (Parts != null && q.Design.PartsResearched != parts) continue; // new parts since: worth a fresh look
                 if (best == null || q.EndDay > best.EndDay) best = q;
             }
@@ -621,7 +651,8 @@ namespace KSA.Core
                 Plan = plan,
                 PlanJson = plan.ToJsonText(false),
                 Model = EngineersModel,
-                PartsResearched = Parts.All.Count
+                PartsResearched = Parts.All.Count,
+                DesignerRevision = ProceduralDesigner.Revision
             };
             r.ApplyAnalysis(a);
             return r;

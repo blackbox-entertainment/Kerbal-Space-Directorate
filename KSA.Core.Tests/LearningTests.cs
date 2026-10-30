@@ -96,6 +96,31 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void AnUnflownDesignByOlderRulesIsRedrawnOnLoad()
+        {
+            Agency a = Staffed(new FakeClock());
+            MissionType orbit = a.Catalogs.Missions.Get("KerbinOrbit");
+            string why;
+            var p = new Project { Id = "P90", MissionTypeId = orbit.Id, Name = orbit.Name, Status = ProjectStatus.Build, BuildDays = 16, PhaseStartDay = a.CurrentDay };
+            p.Design = a.EngineersDesign(p, out why, orbit);
+            Assert.That(p.Design, Is.Not.Null, why);
+            Assert.That(p.Design.DesignerRevision, Is.EqualTo(ProceduralDesigner.Revision));
+            p.Design.DesignerRevision = 0; // drawn by an older build
+            a.Projects.Add(p);
+            // Load the save into a fresh agency, as the game does.
+            Agency b = Make.Agency(new FakeClock(), new ListLogger());
+            b.Parts = a.Parts;
+            b.Requirements = a.Requirements;
+            AgencyStateSerializer.Read(AgencyStateSerializer.Write(a), b);
+            var notices = new List<string>();
+            b.ResumeInterruptedDesigns(notices);
+            Project q = b.GetProject("P90");
+            Assert.That(q.Design.DesignerRevision, Is.EqualTo(ProceduralDesigner.Revision), "redrawn by today's rules");
+            Assert.That(q.Status, Is.EqualTo(ProjectStatus.Build));
+            Assert.That(notices, Has.Some.Contains("redrew its rocket"));
+        }
+
+        [Test]
         public void AHopShortOfSpaceIsBelowSpaceAndADirectorFlownCrashChangesNoDesign()
         {
             MissionType hop = ShippedConfigs.Missions().Get("SuborbitalHop");

@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.6.10 (2026-10-30), test build
+
+- **Old designs are redrawn.** Every engineers' design now carries the revision of the rules it was drawn by (ProceduralDesigner.Revision). On load, a project that is building or on the pad with a design by older rules gets a fresh one (like Swap rocket: half the build time). Raise the revision whenever the design rules change. P7 had flown on 8 fins and fixed Reliants from 0.6.5 rules.
+- **The gravity turn corrects a drift west.** The ascent compared the nose with the flight path's angle above the horizon without its direction, so a path leaning west read as leaning east; a rocket on fixed engines that drifted west kept going west and climbed past vertical. The path is now measured in the up-east plane, so the turn pulls it back east.
+
 ## 0.6.9 (2026-10-30), test build
 
 - **Engines that steer.** The engineers prefer engines that swivel (gimbal) whenever one is researched: a Kerbin orbit rocket on two LV-T30 Reliants (fixed nozzles) could not turn, climbed nearly straight up and needed 2,182 m/s to circularise. A Reliant is used only when nothing that swivels does the job.

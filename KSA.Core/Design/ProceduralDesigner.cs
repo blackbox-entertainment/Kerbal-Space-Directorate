@@ -15,8 +15,13 @@ namespace KSA.Core.Design
     /// </summary>
     public static class ProceduralDesigner
     {
+        /// <summary>
+        /// Raise this whenever the rules the engineers design by change (fins, engines, parachutes, margins): designs drawn
+        /// up by an older revision that have not flown yet are drawn again on load (2026-10-30). 1 = 0.6.9.
+        /// </summary>
+        public const int Revision = 1;
+
         private const double G0 = 9.80665;
-        // The delta-v margin over every leg: 10%, more after a mission ran dry (DesignRequest.DeltaVMargin).
         private const int MaxTanks = 8;
         private const int MaxStages = 8;
         private const double MaxSlenderness = 10;

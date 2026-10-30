@@ -40,6 +40,8 @@ namespace KSA.Core.Design
         public bool IsPlane { get; set; }
         /// <summary>How many parts were researched when the design was made; a proven design is reused until this changes (2026-10-28).</summary>
         public int PartsResearched { get; set; }
+        /// <summary>ProceduralDesigner.Revision the engineers drew it by (0 = before revisions were kept, or not theirs).</summary>
+        public int DesignerRevision { get; set; }
         /// <summary>Propellant this design takes on at the fuel depot, tonnes (0 = it does not stop there).</summary>
         public double DepotFuel { get; set; }
 
@@ -89,6 +91,7 @@ namespace KSA.Core.Design
             n.AddValue("error", Error);
             n.AddValue("craft", CraftPath);
             n.AddValue("partsResearched", PartsResearched);
+            n.AddValue("designerRevision", DesignerRevision);
             if (DepotFuel > 0) n.AddValue("depotFuel", DepotFuel);
             n.AddValue("isPlane", IsPlane);
             foreach (string f in Feedback) n.AddValue("feedback", f);
@@ -125,6 +128,7 @@ namespace KSA.Core.Design
                 Error = n.GetValue("error", string.Empty),
                 CraftPath = n.GetValue("craft", string.Empty),
                 PartsResearched = n.GetInt("partsResearched", 0),
+                DesignerRevision = n.GetInt("designerRevision", 0),
                 DepotFuel = n.GetDouble("depotFuel", 0),
                 IsPlane = n.GetBool("isPlane", false)
             };
