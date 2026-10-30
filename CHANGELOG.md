@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.6.2 (2026-10-30), test build
+
+- **The OpenRouter key no longer gets lost on save.** The encrypted key was written in a form that could contain "//", which KSP's config reader takes for the start of a comment; about one save in ten cut the key short, it could not be read back ("Invalid length for a Base-64 char array"), and the AI Director quietly fell back to the local model. Keys are now stored without "/" characters; keys saved by older versions still load.
+- **A quiet AI Director can be diagnosed.** Everything in the AI Director's log (thoughts, actions, failures, "the model did not answer") is also written to KSP.log as "[KSA] AI Director ...", and a reply that is not valid JSON is logged with its first 200 characters.
+
 ## 0.6.1 (2026-10-29), release
 
 Everything since 0.5.10, from the test builds 0.5.11 to 0.5.25 below. In short:

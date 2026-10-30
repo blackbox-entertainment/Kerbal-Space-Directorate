@@ -167,7 +167,7 @@ namespace KSA.Core
             object parsed; string error;
             if (json == null || !Json.TryParse(json, out parsed, out error) || Json.AsObject(parsed) == null)
             {
-                DirectorAdd("Failed", "The reply was not the JSON asked for; nothing was done.");
+                DirectorAdd("Failed", "The reply was not the JSON asked for; nothing was done. It began: " + Clip((text ?? string.Empty).Trim(), 200));
                 _directorLastResults.Add("Your last reply was not valid JSON. Answer with the JSON object only.");
                 return;
             }
@@ -462,6 +462,8 @@ namespace KSA.Core
         private void DirectorAdd(string kind, string text)
         {
             DirectorLog.Add(new DirectorLogEntry { Day = CurrentDay, Year = CurrentYear, Kind = kind, Text = Clean(Clip(text, 500)) });
+            // Into the game log too, so a quiet Director can be diagnosed from KSP.log (2026-10-30).
+            if (Log != null) Log.Info("AI Director " + kind.ToLowerInvariant() + " (day " + CurrentDay + "): " + Clean(Clip(text, 500)));
             int keep = Math.Max(20, DirectorRules.LogKept);
             if (DirectorLog.Count > keep) DirectorLog.RemoveRange(0, DirectorLog.Count - keep);
         }

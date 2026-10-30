@@ -22,7 +22,9 @@ namespace KSA.KSP.Ai
             try
             {
                 byte[] cipher = ProtectedData.Protect(Encoding.UTF8.GetBytes(plain), Entropy, DataProtectionScope.CurrentUser);
-                return Prefix + Convert.ToBase64String(cipher);
+                // URL-safe Base64 (2026-10-30): KSP's config reader takes "//" for a comment, so a key whose Base64 held
+                // "//" was cut short on load and lost ("Invalid length for a Base-64 char array").
+                return Prefix + Convert.ToBase64String(cipher).Replace('+', '-').Replace('/', '_');
             }
             catch (Exception e)
             {
@@ -38,7 +40,7 @@ namespace KSA.KSP.Ai
             if (!stored.StartsWith(Prefix, StringComparison.Ordinal)) return stored;
             try
             {
-                byte[] plain = ProtectedData.Unprotect(Convert.FromBase64String(stored.Substring(Prefix.Length)), Entropy, DataProtectionScope.CurrentUser);
+                byte[] plain = ProtectedData.Unprotect(Convert.FromBase64String(stored.Substring(Prefix.Length).Trim().Replace('-', '+').Replace('_', '/')), Entropy, DataProtectionScope.CurrentUser);
                 return Encoding.UTF8.GetString(plain);
             }
             catch (Exception e)
