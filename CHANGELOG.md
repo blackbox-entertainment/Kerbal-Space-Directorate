@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.6.11 (2026-10-30), test build
+
+- **No paper firsts.** A mission that would earn something the agency has never done in a flight it actually flew (reaching orbit, a flyby, a landing, a spacewalk) now flies live under the Hybrid default and the AI Director's "Firsts live" setting, not only missions marked as a First. Orbital sounding had been simulated and the dice credited an orbit no rocket had flown, while every live orbit attempt was still failing. Simulated achievements no longer count as know-how for this; program modules and rescues keep their usual modes. The AI Director's briefing marks such missions "new ground: flies live".
+
 ## 0.6.10 (2026-10-30), test build
 
 - **Old designs are redrawn.** Every engineers' design now carries the revision of the rules it was drawn by (ProceduralDesigner.Revision). On load, a project that is building or on the pad with a design by older rules gets a fresh one (like Swap rocket: half the build time). Raise the revision whenever the design rules change. P7 had flown on 8 fins and fixed Reliants from 0.6.5 rules.

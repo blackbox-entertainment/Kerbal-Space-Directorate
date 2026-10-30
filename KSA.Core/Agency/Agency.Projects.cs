@@ -142,9 +142,41 @@ namespace KSA.Core
             {
                 case DefaultMissionMode.WatchLive: return MissionMode.WatchLive;
                 case DefaultMissionMode.Hybrid:
-                    return type != null && type.IsFirst && !HasAgencyAchievement(type.PrimaryAchievement) ? MissionMode.WatchLive : MissionMode.Simulate;
+                    return BreaksNewGround(type) ? MissionMode.WatchLive : MissionMode.Simulate;
                 default: return MissionMode.Simulate;
             }
+        }
+
+        /// <summary>
+        /// True when a mission would earn something the agency has never done in a flight it actually flew: a First, or a
+        /// mission that needs a skill not yet shown live, such as reaching orbit (2026-10-30, T: "how is orbital sounding a
+        /// success when we cannot make a real orbit yet?"; it was simulated, and the dice credited an orbit no rocket had
+        /// flown). These fly live under the Hybrid default and the AI Director's "Firsts live" setting.
+        /// </summary>
+        public bool BreaksNewGround(MissionType type)
+        {
+            if (type == null) return false;
+            if (type.IsFirst && !HasAgencyAchievement(type.PrimaryAchievement)) return true;
+            // Program modules and rescues keep their own modes (assembly is simulated by default).
+            if (type.ModuleRole.Length > 0 || type.IsRescue) return false;
+            foreach (string a in type.Achievements)
+            {
+                if (a.StartsWith("Recover", StringComparison.OrdinalIgnoreCase) || a.StartsWith("Science:", StringComparison.OrdinalIgnoreCase)
+                    || a.StartsWith("Flight:", StringComparison.OrdinalIgnoreCase)) continue;
+                if (!FlownLive(a)) return true;
+            }
+            return false;
+        }
+
+        /// <summary>True when a live flight (not a simulation) has earned an achievement matching the pattern.</summary>
+        public bool FlownLive(string pattern)
+        {
+            foreach (MissionReport r in Reports)
+            {
+                if (r.Mode != MissionMode.WatchLive || !r.IsSuccess) continue;
+                foreach (string a in r.Achievements) if (PatternMatches(a, pattern)) return true;
+            }
+            return false;
         }
 
         // ------------------------------------------------------------------ projects

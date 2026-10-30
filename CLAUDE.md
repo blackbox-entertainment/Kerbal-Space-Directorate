@@ -125,7 +125,7 @@ GameData/KSA/
 | Selection | Director picks which Test Pilots become Candidates each year; passed-over pilots lose morale |
 | Recruiting | Paid recruitment drives; sources: Kerbin Air Corps, universities, industry poaching, walk-ins; interviews reveal partial stats; prestige affects applicant quality |
 | Stations/bases | A **Program** layer above Projects (e.g., "Mun Base Alpha" = several module missions). Assembly defaults to Simulated. |
-| Mission modes | Hybrid default: Simulated unless it's a "First" or the player clicks Watch Live |
+| Mission modes | Hybrid default: Simulated unless it's a "First" or the player clicks Watch Live. Since 0.6.11 (2026-10-30) "new ground" also flies live: any mission earning an achievement no live flight has earned yet (Agency.BreaksNewGround; simulated successes do not count; modules and rescues excepted) |
 | AI providers | OpenRouter for design and kOS scripts; local (Ollama/LM Studio) for narrative |
 | Hardware targets | Minimum 16 GB RAM (AI via API only), Recommended 32 GB (full mod set, optional small local model). T's 64 GB dev machine is **not** a target. |
 | GitHub owner | **Blackbox Entertainment** organization, GitHub slug `blackbox-entertainment` (decided 2026-10-26). Remote: https://github.com/blackbox-entertainment/Kerbal-Space-Directorate |

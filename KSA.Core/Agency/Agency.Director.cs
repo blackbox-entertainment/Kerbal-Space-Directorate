@@ -415,7 +415,7 @@ namespace KSA.Core
             switch (State.DirectorFlights)
             {
                 case DirectorFlights.All: return MissionMode.WatchLive;
-                case DirectorFlights.Firsts: return t.IsFirst && !HasAgencyAchievement(t.PrimaryAchievement) ? MissionMode.WatchLive : MissionMode.Simulate;
+                case DirectorFlights.Firsts: return BreaksNewGround(t) ? MissionMode.WatchLive : MissionMode.Simulate;
                 default: return MissionMode.Simulate;
             }
         }
@@ -705,7 +705,7 @@ namespace KSA.Core
                 if (RepeatBlocker(t) != null) { doneAlready.Add(t.Name); continue; }
                 Template best = null;
                 foreach (Template tp in TemplatesFor(t)) if (TemplateBlocker(tp) == null) { best = tp; break; }
-                sb.AppendLine("  " + t.Id + " | " + t.Name + " | " + Money(ProjectCost(t, best)) + " | " + t.CrewSize + " | " + t.MinStars + " | " + t.DurationDays + " | " + MissionsCompleted(t.Id) + (t.IsFirst && !HasAgencyAchievement(t.PrimaryAchievement) ? " | a First" : string.Empty)
+                sb.AppendLine("  " + t.Id + " | " + t.Name + " | " + Money(ProjectCost(t, best)) + " | " + t.CrewSize + " | " + t.MinStars + " | " + t.DurationDays + " | " + MissionsCompleted(t.Id) + (BreaksNewGround(t) ? " | new ground: flies live" : string.Empty)
                     + (picked != null ? " | the human Director wants their design '" + picked.Name + "' flown for this (used automatically)" : string.Empty));
             }
             if (doneAlready.Count > 0) sb.AppendLine("ALREADY DONE OR UNDER WAY (no open goal needs them again now): " + string.Join("; ", doneAlready.ToArray()));

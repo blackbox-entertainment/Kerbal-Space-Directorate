@@ -121,6 +121,25 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void ASimulatedOrbitIsNotKnowHowSoTheNextOrbitalMissionFliesLive()
+        {
+            Agency a = Staffed(new FakeClock());
+            MissionType sounding = a.Catalogs.Missions.Get("OrbitalSounding");
+            var paper = new MissionReport { MissionTypeId = "OrbitalSounding", Mode = MissionMode.Simulate, Outcome = MissionOutcome.Success };
+            paper.Achievements.Add("Suborbit:Kerbin"); paper.Achievements.Add("Orbit:Kerbin");
+            a.Reports.Add(paper);
+            Assert.That(a.BreaksNewGround(sounding), Is.True, "only a simulation has reached orbit");
+            a.SetDirectorFlights(KSA.Core.Ai.DirectorFlights.Firsts);
+            Assert.That(a.DirectorMode(sounding), Is.EqualTo(MissionMode.WatchLive));
+
+            var flown = new MissionReport { MissionTypeId = "KerbinOrbit", Mode = MissionMode.WatchLive, Outcome = MissionOutcome.Success };
+            flown.Achievements.Add("Suborbit:Kerbin"); flown.Achievements.Add("Orbit:Kerbin");
+            a.Reports.Add(flown);
+            Assert.That(a.BreaksNewGround(sounding), Is.False, "a real orbit has been flown");
+            Assert.That(a.DirectorMode(sounding), Is.EqualTo(MissionMode.Simulate));
+        }
+
+        [Test]
         public void AHopShortOfSpaceIsBelowSpaceAndADirectorFlownCrashChangesNoDesign()
         {
             MissionType hop = ShippedConfigs.Missions().Get("SuborbitalHop");

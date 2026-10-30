@@ -105,7 +105,11 @@ namespace KSA.Core.Tests
             _agency.Settings.DefaultMissionMode = DefaultMissionMode.Hybrid;
             Assert.That(_agency.DefaultModeFor(_agency.Catalogs.Missions.Get("KerbinOrbit")), Is.EqualTo(MissionMode.WatchLive));
             _agency.AddAchievements("Jebediah Kerman", new[] { "Orbit:Kerbin" });
-            Assert.That(_agency.DefaultModeFor(_agency.Catalogs.Missions.Get("KerbinOrbit")), Is.EqualTo(MissionMode.Simulate), "already achieved");
+            Assert.That(_agency.DefaultModeFor(_agency.Catalogs.Missions.Get("KerbinOrbit")), Is.EqualTo(MissionMode.WatchLive), "held, but never flown live (2026-10-30)");
+            var flown = new MissionReport { MissionTypeId = "KerbinOrbit", Mode = MissionMode.WatchLive, Outcome = MissionOutcome.Success };
+            flown.Achievements.Add("Suborbit:Kerbin"); flown.Achievements.Add("Orbit:Kerbin");
+            _agency.Reports.Add(flown);
+            Assert.That(_agency.DefaultModeFor(_agency.Catalogs.Missions.Get("KerbinOrbit")), Is.EqualTo(MissionMode.Simulate), "already flown live");
 
             string msg;
             Project p = _agency.CreateProject("Hop", "SuborbitalHop", null, null, null, null, null, out msg);
