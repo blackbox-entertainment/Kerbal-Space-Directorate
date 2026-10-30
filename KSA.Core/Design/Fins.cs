@@ -52,10 +52,13 @@ namespace KSA.Core.Design
             return false;
         }
 
+        /// <summary>A launch stage with less than this (sea-level Isp) burns out in thick air, below about 20 km.</summary>
+        public const double LowStageDeltaV = 1500;
+
         /// <summary>
         /// The stages that fly through thick air and so need fins: the launch stage, and the stage above it when the launch
-        /// stage is solid boosters only (they burn out at 10-15 km and the next stage climbs on through the air; 2026-10-30:
-        /// a finless liquid stage above a solid tumbled at 16 km).
+        /// stage is solid boosters only or has under 1,500 m/s at sea level: it burns out low and the next stage climbs on
+        /// through the air (2026-10-30: a finless upper stage tumbled at 16 km; T's Suborbital hop mk I flew with fins on both).
         /// </summary>
         public static List<int> StagesNeedingFins(StagePlan plan, IPartCatalog catalog)
         {
@@ -71,20 +74,40 @@ namespace KSA.Core.Design
                 if (x.Kind == PartKind.Engine) liquid = true;
                 if (x.Kind == PartKind.Booster) solid = true;
             }
-            if (solid && !liquid) list.Add(1);
+            if ((solid && !liquid) || LaunchStageDeltaV(plan, catalog) < LowStageDeltaV) list.Add(1);
             return list;
+        }
+
+        /// <summary>Rough delta-v of the launch stage at sea level, full stack above it (m/s).</summary>
+        public static double LaunchStageDeltaV(StagePlan plan, IPartCatalog catalog)
+        {
+            if (plan == null || plan.Stages.Count == 0) return 0;
+            double fuel = 0, thrust = 0, flow = 0;
+            Action<PlanPart, int> take = (p, n) =>
+            {
+                PartInfo x = catalog.Get(p.Part);
+                if (x == null) return;
+                fuel += x.FuelMass * n;
+                if (x.ProducesThrust && x.IspSeaLevel > 0) { thrust += x.Thrust * n; flow += x.Thrust * n / x.IspSeaLevel; }
+            };
+            foreach (PlanPart p in plan.Stages[0].Core) take(p, Math.Max(1, p.Count));
+            foreach (PlanPart p in plan.Stages[0].Radial) take(p, p.Count > 0 && p.Symmetry > 1 && p.Count == p.Symmetry ? p.Count : Math.Max(1, p.Count) * Math.Max(1, p.Symmetry));
+            double m0 = LiftoffMass(plan, catalog);
+            if (flow <= 0 || fuel <= 0 || m0 <= fuel) return 0;
+            return thrust / flow * 9.81 * Math.Log(m0 / (m0 - fuel));
         }
 
         /// <summary>
         /// Adds fins to every stage that flies through thick air and has none, when a fin is allowed (the AI often leaves
         /// them out). Returns a note for the design log, or null when nothing changed.
         /// </summary>
-        public static string AddIfMissing(StagePlan plan, IEnumerable<PartInfo> allowed, IPartCatalog catalog)
+        public static string AddIfMissing(StagePlan plan, IEnumerable<PartInfo> allowed, IPartCatalog catalog, int maxStages = int.MaxValue)
         {
             if (plan == null || plan.Stages.Count == 0 || catalog == null) return null;
             var notes = new List<string>();
             foreach (int s in StagesNeedingFins(plan, catalog))
             {
+                if (s >= maxStages) break;
                 if (HasOn(plan, catalog, s)) continue;
                 double above = MassFrom(plan, catalog, s);
                 PartInfo fin = Pick(allowed, above);

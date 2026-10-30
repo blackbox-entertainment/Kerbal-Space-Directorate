@@ -191,14 +191,14 @@ namespace KSA.Core.Design
             int[][] bestChunks;
             double bestMass;
             string shortOn;
-            Search(flight, payload, decouplerMass, legsMass, fin != null ? fin.Mass * Fins.Count * 2 : 0, landingLeg, refuelLeg, kerbinLegs, liquid, withSolids, solidLaunch, out bestStages, out bestChunks, out bestMass, out shortOn);
+            Search(flight, payload, decouplerMass, legsMass, fin != null ? fin.Mass * Fins.Count : 0, landingLeg, refuelLeg, kerbinLegs, liquid, withSolids, solidLaunch, out bestStages, out bestChunks, out bestMass, out shortOn);
             if (bestStages == null)
             {
                 // Nothing short and wide does it: the lightest stacks, whatever their shape (a rocket at the edge of reach).
                 liquid = LightestFirst(liquid); withSolids = LightestFirst(withSolids);
                 if (solidLaunch != null) { solidLaunch = new List<Option>(withSolids.FindAll(o => o.Engine == null)); solidLaunch.AddRange(withSolids.FindAll(o => o.Engine != null)); }
                 string shortAgain;
-                Search(flight, payload, decouplerMass, legsMass, fin != null ? fin.Mass * Fins.Count * 2 : 0, landingLeg, refuelLeg, kerbinLegs, liquid, withSolids, solidLaunch, out bestStages, out bestChunks, out bestMass, out shortAgain);
+                Search(flight, payload, decouplerMass, legsMass, fin != null ? fin.Mass * Fins.Count : 0, landingLeg, refuelLeg, kerbinLegs, liquid, withSolids, solidLaunch, out bestStages, out bestChunks, out bestMass, out shortAgain);
             }
             if (fin != null && bestStages != null)
             {
@@ -206,7 +206,7 @@ namespace KSA.Core.Design
                 if (sized != null && sized != fin)
                 {
                     Pick[] s2; int[][] c2; double m2; string short2;
-                    Search(flight, payload, decouplerMass, legsMass, sized.Mass * Fins.Count * 2, landingLeg, refuelLeg, kerbinLegs, liquid, withSolids, solidLaunch, out s2, out c2, out m2, out short2);
+                    Search(flight, payload, decouplerMass, legsMass, sized.Mass * Fins.CountFor(sized, bestMass), landingLeg, refuelLeg, kerbinLegs, liquid, withSolids, solidLaunch, out s2, out c2, out m2, out short2);
                     if (s2 != null) { fin = sized; bestStages = s2; bestChunks = c2; bestMass = m2; }
                 }
             }
@@ -217,8 +217,16 @@ namespace KSA.Core.Design
             }
 
             StagePlan best = Build(plan, bestStages, bestChunks, flight, decoupler, legs, landingLeg, refuelLeg);
-            if (fin != null) Fins.AddIfMissing(best, allowed, catalog);
+            if (fin != null) Fins.AddIfMissing(best, allowed, catalog, 1);
             DesignAnalysis check = StageAnalyzer.Analyze(best, catalog, need, gravity);
+            // Fins on the stage above a weak launch stage too, when the rocket still makes the mission with them (2026-10-30;
+            // a Moho rocket at the edge of reach could not carry them).
+            if (fin != null && check.Passes && best.Stages.Count > 1 && !Fins.HasOn(best, catalog, 1) && Fins.AddIfMissing(best, allowed, catalog) != null)
+            {
+                DesignAnalysis withFins = StageAnalyzer.Analyze(best, catalog, need, gravity);
+                if (withFins.Passes) check = withFins;
+                else best.Stages[1].Radial.RemoveAll(rp => { PartInfo x = catalog.Get(rp.Part); return x != null && x.Kind == PartKind.Fin; });
+            }
             var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (PartInfo p in allowed) names.Add(p.Name);
             List<string> invalid = StagePlanValidator.Validate(best, catalog, names);

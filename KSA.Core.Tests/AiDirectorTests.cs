@@ -118,6 +118,7 @@ namespace KSA.Core.Tests
             Project p = a.Projects.Find(x => x.MissionTypeId == "FleaHop");
             Assert.That(p, Is.Not.Null);
             Assert.That(p.Design == null || p.Design.Source != KSA.Core.Design.DesignSource.Player, "your design was not ticked for this mission");
+            a.Projects.Remove(p); // one at a time: an active FleaHop leaves it off the list
 
             a.SetPreferredDesign("FleaHop", "Jeb's Hopper");
             Assert.That(a.DirectorBriefing(), Does.Contain("wants their design 'Jeb's Hopper'"));
@@ -311,11 +312,13 @@ namespace KSA.Core.Tests
             a.ApplyDirectorReply(start, new List<string>());
             Project p = a.Projects.Find(x => x.MissionTypeId == "FleaHop");
             Assert.That(p, Is.Not.Null, "the first hop flies");
+            a.ApplyDirectorReply(start, new List<string>());
+            Assert.That(a.Projects.FindAll(x => x.MissionTypeId == "FleaHop"), Has.Count.EqualTo(1), "not two side by side");
             p.Status = ProjectStatus.Complete;
             a.AddAchievements(a.Crew.Get("Jeb Kerman").Id, new[] { "Flight:Kerbin", "Recover:-" });
             MissionType flea = a.Catalogs.Missions.Get("FleaHop");
             Assert.That(a.RepeatBlocker(flea), Is.Not.Null);
-            Assert.That(a.DirectorBriefing(), Does.Contain("ALREADY DONE"));
+            Assert.That(a.DirectorBriefing(), Does.Contain("ALREADY DONE OR UNDER WAY"));
             a.ApplyDirectorReply(start, new List<string>());
             Assert.That(a.Projects.FindAll(x => x.MissionTypeId == "FleaHop"), Has.Count.EqualTo(1), "no second hop for nothing");
             a.ActiveGoals.Add(new KSA.Core.Goals.GoalState { GoalId = "ThreeMissions", YearIssued = a.CurrentYear });

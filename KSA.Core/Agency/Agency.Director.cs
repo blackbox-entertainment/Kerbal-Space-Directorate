@@ -557,7 +557,10 @@ namespace KSA.Core
         /// </summary>
         public string RepeatBlocker(MissionType t)
         {
-            if (t == null || MissionsCompleted(t.Id) == 0) return null;
+            if (t == null) return null;
+            // One at a time (2026-10-30: two Flea test hops ran side by side, the second reusing the first's design).
+            foreach (Project p in Projects) if (p.IsActive && p.MissionTypeId == t.Id) return t.Name + " is already under way (" + p.Id + "); wait for its result";
+            if (MissionsCompleted(t.Id) == 0) return null;
             foreach (GoalState gs in ActiveGoals)
             {
                 GoalDefinition g = Catalogs.Goals.Get(gs.GoalId);
@@ -705,7 +708,7 @@ namespace KSA.Core
                 sb.AppendLine("  " + t.Id + " | " + t.Name + " | " + Money(ProjectCost(t, best)) + " | " + t.CrewSize + " | " + t.MinStars + " | " + t.DurationDays + " | " + MissionsCompleted(t.Id) + (t.IsFirst && !HasAgencyAchievement(t.PrimaryAchievement) ? " | a First" : string.Empty)
                     + (picked != null ? " | the human Director wants their design '" + picked.Name + "' flown for this (used automatically)" : string.Empty));
             }
-            if (doneAlready.Count > 0) sb.AppendLine("ALREADY DONE (no open goal needs them again): " + string.Join("; ", doneAlready.ToArray()));
+            if (doneAlready.Count > 0) sb.AppendLine("ALREADY DONE OR UNDER WAY (no open goal needs them again now): " + string.Join("; ", doneAlready.ToArray()));
             if (locked.Count > 0) sb.AppendLine("NEXT LOCKED MISSIONS: " + string.Join("; ", locked.ToArray()));
 
             sb.AppendLine("LIFE SUPPORT: " + LifeSupportText() + ". A base becomes a colony only once its optional industry module (extend_program) delivers a drill, an ore converter and power" + (LifeSupportOn ? " and a greenhouse" : string.Empty) + ".");

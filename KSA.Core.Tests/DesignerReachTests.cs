@@ -247,6 +247,23 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void AWeakLiquidLaunchStageFinsTheStageAboveToo()
+        {
+            PartCatalog parts = StockParts();
+            var plan = new StagePlan();
+            plan.Payload.Command = "mk1pod.v2";
+            var s0 = new PlanStage { Stage = 0, Role = "launch" };
+            s0.Core.Add(new PlanPart { Part = "fuelTank", Count = 1 });
+            s0.Core.Add(new PlanPart { Part = "liquidEngine2.v2", Count = 1 });
+            var s1 = new PlanStage { Stage = 1, Role = "upper" };
+            s1.Core.Add(new PlanPart { Part = "fuelTank", Count = 1 });
+            s1.Core.Add(new PlanPart { Part = "liquidEngine2.v2", Count = 1 });
+            plan.Stages.Add(s0); plan.Stages.Add(s1);
+            Assert.That(Fins.LaunchStageDeltaV(plan, parts), Is.LessThan(Fins.LowStageDeltaV), "one FL-T400 under a full second stage burns out low");
+            Assert.That(Fins.StagesNeedingFins(plan, parts), Is.EquivalentTo(new[] { 0, 1 }));
+        }
+
+        [Test]
         public void TheEngineersReachEveryWorldWithStockParts()
         {
             Agency a = Make.Agency(new FakeClock(), new ListLogger());

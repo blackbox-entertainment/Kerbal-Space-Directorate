@@ -2,6 +2,12 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.6.5 (2026-10-30), test build
+
+- **Fins on the tanks, not round the engine.** On a stack of short tanks the fins were hung on the bottom FL-T100 and stuck out below the stage, round the engine bell. Each fin now sits wholly on the stage's tanks, its lower edge level with the bottom of the stage, on whichever tank is there.
+- **Fins on the second stage when the first is weak.** The stage above the launch stage gets fins whenever the launch stage has under 1,500 m/s at sea level (it burns out in thick air), not only above solids, as on T's Suborbital hop mk I. The engineers keep them only when the rocket still makes the mission with them.
+- **One of each mission at a time.** The AI Director no longer starts a mission that is already under way (it had two Flea test hops running side by side).
+
 ## 0.6.4 (2026-10-30), test build
 
 - **Fins where the air is.** The stage above a solid booster gets fins too: solids burn out at 10-15 km and the liquid stage climbs on through thick air (a finless upper stage tumbled at 16 km, spinning at almost 1,000 degrees a second). Eight fins instead of four when four of the biggest fin researched weigh under 2% of the stack they steer.

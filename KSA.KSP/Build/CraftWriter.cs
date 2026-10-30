@@ -265,6 +265,7 @@ namespace KSA.KSP.Build
                 ordered.Reverse(); // plan lists bottom-up; we build top-down
                 ordered.AddRange(engines);
                 Placed firstTank = null, lastTank = null;
+                var stageTanks = new List<Placed>();
                 foreach (PlanPart pp in ordered)
                 {
                     for (int c = 0; c < Math.Max(1, pp.Count); c++)
@@ -277,7 +278,7 @@ namespace KSA.KSP.Build
                         StackBelow(bottomMost, part);
                         bottomMost = part;
                         bool solid = thrusts && (info == null || info.Kind == PartKind.Booster) && HasFuel(part.Ap);
-                        if ((info != null && info.Kind == PartKind.Tank) || solid) { if (firstTank == null) firstTank = part; lastTank = part; }
+                        if ((info != null && info.Kind == PartKind.Tank) || solid) { if (firstTank == null) firstTank = part; lastTank = part; stageTanks.Add(part); }
                     }
                 }
                 Placed anchor = firstTank ?? bottomMost;
@@ -298,6 +299,24 @@ namespace KSA.KSP.Build
                     Placed groupAnchor = fin && lastTank != null ? lastTank : anchor;
                     AttachNode anchorBottom = Node(groupAnchor.Ap, "bottom");
                     float yOffset = low && anchorBottom != null ? anchorBottom.position.y * 0.8f : 0f;
+                    // 2026-10-30: on a stack of short tanks (FL-T100s) a fin attached on the bottom tank hung below the
+                    // stage, round the engine. Now the whole fin sits on the tanks, its lower edge level with the bottom of
+                    // the stage: aim its middle half a fin above that and hang it on whichever tank is there.
+                    if (fin && lastTank != null && stageTanks.Count > 0)
+                    {
+                        AttachNode lastBottom = Node(lastTank.Ap, "bottom");
+                        float stackBottom = lastTank.Pos.y + (lastBottom != null ? lastBottom.position.y : -0.3f);
+                        float finSize = rap.partSize > 0.05f ? rap.partSize : 0.6f;
+                        float targetY = stackBottom + 0.5f * finSize + 0.05f;
+                        foreach (Placed t in stageTanks)
+                        {
+                            AttachNode tb = Node(t.Ap, "bottom"), tt = Node(t.Ap, "top");
+                            float lo = t.Pos.y + (tb != null ? tb.position.y : -0.3f), hi = t.Pos.y + (tt != null ? tt.position.y : 0.3f);
+                            if (targetY >= lo && targetY <= hi) { groupAnchor = t; break; }
+                        }
+                        // SurfaceAttach puts the attach point at the host's centre plus the offset (the top node is above it).
+                        yOffset = targetY - groupAnchor.Pos.y;
+                    }
                     float turn = (float)(Math.PI / 8 * groupIndex++);
                     var group = new List<Placed>();
                     for (int k = 0; k < n; k++)
