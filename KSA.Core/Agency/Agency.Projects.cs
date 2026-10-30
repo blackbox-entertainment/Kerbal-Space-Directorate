@@ -155,7 +155,7 @@ namespace KSA.Core
         /// </summary>
         public bool BreaksNewGround(MissionType type)
         {
-            if (type == null || type.IsUncrewed) return false; // probes fly simulated for now (2026-10-30)
+            if (type == null || (type.IsUncrewed && type.Profile != MissionProfile.Suborbital)) return false; // orbital probes fly simulated for now (2026-10-30)
             if (type.IsFirst && !HasAgencyAchievement(type.PrimaryAchievement)) return true;
             // Program modules and rescues keep their own modes (assembly is simulated by default).
             if (type.ModuleRole.Length > 0 || type.IsRescue) return false;

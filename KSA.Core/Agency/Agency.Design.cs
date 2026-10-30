@@ -387,7 +387,10 @@ namespace KSA.Core
         /// </summary>
         private void AddParachute(MissionType type, Project p, DesignRequest req)
         {
-            if (Parts == null || type == null || type.CrewSize <= 0) return;
+            if (Parts == null || type == null) return;
+            // A probe on a sounding rocket comes down under one too, when one is researched (2026-10-30, T: "it needs a parachute"),
+            // so it can be recovered; a satellite stays up.
+            if (type.IsUncrewed && type.Profile != MissionProfile.Suborbital) return;
             if (type.Profile == MissionProfile.Base || (p != null && string.Equals(p.ModuleRole, "industry", StringComparison.OrdinalIgnoreCase))) return;
             if (IsDepotCoreMission(type)) return; // the depot keeper stays aboard
             // A craft that docks nose first keeps its nose free: side-mounted parachutes only (2026-10-29).

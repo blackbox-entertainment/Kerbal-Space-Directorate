@@ -80,7 +80,26 @@ namespace KSA.Core.Flight
             // trip to space (2026-10-29).
             bool belowSpace = result.SpaceAltitude > 0 && result.MaxAltitude < result.SpaceAltitude;
             if (belowSpace) earned.RemoveWhere(a => a.StartsWith("Suborbit:", StringComparison.OrdinalIgnoreCase));
-            if (type != null && type.IsScience && result.SciencePoints > 0 && (result.Recovered || result.Delivered)) earned.Add("Science:" + type.Body);
+            // A probe's flight earns probe achievements, never the crewed ones (2026-10-30): liftoff is Probe:, above the air
+            // ProbeSpace:, a full orbit Satellite:.
+            bool probe = type != null && type.IsUncrewed;
+            if (probe)
+            {
+                var mapped = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (string a in earned)
+                {
+                    int colon = a.IndexOf(':');
+                    string kind = colon > 0 ? a.Substring(0, colon) : a, body = colon > 0 ? a.Substring(colon + 1) : string.Empty;
+                    if (string.Equals(kind, "Flight", StringComparison.OrdinalIgnoreCase)) mapped.Add("Probe:" + body);
+                    else if (string.Equals(kind, "Suborbit", StringComparison.OrdinalIgnoreCase)) mapped.Add("ProbeSpace:" + body);
+                    else if (string.Equals(kind, "Orbit", StringComparison.OrdinalIgnoreCase)) { mapped.Add("ProbeSpace:" + body); mapped.Add("Satellite:" + body); }
+                    else if (string.Equals(kind, "Land", StringComparison.OrdinalIgnoreCase) || string.Equals(kind, "EVA", StringComparison.OrdinalIgnoreCase)) continue;
+                    else mapped.Add(a);
+                }
+                earned = mapped;
+            }
+            // A probe's data counts whether the probe comes home or not: the antenna sends it, and a sounding rocket is spent.
+            if (type != null && type.IsScience && result.SciencePoints > 0 && (result.Recovered || result.Delivered || (probe && !result.Stranded))) earned.Add("Science:" + type.Body);
             List<string> wanted = type != null ? type.Achievements : new List<string>();
             foreach (string w in wanted) if (Matches(earned, w)) r.Achievements.Add(w);
             foreach (string a in earned) if (!r.Achievements.Exists(x => string.Equals(x, a, StringComparison.OrdinalIgnoreCase)) && !a.StartsWith("Recover", StringComparison.OrdinalIgnoreCase)) r.Achievements.Add(a);
@@ -104,13 +123,13 @@ namespace KSA.Core.Flight
                 r.StrandedVesselId = result.StrandedVesselId ?? string.Empty;
                 r.Lesson = "Crew stranded " + (r.StrandedOnSurface ? "on the surface of " : "in orbit of ") + r.StrandedBody + " on " + r.ProjectName + "; a rescue is needed.";
             }
-            else if (!result.Recovered && !result.Delivered)
+            else if (!result.Recovered && !result.Delivered && !(probe && gotPrimary))
             {
                 r.Outcome = result.Crashed ? MissionOutcome.LossOfVehicle : MissionOutcome.Abort;
                 if (result.Crashed) r.Incidents.Add(IncidentKind.Crash);
                 r.Lesson = result.Crashed ? "Vehicle lost on " + r.ProjectName + "; the design needs more margin." : "Abort on " + r.ProjectName + "; the crew called it early.";
             }
-            else if (gotPrimary && !result.Crashed)
+            else if (gotPrimary && (!result.Crashed || probe)) // a spent probe is no damage
             {
                 r.Outcome = MissionOutcome.Success;
                 r.Lesson = "Nominal flight on " + r.ProjectName + ".";
@@ -139,7 +158,7 @@ namespace KSA.Core.Flight
             {
                 r.Cause = result.Cause;
                 r.CauseDetail = result.CauseDetail ?? string.Empty;
-                if (r.Cause == FailureCause.None && belowSpace && primary.StartsWith("Suborbit:", StringComparison.OrdinalIgnoreCase))
+                if (r.Cause == FailureCause.None && belowSpace && (primary.StartsWith("Suborbit:", StringComparison.OrdinalIgnoreCase) || primary.StartsWith("ProbeSpace:", StringComparison.OrdinalIgnoreCase)))
                 {
                     r.Cause = FailureCause.BelowSpace;
                     r.CauseDetail = "it peaked at " + FormatKm(result.MaxAltitude) + ", below the " + FormatKm(result.SpaceAltitude) + " where space begins";

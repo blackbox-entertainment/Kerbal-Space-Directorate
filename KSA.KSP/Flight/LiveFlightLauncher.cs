@@ -51,7 +51,7 @@ namespace KSA.KSP.Flight
                 if (craft == null) throw new InvalidOperationException("craft file unreadable");
                 VesselCrewManifest manifest = VesselCrewManifest.FromConfigNode(craft);
                 int seated = Seat(manifest, spec.CrewNames);
-                if (seated == 0) throw new InvalidOperationException("no seats for the crew (" + spec.CrewNames.Count + " assigned)");
+                if (seated == 0 && spec.CrewNames.Count > 0) throw new InvalidOperationException("no seats for the crew (" + spec.CrewNames.Count + " assigned)");
                 Pending = spec;
                 // Planes from the spaceplane hangar roll out to the runway (2026-10-28).
                 bool plane = spec.IsPlane || string.Equals(craft.GetValue("type"), "SPH", StringComparison.OrdinalIgnoreCase);

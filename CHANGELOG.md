@@ -2,6 +2,12 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.7.6 (2026-10-30), test build
+
+- **Watch your probes.** Sounding rockets and Probe to space now fly live under the same rules as any first (they had been switched to simulated once built, so a project marked Watch Live never flew). The launcher puts a craft with no crew on the pad, nothing waits for food or water, and a probe that lands is recovered automatically like a crewed capsule. First satellite stays simulated for now: a Stayputnik cannot steer to orbit.
+- **How a live probe flight is scored.** Its liftoff, its climb above the air and a full orbit count as probe achievements (Probe:, ProbeSpace:, Satellite:), never as the crewed ones. Its data counts whether the probe comes home or not, so a spent sounding rocket that did its job is a success. Probe to space succeeds only above the air (its main objective is now reaching space), and one that falls short says so.
+- **A parachute for the probe.** Probe sounding rockets carry a parachute when one is researched, so the probe can be recovered.
+
 ## 0.7.5 (2026-10-30), release
 
 Everything since 0.7.3, from the test build 0.7.4 below. In short:

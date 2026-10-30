@@ -69,7 +69,9 @@ namespace KSA.Core
             if (type == null) return "Unknown mission type.";
             if (!ProfileInScope(type)) return "Live flight for " + type.Name + " is outside the scope set in agency.cfg (liveFlightScope = " + Settings.LiveFlightScope + ").";
             if (type.Floating) return type.Name + " floats in the clouds; the flight director has no airship program, so it is simulated.";
-            if (type.IsUncrewed) return type.Name + " is a probe flight: probes fly simulated for now (the flight director flies crewed craft).";
+            // Probe sounding rockets fly live (2026-10-30, T: "I never got to watch the probe"); a probe in orbit needs steering a
+            // Stayputnik cannot give, so orbital probe flights stay simulated for now.
+            if (type.IsUncrewed && type.Profile != MissionProfile.Suborbital) return type.Name + " is an orbital probe flight: those fly simulated for now (the flight director cannot steer a probe to orbit yet).";
             if (type.IsRescue)
             {
                 Stranding s = GetStranding(p.RescueId);
@@ -100,7 +102,7 @@ namespace KSA.Core
         /// </summary>
         public string LifeSupportBlocker(Project p, MissionType type)
         {
-            if (!LifeSupportOn || p == null || type == null) return null;
+            if (!LifeSupportOn || p == null || type == null || type.IsUncrewed) return null; // a probe eats nothing
             Func<Project, ModuleHardware> check = ModuleHardwareCheck;
             ModuleHardware h = null;
             try { h = check != null ? check(p) : null; }

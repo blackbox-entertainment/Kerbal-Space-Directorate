@@ -121,6 +121,7 @@ namespace KSA.Core.Tests
             MissionType sounding = a.Catalogs.Missions.Get("SoundingRocketKerbin");
             MissionType space = a.Catalogs.Missions.Get("ProbeToSpaceKerbin");
             Assert.That(sounding.IsUncrewed && sounding.Seats == 0, Is.True);
+            a.LiveFlightAvailable = true;
             Assert.That(a.MissionBlocker(a.Catalogs.Missions.Get("FleaHop")), Is.Not.Null, "a probe core is no crew pod");
             Assert.That(a.MissionBlocker(sounding), Is.Null, "a Flea and a Stayputnik fly a sounding rocket");
             Assert.That(a.MissionBlocker(space), Does.Contain("climb"), "two Fleas fall short of space: the next research step opens it");
@@ -129,7 +130,9 @@ namespace KSA.Core.Tests
             Project p = a.CreateProject(null, sounding.Id, null, null, null, null, null, out msg);
             Assert.That(p, Is.Not.Null, msg);
             Assert.That(p.Crew, Is.Empty);
-            Assert.That(p.Mode, Is.EqualTo(MissionMode.Simulate), "probes fly simulated");
+            Assert.That(p.Mode, Is.EqualTo(MissionMode.WatchLive), "a first probe hop flies live (2026-10-30, T: \"I never got to watch the probe\")");
+            Assert.That(a.LiveBlocker(p), Is.Null, "probe hops can fly live");
+            Assert.That(a.LiveBlocker(new Project { Id = "x", MissionTypeId = "FirstSatelliteKerbin" }), Does.Contain("orbital probe"));
             Assert.That(p.Design.DesignName, Is.Not.Empty);
             Assert.That(p.Design.Plan.Payload.Command, Is.EqualTo("probeCoreSphere.v2"));
             Assert.That(p.Design.Plan.Payload.Extras, Has.Some.EqualTo("SurfAntenna"), "the data goes home by radio");
@@ -143,6 +146,26 @@ namespace KSA.Core.Tests
             Assert.That(a.RepeatBlocker(sounding), Does.Contain("under way"), "one at a time");
             a.CancelProject(p.Id, out msg);
             Assert.That(a.RepeatBlocker(sounding), Is.Null, "a probe may fly again for more data");
+        }
+
+        [Test]
+        public void ALiveProbeHopEarnsProbeAchievementsEvenWhenItIsNotRecovered()
+        {
+            MissionCatalog m = ShippedConfigs.Missions();
+            MissionType space = m.Get("ProbeToSpaceKerbin");
+            Assert.That(space.PrimaryAchievement, Is.EqualTo("ProbeSpace:Kerbin"));
+            var flown = new KSA.Core.Flight.LiveFlightResult { Crashed = true, MaxAltitude = 81000, SpaceAltitude = 70000, SciencePoints = 4 };
+            flown.Achievements.Add("Flight:Kerbin"); flown.Achievements.Add("Suborbit:Kerbin");
+            MissionReport r = KSA.Core.Flight.LiveFlightResolver.Resolve(new Project { Id = "P3", Name = "Probe to space" }, space, new List<string>(), flown, 30, 0.8, 0.7);
+            Assert.That(r.Outcome, Is.EqualTo(MissionOutcome.Success), "a spent sounding rocket is no failure");
+            Assert.That(r.Achievements, Does.Contain("Probe:Kerbin").And.Contain("ProbeSpace:Kerbin").And.Contain("Science:Kerbin"));
+            Assert.That(r.Achievements, Has.None.StartsWith("Flight:").And.None.StartsWith("Suborbit:"), "probe flights never count as crewed ones");
+
+            var low = new KSA.Core.Flight.LiveFlightResult { Crashed = true, MaxAltitude = 30000, SpaceAltitude = 70000, SciencePoints = 2 };
+            low.Achievements.Add("Flight:Kerbin");
+            MissionReport r2 = KSA.Core.Flight.LiveFlightResolver.Resolve(new Project { Id = "P4", Name = "Probe to space" }, space, new List<string>(), low, 31, 0.8, 0.7);
+            Assert.That(r2.IsSuccess, Is.False, "it never reached space");
+            Assert.That(r2.Cause, Is.EqualTo(KSA.Core.Flight.FailureCause.BelowSpace));
         }
 
         [Test]
