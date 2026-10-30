@@ -115,8 +115,8 @@ namespace KSA.KSP.UI
                 ModeButton(DesignMode.Hybrid, "Hybrid")));
             Line(items, "Off: the engineering team flies the template library. No AI calls are ever made.", textWidth);
             Line(items, "Local: Ollama or LM Studio on this PC does design and narrative. Free, slower, needs a capable model.", textWidth);
-            Line(items, "API: OpenRouter (cloud) does design and post-mortems. Needs a key; spend is capped below.", textWidth);
-            Line(items, "Hybrid: cloud for design and post-mortems, local for narrative; each falls back to the other.", textWidth);
+            Line(items, "API: OpenRouter (cloud) does design and after-action reports. Needs a key; spend is capped below.", textWidth);
+            Line(items, "Hybrid: cloud for design and after-action reports, local for narrative; each falls back to the other.", textWidth);
             Line(items, "Current file: " + (_settings.AiEnabled ? "<color=#8be28b>AI route configured</color>" : "<color=#ffd27f>no usable AI route; templates will fly</color>")
                 + "  |  agency now: " + (_agency.AiDesignAvailable ? "AI design available" : "AI design off"), textWidth);
         }
@@ -155,7 +155,7 @@ namespace KSA.KSP.UI
             });
             items.Add(Input("Custom design model", _settings.DesignModel, textWidth, v => { _settings.DesignModel = (v ?? string.Empty).Trim(); return _settings.DesignModel; }, null));
 
-            Line(items, "Post-mortem model (" + (_settings.PostMortemModel.Length > 0 ? _settings.PostMortemModel : "same as design") + "):", textWidth);
+            Line(items, "After-action report model (" + (_settings.PostMortemModel.Length > 0 ? _settings.PostMortemModel : "same as design") + "):", textWidth);
             List<ModelOption> post = ModelsFor(AiTask.PostMortem, false);
             ButtonRows(items, post.Count, textWidth, ModelButtonWidth, i =>
             {
@@ -164,7 +164,7 @@ namespace KSA.KSP.UI
                 bool sel = string.Equals(_settings.PostMortemModel, id, StringComparison.OrdinalIgnoreCase);
                 return new DialogGUIButton((sel ? "> " : "") + ModelLabel(m), () => OnPickPostMortemModel(id), ModelButtonWidth, ButtonHeight, false);
             });
-            items.Add(Input("Custom post-mortem", _settings.PostMortemModel, textWidth, v => { _settings.PostMortemModel = (v ?? string.Empty).Trim(); return _settings.PostMortemModel; }, null));
+            items.Add(Input("Custom after-action report model", _settings.PostMortemModel, textWidth, v => { _settings.PostMortemModel = (v ?? string.Empty).Trim(); return _settings.PostMortemModel; }, null));
 
             items.Add(Input("Max calls per day", _settings.MaxCallsPerDay.ToString(), textWidth, v =>
             {
@@ -453,7 +453,7 @@ namespace KSA.KSP.UI
         private void OnPickPostMortemModel(string id)
         {
             _settings.PostMortemModel = id;
-            _status = "Post-mortem model: " + id + " (not saved yet).";
+            _status = "After-action report model: " + id + " (not saved yet).";
             Refresh();
         }
 

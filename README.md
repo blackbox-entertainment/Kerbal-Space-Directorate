@@ -56,7 +56,7 @@ Use a separate copy of KSP for testing mods, not the one you play on.
 
 KSA works with no AI at all. To turn it on, open **AI Setup** in the Director's Office, or copy `GameData/KSA/PluginData/ksa_settings.example.cfg` to `ksa_settings.cfg` in the same folder and edit it.
 
-- **Online:** an [OpenRouter](https://openrouter.ai) API key. Rocket design, post-mortems and the AI Director use it. A monthly spend cap in AI Setup keeps costs down. The AI Director's default model costs about a cent per game year.
+- **Online:** an [OpenRouter](https://openrouter.ai) API key. Rocket design, after-action reports and the AI Director use it. A monthly spend cap in AI Setup keeps costs down. The AI Director's default model costs about a cent per game year.
 - **On your own machine:** [Ollama](https://ollama.com) or LM Studio. Press releases, crew dialogue and news use it, free. KSA does not ship any AI model. AI Setup pulls the recommended one for you.
 
 Your `ksa_settings.cfg` holds your API key. Never share or upload it.

@@ -183,7 +183,7 @@ namespace KSA.Core.Flight
     {
         public static string SystemPrompt()
         {
-            return "You are the flight safety office of a small space agency. Write a short, plain-language post-mortem of a crewed flight: " +
+            return "You are the flight safety office of a small space agency. Write a short, plain-language after-action report of a crewed flight: " +
                    "what happened, why, and one concrete lesson for the next design. Four to six sentences, no headings, no bullet points, no markdown. " +
                    "Refer to crew by name. Keep a calm, professional tone; it may be dry or wry but never cruel about deaths.";
         }
@@ -204,7 +204,7 @@ namespace KSA.Core.Flight
             sb.AppendLine("FLIGHT LOG:");
             if (flightLog != null) foreach (string e in flightLog) sb.AppendLine("- " + e);
             sb.AppendLine();
-            sb.AppendLine("Write the post-mortem now.");
+            sb.AppendLine("Write the after-action report now.");
             return sb.ToString();
         }
 

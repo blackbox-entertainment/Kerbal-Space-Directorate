@@ -453,7 +453,7 @@ namespace KSA.Core
             LlmEndpoint endpoint = Ai.EndpointFor(AiTask.PostMortem);
             if (endpoint == null) return;
             string why;
-            if (!Costs.Allows(Ai, endpoint.IsLocal, CurrentDay, out why)) { Log.Info("Post-mortem skipped: " + why); return; }
+            if (!Costs.Allows(Ai, endpoint.IsLocal, CurrentDay, out why)) { Log.Info("After-action report skipped: " + why); return; }
             var crew = new List<CrewProfile>();
             foreach (string id in r.Crew) { CrewProfile c = Crew.Get(id); if (c != null) crew.Add(c); }
             var log = new List<string>(p.FlightLog);
@@ -461,7 +461,7 @@ namespace KSA.Core
             PostMortemWriter.Run(new LlmClient(Transport, Log), endpoint, r, type, crew, log, ok =>
             {
                 if (!ok) return;
-                Log.Info("Post-mortem written for " + r.ProjectName);
+                Log.Info("After-action report written for " + r.ProjectName);
                 Action<MissionReport> handler = ReportUpdated;
                 if (handler != null) handler(r);
             });

@@ -38,7 +38,7 @@ namespace KSA.Core
         private void InitNarrative()
         {
             MissionResolved += r => PublishMission(r);
-            ReportUpdated += r => { if (!string.IsNullOrEmpty(r.PostMortem)) Publish(new NewsItem { Kind = NewsKind.Dispatch, Related = r.ProjectId, Byline = "Flight Safety Office", Headline = "Post-mortem filed: " + r.ProjectName, Body = r.PostMortem }, false); };
+            ReportUpdated += r => { if (!string.IsNullOrEmpty(r.PostMortem)) Publish(new NewsItem { Kind = NewsKind.Dispatch, Related = r.ProjectId, Byline = "Flight Safety Office", Headline = "After-action report filed: " + r.ProjectName, Body = r.PostMortem }, false); };
             YearEnded += OnYearEndedNews;
             ApplicantHired += (a, p) => Publish(Narrator.Hired(p, Catalogs.Recruiting.NameOf(a.SourceId), AgencyName));
             CrewDeparted += (p, reason) => { NewsItem n = Narrator.Departed(p, reason, AgencyName, Rng); if (n != null) Publish(n); };

@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.6.15 (2026-10-30), test build
+
+- **After-action reports.** The flight safety office's write-up of a flight is now called an after-action report everywhere you see it (Mission Control, the Press Room, screen messages, AI Setup, help). Save files and settings keep their old keys, so nothing needs redoing.
+
 ## 0.6.14 (2026-10-30), test build
 
 - **The roll is held.** The crew pointed the rocket by locking SAS to the wanted direction "keeping the current roll", taken afresh each time. SAS was therefore always told the roll was right, so nothing damped a roll: at maximum dynamic pressure the rockets spun up to 60-156 deg/s, and a spinning rocket cannot pitch over (both Kerbin orbit attempts climbed nearly straight up, the second drifting west, periapsis -600 km at 57 km up). The crew now holds the roll SAS was locked to and turns the nose from there, so SAS fights any roll.

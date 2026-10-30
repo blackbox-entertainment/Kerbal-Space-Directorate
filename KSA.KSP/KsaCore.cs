@@ -493,7 +493,7 @@ namespace KSA.KSP
 
         private static void OnReportUpdated(Core.Projects.MissionReport r)
         {
-            ScreenMessages.PostScreenMessage("[KSA] Post-mortem filed for " + r.ProjectName, 6f, ScreenMessageStyle.UPPER_CENTER);
+            ScreenMessages.PostScreenMessage("[KSA] After-action report filed for " + r.ProjectName, 6f, ScreenMessageStyle.UPPER_CENTER);
         }
 
         private static void OnYearEnded(Core.Review.ReviewResult r)

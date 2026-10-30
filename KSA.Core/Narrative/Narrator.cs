@@ -45,7 +45,7 @@ namespace KSA.Core.Narrative
                     item.Body = "With profound sorrow, " + agencyName + " announces the loss of " + crew + " aboard " + r.ProjectName + ". They flew so that others could follow. Flags at the space centre are at half mast. A memorial will be held in the coming days.";
                     break;
             }
-            if (!string.IsNullOrEmpty(r.PostMortem) && r.Outcome != MissionOutcome.Success) item.Body += "\n\nFrom the post-mortem: " + r.PostMortem;
+            if (!string.IsNullOrEmpty(r.PostMortem) && r.Outcome != MissionOutcome.Success) item.Body += "\n\nFrom the after-action report: " + r.PostMortem;
             return item;
         }
 
