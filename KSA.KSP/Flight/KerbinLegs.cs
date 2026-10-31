@@ -493,7 +493,10 @@ namespace KSA.KSP.Flight
                                 + (c.ManualAttitude ? ", crew steering by hand" : ", stock retrograde hold") + ", alt " + Math.Round(alt / 1000, 1) + " km" + ChargeLog.Note(v));
                         }
                     }
-                    if (alt > atmo + 20000 && v.verticalSpeed > -50 && v.orbit.timeToPe > 120) c.WarpTo(ctx.Now + Math.Min(v.orbit.timeToPe, 600) - 90);
+                    // Warp only well above the air, and leave it 15 km up: KSP drops out of warp at the edge of the atmosphere
+                    // and staging in that frame tore the capsule apart (2026-10-30).
+                    if (c.IsWarping && alt < atmo + 15000) c.StopWarp();
+                    else if (alt > atmo + 20000 && v.verticalSpeed > -50 && v.orbit.timeToPe > 120) c.WarpTo(ctx.Now + Math.Min(v.orbit.timeToPe, 600) - 90);
                     // Shed everything but the capsule once we are coming down, one stage every two seconds.
                     if (v.verticalSpeed < 0 && v.currentStage > 1 && ctx.Now - _lastShed > 2 && alt < atmo) { c.Stage(); _lastShed = ctx.Now; line = "Staged away the service section for reentry."; }
                     // Chutes: armed as soon as we are falling inside the atmosphere, so the game opens them the moment it

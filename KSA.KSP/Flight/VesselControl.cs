@@ -345,9 +345,28 @@ namespace KSA.KSP.Flight
 
         // ------------------------------------------------------------------ staging
 
+        private double _settleUntil = -1;
+
+        /// <summary>
+        /// False while the vessel is on rails (packed) or time is warping, and for a second after it unpacks: parts must not
+        /// separate then (2026-10-30: dropping out of warp at the top of the air, the capsule was decoupled in the same frame
+        /// the ship unpacked, the parts overlapped and Valentina's pod exploded). Asking stops the warp.
+        /// </summary>
+        public bool PartsSafe()
+        {
+            if (_v == null) return false;
+            if (_v.packed || IsWarping)
+            {
+                StopWarp();
+                _settleUntil = Now + 1.0;
+                return false;
+            }
+            return _settleUntil < 0 || Now >= _settleUntil;
+        }
+
         public void Stage()
         {
-            if (_v == null || _v != FlightGlobals.ActiveVessel) return;
+            if (_v == null || _v != FlightGlobals.ActiveVessel || !PartsSafe()) return;
             global::KSP.UI.Screens.StageManager.ActivateNextStage();
             _lastStage = Now;
         }
@@ -389,7 +408,7 @@ namespace KSA.KSP.Flight
         /// </summary>
         public bool DropSpentStage(ref string line)
         {
-            if (_v == null || _v.currentStage <= 0 || Now - _lastStage < 1.5) return false;
+            if (_v == null || _v.currentStage <= 0 || Now - _lastStage < 1.5 || !PartsSafe()) return false;
             bool anyLit = false;
             foreach (ModuleEngines e in _v.FindPartModulesImplementing<ModuleEngines>())
             {
@@ -420,7 +439,7 @@ namespace KSA.KSP.Flight
         /// </summary>
         public bool ShedForReentry(ref string line)
         {
-            if (_v == null || Now - _lastStage < 1.5) return false;
+            if (_v == null || Now - _lastStage < 1.5 || !PartsSafe()) return false;
             // The decoupler nearest under the capsule, fired directly: everything below goes at once, whatever stage it
             // was put in (2026-10-29: a Director's rocket had it in the parachute stage, which the crew never fires).
             ModuleDecouple under = DecouplerUnderCapsule();

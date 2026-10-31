@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.1 (2026-10-30), test build
+
+- **No staging out of time warp.** Valentina's orbit went perfectly, deorbit included, but the flight director warped toward periapsis, KSP dropped out of warp at the top of the air, and in that same frame the capsule was decoupled while the ship was still packed on rails: the parts overlapped as it unpacked and the pod exploded at 70 km. Now nothing is staged or decoupled while the ship is packed or warping, nor in the first second after it unpacks, and the reentry warp ends 15 km above the air.
+
 ## 0.8.0 (2026-10-30), release
 
 Everything since 0.7.9, from the test builds 0.7.10 to 0.7.13 below. In short:
