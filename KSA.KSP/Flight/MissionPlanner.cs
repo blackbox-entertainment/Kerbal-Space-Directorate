@@ -235,7 +235,8 @@ namespace KSA.KSP.Flight
             {
                 // Leaving after the return burn, or part-way down to the surface: do not re-run the arrival legs.
                 if (v.situation == Vessel.Situations.ESCAPING && headingHome && Has(prog, l => l is ReturnLeg)) { prog.SkipTo(l => l is WaitForSoiLeg && IndexAfterHome(prog, l)); return; }
-                if (descending && logged("Orbit:" + tb) && !logged("Land:" + tb) && Has(prog, l => l is LandingLeg)) { prog.SkipTo(l => l is LandingLeg); return; }
+                // No need for the orbit to be logged: it only counts after a full turn, and a lander goes straight down (2026-10-31).
+                if (descending && !logged("Land:" + tb) && v.orbit.eccentricity < 1 && Has(prog, l => l is LandingLeg)) { prog.SkipTo(l => l is LandingLeg); return; }
                 prog.SkipTo(l => l is CaptureLeg || l is PassPeriapsisLeg || l is CorrectionLeg);
                 return;
             }

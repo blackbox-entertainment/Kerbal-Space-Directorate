@@ -2,6 +2,12 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.49 (2026-10-31), test build
+
+- **Landings no longer give up on a closed throttle.** While braking from high up, a closed throttle read as an empty tank; the crew stopped flying and fell onto the Mun with 2,711 m/s aboard. Only an open throttle with no thrust, or no delta-v left, counts now.
+- **A halted descent restarts as a descent.** A retry part-way down went back to the course correction; it now picks the landing up again.
+- **Three batteries on the lander templates.**
+
 ## 0.8.48 (2026-10-31), test build
 
 - **A later level-off.** The climb now flattens by 60 km, up from 50 km, so strong rockets are not flying near orbital speed inside the air.

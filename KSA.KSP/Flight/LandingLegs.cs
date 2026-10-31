@@ -420,7 +420,9 @@ namespace KSA.KSP.Flight
             }
             else if (!_holdingUp) c.Sas(VesselAutopilot.AutopilotMode.Retrograde, true);
 
-            if (c.NoThrustAvailable())
+            // Only with the throttle open: closed on purpose while the fall is slow enough, no thrust is not an empty tank
+            // (2026-10-31: 32 km up with 2,711 m/s aboard the crew declared the tanks dry and fell onto the Mun at 278 m/s).
+            if ((c.Throttle > 0.05f && c.NoThrustAvailable()) || c.OutOfDeltaV())
             {
                 if (!_fuelWarned)
                 {
