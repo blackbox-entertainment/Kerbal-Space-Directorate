@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.4 (2026-10-30), test build
+
+- **No deorbit burn in time warp.** With a flat battery Valentina waited for the orbit to swing her nose round to retrograde (as she should), but the burn was lit while the game was still in time warp: on rails the engine gives no thrust, 76 seconds passed, and when the warp ended she burned for about one second. Now the warp ends while the nose is still 45 degrees from retrograde, the engine lights only off rails, and any warp during the burn is stopped. The same guard covers spaceplane deorbits.
+- **Clearer flight director window.** While waiting without power it says so ("no power to turn; waiting for the orbit to swing the nose round"); during the burn it shows the periapsis coming down to the target; at the end it says "Deorbit burn done: periapsis 35 km, inside the air; coming home."
+
 ## 0.8.3 (2026-10-30), test build
 
 - **Time warp works while watching again.** The 0.8.1 safety check (nothing separates while warping) stopped the warp every time it was asked, and the reentry leg asked every frame, so warp was cancelled the moment you started it. Now the warp stops only when something is actually about to be staged or decoupled. Physics warp is allowed in the air during reentry and under parachutes; only rails warp ends 15 km above the atmosphere.

@@ -433,8 +433,14 @@ namespace KSA.KSP.Flight
                         // higher orbit (2026-10-30). A craft that cannot turn (flat battery) waits in its safe orbit instead.
                         double off = c.AttitudeError(-v.obt_velocity);
                         double charge = VesselControl.ChargeFraction(v);
-                        Status = "Deorbit: turning retrograde, " + Math.Round(off) + " deg to go" + (charge >= 0 && charge < 0.02 ? " (charge reads empty)" : string.Empty) + ".";
-                        if (ctx.Now - _phaseStart > 5 && off < AlignDeg)
+                        bool dead = charge >= 0 && charge < 0.02 || charge < 0;
+                        Status = dead ? "Deorbit: no power to turn; waiting for the orbit to swing the nose round to retrograde, " + Math.Round(off) + " deg to go."
+                                      : "Deorbit: turning retrograde, " + Math.Round(off) + " deg to go.";
+                        // Out of time warp before lining up (so the nose does not sweep past retrograde between frames), and the
+                        // engine never lit on rails: a burn "started" in warp gives no thrust (2026-10-30: 76 s passed in warp, then
+                        // one real second of burn).
+                        if (c.IsWarping && off < AlignDeg + 30) c.StopWarp();
+                        if (ctx.Now - _phaseStart > 5 && off < AlignDeg && !c.IsWarping && !v.packed)
                         {
                             c.EnsureEngine(ref line);
                             c.Throttle = 1f;
@@ -454,13 +460,15 @@ namespace KSA.KSP.Flight
                     }
                     break;
                 case Phases.Burn:
+                    if (c.IsWarping) c.StopWarp(); // no thrust on rails
+                    Status = "Deorbit burn: periapsis " + Math.Round(v.orbit.PeA / 1000) + " km, burning down to " + Math.Round(_targetPe / 1000) + " km.";
                     c.AutoStage(ref line);
                     c.Sas(VesselAutopilot.AutopilotMode.Retrograde, false);
                     if (v.orbit.PeA < _targetPe)
                     {
                         c.Throttle = 0;
                         _phase = Phases.Reentry; _phaseStart = ctx.Now; Status = "Reentry.";
-                        line = "Deorbit complete; periapsis " + Math.Round(v.orbit.PeA / 1000) + " km.";
+                        line = "Deorbit burn done: periapsis " + Math.Round(v.orbit.PeA / 1000) + " km, inside the air; coming home.";
                     }
                     else if (c.NoThrustAvailable())
                     {
