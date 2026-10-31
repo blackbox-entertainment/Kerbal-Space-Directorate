@@ -58,7 +58,7 @@ namespace KSA.Core.Tests
         public void CreateProject_RejectsWrongCrewCountAndExperience_AndUnaffordable()
         {
             string msg;
-            Assert.That(_agency.CreateProject("x", "MunOrbit", null, new[] { "Jebediah Kerman" }, null, null, null, out msg), Is.Null);
+            Assert.That(_agency.CreateProject("x", "MunLanding", null, new[] { "Jebediah Kerman" }, null, null, null, out msg), Is.Null);
             Assert.That(msg, Does.Contain("needs 2"));
             Assert.That(_agency.CreateProject("x", "DunaLanding", null, new[] { "Jebediah Kerman", "Valentina Kerman", "Bob Kerman" }, null, null, null, out msg), Is.Null);
             Assert.That(msg, Does.Contain("experience"));

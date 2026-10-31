@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.29 (2026-10-31), test build
+
+- **Mun orbit takes one kerbal.** It asked for two for no good reason; Minmus orbit already took one, so a smaller rocket can fly it.
+
 ## 0.8.28 (2026-10-31), test build
 
 - **Side boosters stay on while they burn.** The crew's early booster drop fired on solids still burning; they cannot be shut off, so they flew up the side of the rocket and destroyed it. Burning solids now stay on until burnout, and liquid side boosters are shut down before they drop.
