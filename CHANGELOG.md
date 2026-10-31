@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.17 (2026-10-30), test build
+
+- **Earliest parts first, on every rocket.** The engineers now take the earliest parts in the tech tree that can do the job, not the lightest: they try only the oldest engines, tanks and boosters, then allow one tech level more at a time until a rocket works. Pods, heat shields, decouplers and legs follow the same rule. Your own craft are never changed.
+
 ## 0.8.16 (2026-10-30), test build
 
 - **Flight tests fly your rockets.** The bench now uses the smallest saved craft in the save that fits each mission, so it tests the flying and not the engineers' designs. With none that fits it says so and stops.

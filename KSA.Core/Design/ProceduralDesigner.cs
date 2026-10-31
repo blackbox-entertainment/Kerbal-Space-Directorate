@@ -19,9 +19,12 @@ namespace KSA.Core.Design
         /// Raise this whenever the rules the engineers design by change (fins, engines, parachutes, margins): designs drawn
         /// up by an older revision that have not flown yet are drawn again on load (2026-10-30). 1 = 0.6.9.
         /// </summary>
-        public const int Revision = 3; // 3: return capsules, at most four side boosters unless nothing else flies; 2: upper stages that light in the air carry fins; real capsules; decouplers that fit
+        public const int Revision = 4; // 4: the earliest parts that do the job; 3: return capsules, at most four side boosters unless nothing else flies; 2: upper stages that light in the air carry fins; real capsules; decouplers that fit
 
         private static bool IsPlaneCockpit(PartInfo p) { return PartFilter.IsPlaneCockpit(p); }
+
+        /// <summary>True when a comes earlier in the tech tree than b, or as early and lighter (2026-10-30, T: "all parts should be the earliest that can be used for the mission type").</summary>
+        private static bool Earlier(PartInfo a, PartInfo b) { return a.TechCost != b.TechCost ? a.TechCost < b.TechCost : a.Mass < b.Mass; }
 
         private const double G0 = 9.80665;
         private const int MaxTanks = 8;
@@ -40,6 +43,8 @@ namespace KSA.Core.Design
             public bool Awkward;        // too tall and thin, or an engine wider than its tanks: tried last
             public bool Fixed;          // a liquid engine that cannot swivel, when one that can is researched: tried after those
             public double Wet { get { return Dry + Fuel; } }
+            /// <summary>How far up the tech tree the stage's newest part is, Science.</summary>
+            public double Tech { get { return Math.Max(Engine != null ? Engine.TechCost : 0, Math.Max(Tank != null ? Tank.TechCost : 0, Booster != null ? Booster.TechCost : 0)); } }
         }
 
         private sealed class Pick
@@ -66,7 +71,7 @@ namespace KSA.Core.Design
             {
                 if (pod != null) break;
                 foreach (PartInfo p in allowed)
-                    if (p.Kind == PartKind.Command && p.CrewCapacity >= Math.Max(1, crew) && (cockpits || !IsPlaneCockpit(p)) && (pod == null || (pod.RequiresDlc && !p.RequiresDlc) || (pod.RequiresDlc == p.RequiresDlc && p.Mass < pod.Mass))) pod = p; // stock before DLC pods
+                    if (p.Kind == PartKind.Command && p.CrewCapacity >= Math.Max(1, crew) && (cockpits || !IsPlaneCockpit(p)) && (pod == null || (pod.RequiresDlc && !p.RequiresDlc) || (pod.RequiresDlc == p.RequiresDlc && Earlier(p, pod)))) pod = p; // stock before DLC pods
             }
             // No pod seats everyone (a rescue brings the stranded home): the roomiest pod plus crew cabins (2026-10-28).
             var cabins = new List<PartInfo>();
@@ -94,7 +99,7 @@ namespace KSA.Core.Design
                     if (x == null) continue;
                     // A heat shield must fit the pod; otherwise the lightest.
                     if (x.Kind == PartKind.HeatShield && pod.Diameter > 0 && x.Diameter > 0 && Math.Abs(x.Diameter - pod.Diameter) > 0.01) continue;
-                    if (pickPart == null || x.Mass < pickPart.Mass) pickPart = x;
+                    if (pickPart == null || Earlier(x, pickPart)) pickPart = x;
                 }
                 if (pickPart == null) foreach (string n in rule.Value) { PartInfo x = catalog.Get(n); if (x != null && (pickPart == null || x.Mass < pickPart.Mass)) pickPart = x; }
                 if (pickPart == null) { why = "nothing researched for " + rule.Key; return null; }
@@ -144,8 +149,8 @@ namespace KSA.Core.Design
                 if (p.Kind == PartKind.Engine && p.ProducesThrust && p.HasTopNode) engines.Add(p);
                 else if (p.Kind == PartKind.Booster && p.ProducesThrust && p.FuelMass > 0) boosters.Add(p);
                 else if (p.Kind == PartKind.Tank && p.FuelMass > 0 && p.HasTopNode && p.HasBottomNode) tanks.Add(p);
-                else if (p.Kind == PartKind.Decoupler && p.HasTopNode && p.HasBottomNode && (decoupler == null || p.Mass < decoupler.Mass)) decoupler = p;
-                else if (p.Kind == PartKind.LandingLeg && (legs == null || p.Mass < legs.Mass)) legs = p;
+                else if (p.Kind == PartKind.Decoupler && p.HasTopNode && p.HasBottomNode && (decoupler == null || Earlier(p, decoupler))) decoupler = p;
+                else if (p.Kind == PartKind.LandingLeg && (legs == null || Earlier(p, legs))) legs = p;
             }
             if (engines.Count == 0 && boosters.Count == 0) { why = "no engine or booster researched"; return null; }
 
@@ -205,7 +210,25 @@ namespace KSA.Core.Design
             int[][] bestChunks;
             double bestMass;
             string shortOn;
-            Search(flight, payload, decouplerMass, legsMass, fin != null ? fin.Mass * Fins.Count : 0, landingLeg, refuelLeg, kerbinLegs, liquid, withSolids, solidLaunch, out bestStages, out bestChunks, out bestMass, out shortOn);
+            // The earliest parts that do the job, on every rocket (2026-10-30, T: "all parts should be the earliest that can be
+            // used for the mission type ... for all rockets"): only the oldest engines, tanks and boosters first, then one tech
+            // level more at a time, until a rocket works.
+            bestStages = null; bestChunks = null; bestMass = double.MaxValue; shortOn = null;
+            var ceilings = new List<double>();
+            foreach (PartInfo p in engines) if (!ceilings.Contains(p.TechCost)) ceilings.Add(p.TechCost);
+            foreach (PartInfo p in tanks) if (!ceilings.Contains(p.TechCost)) ceilings.Add(p.TechCost);
+            foreach (PartInfo p in boosters) if (!ceilings.Contains(p.TechCost)) ceilings.Add(p.TechCost);
+            ceilings.Sort();
+            foreach (double ceiling in ceilings)
+            {
+                List<PartInfo> e = engines.FindAll(x => x.TechCost <= ceiling), t = tanks.FindAll(x => x.TechCost <= ceiling), b = boosters.FindAll(x => x.TechCost <= ceiling);
+                if (e.Count == 0 && b.Count == 0) continue;
+                List<Option> lq = Options(e, t, b, false, false), ws = Options(e, t, b, true, radialDecoupler);
+                List<Option> sl = null;
+                if (splitHop) { sl = new List<Option>(ws.FindAll(o => o.Engine == null)); sl.AddRange(ws.FindAll(o => o.Engine != null)); }
+                Search(flight, payload, decouplerMass, legsMass, fin != null ? fin.Mass * Fins.Count : 0, landingLeg, refuelLeg, kerbinLegs, lq, ws, sl, out bestStages, out bestChunks, out bestMass, out shortOn);
+                if (bestStages != null) { liquid = lq; withSolids = ws; solidLaunch = sl; break; }
+            }
             if (bestStages == null)
             {
                 // Nothing short and wide does it: the lightest stacks, whatever their shape (a rocket at the edge of reach).
@@ -248,7 +271,7 @@ namespace KSA.Core.Design
                 foreach (PartInfo p in allowed)
                 {
                     if (p.Kind != PartKind.Decoupler || !p.HasTopNode || !p.HasBottomNode) continue;
-                    if (fit == null || Math.Abs(p.Diameter - width) < Math.Abs(fit.Diameter - width) - 0.01 || (Math.Abs(Math.Abs(p.Diameter - width) - Math.Abs(fit.Diameter - width)) <= 0.01 && p.Mass < fit.Mass)) fit = p;
+                    if (fit == null || Math.Abs(p.Diameter - width) < Math.Abs(fit.Diameter - width) - 0.01 || (Math.Abs(Math.Abs(p.Diameter - width) - Math.Abs(fit.Diameter - width)) <= 0.01 && Earlier(p, fit))) fit = p;
                 }
                 if (fit != null) s.Decoupler = fit.Name;
             }
@@ -408,6 +431,7 @@ namespace KSA.Core.Design
             {
                 if (x.Awkward != y.Awkward) return x.Awkward ? 1 : -1; // short and wide first
                 if (x.Fixed != y.Fixed) return x.Fixed ? 1 : -1;       // then engines that steer
+                if (x.Tech != y.Tech) return x.Tech.CompareTo(y.Tech); // then the earliest parts that do the job (2026-10-30, T: "for all rockets")
                 int byMass = Math.Round(x.Wet, 3).CompareTo(Math.Round(y.Wet, 3));
                 if (byMass != 0) return byMass;
                 int byCount = x.Tanks.CompareTo(y.Tanks);

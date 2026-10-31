@@ -37,6 +37,27 @@ namespace KSA.KSP.Parts
         /// <summary>Call when parts are researched or purchased so the next read rebuilds the catalog.</summary>
         public static void Invalidate() { _cache = null; _cacheKey = null; _techVersion++; }
 
+        private static Dictionary<string, double> _techCosts;
+
+        /// <summary>The Science a part's tech node costs, from the game's tech tree: how early the part is (2026-10-30). 0 when unknown.</summary>
+        private static double TechCostOf(string techId)
+        {
+            if (_techCosts == null)
+            {
+                _techCosts = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+                foreach (ConfigNode tree in GameDatabase.Instance.GetConfigNodes("TechTree"))
+                    foreach (ConfigNode n in tree.GetNodes("RDNode"))
+                    {
+                        double cost;
+                        string id = n.GetValue("id");
+                        if (!string.IsNullOrEmpty(id) && double.TryParse(n.GetValue("cost"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out cost)) _techCosts[id] = cost;
+                    }
+                KsaCore.Log.Info("Tech tree read for part ages: " + _techCosts.Count + " nodes");
+            }
+            double found;
+            return techId != null && _techCosts.TryGetValue(techId, out found) ? found : 0;
+        }
+
         /// <summary>The first "sizeN" in a part's bulkhead profiles, in metres; 0 when it has none.</summary>
         private static double ProfileDiameter(string profiles)
         {
@@ -104,6 +125,7 @@ namespace KSA.KSP.Parts
                 Cost = ap.cost,
                 CrewCapacity = p.CrewCapacity,
                 Mod = ModOf(ap.partUrl),
+                TechCost = TechCostOf(ap.TechRequired),
                 RequiresDlc = IsDlc(ap.partUrl)
             };
 

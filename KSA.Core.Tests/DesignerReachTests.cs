@@ -161,6 +161,27 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void TheEngineersTakeTheEarliestPartsThatDoTheJob()
+        {
+            Agency a = Make.Agency(new FakeClock(), new ListLogger());
+            PartCatalog parts = StockParts();
+            foreach (PartInfo p in parts.All) p.TechCost = 100;
+            parts.Get("mk1pod.v2").TechCost = 0;
+            parts.Get("liquidEngine2.v2").TechCost = 5;
+            parts.Get("liquidEngine2.v2").Tags.Add("gimbal");
+            parts.Add(new PartInfo { Name = "laterEngine", Title = "Later, better engine", Kind = PartKind.Engine, Mass = 0.5, Thrust = 400, IspVacuum = 450, IspSeaLevel = 400, Diameter = 1.25, HasTopNode = true, HasBottomNode = true, TechCost = 1000 });
+            parts.Get("laterEngine").Tags.Add("gimbal");
+            a.Parts = parts;
+            a.Requirements = MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
+            MissionType orbit = a.Catalogs.Missions.Get("KerbinOrbit");
+            string why;
+            DesignRecord r = a.EngineersDesign(new KSA.Core.Projects.Project { Id = "x", MissionTypeId = orbit.Id, Name = orbit.Name }, out why, orbit);
+            Assert.That(r, Is.Not.Null, why);
+            Assert.That(r.Plan.Payload.Command, Is.EqualTo("mk1pod.v2"));
+            foreach (PlanStage s in r.Plan.Stages) Assert.That(s.Core.Exists(p => p.Part == "laterEngine"), Is.False, "the early engine does the job");
+        }
+
+        [Test]
         public void TheEngineersUseOnlyPartsThatStack()
         {
             Agency a = Make.Agency(new FakeClock(), new ListLogger());

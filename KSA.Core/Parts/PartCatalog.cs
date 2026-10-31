@@ -32,6 +32,8 @@ namespace KSA.Core.Parts
         public PartKind Kind { get; set; }
         /// <summary>Dry mass in tonnes.</summary>
         public double Mass { get; set; }
+        /// <summary>Science the part's tech node costs: how early it comes in the tree (2026-10-30). 0 when unknown.</summary>
+        public double TechCost { get; set; }
         /// <summary>Propellant mass in tonnes when full (tanks, boosters).</summary>
         public double FuelMass { get; set; }
         public double Cost { get; set; }
