@@ -741,7 +741,14 @@ namespace KSA.KSP.Flight
         {
             if (TimeWarp.fetch == null) return;
             if (ut <= Now + 1) return;
-            if (IsWarping) return;
+            // Out of the air, full warp: physics warp left over from the air stops at 4x (2026-10-30, T: "would be nice to speed up faster").
+            bool inAir = _v != null && _v.mainBody != null && _v.mainBody.atmosphere && _v.altitude < _v.mainBody.atmosphereDepth;
+            if (!inAir && TimeWarp.WarpMode == TimeWarp.Modes.LOW)
+            {
+                if (IsWarping) TimeWarp.SetRate(0, true);
+                TimeWarp.fetch.Mode = TimeWarp.Modes.HIGH;
+            }
+            else if (IsWarping) return;
             TimeWarp.fetch.WarpTo(ut);
         }
 
