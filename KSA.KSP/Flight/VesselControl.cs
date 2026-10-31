@@ -403,8 +403,7 @@ namespace KSA.KSP.Flight
             if (anyActive && !anyFlamedOut && !anyThrust && (_throttle < 0.05f || Now - _lastStage < 3 || Now - _throttleUp < 3)) return;
             if ((anyActive && (anyFlamedOut || !anyThrust)) || (!anyActive && HasStagesLeft)) if (NextStageIsWorthFiring())
             {
-                Stage();
-                line = "Staging (" + (anyFlamedOut ? "burnout" : "no thrust") + "), stage " + _v.currentStage + ".";
+                if (Stage()) line = "Staging (" + (anyFlamedOut ? "burnout" : "no thrust") + "), stage " + _v.currentStage + ".";
             }
         }
 

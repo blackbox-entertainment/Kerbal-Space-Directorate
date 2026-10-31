@@ -1,10 +1,10 @@
 {
   "design_name": "Directorate lander, stock pod and cabin",
-  "rationale": "The Director's own Mun lander (Mun lander crew 3 mk I, 2026-10-31): a Skipper on four X200-16 with four Thumpers lifts it, and a Terrier on five X200-8 flies capture, landing, ascent and home. Only the crew pod changes with the crew size.",
+  "rationale": "The Director's own Mun lander (Mun lander crew 3 mk I, 2026-10-31): a Skipper on four X200-16 with four Kickbacks lifts it, and a Terrier on five X200-8 flies capture, landing, ascent and home. Only the crew pod changes with the crew size.",
   "stages": [
     { "stage": 0, "role": "launch", "decoupler": "Decoupler.2",
       "core": [ { "part": "Rockomax16.BW", "count": 4 }, { "part": "engineLargeSkipper.v2", "count": 1 } ],
-      "radial": [ { "part": "solidBooster1-1", "count": 4, "symmetry": 4 }, { "part": "tailfin", "count": 4, "symmetry": 4 } ] },
+      "radial": [ { "part": "MassiveBooster", "count": 4, "symmetry": 4 }, { "part": "tailfin", "count": 4, "symmetry": 4 } ] },
     { "stage": 1, "role": "transfer+landing+return", "decoupler": "Decoupler.2",
       "core": [ { "part": "Rockomax8BW", "count": 5 }, { "part": "liquidEngine3.v2", "count": 1 } ],
       "radial": [ { "part": "landingLeg1", "count": 4, "symmetry": 4 }, { "part": "solarPanels5", "count": 8, "symmetry": 8 }, { "part": "HighGainAntenna5.v2", "count": 4, "symmetry": 4 } ] }

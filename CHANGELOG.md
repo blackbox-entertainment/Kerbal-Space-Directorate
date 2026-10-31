@@ -2,6 +2,12 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.47 (2026-10-31), test build
+
+- **Heavy rockets keep climbing.** When a low-thrust stage nears the top of its climb, the crew raises the nose as far as the thrust needs, down to 5 km, instead of following the program flat.
+- **The Director's lander on Kickbacks.** Four Thumpers burnt out at 45 seconds and left the Skipper too weak to climb. The templates now use four Kickbacks.
+- **Staging spam.** A staging attempt that was refused no longer logs as done, every frame.
+
 ## 0.8.46 (2026-10-31), test build
 
 - **The Director's lander is now a template.** Mun and Minmus landings can use T's lander, with one pod swap for the crew: KV-1, KV-2 or KV-3 with a stabilizer when Making History is installed, a Mk1 pod with or without a crew cabin when it is not. Design rockets saves one craft of each.

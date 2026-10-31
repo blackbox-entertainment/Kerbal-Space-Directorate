@@ -319,6 +319,7 @@ namespace KSA.KSP.Flight
         internal const double OrbitPeMargin = 5000;
         /// <summary>The most the nose is raised above the horizon to stop the climb topping out in the air, degrees.</summary>
         internal const double ClimbFloor = 25;
+        internal const double ClimbFloorMax = 75;
         internal const double TurnEnd = 50000; // level by 50 km (2026-10-30, T: "turn the big rocket level at 50 to 55 km")
         /// <summary>Straight up until this surface speed, then the small kick east.</summary>
         internal const double KickSpeed = 100;
@@ -332,6 +333,20 @@ namespace KSA.KSP.Flight
         /// at 50 km. To keep control the nose never leans far off the flight path: at most 10 degrees below 20 km, 8 while the
         /// air is thick (25 kPa or more), opening as it thins (free at 5 kPa). A suborbital hop climbs at 88 all the way.
         /// </summary>
+        /// <summary>The nose pitch at which the thrust just cancels what is left of gravity after the speed along the horizon.</summary>
+        private static double HoldPitch(Vessel v)
+        {
+            double thrust = 0;
+            foreach (ModuleEngines e in v.FindPartModulesImplementing<ModuleEngines>()) if (e.EngineIgnited && !e.flameout) thrust += e.finalThrust;
+            double accel = thrust / Math.Max(0.1, v.GetTotalMass());
+            double r = v.mainBody.Radius + v.altitude;
+            double side = v.obt_speed * v.obt_speed - v.verticalSpeed * v.verticalSpeed;
+            double need = v.mainBody.gravParameter / (r * r) - Math.Max(0, side) / r;
+            if (need <= 0) return 0;
+            if (accel <= need) return ClimbFloorMax;
+            return Math.Min(ClimbFloorMax, Math.Max(ClimbFloor, Math.Asin(need / accel) * 180 / Math.PI + 5));
+        }
+
         internal static double TargetPitch(Vessel v, bool orbit = true)
         {
             if (!orbit) return 88;
@@ -341,10 +356,14 @@ namespace KSA.KSP.Flight
             // pod cannot pull it over at 600 m/s), so it never built sideways speed. The turn starts low and slow instead.
             double program = Math.Max(0, 88 * (1 - Math.Sqrt(Math.Min(1, alt / TurnEnd))));
             if (v.srfSpeed < KickDone) return Math.Max(85, program);
-            // Short of the speed to stay up, a weak upper stage laid flat tops out and falls back in the air (2026-10-31: flat at
-            // 50 km, a Terrier peaked at 64): with the top of the climb close, the nose stays up until the apoapsis moves away.
-            if (alt > 20000 && alt < v.mainBody.atmosphereDepth && v.orbit.PeA < 0)
-                program = Math.Max(program, v.verticalSpeed <= 0 ? ClimbFloor : ClimbFloor * Math.Max(0, 1 - v.orbit.timeToAp / 60));
+            // Short of the speed to stay up, a weak stage laid flat tops out and falls back in the air (2026-10-31: flat at 50 km a
+            // Terrier peaked at 64; a Skipper levelled out at 19): with the top of the climb close, the nose rises to where the
+            // thrust holds the rocket up, whatever the program says.
+            if (alt > 5000 && alt < v.mainBody.atmosphereDepth && v.orbit.PeA < 0)
+            {
+                double hold = HoldPitch(v);
+                program = Math.Max(program, v.verticalSpeed <= 0 ? hold : hold * Math.Max(0, 1 - v.orbit.timeToAp / 60));
+            }
             Vector3d up = v.upAxis;
             // The flight path's pitch from the eastern horizon, in the up-east plane: over 90 means it leans west
             // (2026-10-30: a rocket on fixed engines drifted west; the unsigned angle read that as leaning east, so the
