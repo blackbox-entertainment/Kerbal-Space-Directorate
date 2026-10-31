@@ -2,6 +2,15 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.5 (2026-10-30), release
+
+Everything since 0.8.0, from the test builds 0.8.1 to 0.8.4 below. In short:
+
+- **Safe reentry out of time warp.** Nothing is staged or decoupled while the ship is on rails or warping, nor in the first second after it unpacks (a capsule decoupled in that frame exploded), and the reentry warp ends 15 km above the air.
+- **Time warp works while watching.** Warp is stopped only when something is about to separate; physics warp is allowed in the air.
+- **Deorbit burns happen out of warp.** The engine lights only off rails, warp ends before the nose lines up, and a crew with a flat battery waits for the orbit to swing the nose round to retrograde. The flight director window says what it is waiting for and shows the periapsis coming down.
+- **Records, world by world.** Firsts grouped by world with record-book names (First kerbal in space, First kerbal on the Mun), the agency records, and a new Records by world section (missions, longest mission and surface stay, leading kerbals).
+
 ## 0.8.4 (2026-10-30), test build
 
 - **No deorbit burn in time warp.** With a flat battery Valentina waited for the orbit to swing her nose round to retrograde (as she should), but the burn was lit while the game was still in time warp: on rails the engine gives no thrust, 76 seconds passed, and when the warp ended she burned for about one second. Now the warp ends while the nose is still 45 degrees from retrograde, the engine lights only off rails, and any warp during the burn is stopped. The same guard covers spaceplane deorbits.
