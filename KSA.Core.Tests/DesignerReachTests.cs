@@ -161,6 +161,27 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void TheEngineersUseOnlyPartsThatStack()
+        {
+            Agency a = Make.Agency(new FakeClock(), new ListLogger());
+            PartCatalog parts = StockParts();
+            parts.Add(new PartInfo { Name = "KKAOSS.Liquid.Fuel.Tank", Title = "Container tank", Kind = PartKind.Tank, Mass = 0.001, FuelMass = 2, HasTopNode = true, Diameter = 1.25 });
+            parts.Add(new PartInfo { Name = "oneNodeEngine", Title = "Bottom-only engine", Kind = PartKind.Engine, Mass = 0.01, Thrust = 400, IspVacuum = 400, IspSeaLevel = 380, HasBottomNode = true, Diameter = 1.25 });
+            parts.Add(new PartInfo { Name = "oneNodeDecoupler", Title = "One-node decoupler", Kind = PartKind.Decoupler, Mass = 0.0001, HasTopNode = true, Diameter = 1.25 });
+            a.Parts = parts;
+            a.Requirements = MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
+            MissionType orbit = a.Catalogs.Missions.Get("KerbinOrbit");
+            string why;
+            DesignRecord r = a.EngineersDesign(new KSA.Core.Projects.Project { Id = "x", MissionTypeId = orbit.Id, Name = orbit.Name }, out why, orbit);
+            Assert.That(r, Is.Not.Null, why);
+            foreach (PlanStage s in r.Plan.Stages)
+            {
+                Assert.That(s.Decoupler, Is.Not.EqualTo("oneNodeDecoupler"));
+                Assert.That(s.Core.Exists(p => p.Part == "KKAOSS.Liquid.Fuel.Tank" || p.Part == "oneNodeEngine"), Is.False, "the VAB could not stack it");
+            }
+        }
+
+        [Test]
         public void EachKindOfCraftGetsItsOwnParts()
         {
             var parts = new PartCatalog();

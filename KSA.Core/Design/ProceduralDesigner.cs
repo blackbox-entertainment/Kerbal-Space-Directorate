@@ -141,10 +141,10 @@ namespace KSA.Core.Design
             PartInfo decoupler = null, legs = null;
             foreach (PartInfo p in allowed)
             {
-                if (p.Kind == PartKind.Engine && p.ProducesThrust && p.IsStackable) engines.Add(p);
+                if (p.Kind == PartKind.Engine && p.ProducesThrust && p.HasTopNode) engines.Add(p);
                 else if (p.Kind == PartKind.Booster && p.ProducesThrust && p.FuelMass > 0) boosters.Add(p);
-                else if (p.Kind == PartKind.Tank && p.FuelMass > 0 && p.IsStackable) tanks.Add(p);
-                else if (p.Kind == PartKind.Decoupler && p.IsStackable && (decoupler == null || p.Mass < decoupler.Mass)) decoupler = p;
+                else if (p.Kind == PartKind.Tank && p.FuelMass > 0 && p.HasTopNode && p.HasBottomNode) tanks.Add(p);
+                else if (p.Kind == PartKind.Decoupler && p.HasTopNode && p.HasBottomNode && (decoupler == null || p.Mass < decoupler.Mass)) decoupler = p;
                 else if (p.Kind == PartKind.LandingLeg && (legs == null || p.Mass < legs.Mass)) legs = p;
             }
             if (engines.Count == 0 && boosters.Count == 0) { why = "no engine or booster researched"; return null; }
@@ -247,7 +247,7 @@ namespace KSA.Core.Design
                 PartInfo fit = null;
                 foreach (PartInfo p in allowed)
                 {
-                    if (p.Kind != PartKind.Decoupler || !p.IsStackable) continue;
+                    if (p.Kind != PartKind.Decoupler || !p.HasTopNode || !p.HasBottomNode) continue;
                     if (fit == null || Math.Abs(p.Diameter - width) < Math.Abs(fit.Diameter - width) - 0.01 || (Math.Abs(Math.Abs(p.Diameter - width) - Math.Abs(fit.Diameter - width)) <= 0.01 && p.Mass < fit.Mass)) fit = p;
                 }
                 if (fit != null) s.Decoupler = fit.Name;

@@ -172,7 +172,7 @@ namespace KSA.KSP.Testing
         {
             MissionReport r = p.Report;
             bool pass = p.Status == ProjectStatus.Complete && r != null && (r.IsSuccess || r.Outcome == MissionOutcome.PartialSuccess) && r.Mode == MissionMode.WatchLive && r.Deaths.Count == 0;
-            string detail = r == null ? p.Status.ToString() : Agency.OutcomeText(r.Outcome) + (r.Mode != MissionMode.WatchLive ? ", flown simulated" : string.Empty)
+            string detail = r == null ? p.Status + (p.Notes.Count > 0 ? ": " + p.Notes[p.Notes.Count - 1] : string.Empty) : Agency.OutcomeText(r.Outcome) + (r.Mode != MissionMode.WatchLive ? ", flown simulated" : string.Empty)
                 + (r.Deaths.Count > 0 ? ", " + r.Deaths.Count + " died" : string.Empty)
                 + (r.CauseDetail.Length > 0 ? ", cause: " + r.CauseDetail : string.Empty)
                 + (r.Achievements.Count > 0 ? ", earned " + string.Join(" ", r.Achievements.ToArray()) : string.Empty);

@@ -118,7 +118,10 @@ namespace KSA.Core.Parts
         /// <summary>The rules a part kind alone cannot say: a plane's cockpit belongs to planes and nothing else.</summary>
         public static bool Suits(PartJob job, PartInfo p)
         {
-            return !IsPlaneCockpit(p) || job == PartJob.Plane;
+            if (IsPlaneCockpit(p) && job != PartJob.Plane) return false;
+            // A stack tank attaches at both ends: Kerbal Planetary Base Systems container tanks have one node and cannot be stacked (2026-10-30).
+            if (p != null && p.Kind == PartKind.Tank && p.FuelMass > 0 && !(p.HasTopNode && p.HasBottomNode)) return false;
+            return true;
         }
 
         /// <summary>Parts for the job: allowed kinds only, DLC parts only if allowed, at most <paramref name="maxPerKind"/> of each kind (cheapest first).</summary>
