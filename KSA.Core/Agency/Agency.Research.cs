@@ -74,6 +74,8 @@ namespace KSA.Core
         public string MissionBlocker(MissionType type)
         {
             if (type == null) return "Unknown mission.";
+            string eva = EvaBlocker(type);
+            if (eva != null) return eva;
             // Aircraft (2026-10-30): the engineers do not design planes; one of the Director's own planes flies it.
             if (type.IsAircraft) return PlayerDesignsFor(type).Count > 0 ? null : (PartKindsBlocker(type) ?? AircraftHint);
             bool anyTemplate = false, anyBuildable = false;
@@ -93,6 +95,12 @@ namespace KSA.Core
                     DesignableBlocker(type);
                     double heavy;
                     if (_tooHeavy.TryGetValue(type.Id, out heavy)) return "has no rocket the launch pad can take yet (" + PadBlocker(heavy) + ")";
+                }
+                if (Parts != null && PartLimit(false) > 0)
+                {
+                    DesignableBlocker(type);
+                    int parts;
+                    if (_tooManyParts.TryGetValue(type.Id, out parts)) return "has no rocket the VAB can build yet (" + PartsBlocker(parts, false) + ")";
                 }
                 return null;
             }

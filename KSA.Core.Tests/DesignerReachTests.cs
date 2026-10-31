@@ -145,17 +145,19 @@ namespace KSA.Core.Tests
         }
 
         [Test]
-        public void YourRocketNeedsAHeatShieldForOrbitOnceOneIsResearched()
+        public void YourRocketNeedsAHeatShieldOnlyComingHomeFromAnotherWorld()
         {
             var orbit = ShippedConfigs.Missions().Get("KerbinOrbit");
+            var mun = ShippedConfigs.Missions().Get("MunOrbit");
             var hop = ShippedConfigs.Missions().Get("SuborbitalHop");
-            var mine = new PlayerDesign { Name = "K Orbiter mk I", Seats = 1, DeltaV = 4068, LiftoffTwr = 1.53, HasParachute = true, HasHeatShield = false };
-            Assert.That(mine.Blocker(orbit, null), Is.Null, "no shield researched yet: not demanded");
+            var mine = new PlayerDesign { Name = "K Orbiter mk I", Seats = 3, DeltaV = 9000, LiftoffTwr = 1.53, HasParachute = true, HasHeatShield = false };
+            Assert.That(mine.Blocker(mun, null), Is.Null, "no shield researched yet: not demanded");
             mine.HeatShieldResearched = true;
-            Assert.That(mine.Blocker(orbit, null), Does.Contain("no heat shield"));
+            Assert.That(mine.Blocker(mun, null), Does.Contain("no heat shield"));
+            Assert.That(mine.Blocker(orbit, null), Is.Null, "from Kerbin orbit a shield is only suggested (2026-10-30)");
             Assert.That(mine.Blocker(hop, null), Is.Null, "a hop comes in slowly enough");
             mine.HasHeatShield = true;
-            Assert.That(mine.Blocker(orbit, null), Is.Null);
+            Assert.That(mine.Blocker(mun, null), Is.Null);
         }
 
         [Test]

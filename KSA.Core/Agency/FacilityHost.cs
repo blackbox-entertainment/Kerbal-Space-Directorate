@@ -19,6 +19,18 @@ namespace KSA.Core
         public string NextLevel { get; set; }
         /// <summary>Launch pad and runway: the heaviest craft they take, tonnes (0 = no limit or not a launch site).</summary>
         public double MassLimit { get; set; }
+        /// <summary>VAB and SPH: the most parts a craft may have (0 = no limit or not an assembly building).</summary>
+        public int PartLimit { get; set; }
+        /// <summary>Astronaut Complex: the most active kerbals on staff (0 = no limit or not known).</summary>
+        public int CrewLimit { get; set; }
+        /// <summary>Astronaut Complex: no spacewalks in flight (only on Kerbin's surface) at this level.</summary>
+        public bool NoEva { get; set; }
+        /// <summary>Mission Control: no flight planning (manoeuvre nodes) at this level.</summary>
+        public bool NoFlightPlanning { get; set; }
+        /// <summary>Tracking Station: no patched conics (no predicted encounters with other worlds) at this level.</summary>
+        public bool NoPatchedConics { get; set; }
+        /// <summary>Research and Development: the costliest technology it can research, Science (0 = no limit).</summary>
+        public double ScienceLimit { get; set; }
         public bool CanUpgrade { get { return Level < MaxLevel && UpgradeCost > 0; } }
 
         public FacilityOption() { Id = string.Empty; Title = string.Empty; LimitNow = string.Empty; NextLevel = string.Empty; }

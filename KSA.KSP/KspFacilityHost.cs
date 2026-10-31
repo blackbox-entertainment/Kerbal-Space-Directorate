@@ -38,6 +38,7 @@ namespace KSA.KSP
                     var o = new FacilityOption { Id = f.ToString(), Title = Title(f), Level = level + 1, MaxLevel = steps + 1 };
                     o.LimitNow = Limits(f, norm);
                     if (f == SpaceCenterFacility.LaunchPad || f == SpaceCenterFacility.Runway) { float m = GameVariables.Instance != null ? GameVariables.Instance.GetCraftMassLimit(norm, f == SpaceCenterFacility.LaunchPad) : 0f; o.MassLimit = m > 0 && m < 1e6f ? m : 0; }
+                    SetRules(o, f, norm);
                     if (level < steps) o.NextLevel = Limits(f, (level + 1) / (float)steps);
                     UpgradeableFacility live = Live(f);
                     if (live != null && level < steps) o.UpgradeCost = live.GetUpgradeCost();
@@ -105,6 +106,25 @@ namespace KSA.KSP
                 case SpaceCenterFacility.TrackingStation: return "Tracking Station";
                 case SpaceCenterFacility.ResearchAndDevelopment: return "Research and Development";
                 default: return f.ToString();
+            }
+        }
+
+        /// <summary>The limits the agency enforces (2026-10-30, T: "ai director needs to take building limits into account").</summary>
+        private static void SetRules(FacilityOption o, SpaceCenterFacility f, float norm)
+        {
+            GameVariables g = GameVariables.Instance;
+            if (g == null) return;
+            switch (f)
+            {
+                case SpaceCenterFacility.VehicleAssemblyBuilding:
+                case SpaceCenterFacility.SpaceplaneHangar:
+                    { int n = g.GetPartCountLimit(norm, f == SpaceCenterFacility.VehicleAssemblyBuilding); o.PartLimit = n > 0 && n < 10000 ? n : 0; break; }
+                case SpaceCenterFacility.AstronautComplex:
+                    { int n = g.GetActiveCrewLimit(norm); o.CrewLimit = n > 0 && n < 10000 ? n : 0; o.NoEva = !g.UnlockedEVA(norm); break; }
+                case SpaceCenterFacility.MissionControl: o.NoFlightPlanning = !g.UnlockedFlightPlanning(norm); break;
+                case SpaceCenterFacility.TrackingStation: o.NoPatchedConics = g.GetPatchesAheadLimit(norm) <= 0; break;
+                case SpaceCenterFacility.ResearchAndDevelopment:
+                    { float s = g.GetScienceCostLimit(norm); o.ScienceLimit = s > 0 && s < 1e6f ? s : 0; break; }
             }
         }
 

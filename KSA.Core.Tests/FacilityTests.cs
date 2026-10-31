@@ -39,6 +39,35 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void LevelOneBuildingsHoldBackHiringSpacewalksResearchBigRocketsAndFarLiveFlights()
+        {
+            FakeHost host;
+            Agency a = Make1(out host);
+            host.List.Add(new FacilityOption { Id = "AstronautComplex", Title = "Astronaut Complex", Level = 1, MaxLevel = 3, UpgradeCost = 75000, CrewLimit = 1, NoEva = true });
+            host.List.Add(new FacilityOption { Id = "VehicleAssemblyBuilding", Title = "Vehicle Assembly Building", Level = 1, MaxLevel = 3, UpgradeCost = 225000, PartLimit = 30 });
+            host.List.Add(new FacilityOption { Id = "MissionControl", Title = "Mission Control", Level = 1, MaxLevel = 3, NoFlightPlanning = true });
+            host.List.Add(new FacilityOption { Id = "TrackingStation", Title = "Tracking Station", Level = 1, MaxLevel = 3, NoPatchedConics = true });
+            host.List.Add(new FacilityOption { Id = "ResearchAndDevelopment", Title = "Research and Development", Level = 1, MaxLevel = 3, ScienceLimit = 100 });
+
+            // One kerbal on staff, room for one: no hiring.
+            Assert.That(a.CrewRoomBlocker(), Does.Contain("Astronaut Complex"));
+            // Spacewalks only on Kerbin's surface: an orbital EVA stays locked; an orbit does not.
+            Assert.That(a.MissionBlocker(a.Catalogs.Missions.Get("OrbitalEva")), Does.Contain("spacewalk"));
+            Assert.That(a.EvaBlocker(a.Catalogs.Missions.Get("KerbinOrbit")), Is.Null);
+            // R&D: up to 100 Science per technology.
+            Assert.That(a.ResearchLimitBlocker(90), Is.Null);
+            Assert.That(a.ResearchLimitBlocker(160), Does.Contain("Research and Development"));
+            // VAB: 30 parts.
+            var big = new PlayerDesign { Name = "Big one", Seats = 1, DeltaV = 4000, LiftoffTwr = 1.5, HasParachute = true, Mass = 10, PartCount = 31 };
+            Assert.That(a.SiteBlocker(big), Does.Contain("Vehicle Assembly Building"));
+            big.PartCount = 30;
+            Assert.That(a.SiteBlocker(big), Is.Null);
+            // Live to the Mun needs flight planning; Kerbin orbit does not.
+            Assert.That(a.PlanningBlocker(a.Catalogs.Missions.Get("MunOrbit")), Does.Contain("Mission Control").And.Contain("Tracking Station"));
+            Assert.That(a.PlanningBlocker(a.Catalogs.Missions.Get("KerbinOrbit")), Is.Null);
+        }
+
+        [Test]
         public void AnUpgradeIsPaidFromTheLedgerAndRefundedIfTheGameRefuses()
         {
             FakeHost host;

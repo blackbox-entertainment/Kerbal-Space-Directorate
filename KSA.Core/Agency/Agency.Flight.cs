@@ -69,6 +69,8 @@ namespace KSA.Core
             if (type == null) return "Unknown mission type.";
             if (!ProfileInScope(type)) return "Live flight for " + type.Name + " is outside the scope set in agency.cfg (liveFlightScope = " + Settings.LiveFlightScope + ").";
             if (type.Floating) return type.Name + " floats in the clouds; the flight director has no airship program, so it is simulated.";
+            string planning = PlanningBlocker(type);
+            if (planning != null) return planning;
             if (type.IsRescue)
             {
                 Stranding s = GetStranding(p.RescueId);

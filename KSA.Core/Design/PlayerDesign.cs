@@ -41,6 +41,17 @@ namespace KSA.Core.Design
         public double LandingMass { get; set; }
         /// <summary>The landing mass the main parachutes bring down softly, tonnes.</summary>
         public double ChuteCapacity { get; set; }
+        /// <summary>
+        /// True when a crew must have a heat shield: coming home from another world, much faster than from Kerbin orbit. From
+        /// Kerbin orbit it is only suggested (2026-10-30, T: "heat shield should not be a requirement but a suggestion at least
+        /// on the first orbit early game"; Valentina came home from a 428 km orbit in a bare Mk1 pod).
+        /// </summary>
+        public static bool HeatShieldRequired(MissionType type)
+        {
+            return type != null && type.CrewSize > 0 && type.Profile != MissionProfile.Suborbital && type.Profile != MissionProfile.Base
+                && !string.Equals(type.Body, "Kerbin", StringComparison.OrdinalIgnoreCase);
+        }
+
         /// <summary>A heat shield as wide as the crew pod, or a pod with its own ablator.</summary>
         public bool HasHeatShield { get; set; }
         /// <summary>A heat shield wide enough for a crew pod is researched (the host sets it); only then is one demanded.</summary>
@@ -82,8 +93,8 @@ namespace KSA.Core.Design
                 return "parachutes too small: they land about " + ChuteCapacity.ToString("0.0") + " t softly and the capsule weighs " + LandingMass.ToString("0.0") + " t (add parachutes)";
             // Home from orbit or beyond: a heat shield that fits the pod, once one is researched (2026-10-29: a Director's
             // rocket flew with only 0.625 m shields between its stages and none under the pod).
-            if (type.CrewSize > 0 && type.Profile != MissionProfile.Suborbital && type.Profile != MissionProfile.Base && HeatShieldResearched && !HasHeatShield)
-                return "no heat shield under the pod (one as wide as the pod): the crew would burn up coming home";
+            if (HeatShieldRequired(type) && HeatShieldResearched && !HasHeatShield)
+                return "no heat shield under the pod (one as wide as the pod): the crew would burn up coming home from " + type.Body;
             if (need != null && DeltaV < need.DeltaV) return Math.Round(DeltaV) + " of " + Math.Round(need.DeltaV) + " m/s";
             if (need != null && need.MinTwr > 0 && LiftoffTwr < need.MinTwr) return "liftoff TWR " + LiftoffTwr.ToString("0.00") + " of " + need.MinTwr.ToString("0.0");
             return null;

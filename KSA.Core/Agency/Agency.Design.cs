@@ -672,7 +672,7 @@ namespace KSA.Core
             if (type == null || Parts == null) return null;
             if (type.IsAircraft) return "the engineers do not design planes";
             Program depot = Depot();
-            string key = type.Id + "|" + Parts.All.Count + "|" + LifeSupportMod + "|" + (depot != null ? Math.Round(depot.DepotCapacity).ToString() : "-") + "|" + Math.Round(LaunchMassLimit(false));
+            string key = type.Id + "|" + Parts.All.Count + "|" + LifeSupportMod + "|" + (depot != null ? Math.Round(depot.DepotCapacity).ToString() : "-") + "|" + Math.Round(LaunchMassLimit(false)) + "|" + PartLimit(false);
             string cached;
             if (_designable.TryGetValue(key, out cached)) return cached.Length == 0 ? null : cached;
             string why;
@@ -685,6 +685,10 @@ namespace KSA.Core
             string pad = r != null ? PadBlocker(r.TotalMass) : null;
             NoteTooHeavy(type.Id, pad != null ? r.TotalMass : 0);
             if (pad != null) result = pad;
+            // And the VAB has to be able to build it: no more parts than it allows.
+            string parts = r != null && r.PartCount > 0 ? PartsBlocker(r.PartCount, false) : null;
+            NoteTooManyParts(type.Id, parts != null ? r.PartCount : 0);
+            if (parts != null && pad == null) result = parts;
             _designable[key] = result;
             return result.Length == 0 ? null : result;
         }
@@ -734,7 +738,10 @@ namespace KSA.Core
         /// <summary>Null when the launch site takes the craft's weight; else which building to upgrade.</summary>
         public string SiteBlocker(PlayerDesign d)
         {
-            if (d == null || FacilityHost == null || d.Mass <= 0) return null;
+            if (d == null || FacilityHost == null) return null;
+            string parts = d.PartCount > 0 ? PartsBlocker(d.PartCount, d.IsPlane) : null;
+            if (parts != null) return d.PartCount + " parts, " + parts.Substring(parts.IndexOf(" and the ", StringComparison.Ordinal) + 5);
+            if (d.Mass <= 0) return null;
             string site = d.IsPlane ? "Runway" : "LaunchPad";
             foreach (FacilityOption f in FacilityHost.Facilities())
             {

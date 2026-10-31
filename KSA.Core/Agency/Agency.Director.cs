@@ -241,6 +241,8 @@ namespace KSA.Core
                         if (ConserveRefuses(src.DriveCost, "a drive", out message)) return false;
                         if (HireBlocker(CrewRole.Pilot) != null && HireBlocker(CrewRole.Engineer) != null && HireBlocker(CrewRole.Scientist) != null)
                         { message = "every role is staffed; a recruitment drive waits until someone is needed"; return false; }
+                        string room = CrewRoomBlocker();
+                        if (room != null) { message = "no point in a drive: " + room; return false; }
                         return RunDrive(src.Id, out message);
                     }
                 case "dismiss": { CrewProfile c = FindCrew(Json.GetString(a, "kerbal", "")); if (c == null) { message = "no such kerbal"; return false; } return Fire(c.Id, out message); }
@@ -310,7 +312,14 @@ namespace KSA.Core
                     {
                         if (ResearchHost == null) { message = "research is not available in this game mode"; return false; }
                         string id = Json.GetString(a, "tech", "");
-                        foreach (TechOption o in ResearchHost.Options()) if (string.Equals(o.Title, id, StringComparison.OrdinalIgnoreCase)) { id = o.Id; break; }
+                        foreach (TechOption o in ResearchHost.Options())
+                        {
+                            if (!string.Equals(o.Title, id, StringComparison.OrdinalIgnoreCase) && !string.Equals(o.Id, id, StringComparison.OrdinalIgnoreCase)) continue;
+                            id = o.Id;
+                            string over = ResearchLimitBlocker(o.ScienceCost);
+                            if (over != null) { message = o.Title + " " + over; return false; }
+                            break;
+                        }
                         return ResearchHost.Research(id, out message);
                     }
                 default:
@@ -803,7 +812,10 @@ namespace KSA.Core
                 options.Sort((x, y) => x.ScienceCost.CompareTo(y.ScienceCost));
                 sb.AppendLine("RESEARCH YOU CAN BUY NOW (tech id | title | Science | unlocks):");
                 if (options.Count == 0) sb.AppendLine("  nothing available");
-                for (int i = 0; i < options.Count && i < 12; i++) sb.AppendLine("  " + options[i].Id + " | " + options[i].Title + " | " + options[i].ScienceCost.ToString("0") + " | " + options[i].Unlocks);
+                for (int i = 0; i < options.Count && i < 12; i++) sb.AppendLine("  " + options[i].Id + " | " + options[i].Title + " | " + options[i].ScienceCost.ToString("0") + " | " + options[i].Unlocks
+                    + (ResearchLimitBlocker(options[i].ScienceCost) != null ? " | NOT YET: over the R&D building's limit" : string.Empty));
+                string room = CrewRoomBlocker();
+                if (room != null) sb.AppendLine("CREW ROOM: " + room + ". Hires and recruitment drives are refused until then.");
             }
 
             // Lessons learned stay for the whole game, newest first, so a mistake is not repeated (2026-10-28).

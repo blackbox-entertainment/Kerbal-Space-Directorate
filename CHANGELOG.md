@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.7.13 (2026-10-30), test build
+
+- **Every building's limits count.** The VAB's part limit (30 at level 1) now holds back missions, projects and your designs like the pad's mass limit. A full Astronaut Complex (5 kerbals at level 1) refuses hires, and the AI Director runs no recruitment drives. Missions that need a spacewalk stay locked until the Astronaut Complex allows them in flight. Research above the R&D building's Science limit (100 at level 1) is refused. Live flights to other worlds need Mission Control and Tracking Station at level 2 (manoeuvre nodes, predicted encounters) and are simulated until then. The AI Director's briefing marks each one, and UPGRADE NEEDED now names the VAB, the Astronaut Complex and R&D when they hold something back.
+- **Heat shields: a suggestion from Kerbin orbit.** Your own designs need a heat shield only coming home from another world; a return from Kerbin orbit no longer refuses them (Orbiter mk I can fly Kerbin orbit). The engineers still fit one when it is researched.
+
 ## 0.7.12 (2026-10-30), test build
 
 - **A recovered live flight is always scored.** Recovering a ship from the flight scene sent the game to the Space Center, where KSA looked for the ship before KSP had reported the recovery, found none and put the project back on the pad: the flight, its firsts and records were lost (Valentina's orbit). KSA now waits 30 seconds after a scene loads before calling any live flight lost.

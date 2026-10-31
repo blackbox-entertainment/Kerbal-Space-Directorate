@@ -688,6 +688,8 @@ namespace KSA.Core
             if (a == null) { message = "No such applicant."; return false; }
             string why;
             if (!HiringAllowed(out why)) { message = why; return false; }
+            string room = CrewRoomBlocker();
+            if (room != null) { message = "No room for " + a.Name + ": " + room + "."; return false; }
             if (!Ledger.CanAfford(a.HireFee)) { message = "Not enough funds to hire " + a.Name + " (" + Money(a.HireFee) + ")."; return false; }
             if (Crew.Get(a.Name) != null && !Crew.Get(a.Name).Departed) { message = "Someone named " + a.Name + " is already on staff."; return false; }
 
