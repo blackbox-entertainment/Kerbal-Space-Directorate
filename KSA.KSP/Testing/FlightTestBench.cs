@@ -55,6 +55,8 @@ namespace KSA.KSP.Testing
         }
 
         private static bool _single;
+        /// <summary>The saved rocket to fly; empty = the smallest that fits each mission.</summary>
+        public static string Rocket = string.Empty;
 
         /// <summary>Starts the ladder at <paramref name="from"/> (0 = the first rung).</summary>
         public static bool Start(int from, out string message) { return Start(from, false, out message); }
@@ -174,7 +176,14 @@ namespace KSA.KSP.Testing
             // A known-good rocket: the bench tests the flying, so it flies the Director's own saved craft, the smallest that
             // fits (2026-10-30, T: "my orbiter mkII was better"; the engineers' designs tested two unknowns at once).
             PlayerDesign rocket = null;
-            foreach (PlayerDesign d in agency.PlayerDesignsFor(type)) if (rocket == null || d.DeltaV < rocket.DeltaV) rocket = d;
+            if (Rocket.Length > 0)
+            {
+                // The Director's pick (T: "I should be able to pick test and rocket design").
+                rocket = agency.FindPlayerDesign(Rocket);
+                string unfit = rocket == null ? "no saved rocket called " + Rocket : agency.DesignBlocker(rocket, type);
+                if (unfit != null) { Record(false, mission, Rocket + " cannot fly it: " + unfit); Stop(mission + " needs another rocket"); return; }
+            }
+            else foreach (PlayerDesign d in agency.PlayerDesignsFor(type)) if (rocket == null || d.DeltaV < rocket.DeltaV) rocket = d;
             if (rocket == null)
             {
                 Record(false, mission, "no saved rocket in this save fits it (" + type.Seats + " seat" + (type.Seats == 1 ? "" : "s") + ", " + Math.Round(agency.Requirements.For(type).DeltaV) + " m/s): build and save one in the VAB");

@@ -38,6 +38,16 @@ namespace KSA.KSP.Testing
             string blocker = FlightTestBench.Blocker();
             if (blocker != null && !FlightTestBench.Active) Line(items, "<color=#ffd27f>Cannot run here: " + blocker + ".</color>", textWidth);
             items.Add(new DialogGUISpace(6f));
+            // The rocket: one of the save's own craft, or the smallest that fits each mission.
+            Line(items, "<b>Rocket:</b> " + (FlightTestBench.Rocket.Length > 0 ? FlightTestBench.Rocket : "the smallest that fits each mission"), textWidth);
+            items.Add(new DialogGUIButton("Smallest that fits", () => { FlightTestBench.Rocket = string.Empty; Refresh(); }, 180f, 26f, false));
+            if (KsaCore.Agency != null)
+                foreach (Core.Design.PlayerDesign d in KsaCore.Agency.PlayerDesigns())
+                {
+                    string name = d.Name;
+                    items.Add(new DialogGUIButton((FlightTestBench.Rocket == name ? "> " : string.Empty) + name + "  (" + Math.Round(d.DeltaV).ToString("#,##0") + " m/s, " + d.Seats + " seat" + (d.Seats == 1 ? "" : "s") + ")", () => { FlightTestBench.Rocket = name; Refresh(); }, 340f, 26f, false));
+                }
+            items.Add(new DialogGUISpace(6f));
             for (int i = 0; i < FlightTestBench.Ladder.Length; i++)
             {
                 string id = FlightTestBench.Ladder[i];

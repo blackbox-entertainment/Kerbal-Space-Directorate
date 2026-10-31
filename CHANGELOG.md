@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.27 (2026-10-30), test build
+
+- **Flight tests: pick the rocket.** The window lists the save's craft with delta-v and seats. Pick one, then Fly any mission; a rocket that cannot fly it says why.
+
 ## 0.8.26 (2026-10-30), test build
 
 - **Full warp after the air.** Physics warp left over from flying through the atmosphere held the crew's warp at 4x. Outside the air the crew now switches to regular time warp.
