@@ -339,6 +339,7 @@ namespace KSA.Core
                 shields.Add(part.Name);
             }
             if (shields.Count == 0) return;
+            req.WantsHeatShield = true;
             // Pods with a built-in ablator count as shielded.
             var shieldedPods = new List<string>();
             foreach (PartInfo part in req.AllowedParts) if (part.Kind == PartKind.Command && part.Tags.Contains("heatshielded")) shieldedPods.Add(part.Name);

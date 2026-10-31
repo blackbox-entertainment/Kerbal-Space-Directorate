@@ -38,6 +38,8 @@ namespace KSA.Core.Design
         public int PreferredSeats { get; set; }
         /// <summary>The lightest rocket from every part offered, not the one from the oldest parts that can just do it (2026-10-31).</summary>
         public bool LightestRocket { get; set; }
+        /// <summary>The crew comes home from orbit or beyond: fit a heat shield whatever the pod (2026-10-31).</summary>
+        public bool WantsHeatShield { get; set; }
         public string ProjectName { get; set; }
         /// <summary>Hardware the craft must carry, one plain sentence each (KSA-67: industry modules, life support supplies).</summary>
         public List<string> MustCarry { get; } = new List<string>();

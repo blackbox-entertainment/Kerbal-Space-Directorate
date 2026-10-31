@@ -19,7 +19,7 @@ namespace KSA.Core.Design
         /// Raise this whenever the rules the engineers design by change (fins, engines, parachutes, margins): designs drawn
         /// up by an older revision that have not flown yet are drawn again on load (2026-10-30). 1 = 0.6.9.
         /// </summary>
-        public const int Revision = 6; // 6: shorter stacks; 5: landers seat three when they can; 4: the earliest parts that do the job; 3: return capsules, at most four side boosters unless nothing else flies; 2: upper stages that light in the air carry fins; real capsules; decouplers that fit
+        public const int Revision = 7; // 7: heat shield, panels and antennas; 6: shorter stacks; 5: landers seat three when they can; 4: the earliest parts that do the job; 3: return capsules, at most four side boosters unless nothing else flies; 2: upper stages that light in the air carry fins; real capsules; decouplers that fit
 
         private static bool IsPlaneCockpit(PartInfo p) { return PartFilter.IsPlaneCockpit(p); }
 
@@ -65,9 +65,43 @@ namespace KSA.Core.Design
                 req.CrewSize = req.PreferredSeats;
                 StagePlan roomy = DesignFor(req, catalog, need, gravity, out why);
                 req.CrewSize = asked;
-                if (roomy != null) return roomy;
+                if (roomy != null) { Equip(roomy, req, catalog); return roomy; }
             }
-            return DesignFor(req, catalog, need, gravity, out why);
+            StagePlan plan = DesignFor(req, catalog, need, gravity, out why);
+            if (plan != null) Equip(plan, req, catalog);
+            return plan;
+        }
+
+        /// <summary>Solar panels and high-gain antennas on a craft leaving Kerbin, as many as T's Mun rockets carry.</summary>
+        private const int TripPanels = 8, TripAntennas = 4;
+
+        /// <summary>
+        /// The kit T fitted by hand to the engineers' Mun orbit rocket (2026-10-31): a heat shield under the pod, even one with its
+        /// own ablator, and for a flight away from Kerbin panels and high-gain antennas on the top stage, which drops before reentry.
+        /// </summary>
+        private static void Equip(StagePlan plan, DesignRequest req, IPartCatalog catalog)
+        {
+            if (req.Mission == null || req.Mission.CrewSize <= 0 || req.Mission.ModuleRole.Length > 0 || plan.Stages.Count == 0) return;
+            PartInfo pod = catalog.Get(plan.Payload.Command);
+            if (pod == null) return;
+            if (req.WantsHeatShield && !plan.Payload.Extras.Exists(e => { PartInfo x = catalog.Get(e); return x != null && x.Kind == PartKind.HeatShield; }))
+            {
+                PartInfo shield = null;
+                foreach (PartInfo p in req.AllowedParts)
+                    if (p.Kind == PartKind.HeatShield && Math.Abs(p.Diameter - pod.Diameter) <= 0.01 && (shield == null || Earlier(p, shield))) shield = p;
+                if (shield != null) plan.Payload.Extras.Add(shield.Name);
+            }
+            if (string.Equals(req.Mission.Body, "Kerbin", StringComparison.OrdinalIgnoreCase)) return;
+            PartInfo panel = null, antenna = null;
+            foreach (PartInfo p in catalog.All)
+            {
+                if (!p.Tags.Contains("radial") || (p.RequiresDlc && !req.AllowedParts.Contains(p))) continue;
+                if (p.Kind == PartKind.Power && p.Tags.Contains("solar") && (panel == null || Earlier(p, panel))) panel = p;
+                if (p.Kind == PartKind.Antenna && p.Mass <= 0.1 && (antenna == null || p.Mass > antenna.Mass)) antenna = p; // the heavier, the further it reaches
+            }
+            PlanStage top = plan.Stages[plan.Stages.Count - 1];
+            if (panel != null) top.Radial.Add(new PlanPart { Part = panel.Name, Count = TripPanels, Symmetry = TripPanels });
+            if (antenna != null) top.Radial.Add(new PlanPart { Part = antenna.Name, Count = TripAntennas, Symmetry = TripAntennas });
         }
 
         private static StagePlan DesignFor(DesignRequest req, IPartCatalog catalog, MissionRequirements.Entry need, double gravity, out string why)

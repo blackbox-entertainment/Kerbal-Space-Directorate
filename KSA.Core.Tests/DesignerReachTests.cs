@@ -502,6 +502,26 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void ARocketLeavingKerbinCarriesShieldPanelsAndAntennasOnTheTopStage()
+        {
+            Agency a = Make.Agency(new FakeClock(), new ListLogger());
+            PartCatalog parts = StockParts();
+            PartInfo panel = parts.Get("solarPanels4");
+            panel.Tags.Add("solar"); panel.Tags.Add("radial");
+            parts.Add(new PartInfo { Name = "HighGainAntenna5.v2", Title = "HG-5", Kind = PartKind.Antenna, Mass = 0.07, Tags = { "radial" } });
+            a.Parts = parts;
+            a.Requirements = MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
+            string why; bool viaDepot;
+            DesignRecord r = a.DesignWithinTech(a.Catalogs.Missions.Get("MunOrbit"), 1, 100, out why, out viaDepot);
+            Assert.That(r, Is.Not.Null, why);
+            Assert.That(r.Plan.Payload.Extras, Does.Contain("HeatShield1"));
+            PlanStage top = r.Plan.Stages[r.Plan.Stages.Count - 1];
+            Assert.That(top.Radial.Exists(p => p.Part == "solarPanels4" && p.Count == 8), Is.True);
+            Assert.That(top.Radial.Exists(p => p.Part == "HighGainAntenna5.v2" && p.Count == 4), Is.True);
+            Assert.That(r.TotalDeltaV, Is.GreaterThanOrEqualTo(r.RequiredDeltaV));
+        }
+
+        [Test]
         public void TheReviewRejectsWhatNeverMadeOrbit()
         {
             PartCatalog parts = StockParts();

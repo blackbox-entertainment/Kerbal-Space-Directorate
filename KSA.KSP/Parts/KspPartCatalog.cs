@@ -178,6 +178,7 @@ namespace KSA.KSP.Parts
             // Drogues slow a fast capsule but cannot land it (2026-10-29: a Kerbin orbit design carried only a Mk25 drogue).
             if (p.Modules != null && p.Modules.Contains("ModuleParachute") && ap.name.ToLowerInvariant().Contains("drogue")) info.Tags.Add("drogue");
             if (p.CrewCapacity > 0) info.Tags.Add("crew" + p.CrewCapacity);
+            if (p.Modules != null && p.Modules.Contains("ModuleDeployableSolarPanel")) info.Tags.Add("solar");
             // Kerbalism sample experiments (goo, materials bay) take 10 minutes or more and need sample storage
             // (2026-10-30: the goo on a Suborbital hop showed "no storage space" and never ran). Read by name: no reference.
             if (IsKerbalismSampler(p)) info.Tags.Add("sample");

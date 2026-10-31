@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.34 (2026-10-31), test build
+
+- **The kit T fitted, on every engineers' rocket.** Crewed flights from orbit or beyond get a heat shield, even on a pod with its own ablator. Flights leaving Kerbin also get 8 solar panels and 4 high-gain antennas on the top stage. Delete saved "Engineers ..." craft to have them redrawn.
+
 ## 0.8.33 (2026-10-31), test build
 
 - **Shorter, stiffer rockets.** The engineers' stacks may now be 6 times as tall as they are wide per stage, down from 10, which keeps a two-stage rocket near Orbiter mk III's proportions. Their craft also use autostrut and rigid attachment. Designs not yet flown are redrawn; saved "Engineers ..." craft must be deleted to be drawn again.
