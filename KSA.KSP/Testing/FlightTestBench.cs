@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using KSA.Core;
+using KSA.Core.Design;
 using KSA.Core.Missions;
 using KSA.Core.Personnel;
 using KSA.Core.Projects;
@@ -158,13 +159,23 @@ namespace KSA.KSP.Testing
             if (type == null) { Record(false, mission, "no such mission in missions.cfg"); Stop("unknown mission " + mission); return; }
             agency.Ledger.SetBalance(100000000); // a test never stops for money
             EnsureCrew(Math.Max(1, type.CrewSize) + 1);
-            string msg;
-            Project p = agency.CreateProject("Test " + type.Name, type.Id, null, null, null, null, MissionMode.WatchLive, out msg);
             _startedReal = now;
             _haltSince = -1;
+            // A known-good rocket: the bench tests the flying, so it flies the Director's own saved craft, the smallest that
+            // fits (2026-10-30, T: "my orbiter mkII was better"; the engineers' designs tested two unknowns at once).
+            PlayerDesign rocket = null;
+            foreach (PlayerDesign d in agency.PlayerDesignsFor(type)) if (rocket == null || d.DeltaV < rocket.DeltaV) rocket = d;
+            if (rocket == null)
+            {
+                Record(false, mission, "no saved rocket in this save fits it (" + type.Seats + " seat" + (type.Seats == 1 ? "" : "s") + ", " + Math.Round(agency.Requirements.For(type).DeltaV) + " m/s): build and save one in the VAB");
+                Stop(mission + " needs a rocket");
+                return;
+            }
+            string msg;
+            Project p = agency.CreateProject("Test " + type.Name, type.Id, null, null, null, null, MissionMode.WatchLive, out msg, null, rocket.Name);
             if (p == null) { Record(false, mission, "could not start the project: " + msg); Stop(mission + " could not start"); return; }
             _projectId = p.Id;
-            Write("--- " + mission + " (" + type.Name + "), project " + p.Id + " ---");
+            Write("--- " + mission + " (" + type.Name + "), project " + p.Id + ", rocket " + rocket.Name + " ---");
             ScreenMessages.PostScreenMessage("[KSA] Flight test " + (Index + 1) + " of " + Ladder.Length + ": " + type.Name, 8f, ScreenMessageStyle.UPPER_CENTER);
         }
 

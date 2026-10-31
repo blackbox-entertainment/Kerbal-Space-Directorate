@@ -2,6 +2,12 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.16 (2026-10-30), test build
+
+- **Flight tests fly your rockets.** The bench now uses the smallest saved craft in the save that fits each mission, so it tests the flying and not the engineers' designs. With none that fits it says so and stops.
+- **Staging gap back to 1.5 s.** The 0.3 s gap from 0.8.12 let the crew fire three stages in 0.6 s and throw away a fuelled stage.
+- **No booms on rockets.** The Magnetometer Boom and robot arm scanner are no longer added to the engineers' designs.
+
 ## 0.8.15 (2026-10-30), test build
 
 - **Real capsules only.** The engineers put a crew in a Cupola with a 2.5 m heat shield under it. Flybys, orbits and landings now use a capsule that comes home through the air: no cockpits, Cupolas or lander cans. Kerbal Planetary Base Systems parts are for bases only. More than four side boosters is a last resort.
