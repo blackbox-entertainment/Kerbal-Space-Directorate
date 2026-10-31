@@ -10,7 +10,8 @@ namespace KSA.KSP.Testing
 {
     /// <summary>
     /// The engineers draw the mission list with low-tech parts and save each rocket in the save's VAB folder, to look at, edit
-    /// and fly on the bench (2026-10-31, T: "redesign the rockets with research 100 or less"). Craft already there are kept.
+    /// and fly on the bench (2026-10-31, T: "redesign the rockets with research 100 or less"). Each run replaces the "Engineers ..."
+    /// craft, so a craft to keep is saved under another name (T: "tired of deleting").
     /// </summary>
     public static class DesignRun
     {
@@ -44,7 +45,6 @@ namespace KSA.KSP.Testing
                 string size = Math.Round(r.TotalDeltaV).ToString("#,##0") + " of " + Math.Round(r.RequiredDeltaV).ToString("#,##0") + " m/s, " + Math.Round(r.TotalMass) + " t, TWR " + r.LiftoffTwr + ", " + r.PartCount + " parts";
                 if (viaDepot) { Lines.Add(name + ": only with a stop at a fuel depot (" + size + "), not saved"); continue; }
                 string path = Path.Combine(folder, name + ".craft");
-                if (File.Exists(path)) { Lines.Add(name + ": " + size + ", already saved, kept (delete it to redraw)"); continue; }
                 CraftWriter.Result w = CraftWriter.WriteTo(r.Plan, KsaCore.Agency.Parts, name, path);
                 Lines.Add(name + ": " + size + (w.Ok ? ", saved" : ", NOT saved: " + w.Error));
             }
