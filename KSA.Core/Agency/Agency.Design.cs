@@ -735,6 +735,43 @@ namespace KSA.Core
             return why ?? SiteBlocker(d);
         }
 
+        /// <summary>One mission measured against a craft: why it cannot fly it (null = it can), and how much delta-v it lacks.</summary>
+        public sealed class MissionFit
+        {
+            public MissionType Mission;
+            public string Blocker;
+            public double DeltaVShort;
+            /// <summary>The craft fits but the mission is not open yet (a building or research it needs), else null.</summary>
+            public string Locked;
+        }
+
+        /// <summary>
+        /// Every mission a craft could fly, and how far off the rest are (2026-10-30, T: "a What can this fly? in the VAB would be
+        /// nice"): fitting ones first, then the near misses by delta-v short, then the rest. Programme modules, rescues and
+        /// custom missions are left out.
+        /// </summary>
+        public List<MissionFit> WhatCanItFly(PlayerDesign d)
+        {
+            var list = new List<MissionFit>();
+            if (d == null) return list;
+            foreach (MissionType t in Catalogs.Missions.Types)
+            {
+                if (t.IsCustom || t.IsRescue || t.ModuleRole.Length > 0) continue;
+                MissionRequirements.Entry need = Requirements.For(t);
+                var f = new MissionFit { Mission = t, Blocker = DesignBlocker(d, t, need), DeltaVShort = need != null ? Math.Max(0, need.DeltaV - d.DeltaV) : 0 };
+                if (f.Blocker == null) f.Locked = EvaBlocker(t);
+                list.Add(f);
+            }
+            list.Sort((a, b) =>
+            {
+                int ga = a.Blocker == null ? 0 : 1, gb = b.Blocker == null ? 0 : 1;
+                if (ga != gb) return ga.CompareTo(gb);
+                if (ga == 0) return b.Mission.Difficulty.CompareTo(a.Mission.Difficulty); // hardest it can do first
+                return a.DeltaVShort.CompareTo(b.DeltaVShort);
+            });
+            return list;
+        }
+
         /// <summary>Null when the launch site takes the craft's weight; else which building to upgrade.</summary>
         public string SiteBlocker(PlayerDesign d)
         {

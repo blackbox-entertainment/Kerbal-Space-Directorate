@@ -161,6 +161,22 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void WhatCanItFlyListsTheFitsFirstThenTheNearMissesByDeltaV()
+        {
+            Agency a = Make.Agency(new FakeClock(), new ListLogger());
+            a.Requirements = MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
+            var mine = new PlayerDesign { Name = "Orbiter mk II", Seats = 1, DeltaV = 3600, LiftoffTwr = 1.6, HasParachute = true, Mass = 12 };
+            List<Agency.MissionFit> fits = a.WhatCanItFly(mine);
+            Assert.That(fits.Exists(f => f.Mission.Id == "KerbinOrbit" && f.Blocker == null), Is.True, "3,600 m/s makes orbit");
+            int firstBlocked = fits.FindIndex(f => f.Blocker != null);
+            Assert.That(firstBlocked, Is.GreaterThan(0));
+            Assert.That(fits.GetRange(0, firstBlocked).TrueForAll(f => f.Blocker == null), Is.True, "every fit comes first");
+            var shorts = fits.GetRange(firstBlocked, fits.Count - firstBlocked).ConvertAll(f => f.DeltaVShort);
+            for (int i = 1; i < shorts.Count; i++) Assert.That(shorts[i], Is.GreaterThanOrEqualTo(shorts[i - 1]), "near misses by delta-v short");
+            Assert.That(fits.Exists(f => f.Mission.ModuleRole.Length > 0 || f.Mission.IsRescue), Is.False, "no programme modules or rescues");
+        }
+
+        [Test]
         public void TheParachutesAreSizedForTheCapsule()
         {
             PartCatalog parts = StockParts();

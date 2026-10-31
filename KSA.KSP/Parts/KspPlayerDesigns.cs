@@ -67,6 +67,27 @@ namespace KSA.KSP.Parts
             return list;
         }
 
+        /// <summary>
+        /// Reads the craft open in the editor right now, saved or not (2026-10-30, "What can this fly?"): it is written to a
+        /// scratch file and read like a saved design. Null when the editor holds nothing.
+        /// </summary>
+        public static PlayerDesign CurrentEditorCraft()
+        {
+            if (EditorLogic.fetch == null || EditorLogic.fetch.ship == null || EditorLogic.fetch.ship.parts.Count == 0) return null;
+            ShipConstruct ship = EditorLogic.fetch.ship;
+            string path = Path.Combine(KSPUtil.ApplicationRootPath, Path.Combine("GameData", Path.Combine("KSA", Path.Combine("PluginData", "editor_craft.craft"))));
+            ConfigNode node = ship.SaveShip();
+            if (node == null) return null;
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            node.Save(path);
+            PlayerDesign d = Analyze(path);
+            if (d == null) return null;
+            if (!string.IsNullOrEmpty(ship.shipName)) d.Name = ship.shipName;
+            d.ResearchBlocker = ResearchBlocker(path);
+            d.HeatShieldResearched = CrewShieldResearched();
+            return d;
+        }
+
         // ------------------------------------------------------------------ craft analysis
 
         private sealed class P

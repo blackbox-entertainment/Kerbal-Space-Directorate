@@ -397,6 +397,23 @@ namespace KSA.KSP.Flight
         private double _lastAttitudeLog = -1;
 
         private bool _waitSaid;
+
+        /// <summary>About 1 g: a deorbit is a few dozen m/s, so a strong upper stage at full throttle is over in a blink.</summary>
+        private static float GentleThrottle(VesselControl c)
+        {
+            double accel = c.MaxAcceleration();
+            return accel > 0 ? (float)Math.Max(0.05, Math.Min(1.0, 10.0 / accel)) : 1f;
+        }
+
+        /// <summary>When the orbit next comes down to <paramref name="altitude"/> (metres), or -1 if it does not before periapsis.</summary>
+        private static double TimeDownTo(Vessel v, double altitude, double now)
+        {
+            if (v.orbit == null || v.orbit.PeA > altitude) return -1;
+            double end = now + Math.Min(v.orbit.timeToPe, 7200), step = Math.Max(1, (end - now) / 400);
+            for (double t = now; t <= end; t += step)
+                if (v.orbit.getRelativePositionAtUT(t).magnitude - v.mainBody.Radius <= altitude) return t;
+            return -1;
+        }
         private const double AlignDeg = 15, AbortDeg = 30;
         public ReentryLeg(double targetPeriapsis) { _targetPe = targetPeriapsis; }
         public string Name { get { return "Reentry"; } }
@@ -436,14 +453,24 @@ namespace KSA.KSP.Flight
                         bool dead = charge >= 0 && charge < 0.02 || charge < 0;
                         Status = dead ? "Deorbit: no power to turn; waiting for the orbit to swing the nose round to retrograde, " + Math.Round(off) + " deg to go."
                                       : "Deorbit: turning retrograde, " + Math.Round(off) + " deg to go.";
+                        // With power, the burn waits for apoapsis, where it costs least and the fall is steepest (2026-10-30, T:
+                        // "deorbit burn was a split second"); time warp gets there. Without power, the first moment the nose lines up.
+                        double toAp = v.orbit.timeToAp, period = v.orbit.period;
+                        bool atAp = dead || v.orbit.eccentricity < 0.002 || toAp < 20 || toAp > period - 60;
+                        if (!atAp)
+                        {
+                            Status = "Deorbit: pointing retrograde, waiting for apoapsis in " + Math.Round(toAp) + " s.";
+                            if (toAp > 90 && off < AlignDeg) c.WarpTo(ctx.Now + toAp - 45);
+                            else if (c.IsWarping && toAp < 50) c.StopWarp();
+                        }
                         // Out of time warp before lining up (so the nose does not sweep past retrograde between frames), and the
                         // engine never lit on rails: a burn "started" in warp gives no thrust (2026-10-30: 76 s passed in warp, then
                         // one real second of burn).
-                        if (c.IsWarping && off < AlignDeg + 30) c.StopWarp();
-                        if (ctx.Now - _phaseStart > 5 && off < AlignDeg && !c.IsWarping && !v.packed)
+                        if (c.IsWarping && atAp && off < AlignDeg + 30) c.StopWarp();
+                        if (atAp && ctx.Now - _phaseStart > 5 && off < AlignDeg && !c.IsWarping && !v.packed)
                         {
                             c.EnsureEngine(ref line);
-                            c.Throttle = 1f;
+                            c.Throttle = GentleThrottle(c);
                             _phase = Phases.Burn; _phaseStart = ctx.Now;
                             line = line ?? "Deorbit burn started.";
                         }
@@ -461,6 +488,7 @@ namespace KSA.KSP.Flight
                     break;
                 case Phases.Burn:
                     if (c.IsWarping) c.StopWarp(); // no thrust on rails
+                    c.Throttle = GentleThrottle(c);
                     Status = "Deorbit burn: periapsis " + Math.Round(v.orbit.PeA / 1000) + " km, burning down to " + Math.Round(_targetPe / 1000) + " km.";
                     c.AutoStage(ref line);
                     c.Sas(VesselAutopilot.AutopilotMode.Retrograde, false);
@@ -503,8 +531,13 @@ namespace KSA.KSP.Flight
                     }
                     // Warp only well above the air, and leave it 15 km up: KSP drops out of warp at the edge of the atmosphere
                     // and staging in that frame tore the capsule apart (2026-10-30).
-                    if (c.IsWarping && TimeWarp.WarpMode == TimeWarp.Modes.HIGH && alt < atmo + 15000) c.StopWarp(); // physics warp (in the air) is fine
-                    else if (alt > atmo + 20000 && v.verticalSpeed > -50 && v.orbit.timeToPe > 120) c.WarpTo(ctx.Now + Math.Min(v.orbit.timeToPe, 600) - 90);
+                    // Warp down to the top of the air (2026-10-30, T: "would be nice to compress time waiting for pe"). KSP drops
+                    // out of warp there itself; nothing separates until a second after (VesselControl.PartsSafe).
+                    if (alt > atmo + 3000 && !c.IsWarping)
+                    {
+                        double edge = TimeDownTo(v, atmo + 2000, ctx.Now);
+                        if (edge > ctx.Now + 20) c.WarpTo(edge - 5);
+                    }
                     // Shed everything but the capsule once we are coming down, one stage every two seconds.
                     if (v.verticalSpeed < 0 && v.currentStage > 1 && ctx.Now - _lastShed > 2 && alt < atmo) { if (c.Stage()) { _lastShed = ctx.Now; line = "Staged away the service section for reentry."; } }
                     // Chutes: armed as soon as we are falling inside the atmosphere, so the game opens them the moment it

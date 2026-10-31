@@ -2,6 +2,12 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.8 (2026-10-30), test build
+
+- **What can this fly?** In the VAB and SPH the KSA toolbar button measures the craft on the floor, saved or not, against every mission: the ones it can fly (hardest first), the near misses with the delta-v each lacks, and why the rest are out of reach.
+- **A real deorbit burn.** With power the crew waits for apoapsis (time warp gets there) and burns at about 1 g down to the target periapsis, instead of a split second at full throttle wherever it happened to be. A crew without power still takes the first moment the nose lines up.
+- **Warp down to the air.** After the deorbit burn the flight director warps to just above the atmosphere, and you can warp there yourself: the 0.8.1 rule that stopped fast warp 15 km above the air is gone (nothing separates until a second after warp ends, so it is no longer needed).
+
 ## 0.8.7 (2026-10-30), release
 
 Everything since 0.8.5, from the test build 0.8.6 below. In short:
