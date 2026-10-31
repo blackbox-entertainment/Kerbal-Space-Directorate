@@ -29,6 +29,8 @@ namespace KSA.Core.Missions
         public int PassengerSeats { get; set; }
         /// <summary>Seats the craft needs: the crew plus the passengers.</summary>
         public int Seats { get { return Math.Max(1, CrewSize) + Math.Max(0, PassengerSeats); } }
+        /// <summary>The same mission flown by a different number of kerbals.</summary>
+        public MissionType WithCrew(int crew) { var m = (MissionType)MemberwiseClone(); m.CrewSize = crew; return m; }
         public int MinStars { get; set; }
         public int DurationDays { get; set; }
         public double BaseCost { get; set; }

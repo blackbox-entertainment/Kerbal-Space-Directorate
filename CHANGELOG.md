@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.31 (2026-10-31), test build
+
+- **Design rockets (research 100 or less).** A new Flight tests button has the engineers draw the Mun, Minmus and planet missions from parts in tech nodes of 100 Science or less, saves each as an "Engineers ..." craft in the VAB, and writes a table to PluginData/FlightTests/designs.txt. Those craft can be opened, edited and flown on the bench.
+- **Crew cabins.** With no two- or three-seat pod available, the engineers add Mk1 Crew Cabins to a Mk1 pod.
+
 ## 0.8.30 (2026-10-31), test build
 
 - **Landers seat three.** The engineers draw a landing mission's rocket with room for three whenever a three-seat pod is researched and the rocket can carry it; otherwise for the crew the mission needs. Designs not yet flown are redrawn. Your own craft still need only the mission's crew.

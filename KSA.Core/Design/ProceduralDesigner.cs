@@ -233,6 +233,7 @@ namespace KSA.Core.Design
             foreach (PartInfo p in tanks) if (!ceilings.Contains(p.TechCost)) ceilings.Add(p.TechCost);
             foreach (PartInfo p in boosters) if (!ceilings.Contains(p.TechCost)) ceilings.Add(p.TechCost);
             ceilings.Sort();
+            if (req.LightestRocket && ceilings.Count > 1) ceilings.RemoveRange(0, ceilings.Count - 1); // every part offered from the start
             foreach (double ceiling in ceilings)
             {
                 List<PartInfo> e = engines.FindAll(x => x.TechCost <= ceiling), t = tanks.FindAll(x => x.TechCost <= ceiling), b = boosters.FindAll(x => x.TechCost <= ceiling);

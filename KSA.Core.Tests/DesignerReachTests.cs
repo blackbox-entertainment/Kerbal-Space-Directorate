@@ -485,6 +485,23 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void LowTechDesignsUseCabinsAndNoPartAboveTheLimit()
+        {
+            Agency a = Make.Agency(new FakeClock(), new ListLogger());
+            PartCatalog parts = StockParts();
+            foreach (PartInfo p in parts.All) if (p.Name == "mk1-3pod" || p.Name == "mk2LanderCabin.v2" || p.Name == "liquidEngineMainsail.v2") p.TechCost = 160;
+            a.Parts = parts;
+            a.Requirements = MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
+            string why; bool viaDepot;
+            DesignRecord r = a.DesignWithinTech(a.Catalogs.Missions.Get("MunOrbit"), 3, 100, out why, out viaDepot);
+            Assert.That(r, Is.Not.Null, why);
+            Assert.That(r.Plan.Payload.Command, Is.EqualTo("mk1pod.v2"));
+            Assert.That(r.Plan.Payload.Extras, Does.Contain("MK1CrewCabin"));
+            Assert.That(DesignSession.SeatsIn(r.Plan, a.Parts), Is.GreaterThanOrEqualTo(3));
+            Assert.That(a.Parts, Is.SameAs(parts), "the full list comes back");
+        }
+
+        [Test]
         public void TheReviewRejectsWhatNeverMadeOrbit()
         {
             PartCatalog parts = StockParts();

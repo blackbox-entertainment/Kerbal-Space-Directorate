@@ -225,7 +225,8 @@ namespace KSA.Core
                 // Seats, not just the crew: a rescue also seats the kerbals it brings home (2026-10-28).
                 CrewSize = type != null ? type.Seats : p.Crew.Count,
                 // A landing mission flies two or three: its lander has room for three (2026-10-31, T).
-                PreferredSeats = type != null && type.Profile == MissionProfile.Land && type.CrewSize > 0 && type.ModuleRole.Length == 0 ? LanderSeats : 0,
+                PreferredSeats = !_seatsAsAsked && type != null && type.Profile == MissionProfile.Land && type.CrewSize > 0 && type.ModuleRole.Length == 0 ? LanderSeats : 0,
+                LightestRocket = _seatsAsAsked,
                 ProjectName = p.Name
             };
             foreach (string id in p.Engineers)
@@ -236,6 +237,10 @@ namespace KSA.Core
                 req.RankNames[e.Id] = Careers.RankName(e.Track, e.RankId);
             }
             if (Parts != null) req.AllowedParts.AddRange(PartFilter.ForJob(Parts, JobFor(type), AllowDlcParts));
+            // Low tech has one seat per pod: crew cabins make up the rest (Mk1 size, so the stack stays one width).
+            if (Parts != null && _seatsAsAsked)
+                foreach (PartInfo part in Parts.All)
+                    if (part.Kind == PartKind.Habitat && part.CrewCapacity > 0 && part.Diameter <= 1.3 && (AllowDlcParts || !part.RequiresDlc) && !req.AllowedParts.Contains(part)) req.AllowedParts.Add(part);
             // A crewed landing flies a launch vehicle, but it has to stand on the ground (2026-10-29: no legs were offered,
             // so no lander could ever be drawn up).
             if (Parts != null && type != null && type.IsLanding && !type.Floating)
@@ -640,6 +645,32 @@ namespace KSA.Core
             if (viaDepot != null) { why = null; return viaDepot; }
             if (depotWhy != null) why += "; with a stop at the fuel depot, " + depotWhy;
             return null;
+        }
+
+        private bool _seatsAsAsked;
+
+        /// <summary>
+        /// The engineers' rocket for a mission, crew and research level: only parts from tech nodes costing at most
+        /// <paramref name="maxNodeCost"/> (2026-10-31, T: "redesign the rockets with research 100 or less").
+        /// </summary>
+        public DesignRecord DesignWithinTech(MissionType type, int crew, double maxNodeCost, out string why, out bool viaDepot)
+        {
+            viaDepot = false;
+            why = null;
+            if (type == null || Parts == null) { why = "no parts list"; return null; }
+            IPartCatalog all = Parts;
+            var within = new PartCatalog();
+            foreach (PartInfo p in all.All) if (p.TechCost <= maxNodeCost) within.Add(p);
+            var probe = new Project { Id = "tech", MissionTypeId = type.Id, Name = type.Name };
+            Parts = within;
+            _seatsAsAsked = true;
+            try
+            {
+                DesignRecord r = EngineersDesign(probe, out why, type.WithCrew(crew));
+                viaDepot = probe.DepotId.Length > 0;
+                return r;
+            }
+            finally { Parts = all; _seatsAsAsked = false; }
         }
 
         /// <summary>The hand design for the project as it stands (with its depot stop, if DepotId is set).</summary>

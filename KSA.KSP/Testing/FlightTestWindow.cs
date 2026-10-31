@@ -47,6 +47,8 @@ namespace KSA.KSP.Testing
                     string name = d.Name;
                     items.Add(new DialogGUIButton((FlightTestBench.Rocket == name ? "> " : string.Empty) + name + "  (" + Math.Round(d.DeltaV).ToString("#,##0") + " m/s, " + d.Seats + " seat" + (d.Seats == 1 ? "" : "s") + ")", () => { FlightTestBench.Rocket = name; Refresh(); }, 340f, 26f, false));
                 }
+            items.Add(new DialogGUIButton("Design rockets (research 100 or less)", () => { DesignRun.Run(); Refresh(); }, 340f, 26f, false));
+            foreach (string line in DesignRun.Lines) Line(items, line, textWidth);
             items.Add(new DialogGUISpace(6f));
             for (int i = 0; i < FlightTestBench.Ladder.Length; i++)
             {
