@@ -2,6 +2,13 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.10 (2026-10-30), test build
+
+- **No more westward launches.** During the vertical climb the crew left the stock SAS hold in charge, which keeps whatever attitude the rocket drifts to. Orbiter mk III leaned west 3 degrees by 500 m, the gravity turn then followed its path, and gravity bent it on over the top: it flew west, against Kerbin's spin, burning about 350 m/s more than it should. The crew now steers to 88 degrees east from just off the pad.
+- **No false "out of fuel".** Just after the ship came out of time warp the game's delta-v read 0 for a moment; the ascent took that for empty tanks, ended before circularising, and the Mun transfer could not start from a suborbital path, so the program halted (and halted again on Retry). Out of fuel now has to read so for 3 seconds out of warp.
+- **The survival net leaves the orbit stage alone.** While the ascent is coasting to, or turning for, its circularisation burn above 42 km, the net no longer drops the stage under the capsule (a retry lost its full 2,051 m/s stage that way and fell back in flames).
+- **Halts say why.** "Flight program halted" now names the leg and its reason; a flyby leg reads "Flyby" until it knows which world.
+
 ## 0.8.9 (2026-10-30), test build
 
 - **The AI Director keeps money in hand.** With every goal of the year met it spent 225,000 of 238,000 funds upgrading the VAB for next year's missions. Now an upgrade must leave at least a quarter of the yearly grant (or half a year of salaries, if more), and once the year's goals are met it may only spend what was earned above the year's opening balance; otherwise the briefing says the upgrade waits for next year.

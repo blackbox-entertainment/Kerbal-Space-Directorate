@@ -617,6 +617,10 @@ namespace KSA.KSP.Flight
             // Engines still pushing: a powered descent or a climb that is still burning, not a fall.
             foreach (ModuleEngines e in v.FindPartModulesImplementing<ModuleEngines>())
                 if (e.EngineIgnited && !e.flameout && e.finalThrust > 0.1f) return;
+            // The ascent is about to burn for orbit (coasting to it or turning for it): high up, its fuelled stage is the way
+            // out, not dead weight (2026-10-30: a retried circularisation at 64 km lost its 2,051 m/s stage to the net while
+            // the engine was still swinging round, and the capsule fell back steeply).
+            if (_program != null && !_program.Failed && _program.Current is AscentLeg ascent && ascent.GoingForOrbit && v.altitude > v.mainBody.atmosphereDepth * 0.6) return;
             double atmo = v.mainBody.atmosphereDepth;
             bool falling = v.verticalSpeed < -10;
             bool comingDown = v.orbit == null || v.orbit.PeA < atmo * 0.5;

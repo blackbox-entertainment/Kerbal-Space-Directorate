@@ -740,7 +740,7 @@ namespace KSA.KSP.Flight
         private double _minAltitude = double.PositiveInfinity;
         private double _lastWarpRequest;
 
-        public string Name { get { return "Flyby of " + TransferSupport.BodyName(_body); } }
+        public string Name { get { return _body != null ? "Flyby of " + _body.bodyName : "Flyby"; } }
         public string Status { get; private set; }
         public LegState State { get; private set; }
 

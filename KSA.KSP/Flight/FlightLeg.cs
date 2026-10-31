@@ -113,7 +113,10 @@ namespace KSA.KSP.Flight
         public IFlightLeg Current { get { return _index >= 0 && _index < _legs.Count ? _legs[_index] : null; } }
         public bool Finished { get { return _index >= _legs.Count; } }
         public bool Failed { get; private set; }
-        public string Status { get { IFlightLeg l = Current; return l != null ? l.Status : (Failed ? "Program halted." : "Program complete."); } }
+        /// <summary>Which leg stopped the program and what it said (2026-10-30: halts only ever said "Program halted.").</summary>
+        private string _failReason = string.Empty;
+        public string Status { get { IFlightLeg l = Current; return l != null ? l.Status : (Failed ? (_failReason.Length > 0 ? "Program halted: " + _failReason : "Program halted.") : "Program complete."); } }
+        private void NoteFailure(IFlightLeg l, string why) { _failReason = l.Name + ": " + (string.IsNullOrEmpty(why) ? "failed" : why); }
         public string Phase { get { IFlightLeg l = Current; return l != null ? l.Name : (Failed ? "Halted" : "Complete"); } }
         public int Index { get { return _index; } }
 
@@ -162,10 +165,10 @@ namespace KSA.KSP.Flight
                 if (l == null) return;
                 _ctx.Control.Throttle = 0;
                 try { l.Begin(_ctx); }
-                catch (Exception e) { KsaCore.Log.Error("Leg " + l.Name + " failed to start: " + e); Failed = true; _index = _legs.Count; return; }
+                catch (Exception e) { KsaCore.Log.Error("Leg " + l.Name + " failed to start: " + e); NoteFailure(l, "could not start (" + e.Message + ")"); Failed = true; _index = _legs.Count; return; }
                 if (l.State == LegState.Running) return;
                 l.End(_ctx);
-                if (l.State == LegState.Failed) { Failed = true; _ctx.Control.Throttle = 0; _index = _legs.Count; return; }
+                if (l.State == LegState.Failed) { NoteFailure(l, l.Status); Failed = true; _ctx.Control.Throttle = 0; _index = _legs.Count; return; }
             }
         }
 
@@ -180,6 +183,7 @@ namespace KSA.KSP.Flight
             {
                 KsaCore.Log.Error("Leg " + l.Name + " threw: " + e);
                 l.End(_ctx);
+                NoteFailure(l, "fault (" + e.Message + ")");
                 Failed = true;
                 _ctx.Control.Throttle = 0;
                 return "Flight program fault in " + l.Name + "; crew holding.";
@@ -193,6 +197,7 @@ namespace KSA.KSP.Flight
             else if (l.State == LegState.Failed)
             {
                 l.End(_ctx);
+                NoteFailure(l, l.Status);
                 Failed = true;
                 _ctx.Control.Throttle = 0;
                 _index = _legs.Count;

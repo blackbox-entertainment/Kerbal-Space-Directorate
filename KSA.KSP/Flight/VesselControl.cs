@@ -618,13 +618,21 @@ namespace KSA.KSP.Flight
         /// <see cref="NoThrustAvailable"/> this is right with the throttle closed, so coasting legs use it (2026-10-28: a
         /// coast to apoapsis read "no engine burning" as "out of fuel" and gave up on orbit). Unknown counts as fuel left.
         /// </summary>
+        private double _dvLowSince = -1;
+
+        /// <summary>
+        /// True when the stages left have less than <paramref name="minimum"/> m/s, and have said so for 3 s out of time warp
+        /// (2026-10-30: just after the ship unpacked from warp the game's delta-v read 0 for a moment; the ascent took that
+        /// as out of fuel, ended before circularising, and the Mun flyby halted on a suborbital path).
+        /// </summary>
         public bool OutOfDeltaV(double minimum = 15)
         {
             if (_v == null) return true;
             try
             {
-                if (_v.VesselDeltaV == null || !_v.VesselDeltaV.IsReady) return false;
-                return _v.VesselDeltaV.TotalDeltaVVac < minimum;
+                if (_v.packed || IsWarping || _v.VesselDeltaV == null || !_v.VesselDeltaV.IsReady || _v.VesselDeltaV.TotalDeltaVVac >= minimum) { _dvLowSince = -1; return false; }
+                if (_dvLowSince < 0) _dvLowSince = Now;
+                return Now - _dvLowSince >= 3.0;
             }
             catch { return false; }
         }

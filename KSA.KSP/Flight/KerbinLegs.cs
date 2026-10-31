@@ -18,6 +18,11 @@ namespace KSA.KSP.Flight
         private double _phaseStart;
         private double _cutoff = -1;
 
+        private bool _climbSteer;
+
+        /// <summary>Coasting to apoapsis or burning for orbit: the stage aboard is about to light (the survival net leaves it).</summary>
+        public bool GoingForOrbit { get { return _orbit && (_phase == Phases.Coast || _phase == Phases.Circularize) && State == LegState.Running; } }
+
         public AscentLeg(double targetApoapsis, bool wantOrbit)
         {
             _targetAp = Math.Max(75000, targetApoapsis);
@@ -70,6 +75,10 @@ namespace KSA.KSP.Flight
                 case Phases.Climb:
                     LogAttitude(ctx, "climb");
                     c.AutoStage(ref line);
+                    // Steer to the program (88 degrees, a touch east) from just off the pad instead of the stock hold, which
+                    // keeps whatever attitude the rocket drifts to (2026-10-30: Orbiter mk III leaned west 3 degrees by 500 m;
+                    // the turn then followed its westward path and gravity bent it on over the top, west to 106 degrees).
+                    if (!_climbSteer && !c.ManualAttitude && (v.heightFromTerrain > 30 || alt > 200)) { c.PointAlong(() => AscentDirection(v, _orbit)); _climbSteer = true; }
                     if (alt > 1500 || v.srfSpeed > 90)
                     {
                         // Pitch program (2026-10-28): hold a set angle for the altitude, east, instead of a yaw kick and
