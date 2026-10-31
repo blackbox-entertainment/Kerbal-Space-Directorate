@@ -159,6 +159,46 @@ namespace KSA.Core.Rivals
             return rungs;
         }
 
+        /// <summary>The world an achievement belongs to ("Orbit:Mun" -> "Mun"; no world -> "Kerbin").</summary>
+        public static string BodyOf(string achievement)
+        {
+            int colon = achievement != null ? achievement.IndexOf(':') : -1;
+            string body = colon > 0 ? achievement.Substring(colon + 1) : string.Empty;
+            return body.Length == 0 || body == "-" || body == "*" ? "Kerbin" : body;
+        }
+
+        /// <summary>
+        /// The record-book name of a first (2026-10-30, T: "first like first kerbal to space ... first for each planet"):
+        /// "First kerbal in space", "First kerbal on the Mun".
+        /// </summary>
+        public static string Title(string achievement)
+        {
+            if (string.IsNullOrEmpty(achievement)) return string.Empty;
+            int colon = achievement.IndexOf(':');
+            string kind = (colon > 0 ? achievement.Substring(0, colon) : achievement).ToLowerInvariant();
+            string body = BodyOf(achievement);
+            string the = body == "Mun" ? "the Mun" : body;
+            bool home = body == "Kerbin";
+            switch (kind)
+            {
+                case "flight": return "First flight";
+                case "suborbit": return "First kerbal in space";
+                case "orbit": return home ? "First kerbal in orbit" : "First orbit of " + the;
+                case "flyby": return "First flyby of " + the;
+                case "land": return "First kerbal on " + the;
+                case "eva": return home ? "First spacewalk" : "First walk at " + the;
+                case "science": return home ? "First science brought home" : "First science from " + the;
+                case "base": return home ? "First space station" : "First base on " + the;
+                case "resupply": return home ? "First station resupply" : "First resupply run to " + the;
+                case "escape": return "First escape from " + the;
+                case "aircraft": return "First aircraft flight";
+                case "survey": return "First aerial survey";
+                case "highair": return "First high-altitude flight";
+                case "rocketplane": return "First rocket plane flight";
+                default: return "First " + Describe(achievement);
+            }
+        }
+
         public static string Describe(string achievement)
         {
             if (string.IsNullOrEmpty(achievement)) return string.Empty;

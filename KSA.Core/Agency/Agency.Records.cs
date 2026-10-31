@@ -158,6 +158,101 @@ namespace KSA.Core
             Records["Farthest"] = new RecordEntry { Key = "Farthest", Value = FarthestOf(best), Holder = string.Join(", ", names.ToArray()), Mission = best.ProjectName, Day = Calendar.DayOfYear(best.Day), Year = Calendar.YearOf(best.Day) };
         }
 
+        // ------------------------------------------------------------------ records by world
+        // 2026-10-30, T: "records like distances days in space etc ... records on each planet". Worked out from the mission
+        // reports each time, so older saves have them at once.
+
+        /// <summary>One line of a world's record book: what, how much, who, on which mission and when.</summary>
+        public sealed class WorldRecord
+        {
+            public string Title = string.Empty, Value = string.Empty, Holder = string.Empty, Mission = string.Empty;
+            public int Year, Day;
+        }
+
+        /// <summary>The order worlds are listed in: Kerbin, its moons, then outward.</summary>
+        public static int WorldOrder(string body)
+        {
+            double km = BodyDistances.FromHomeKm(body);
+            return string.Equals(body, "Kerbin", StringComparison.OrdinalIgnoreCase) ? -1 : km > 0 ? (int)Math.Min(int.MaxValue - 1, km / 1000) : int.MaxValue;
+        }
+
+        private string WorldOfReport(MissionReport r)
+        {
+            MissionType t = Catalogs.Missions.Get(r.MissionTypeId);
+            return t != null && t.Body.Length > 0 ? t.Body : null;
+        }
+
+        private string CrewNamesOf(IEnumerable<string> ids)
+        {
+            var names = new List<string>();
+            foreach (string id in ids) { CrewProfile c = Crew.Get(id); names.Add(c != null ? c.Name : id); }
+            return string.Join(", ", names.ToArray());
+        }
+
+        /// <summary>Worlds the agency has flown crewed missions to, in <see cref="WorldOrder"/>.</summary>
+        public List<string> WorldsFlown()
+        {
+            var worlds = new List<string>();
+            foreach (MissionReport r in Reports)
+            {
+                string w = WorldOfReport(r);
+                if (w != null && r.Crew.Count > 0 && !worlds.Contains(w)) worlds.Add(w);
+            }
+            worlds.Sort((a, b) => WorldOrder(a) != WorldOrder(b) ? WorldOrder(a).CompareTo(WorldOrder(b)) : string.CompareOrdinal(a, b));
+            return worlds;
+        }
+
+        /// <summary>A world's record book: missions flown, longest mission and surface stay, and the kerbals who lead there.</summary>
+        public List<WorldRecord> WorldRecords(string world)
+        {
+            var list = new List<WorldRecord>();
+            bool home = string.Equals(world, "Kerbin", StringComparison.OrdinalIgnoreCase);
+            int flown = 0, succeeded = 0;
+            MissionReport longest = null, longestStay = null;
+            double stay = 0;
+            var missionsBy = new Dictionary<string, int>();
+            var surfaceBy = new Dictionary<string, double>();
+            foreach (MissionReport r in Reports)
+            {
+                if (r.Crew.Count == 0 || !string.Equals(WorldOfReport(r), world, StringComparison.OrdinalIgnoreCase)) continue;
+                flown++;
+                if (r.IsSuccess || r.Outcome == MissionOutcome.PartialSuccess) succeeded++;
+                if (longest == null || r.DaysInSpace > longest.DaysInSpace) longest = r;
+                double s = SurfaceDaysOf(r);
+                if (s > stay) { stay = s; longestStay = r; }
+                foreach (string id in r.Crew)
+                {
+                    missionsBy[id] = (missionsBy.ContainsKey(id) ? missionsBy[id] : 0) + 1;
+                    if (s > 0 && !r.Deaths.Contains(id)) surfaceBy[id] = (surfaceBy.ContainsKey(id) ? surfaceBy[id] : 0) + s;
+                }
+            }
+            if (flown == 0) return list;
+            list.Add(new WorldRecord { Title = "Crewed missions", Value = flown + " flown, " + succeeded + " succeeded" });
+            if (longest != null && longest.DaysInSpace > 0) list.Add(FromReport("Longest mission", Days(longest.DaysInSpace), longest));
+            if (!home && longestStay != null) list.Add(FromReport("Longest stay on the surface", Days(stay), longestStay));
+            string topId = null;
+            foreach (KeyValuePair<string, int> kv in missionsBy) if (topId == null || kv.Value > missionsBy[topId]) topId = kv.Key;
+            if (topId != null) list.Add(new WorldRecord { Title = home ? "Most missions (career)" : "Most missions to " + (world == "Mun" ? "the Mun" : world) + " (career)", Value = missionsBy[topId] + " mission" + (missionsBy[topId] == 1 ? "" : "s"), Holder = CrewNamesOf(new[] { topId }) });
+            string walker = null;
+            foreach (KeyValuePair<string, double> kv in surfaceBy) if (walker == null || kv.Value > surfaceBy[walker]) walker = kv.Key;
+            if (!home && walker != null) list.Add(new WorldRecord { Title = "Most days on the surface (career)", Value = Days(surfaceBy[walker]), Holder = CrewNamesOf(new[] { walker }) });
+            return list;
+        }
+
+        private double SurfaceDaysOf(MissionReport r)
+        {
+            if (r.SurfaceDays > 0) return r.SurfaceDays;
+            MissionType t = Catalogs.Missions.Get(r.MissionTypeId);
+            return r.IsSuccess && t != null && !string.Equals(t.Body, "Kerbin", StringComparison.OrdinalIgnoreCase) ? BodyDistances.SurfaceDaysFor(t) : 0;
+        }
+
+        private WorldRecord FromReport(string title, string value, MissionReport r)
+        {
+            return new WorldRecord { Title = title, Value = value, Holder = CrewNamesOf(r.Crew), Mission = r.ProjectName, Year = Calendar.YearOf(r.Day), Day = Calendar.DayOfYear(r.Day) };
+        }
+
+        private static string Days(double d) { return d.ToString("0.#", CultureInfo.InvariantCulture) + " day" + (Math.Abs(d - 1) < 0.05 ? "" : "s"); }
+
         /// <summary>An older save: build the career records from the crew's service records, quietly.</summary>
         internal void BackfillRecords()
         {

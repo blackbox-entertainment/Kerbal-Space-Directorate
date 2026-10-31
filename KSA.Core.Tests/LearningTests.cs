@@ -157,6 +157,35 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void FirstsHaveRecordBookNamesAndEachWorldKeepsItsOwnRecords()
+        {
+            Assert.That(KSA.Core.Rivals.MilestoneLadder.Title("Suborbit:Kerbin"), Is.EqualTo("First kerbal in space"));
+            Assert.That(KSA.Core.Rivals.MilestoneLadder.Title("Flight:Kerbin"), Is.EqualTo("First flight"));
+            Assert.That(KSA.Core.Rivals.MilestoneLadder.Title("Land:Mun"), Is.EqualTo("First kerbal on the Mun"));
+            Assert.That(KSA.Core.Rivals.MilestoneLadder.Title("Orbit:Duna"), Is.EqualTo("First orbit of Duna"));
+            Assert.That(KSA.Core.Rivals.MilestoneLadder.BodyOf("Recover:-"), Is.EqualTo("Kerbin"));
+
+            Agency a = Staffed(new FakeClock());
+            string jeb = a.Crew.Get("Jeb Kerman").Id, val = a.Crew.Get("Val Kerman").Id;
+            var orbit = new MissionReport { ProjectId = "P1", ProjectName = "Kerbin orbit", MissionTypeId = "KerbinOrbit", Outcome = MissionOutcome.Success, DaysInSpace = 0.1 };
+            orbit.Crew.Add(val);
+            var land1 = new MissionReport { ProjectId = "P2", ProjectName = "Mun landing", MissionTypeId = "MunLanding", Outcome = MissionOutcome.Success, DaysInSpace = 6, SurfaceDays = 2 };
+            land1.Crew.Add(jeb);
+            var land2 = new MissionReport { ProjectId = "P3", ProjectName = "Mun landing 2", MissionTypeId = "MunLanding", Outcome = MissionOutcome.Success, DaysInSpace = 9, SurfaceDays = 3 };
+            land2.Crew.Add(jeb); land2.Crew.Add(val);
+            a.Reports.Add(orbit); a.Reports.Add(land1); a.Reports.Add(land2);
+
+            Assert.That(a.WorldsFlown(), Is.EqualTo(new[] { "Kerbin", "Mun" }));
+            List<Agency.WorldRecord> mun = a.WorldRecords("Mun");
+            Assert.That(mun.Find(r => r.Title == "Crewed missions").Value, Is.EqualTo("2 flown, 2 succeeded"));
+            Assert.That(mun.Find(r => r.Title == "Longest mission").Mission, Is.EqualTo("Mun landing 2"));
+            Assert.That(mun.Find(r => r.Title == "Longest stay on the surface").Value, Is.EqualTo("3 days"));
+            Assert.That(mun.Find(r => r.Title.StartsWith("Most missions to the Mun")).Holder, Is.EqualTo("Jeb Kerman"));
+            Assert.That(mun.Find(r => r.Title == "Most days on the surface (career)").Value, Is.EqualTo("5 days"));
+            Assert.That(a.WorldRecords("Kerbin").Exists(r => r.Title.Contains("surface")), Is.False, "no surface records at home");
+        }
+
+        [Test]
         public void ASimulatedOrbitIsNotKnowHowSoTheNextOrbitalMissionFliesLive()
         {
             Agency a = Staffed(new FakeClock());

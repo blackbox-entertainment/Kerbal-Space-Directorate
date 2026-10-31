@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.2 (2026-10-30), test build
+
+- **Records, world by world.** The Records window now lists the firsts grouped by world, Kerbin first, with record-book names: First flight, First kerbal in space, First kerbal in orbit, First spacewalk, First kerbal on the Mun, First orbit of Duna and so on. Worlds nobody has reached share one line. Then the agency records (altitude, speed, distance, days, missions, worlds), then a new Records by world section: for each world flown to, crewed missions and successes, the longest mission, the longest surface stay, and the kerbals with the most missions and the most surface days there.
+
 ## 0.8.1 (2026-10-30), test build
 
 - **No staging out of time warp.** Valentina's orbit went perfectly, deorbit included, but the flight director warped toward periapsis, KSP dropped out of warp at the top of the air, and in that same frame the capsule was decoupled while the ship was still packed on rails: the parts overlapped as it unpacked and the pod exploded at 70 km. Now nothing is staged or decoupled while the ship is packed or warping, nor in the first second after it unpacks, and the reentry warp ends 15 km above the air.

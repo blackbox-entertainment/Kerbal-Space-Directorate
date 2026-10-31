@@ -51,6 +51,49 @@ namespace KSA.KSP.UI
             float textWidth = Width - 60f;
             var items = new List<DialogGUIBase>();
 
+            // Firsts, world by world (2026-10-30, T: "first like first kerbal to space ... first for each planet").
+            items.Add(new DialogGUILabel("<b>Firsts</b>", textWidth, LineHeight + 2f));
+            int ours = 0, theirs = 0, open = 0;
+            var byWorld = new Dictionary<string, List<MilestoneLadder.Rung>>();
+            var worlds = new List<string>();
+            foreach (MilestoneLadder.Rung rung in MilestoneLadder.Build(_agency.Catalogs.Missions))
+            {
+                string w = MilestoneLadder.BodyOf(rung.Achievement);
+                if (!byWorld.ContainsKey(w)) { byWorld[w] = new List<MilestoneLadder.Rung>(); worlds.Add(w); }
+                byWorld[w].Add(rung);
+            }
+            worlds.Sort((a, b) => Agency.WorldOrder(a) != Agency.WorldOrder(b) ? Agency.WorldOrder(a).CompareTo(Agency.WorldOrder(b)) : string.CompareOrdinal(a, b));
+            var untouched = new List<string>();
+            foreach (string w in worlds)
+            {
+                bool any = false;
+                foreach (MilestoneLadder.Rung rung in byWorld[w]) if (_agency.FirstFor(rung.Achievement) != null) { any = true; break; }
+                if (!any)
+                {
+                    open += byWorld[w].Count;
+                    // Nothing claimed there yet: one short line, unless it is home.
+                    if (w != "Kerbin") { untouched.Add(w); continue; }
+                }
+                Line(items, "<b><color=" + Amber + ">" + (w == "Mun" ? "The Mun" : w) + "</color></b>", textWidth);
+                foreach (MilestoneLadder.Rung rung in byWorld[w])
+                {
+                    FirstClaim f = _agency.FirstFor(rung.Achievement);
+                    string what = MilestoneLadder.Title(rung.Achievement);
+                    if (f == null) { if (any) open++; Line(items, "   " + Color(what + ": open", Grey), textWidth); continue; }
+                    bool mine = f.ClaimedBy == Agency.PlayerId;
+                    if (mine) ours++; else theirs++;
+                    Line(items, "   <b>" + what + ":</b> " + Color(_agency.FirstByText(f), mine ? Green : Red), textWidth);
+                }
+            }
+            if (untouched.Count > 0)
+            {
+                var parts = new List<string>();
+                foreach (string w in untouched) parts.Add((w == "Mun" ? "the Mun" : w) + " (" + byWorld[w].Count + ")");
+                Line(items, Color("Still open, nobody has been there: " + string.Join(", ", parts.ToArray()) + ".", Grey), textWidth);
+            }
+            Line(items, Color(ours + " firsts are ours, " + theirs + " went to rivals, " + open + " are still open.", Amber), textWidth);
+
+            items.Add(new DialogGUISpace(10f));
             items.Add(new DialogGUILabel("<b>Agency records</b>", textWidth, LineHeight + 2f));
             int set = 0;
             foreach (Agency.RecordKind k in Agency.RecordKinds)
@@ -66,24 +109,23 @@ namespace KSA.KSP.UI
             }
             if (set == 0) Line(items, Color("Records are set by live flights (altitude, speed, distance) and by every mission (days in space, missions, worlds).", Grey), textWidth);
 
+            // Records world by world: missions, longest mission and stay, who leads there.
             items.Add(new DialogGUISpace(10f));
-            items.Add(new DialogGUILabel("<b>Firsts</b>", textWidth, LineHeight + 2f));
-            int ours = 0, theirs = 0, open = 0;
-            foreach (MilestoneLadder.Rung rung in MilestoneLadder.Build(_agency.Catalogs.Missions))
+            items.Add(new DialogGUILabel("<b>Records by world</b>", textWidth, LineHeight + 2f));
+            List<string> flown = _agency.WorldsFlown();
+            if (flown.Count == 0) Line(items, Color("No crewed missions yet.", Grey), textWidth);
+            foreach (string w in flown)
             {
-                FirstClaim f = _agency.FirstFor(rung.Achievement);
-                string what = "First " + MilestoneLadder.Describe(rung.Achievement);
-                if (f == null) { open++; Line(items, Color(what + ": open", Grey), textWidth); continue; }
-                bool mine = f.ClaimedBy == Agency.PlayerId;
-                if (mine) ours++; else theirs++;
-                Line(items, "<b>" + what + ":</b> " + Color(_agency.FirstByText(f), mine ? Green : Red), textWidth);
+                Line(items, "<b><color=" + Amber + ">" + (w == "Mun" ? "The Mun" : w) + "</color></b>", textWidth);
+                foreach (Agency.WorldRecord r in _agency.WorldRecords(w))
+                    Line(items, "   <b>" + r.Title + ":</b> " + Color(r.Value, Green) + (r.Holder.Length > 0 ? "  " + r.Holder : string.Empty)
+                        + (r.Mission.Length > 0 ? ", " + r.Mission : string.Empty) + (r.Year > 0 ? Color("  (year " + r.Year + (r.Day > 0 ? ", day " + r.Day : string.Empty) + ")", Grey) : string.Empty), textWidth);
             }
-            Line(items, Color(ours + " firsts are ours, " + theirs + " went to rivals, " + open + " are still open.", Amber), textWidth);
 
             var list = new DialogGUIScrollList(new Vector2(Width - 30f, ListHeight), false, true,
                 new DialogGUIVerticalLayout(false, false, 3f, new RectOffset(6, 6, 6, 6), TextAnchor.UpperLeft, KsaUi.Scrollable(items)));
             var content = new DialogGUIVerticalLayout(true, true, 4f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft,
-                new DialogGUILabel("Who did it first, and the agency's best.", Width - 40f, LineHeight),
+                new DialogGUILabel("Who did it first on every world, the agency's best, and its records world by world.", Width - 40f, LineHeight),
                 list,
                 new DialogGUIHorizontalLayout(true, false, 4f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleRight,
                     HelpWindow.Button("records"),
