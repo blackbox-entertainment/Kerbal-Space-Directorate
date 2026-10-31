@@ -2,6 +2,13 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.7.9 (2026-10-30), release
+
+Everything since 0.7.5, from the test builds 0.7.6 to 0.7.8 below. In short:
+
+- **Un Kerballed Start and Airplane Plus are no longer supported.** The probe missions built for Un Kerballed Start (Sounding rocket, Probe to space, First satellite), their goals and its start-node patch are removed; every mission carries a crew again. Stock SPH planes still fly the aircraft missions. A probe project in an old save is called off on load with a full refund.
+- **Parachutes in pairs.** A design never carries a single radial parachute; an odd one gets a partner on the other side.
+
 ## 0.7.8 (2026-10-30), test build
 
 - **Un Kerballed Start and Airplane Plus dropped.** KSA no longer supports either mod. The start-node patch for Un Kerballed Start is gone, and so are the three probe missions built for it (Sounding rocket, Probe to space, First satellite) with their goals (Launch a probe, A probe in space, First satellite). Every mission carries a crew again. Stock planes from the SPH still fly the aircraft missions.
