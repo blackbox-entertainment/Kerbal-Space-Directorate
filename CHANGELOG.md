@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.20 (2026-10-30), test build
+
+- **The stock hold can turn the ship.** The crew re-sent the SAS mode every frame, which restarted the hold, so pilots with SAS skill never lined up for the deorbit or reentry. It is now set only when it changes. If the deorbit still has not lined up after 45 s, the crew steers it by hand.
+
 ## 0.8.19 (2026-10-30), test build
 
 - **Moon flybys fly a free return.** The course correction aimed only for a height above the Mun and took the cheapest burn, which could pass behind the Mun and fling the craft away. It now looks at the path after the Mun, keeps a correction only if it stays in Kerbin's space, prefers the one that falls closest to Kerbin, and may pass up to 1,200 km above the Mun to get it.

@@ -268,13 +268,16 @@ namespace KSA.KSP.Flight
         {
             if (_v == null) return;
             _surfaceMode = surfaceMode;
-            FlightGlobals.SetSpeedMode(surfaceMode ? FlightGlobals.SpeedDisplayModes.Surface : FlightGlobals.SpeedDisplayModes.Orbit);
+            FlightGlobals.SpeedDisplayModes wanted = surfaceMode ? FlightGlobals.SpeedDisplayModes.Surface : FlightGlobals.SpeedDisplayModes.Orbit;
+            if (FlightGlobals.speedDisplayMode != wanted) FlightGlobals.SetSpeedMode(wanted);
             if (mode == VesselAutopilot.AutopilotMode.StabilityAssist || (_v.Autopilot != null && _v.Autopilot.CanSetMode(mode)))
             {
                 EndManualHold();
                 _mode = mode;
-                _v.ActionGroups.SetGroup(KSPActionGroup.SAS, true);
-                if (_v.Autopilot != null) _v.Autopilot.SetMode(mode);
+                // Only on a change: legs ask every frame, and setting the mode restarts the hold, so it never turned the ship
+                // (2026-10-30: "stock retrograde hold", spin 0, the nose drifting 7 to 74 degrees off; the deorbit never lined up).
+                if (!_v.ActionGroups[KSPActionGroup.SAS]) _v.ActionGroups.SetGroup(KSPActionGroup.SAS, true);
+                if (_v.Autopilot != null && _v.Autopilot.Mode != mode) _v.Autopilot.SetMode(mode);
             }
             else BeginManualHold(mode); // rookie pilot or no probe core: fly it ourselves
         }

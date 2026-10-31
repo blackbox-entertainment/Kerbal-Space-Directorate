@@ -406,6 +406,8 @@ namespace KSA.KSP.Flight
         private double _lastAttitudeLog = -1;
 
         private bool _waitSaid;
+        private bool _handTurn;
+        private double _alignSince = -1;
 
         /// <summary>About 1 g: a deorbit is a few dozen m/s, so a strong upper stage at full throttle is over in a blink.</summary>
         private static float GentleThrottle(VesselControl c)
@@ -454,7 +456,7 @@ namespace KSA.KSP.Flight
                 case Phases.Deorbit:
                     {
                         c.Throttle = 0;
-                        c.Sas(VesselAutopilot.AutopilotMode.Retrograde, false);
+                        if (!_handTurn) c.Sas(VesselAutopilot.AutopilotMode.Retrograde, false);
                         // Never light the engine until the nose is on retrograde: a burn the wrong way throws the craft into a
                         // higher orbit (2026-10-30). A craft that cannot turn (flat battery) waits in its safe orbit instead.
                         double off = c.AttitudeError(-v.obt_velocity);
@@ -478,6 +480,18 @@ namespace KSA.KSP.Flight
                         // engine never lit on rails: a burn "started" in warp gives no thrust (2026-10-30: 76 s passed in warp, then
                         // one real second of burn).
                         if (c.IsWarping && atAp && off < AlignDeg + 30) c.StopWarp();
+                        // The stock hold has had its chance: the crew steers it by hand, as in the ascent (T: "I had to manually do it").
+                        if (atAp && !c.IsWarping && off >= AlignDeg)
+                        {
+                            if (_alignSince < 0) _alignSince = ctx.Now;
+                            if (!_handTurn && ctx.Now - _alignSince > 45)
+                            {
+                                _handTurn = true;
+                                c.PointAlong(() => -v.obt_velocity);
+                                line = "The retrograde hold is not lining up (" + Math.Round(off) + " deg off" + ChargeLog.Note(v) + "); steering it by hand.";
+                            }
+                        }
+                        else if (off < AlignDeg) _alignSince = -1;
                         if (atAp && ctx.Now - _phaseStart > 5 && off < AlignDeg && !c.IsWarping && !v.packed)
                         {
                             c.EnsureEngine(ref line);
@@ -502,7 +516,7 @@ namespace KSA.KSP.Flight
                     c.Throttle = GentleThrottle(c);
                     Status = "Deorbit burn: periapsis " + Math.Round(v.orbit.PeA / 1000) + " km, burning down to " + Math.Round(_targetPe / 1000) + " km.";
                     c.AutoStage(ref line);
-                    c.Sas(VesselAutopilot.AutopilotMode.Retrograde, false);
+                    if (!_handTurn) c.Sas(VesselAutopilot.AutopilotMode.Retrograde, false);
                     if (v.orbit.PeA < _targetPe)
                     {
                         c.Throttle = 0;
