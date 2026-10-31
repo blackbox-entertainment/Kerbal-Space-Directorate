@@ -36,7 +36,7 @@ Install these through CKAN. Use the CKAN identifier shown to find each one.
 |---|---|---|
 | Kerbalism | `Kerbalism` | Real life support for colonies, live flights and stranded crews. See [Kerbalism](#kerbalism) below |
 | Stockalike Station Parts Expansion Redux | `StationPartsExpansionRedux` | Station module designs (planned) |
-| Kerbal Planetary Base Systems | `KerbalPlanetaryBaseSystems` | Surface base module designs (planned) |
+| Kerbal Planetary Base Systems | `KerbalPlanetaryBaseSystems` | Surface bases look like real bases: KSA builds each base on the ground from its hubs, habitats, labs, greenhouses, ISRU and feet, growing with every module and resupply. Without it, stock parts are used. When CKAN offers recommended mods, untick them all (Probes Before Crew rearranges the tech tree) |
 | HL Airships Core | `HooliganLabsAirships` | Eve cloud city designs (planned; cloud cities fly simulated today) |
 
 KSA does not need MechJeb or kOS. It has its own flight director.

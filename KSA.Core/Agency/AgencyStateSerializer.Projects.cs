@@ -97,6 +97,9 @@ namespace KSA.Core
                 n.AddValue("site", g.Site);
                 n.AddValue("siteSlope", g.SiteSlope);
                 n.AddValue("vesselId", g.VesselId);
+                if (!double.IsNaN(g.SiteLat)) { n.AddValue("siteLat", g.SiteLat); n.AddValue("siteLon", g.SiteLon); }
+                n.AddValue("baseVessel", g.BaseVesselId);
+                n.AddValue("baseLayout", g.BaseLayoutKey);
                 n.AddValue("lastSuppliedDay", g.LastSuppliedDay);
                 foreach (string cid in g.CrewAboard) n.AddValue("aboard", cid);
                 n.AddValue("stage", g.Stage.ToString());
@@ -288,6 +291,10 @@ namespace KSA.Core
                 };
                 if (g.Id.Length == 0) continue;
                 g.ModuleProjectIds.AddRange(n.GetValues("module"));
+                g.SiteLat = n.GetDouble("siteLat", double.NaN);
+                g.SiteLon = n.GetDouble("siteLon", double.NaN);
+                g.BaseVesselId = n.GetValue("baseVessel", string.Empty);
+                g.BaseLayoutKey = n.GetValue("baseLayout", string.Empty);
                 g.CrewAboard.AddRange(n.GetValues("aboard"));
                 g.Stage = ParseEnum(n.GetValue("stage"), ColonyStage.None);
                 g.ResuppliesDelivered = n.GetInt("resupplies", 0);

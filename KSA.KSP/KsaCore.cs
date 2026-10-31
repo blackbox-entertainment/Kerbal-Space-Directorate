@@ -170,6 +170,7 @@ namespace KSA.KSP
             AutoRollout();
             if (Agency.Ledger.Mirror != null && Agency.Ledger.Mirror.IsActive && Agency.State.Started) Agency.Ledger.SyncFromMirror();
             List<string> notices = Agency.Tick();
+            try { Build.BaseBuilder.Tick(Agency); } catch (System.Exception e) { Log.Error("Base builder: " + e); } // bases on the ground (2026-10-30)
             if (notices.Count == 0) return;
             Log.Info("Agency tick (" + reason + "): " + notices.Count + " notices");
             int shown = 0;

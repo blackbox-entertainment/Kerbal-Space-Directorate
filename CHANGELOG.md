@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.6 (2026-10-30), test build
+
+- **Bases you can see.** A surface base now stands on the ground at its site as one connected vessel and grows: each delivered module adds its section (core, habitat, lab, power, industry), each of the first six resupplies adds a habitat or a greenhouse, and a colony keeps adding habitats on its own. With Kerbal Planetary Base Systems the base is built from that mod's modules, round a corridor junction once Composites is researched, on its own feet once Landing is; otherwise from stock parts. It is rebuilt at the Space Center or Tracking Station when it changes, at a flat dry spot (or beside a module landed live). It carries no crew; the agency keeps its residents.
+- **Broken mod templates removed.** The station, base and airship templates for Stockalike Station Parts Expansion Redux, Kerbal Planetary Base Systems and HL Airships named craft files that never existed; with the mods installed KSA could have picked them. A template whose craft file is missing is now never used.
+
 ## 0.8.5 (2026-10-30), release
 
 Everything since 0.8.0, from the test builds 0.8.1 to 0.8.4 below. In short:

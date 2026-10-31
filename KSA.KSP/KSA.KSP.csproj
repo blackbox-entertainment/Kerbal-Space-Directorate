@@ -34,6 +34,11 @@
       <HintPath>$(KspManaged)\UnityEngine.CoreModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <!-- Colliders, to stand a base on the ground (2026-10-30). -->
+    <Reference Include="UnityEngine.PhysicsModule">
+      <HintPath>$(KspManaged)\UnityEngine.PhysicsModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <!-- Needed by DialogGUI / PopupDialog (TextAnchor lives in TextRenderingModule; layouts use UnityEngine.UI). -->
     <Reference Include="UnityEngine.TextRenderingModule">
       <HintPath>$(KspManaged)\UnityEngine.TextRenderingModule.dll</HintPath>

@@ -194,6 +194,20 @@ namespace KSA.Core
             }
         }
 
+        /// <summary>
+        /// The sections a surface base shows on the ground (2026-10-30): its delivered modules, its resupplies and, once a
+        /// colony, what it built itself. Empty for anything but a surface base, and until a module is delivered.
+        /// </summary>
+        public List<BaseSection> BaseSectionsFor(Program g)
+        {
+            ProgramType t = g != null ? Catalogs.ProgramTypes.Get(g.ProgramTypeId) : null;
+            if (t == null || t.Kind != ProgramKind.SurfaceBase || g.Status == ProgramStatus.Cancelled) return new List<BaseSection>();
+            var roles = new List<string>();
+            foreach (string pid in g.ModuleProjectIds) { Project mp = GetProject(pid); if (mp != null && mp.Status == ProjectStatus.Complete) roles.Add(mp.ModuleRole); }
+            int colonyRoom = g.Stage == ColonyStage.Colony ? Math.Max(0, g.ExtraRoom - g.ResuppliesDelivered * Colony.RoomPerResupply) : 0;
+            return BaseLayout.Sections(roles, g.ResuppliesDelivered, colonyRoom);
+        }
+
         private bool AnyModuleDelivered(Program g)
         {
             foreach (string pid in g.ModuleProjectIds) { Project mp = GetProject(pid); if (mp != null && mp.Status == ProjectStatus.Complete) return true; }

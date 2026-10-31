@@ -158,6 +158,11 @@ namespace KSA.Core.Projects
         public double SiteSlope { get; set; }
         /// <summary>Host vessel id of the station core (or first base module) once flown live; empty when the program was simulated.</summary>
         public string VesselId { get; set; }
+        /// <summary>Surface bases: where the base stands, degrees (NaN until chosen), the vessel drawn there and the layout it shows (2026-10-30).</summary>
+        public double SiteLat { get; set; } = double.NaN;
+        public double SiteLon { get; set; } = double.NaN;
+        public string BaseVesselId { get; set; } = string.Empty;
+        public string BaseLayoutKey { get; set; } = string.Empty;
         /// <summary>Last day a resupply arrived (or the program completed). -1 = never.</summary>
         public int LastSuppliedDay { get; set; }
         /// <summary>Crew ids living aboard (delivered module crews, rotated by resupplies).</summary>

@@ -17,6 +17,8 @@ namespace KSA.KSP.Parts
         public static string Blocker(Template t)
         {
             if (t == null) return null;
+            // A craft-file template whose file is not there cannot be built (2026-10-30: three mod templates named files that were never made).
+            if (string.IsNullOrEmpty(t.PlanFile) && ResolvePath(t.Craft) == null) return "has no craft file (" + t.Craft + ")";
             // KSA-67: a template built from a stage plan that could not be assembled (a part is not loaded).
             if (!string.IsNullOrEmpty(t.PlanFile) && ResolvePath(t.Craft) == null) return "could not be assembled from its plan (a part it needs is not loaded; see KSP.log)";
             if (HighLogic.CurrentGame == null || HighLogic.CurrentGame.Mode == Game.Modes.SANDBOX || ResearchAndDevelopment.Instance == null) return null;
