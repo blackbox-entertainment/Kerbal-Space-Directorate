@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.24 (2026-10-30), test build
+
+- **Antennas and panels.** Under the crew, deployable antennas and solar panels now open once above the air and fold away before coming back into it.
+
 ## 0.8.23 (2026-10-30), test build
 
 - **Flight tests: pick a mission.** A Fly button on every mission flies that one alone and keeps the other results.

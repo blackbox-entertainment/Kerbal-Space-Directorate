@@ -718,6 +718,14 @@ namespace KSA.KSP.Flight
             SurvivalNet();
             if (Live.AutopilotOn && _program != null)
             {
+                // Antennas and panels: out in space, in before the air. Coming in from orbit they fold 20 km above it.
+                if (UnityEngine.Time.time - _lastTend > 5f && _ctx != null && _vessel != null && _vessel.mainBody != null)
+                {
+                    _lastTend = UnityEngine.Time.time;
+                    double air = _vessel.mainBody.atmosphere ? _vessel.mainBody.atmosphereDepth : -1;
+                    bool outside = air < 0 || _vessel.altitude > air + 20000 || (_vessel.altitude > air + 5000 && _vessel.orbit != null && _vessel.orbit.PeA > air);
+                    _ctx.Control.TendDeployables(outside);
+                }
                 string line = _program.Step();
                 if (line != null) Log(line, null);
                 _status = _program.Status;
@@ -974,6 +982,7 @@ namespace KSA.KSP.Flight
 
         // ------------------------------------------------------------------ KSA-68: AI Director automation
 
+        private float _lastTend = -100f;
         private float _goAt = -1f;
         private float _returnAt = -1f;
 

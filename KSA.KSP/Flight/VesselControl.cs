@@ -641,6 +641,22 @@ namespace KSA.KSP.Flight
             catch { return false; }
         }
 
+        /// <summary>
+        /// Antennas and solar panels out above the air, folded before coming back into it (2026-10-30, T: "I guess my antenna
+        /// cannot be extended to transmit"; nothing ever opened them, and air snaps them off). Parts cannot move on rails.
+        /// </summary>
+        public void TendDeployables(bool outside)
+        {
+            if (_v == null || _v.packed || IsWarping) return;
+            foreach (ModuleDeployablePart d in _v.FindPartModulesImplementing<ModuleDeployablePart>())
+            {
+                if (!(d is ModuleDeployableAntenna) && !(d is ModuleDeployableSolarPanel)) continue;
+                if (!d.retractable) { if (outside && d.deployState == ModuleDeployablePart.DeployState.RETRACTED) d.Extend(); continue; }
+                if (outside && d.deployState == ModuleDeployablePart.DeployState.RETRACTED) d.Extend();
+                else if (!outside && d.deployState == ModuleDeployablePart.DeployState.EXTENDED) d.Retract();
+            }
+        }
+
         /// <summary>Lights the next stage if no engine is ignited (used before a burn after a long coast).</summary>
         public bool EnsureEngine(ref string line)
         {
