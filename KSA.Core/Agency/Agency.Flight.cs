@@ -99,9 +99,12 @@ namespace KSA.Core
         /// KSA-67: with life support a live crew eats real food. The craft must carry food and water for the whole
         /// mission plus a margin, or the flight is simulated. Null when it does (or nothing is known about the craft).
         /// </summary>
+        /// <summary>The flight test bench: fly live whatever the supply sums say. Never saved, never in a normal game.</summary>
+        public bool SkipSupplyPlanning { get; set; }
+
         public string LifeSupportBlocker(Project p, MissionType type)
         {
-            if (!LifeSupportOn || p == null || type == null) return null;
+            if (!LifeSupportOn || p == null || type == null || SkipSupplyPlanning) return null;
             Func<Project, ModuleHardware> check = ModuleHardwareCheck;
             ModuleHardware h = null;
             try { h = check != null ? check(p) : null; }

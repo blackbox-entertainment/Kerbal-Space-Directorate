@@ -60,6 +60,7 @@ namespace KSA.KSP.Testing
             message = Blocker();
             if (message != null) return false;
             Active = true;
+            KsaCore.Agency.SkipSupplyPlanning = true; // the bench tests the flying, not the larder
             Index = Math.Max(0, Math.Min(Ladder.Length - 1, from));
             _projectId = string.Empty;
             Results.Clear();
@@ -73,6 +74,7 @@ namespace KSA.KSP.Testing
         {
             if (!Active) return;
             Active = false;
+            if (KsaCore.Agency != null) KsaCore.Agency.SkipSupplyPlanning = false;
             Write("=== Stopped: " + why + " ===");
             KsaCore.Log.Info("Flight test bench stopped: " + why);
             ScreenMessages.PostScreenMessage("[KSA] Flight tests stopped: " + why, 10f, ScreenMessageStyle.UPPER_CENTER);
@@ -182,11 +184,12 @@ namespace KSA.KSP.Testing
         private static void Finish(Agency agency, Project p, string mission)
         {
             MissionReport r = p.Report;
-            bool pass = p.Status == ProjectStatus.Complete && r != null && (r.IsSuccess || r.Outcome == MissionOutcome.PartialSuccess) && r.Mode == MissionMode.WatchLive && r.Deaths.Count == 0;
+            bool pass = p.Status == ProjectStatus.Complete && r != null && (r.IsSuccess || r.Outcome == MissionOutcome.PartialSuccess) && r.Mode == MissionMode.WatchLive && r.Deaths.Count == 0 && !r.DirectorFlown;
             string detail = r == null ? p.Status + (p.Notes.Count > 0 ? ": " + p.Notes[p.Notes.Count - 1] : string.Empty) : Agency.OutcomeText(r.Outcome) + (r.Mode != MissionMode.WatchLive ? ", flown simulated" : string.Empty)
                 + (r.Deaths.Count > 0 ? ", " + r.Deaths.Count + " died" : string.Empty)
                 + (r.CauseDetail.Length > 0 ? ", cause: " + r.CauseDetail : string.Empty)
                 + (r.Achievements.Count > 0 ? ", earned " + string.Join(" ", r.Achievements.ToArray()) : string.Empty);
+            if (r != null && r.DirectorFlown) detail = "the Director took control, so it does not count; " + detail;
             Record(pass, mission, detail);
             _projectId = string.Empty;
             if (!pass) { Stop(mission + " failed"); return; }

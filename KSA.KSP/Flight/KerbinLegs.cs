@@ -465,12 +465,14 @@ namespace KSA.KSP.Flight
                         // With power, the burn waits for apoapsis, where it costs least and the fall is steepest (2026-10-30, T:
                         // "deorbit burn was a split second"); time warp gets there. Without power, the first moment the nose lines up.
                         double toAp = v.orbit.timeToAp, period = v.orbit.period;
-                        bool atAp = dead || v.orbit.eccentricity < 0.002 || toAp < 20 || toAp > period - 60;
+                        // Warp first, turn after: on rails the attitude freezes while the orbit moves on (2026-10-30: lined up, then
+                        // warped, the nose came out 175 degrees off, too late to turn, and the window closed).
+                        bool atAp = dead || v.orbit.eccentricity < 0.002 || toAp < 30 || toAp > period - 240;
                         if (!atAp)
                         {
-                            Status = "Deorbit: pointing retrograde, waiting for apoapsis in " + Math.Round(toAp) + " s.";
-                            if (toAp > 90 && off < AlignDeg) c.WarpTo(ctx.Now + toAp - 45);
-                            else if (c.IsWarping && toAp < 50) c.StopWarp();
+                            Status = "Deorbit: apoapsis in " + Math.Round(toAp) + " s; turning retrograde shortly before it.";
+                            if (toAp > 200) c.WarpTo(ctx.Now + toAp - 150);
+                            else if (c.IsWarping) c.StopWarp();
                         }
                         // Out of time warp before lining up (so the nose does not sweep past retrograde between frames), and the
                         // engine never lit on rails: a burn "started" in warp gives no thrust (2026-10-30: 76 s passed in warp, then
