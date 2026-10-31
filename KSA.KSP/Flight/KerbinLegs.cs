@@ -219,7 +219,15 @@ namespace KSA.KSP.Flight
             return line;
         }
 
-        public void End(FlightContext ctx) { ctx.Control.Yaw = 0; }
+        public void End(FlightContext ctx)
+        {
+            ctx.Control.Yaw = 0;
+            Vessel v = ctx.Vessel;
+            FellShort = State == LegState.Done && _orbit && v != null && v.orbit != null && v.orbit.PeA < v.mainBody.atmosphereDepth;
+        }
+
+        /// <summary>An ascent for orbit that ended without one: the program goes to reentry, not on to the next burn.</summary>
+        public bool FellShort { get; private set; }
 
         /// <summary>The throttle a swivelling engine is given to steer while the burn waits (2026-10-30).</summary>
         private const float SteerThrottle = 0.1f;

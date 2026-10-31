@@ -526,6 +526,13 @@ namespace KSA.KSP.Flight
             return true;
         }
 
+        private static void EnginesBurning(Part p, List<ModuleEngines> found)
+        {
+            foreach (ModuleEngines e in p.FindModulesImplementing<ModuleEngines>())
+                if (e.EngineIgnited && !e.flameout && e.finalThrust > 0.1f) found.Add(e);
+            foreach (Part c in p.children) EnginesBurning(c, found);
+        }
+
         private static bool BurningBelow(Part p)
         {
             foreach (ModuleEngines e in p.FindModulesImplementing<ModuleEngines>())
@@ -537,6 +544,8 @@ namespace KSA.KSP.Flight
         /// <summary>
         /// Drops the side boosters early when they drag the rocket off course: fires the next stage only when it is radial
         /// decouplers and nothing else (no engines, no stack decouplers, no chutes). True when it staged.
+        /// A burning solid cannot be shut off and flies on up the side of the rocket, so it stays on until it burns out; a
+        /// liquid booster is shut down first (2026-10-30, T: "the side boosters just flew off and exploded everything").
         /// </summary>
         public bool DropSideBoosters(ref string line)
         {
@@ -550,6 +559,11 @@ namespace KSA.KSP.Flight
                 any = true;
             }
             if (!any) return false;
+            var burning = new List<ModuleEngines>();
+            foreach (Part p in _v.parts)
+                if (p.inverseStage == next) foreach (Part c in p.children) EnginesBurning(c, burning);
+            foreach (ModuleEngines e in burning) if (e.throttleLocked) return false;
+            foreach (ModuleEngines e in burning) e.Shutdown();
             Stage();
             line = "Side boosters were pulling the rocket off course: dropped them early.";
             return true;
@@ -651,6 +665,7 @@ namespace KSA.KSP.Flight
             foreach (ModuleDeployablePart d in _v.FindPartModulesImplementing<ModuleDeployablePart>())
             {
                 if (!(d is ModuleDeployableAntenna) && !(d is ModuleDeployableSolarPanel)) continue;
+                if (string.IsNullOrEmpty(d.animationName)) continue; // fixed panels (OX-STAT) have nothing to move: told to, they threw every frame
                 if (!d.retractable) { if (outside && d.deployState == ModuleDeployablePart.DeployState.RETRACTED) d.Extend(); continue; }
                 if (outside && d.deployState == ModuleDeployablePart.DeployState.RETRACTED) d.Extend();
                 else if (!outside && d.deployState == ModuleDeployablePart.DeployState.EXTENDED) d.Retract();

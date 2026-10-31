@@ -191,6 +191,14 @@ namespace KSA.KSP.Flight
             if (l.State == LegState.Done)
             {
                 l.End(_ctx);
+                // Short of orbit there is no transfer to fly (2026-10-30: a broken rocket planned a Mun burn at 8 km): come home.
+                AscentLeg ascent = l as AscentLeg;
+                if (ascent != null && ascent.FellShort)
+                {
+                    SkipTo(x => x is ReentryLeg);
+                    if (!_pendingAdvance) { NoteFailure(l, "no orbit reached"); Failed = true; _ctx.Control.Throttle = 0; _index = _legs.Count; return line; }
+                    line = "No orbit: the flight plan is off, coming home.";
+                }
                 Advance();
                 if (Finished) _ctx.Control.Throttle = 0;
             }

@@ -2,6 +2,12 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.28 (2026-10-31), test build
+
+- **Side boosters stay on while they burn.** The crew's early booster drop fired on solids still burning; they cannot be shut off, so they flew up the side of the rocket and destroyed it. Burning solids now stay on until burnout, and liquid side boosters are shut down before they drop.
+- **Fixed solar panels left alone.** Folding panels for the air also told OX-STATs to retract, which threw an error every frame. Only panels and antennas that move are touched.
+- **No orbit, no Mun.** An ascent that ends short of orbit now goes to reentry instead of on to the transfer burn.
+
 ## 0.8.27 (2026-10-30), test build
 
 - **Flight tests: pick the rocket.** The window lists the save's craft with delta-v and seats. Pick one, then Fly any mission; a rocket that cannot fly it says why.
