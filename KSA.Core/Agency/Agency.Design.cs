@@ -240,7 +240,7 @@ namespace KSA.Core
             // Low tech has one seat per pod: crew cabins make up the rest (Mk1 size, so the stack stays one width).
             if (Parts != null && _seatsAsAsked)
                 foreach (PartInfo part in Parts.All)
-                    if (part.Kind == PartKind.Habitat && part.CrewCapacity > 0 && part.Diameter <= 1.3 && (AllowDlcParts || !part.RequiresDlc) && !req.AllowedParts.Contains(part)) req.AllowedParts.Add(part);
+                    if (part.Kind == PartKind.Habitat && part.CrewCapacity > 0 && part.Diameter <= 1.3 && !part.Name.StartsWith("KKAOSS", StringComparison.Ordinal) && (AllowDlcParts || !part.RequiresDlc) && !req.AllowedParts.Contains(part)) req.AllowedParts.Add(part);
             // A crewed landing flies a launch vehicle, but it has to stand on the ground (2026-10-29: no legs were offered,
             // so no lander could ever be drawn up).
             if (Parts != null && type != null && type.IsLanding && !type.Floating)
