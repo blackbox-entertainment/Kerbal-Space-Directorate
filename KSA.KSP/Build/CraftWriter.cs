@@ -296,9 +296,11 @@ namespace KSA.KSP.Build
                     // Fins go low on the bottom tank, just above the engine, where they keep the rocket nose first (2026-10-29).
                     bool fin = rinfo != null && rinfo.Kind == PartKind.Fin;
                     bool low = rinfo != null && (rinfo.Kind == PartKind.LandingLeg || rinfo.Kind == PartKind.Industry || fin);
-                    Placed groupAnchor = fin && lastTank != null ? lastTank : anchor;
+                    // Legs too: on the top tank they stood metres above the engine bell, and the lander came down on it (2026-10-31).
+                    bool leg = rinfo != null && rinfo.Kind == PartKind.LandingLeg;
+                    Placed groupAnchor = (fin || leg) && lastTank != null ? lastTank : anchor;
                     AttachNode anchorBottom = Node(groupAnchor.Ap, "bottom");
-                    float yOffset = low && anchorBottom != null ? anchorBottom.position.y * 0.8f : 0f;
+                    float yOffset = low && anchorBottom != null ? anchorBottom.position.y * (leg ? 0.95f : 0.8f) : 0f;
                     // 2026-10-30: on a stack of short tanks (FL-T100s) a fin attached on the bottom tank hung below the
                     // stage, round the engine. Now the whole fin sits on the tanks, its lower edge level with the bottom of
                     // the stage: aim its middle half a fin above that and hang it on whichever tank is there.

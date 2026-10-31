@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.44 (2026-10-31), test build
+
+- **Landers stand on their legs.** The engineers put legs on the top tank of the lander stage, metres above the engine. Legs now go low on the bottom tank, and the longest researched legs are used.
+
 ## 0.8.43 (2026-10-31), test build
 
 - **Parking orbits clear the air by 5 km.** The crew now circularises until periapsis reaches 75 km at Kerbin, up from 72 km.
