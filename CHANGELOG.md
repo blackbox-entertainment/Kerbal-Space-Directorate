@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.25 (2026-10-30), test build
+
+- **Reentry from the Mun.** A return with its periapsis at 35.7 km counted as needing a deorbit burn and warped toward an apoapsis six hours away, in the middle of reentry, without dropping the service stage. Any path that meets the air now goes straight to reentry, and the safety net that drops stages covers it too.
+
 ## 0.8.24 (2026-10-30), test build
 
 - **Antennas and panels.** Under the crew, deployable antennas and solar panels now open once above the air and fold away before coming back into it.

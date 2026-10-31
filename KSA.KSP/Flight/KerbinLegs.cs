@@ -438,7 +438,9 @@ namespace KSA.KSP.Flight
             Vessel v = ctx.Vessel;
             double atmo = v.mainBody.atmosphereDepth;
             if (v.situation == Vessel.Situations.LANDED || v.situation == Vessel.Situations.SPLASHED) { _phase = Phases.Landed; State = LegState.Done; return; }
-            bool needsBurn = v.orbit.PeA > _targetPe && v.altitude > atmo;
+            // Only a path that stays out of the air needs a burn (2026-10-30: a return from the Mun with its periapsis at
+            // 35.7 km, in the air but a whisker over the 35 km target, waited for an apoapsis six hours off, warping mid-reentry).
+            bool needsBurn = v.orbit.PeA > Math.Max(_targetPe, atmo) && v.altitude > atmo;
             _phase = needsBurn ? Phases.Deorbit : Phases.Reentry;
             _phaseStart = ctx.Now;
             Status = needsBurn ? "Deorbit burn." : "Reentry.";
@@ -455,6 +457,12 @@ namespace KSA.KSP.Flight
             switch (_phase)
             {
                 case Phases.Deorbit:
+                    if (v.orbit.PeA < atmo || alt < atmo)
+                    {
+                        c.StopWarp(); c.Throttle = 0;
+                        _phase = Phases.Reentry; _phaseStart = ctx.Now; Status = "Reentry.";
+                        break;
+                    }
                     {
                         c.Throttle = 0;
                         if (!_handTurn) c.Sas(VesselAutopilot.AutopilotMode.Retrograde, false);

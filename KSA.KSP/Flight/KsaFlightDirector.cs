@@ -629,7 +629,7 @@ namespace KSA.KSP.Flight
             if (_program != null && !_program.Failed && _program.Current is AscentLeg ascent && ascent.GoingForOrbit && v.altitude > v.mainBody.atmosphereDepth * 0.6) return;
             double atmo = v.mainBody.atmosphereDepth;
             bool falling = v.verticalSpeed < -10;
-            bool comingDown = v.orbit == null || v.orbit.PeA < atmo * 0.5;
+            bool comingDown = v.orbit == null || v.orbit.PeA < atmo * 0.9; // any path that meets the air (0.5 missed a 35.7 km return from the Mun)
             if (!falling || !comingDown || v.altitude > atmo) return;
             // Nothing is burning and the craft falls back on a path that meets the ground: everything under the capsule
             // goes, spent or not, one stage at a time (2026-10-29: a hop came down with its fuelled upper stage still on,
