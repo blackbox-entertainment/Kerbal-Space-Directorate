@@ -2,6 +2,17 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.0 (2026-10-30), release
+
+Everything since 0.7.9, from the test builds 0.7.10 to 0.7.13 below. In short:
+
+- **Deorbit burns point the right way.** The crew holds retrograde through the orbit and the deorbit engine lights only within 15 degrees of retrograde (it had lit after a fixed 5 seconds while facing forward and thrown a capsule into a 1,064 km orbit). The same guard covers Mun and Minmus landings and spaceplanes.
+- **Orbital rescues fly live.** A crew stranded in orbit aboard a real ship is rescued only by a live flight that comes within about 120 m and moves them across; such a rescue never falls back to a simulated dice roll.
+- **Recovered live flights are always scored.** Recovering a ship from flight no longer loses the flight, its firsts and its records.
+- **Records:** farthest from Kerbin is measured from the surface (older saves corrected once).
+- **Every building's limits count.** VAB part limits, Astronaut Complex staff limit and spacewalks, the R&D Science limit, and flight planning for live flights to other worlds (Mission Control and Tracking Station level 2). The AI Director plans its upgrades around them.
+- **Heat shields** are required on your own designs only coming home from another world; from Kerbin orbit they are a suggestion.
+
 ## 0.7.13 (2026-10-30), test build
 
 - **Every building's limits count.** The VAB's part limit (30 at level 1) now holds back missions, projects and your designs like the pad's mass limit. A full Astronaut Complex (5 kerbals at level 1) refuses hires, and the AI Director runs no recruitment drives. Missions that need a spacewalk stay locked until the Astronaut Complex allows them in flight. Research above the R&D building's Science limit (100 at level 1) is refused. Live flights to other worlds need Mission Control and Tracking Station at level 2 (manoeuvre nodes, predicted encounters) and are simulated until then. The AI Director's briefing marks each one, and UPGRADE NEEDED now names the VAB, the Astronaut Complex and R&D when they hold something back.
