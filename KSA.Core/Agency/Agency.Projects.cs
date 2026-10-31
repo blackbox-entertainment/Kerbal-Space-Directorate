@@ -197,6 +197,10 @@ namespace KSA.Core
         {
             MissionType type = Catalogs.Missions.Get(missionTypeId);
             if (type == null) { message = "Unknown mission type."; return null; }
+            // A spacewalk needs the Astronaut Complex whoever built the rocket (2026-10-30: an Orbital spacewalk started with
+            // the Director's own design was flown at level 1, where kerbals may only step out on Kerbin's ground).
+            string eva = EvaBlocker(type);
+            if (eva != null) { message = type.Name + " " + eva + "."; return null; }
             // The Director's own rocket (2026-10-28): it only has to fit the mission, whatever designs exist.
             PlayerDesign mine = null;
             if (!string.IsNullOrEmpty(playerDesign))

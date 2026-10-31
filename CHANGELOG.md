@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.9 (2026-10-30), test build
+
+- **The AI Director keeps money in hand.** With every goal of the year met it spent 225,000 of 238,000 funds upgrading the VAB for next year's missions. Now an upgrade must leave at least a quarter of the yearly grant (or half a year of salaries, if more), and once the year's goals are met it may only spend what was earned above the year's opening balance; otherwise the briefing says the upgrade waits for next year.
+- **No spacewalk without the Astronaut Complex.** A spacewalk mission could be started and flown simulated at Astronaut Complex level 1 when the rocket was your own design (the mission check was skipped for player designs). The building rule now applies whoever built the rocket: in the Projects window, in the pad offer for your own craft, and when a project is started.
+
 ## 0.8.8 (2026-10-30), test build
 
 - **What can this fly?** In the VAB and SPH the KSA toolbar button measures the craft on the floor, saved or not, against every mission: the ones it can fly (hardest first), the near misses with the delta-v each lacks, and why the rest are out of reach.

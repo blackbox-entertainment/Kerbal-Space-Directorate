@@ -315,7 +315,7 @@ namespace KSA.KSP.UI
                 MissionType t = types[i];
                 string tid = t.Id;
                 bool isSel = selected != null && string.Equals(selected.Id, tid, StringComparison.OrdinalIgnoreCase);
-                bool locked = _agency.MissionBlocker(t) != null && _agency.PlayerDesignsFor(t).Count == 0; // one of your designs can open it
+                bool locked = _agency.EvaBlocker(t) != null || (_agency.MissionBlocker(t) != null && _agency.PlayerDesignsFor(t).Count == 0); // one of your designs can open it, but not a building
                 int done = _agency.MissionsCompleted(t.Id);
                 string name = t.IsCustom ? t.Name + " (custom)" : t.Name;
                 string text = locked ? "<color=#888888>" + name + " (research)</color>" : done > 0 ? "<color=#8be28b>" + name + " (done" + (done > 1 ? " x" + done : "") + ")</color>" : name;
@@ -343,6 +343,7 @@ namespace KSA.KSP.UI
             if (pickedMine == null) _selectedPlayerDesign = string.Empty;
             string missionLocked = pickedMine != null ? null : _agency.MissionBlocker(selected);
             if (missionLocked != null && _agency.PlayerDesignsFor(selected).Count > 0) missionLocked = "can only be flown with one of your designs below for now";
+            missionLocked = _agency.EvaBlocker(selected) ?? missionLocked;
             if (missionLocked != null) Line(items, "<color=#ffd27f>Locked: " + selected.Name + " " + missionLocked + ". Put scientists in the lab or fly missions to earn Science, then unlock the parts in R&D.</color>", textWidth);
 
             // Templates.

@@ -385,6 +385,7 @@ namespace KSA.KSP.Flight
             {
                 if (t.ModuleRole.Length > 0 || t.IsRescue || t.IsCustom || t.Floating) continue;
                 if (t.Seats > seats) continue;
+                if (agency.EvaBlocker(t) != null) continue; // no spacewalk missions before the Astronaut Complex allows them (2026-10-30)
                 bool kerbinRocket = string.Equals(t.Body, "Kerbin", StringComparison.OrdinalIgnoreCase) && (t.Profile == MissionProfile.Suborbital || t.Profile == MissionProfile.Orbit);
                 if (plane ? !(t.IsAircraft || kerbinRocket) : t.IsAircraft) continue;
                 if (!t.IsAircraft && agency.Requirements.For(t).DeltaV > dv * 1.1) continue;

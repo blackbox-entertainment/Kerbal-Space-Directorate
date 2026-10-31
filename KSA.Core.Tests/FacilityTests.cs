@@ -39,6 +39,28 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void TheAiDirectorKeepsAReserveAndASpacewalkNeedsTheAstronautComplexWhateverTheRocket()
+        {
+            FakeHost host;
+            Agency a = Make1(out host);
+            host.List.Add(new FacilityOption { Id = "VehicleAssemblyBuilding", Title = "Vehicle Assembly Building", Level = 1, MaxLevel = 3, UpgradeCost = 225000, PartLimit = 30 });
+            host.List.Add(new FacilityOption { Id = "AstronautComplex", Title = "Astronaut Complex", Level = 1, MaxLevel = 3, UpgradeCost = 75000, CrewLimit = 10, NoEva = true });
+            double reserve = a.Settings.BaseGrant * 0.25;
+            Assert.That(reserve, Is.GreaterThan(0));
+            a.Ledger.SetBalance(225000 + reserve - 1); // one fund short of keeping the reserve
+            string msg;
+            Assert.That(a.UpgradeFacility("VehicleAssemblyBuilding", true, out msg), Is.False);
+            Assert.That(msg, Does.Contain("save for it"));
+            Assert.That(a.UpgradeFacility("VehicleAssemblyBuilding", false, out msg), Is.True, "the human Director may still spend it: " + msg);
+
+            // Orbital spacewalk with the Director's own rocket: still refused at level 1.
+            var mine = new PlayerDesign { Name = "Orbiter mk II", CraftPath = "C:/x/VAB/Orbiter mk II.craft", Seats = 1, DeltaV = 4000, LiftoffTwr = 1.6, HasParachute = true, Mass = 10 };
+            a.PlayerDesignSource = () => new List<PlayerDesign> { mine };
+            Assert.That(a.CreateProject("Spacewalk", "OrbitalEva", null, null, null, null, MissionMode.Simulate, out msg, null, mine.Name), Is.Null);
+            Assert.That(msg, Does.Contain("spacewalk"));
+        }
+
+        [Test]
         public void LevelOneBuildingsHoldBackHiringSpacewalksResearchBigRocketsAndFarLiveFlights()
         {
             FakeHost host;

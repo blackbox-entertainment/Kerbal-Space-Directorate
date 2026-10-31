@@ -243,12 +243,15 @@ namespace KSA.Core
             return needs;
         }
 
-        /// <summary>Money the agency should keep after an upgrade: half a year of salaries.</summary>
-        private double UpgradeReserve()
+        /// <summary>
+        /// Money the agency keeps after an upgrade: half a year of salaries, and never less than a quarter of the yearly grant
+        /// (2026-10-30: half a year of four kerbals' salaries let one upgrade leave 13,000 funds).
+        /// </summary>
+        internal double UpgradeReserve()
         {
             double salaries = 0;
             foreach (CrewProfile c in Crew.Active) salaries += c.Salary;
-            return salaries / 2;
+            return Math.Max(salaries / 2, Settings.BaseGrant * 0.25);
         }
 
         /// <summary>True when the building is in the way and paying for it still leaves the reserve.</summary>
@@ -265,7 +268,7 @@ namespace KSA.Core
             if (!State.AiDirector || FacilityHost == null || !FacilityHost.CanUpgradeNow || _upgradeWakeDay == CurrentDay) return;
             foreach (UpgradeNeed n in UpgradeNeeds())
             {
-                if (!UpgradeAffordable(n.Facility)) continue;
+                if (!UpgradeAffordable(n.Facility) || (DirectorConserving() && n.Facility.UpgradeCost > DirectorSpendable())) continue;
                 _upgradeWakeDay = CurrentDay;
                 RequestDirectorTurn("the " + n.Facility.Title + " is holding back " + string.Join(", ", n.Unlocks.ToArray()) + " and the agency can afford the upgrade now");
                 return;

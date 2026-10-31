@@ -568,10 +568,15 @@ namespace KSA.Core
                 if (string.Equals(o.Id, id, StringComparison.OrdinalIgnoreCase) || string.Equals(o.Title, id, StringComparison.OrdinalIgnoreCase)) { f = o; break; }
             if (f == null) { message = "no building called '" + id + "'"; return false; }
             if (!f.CanUpgrade) { message = f.Title + " is already at its top level"; return false; }
-            // An upgrade that frees something held back is an investment, not spending: it is allowed while saving money as
-            // long as the agency keeps its reserve (2026-10-30).
-            bool needed = UpgradeNeeds().Exists(n => string.Equals(n.Facility.Id, f.Id, StringComparison.OrdinalIgnoreCase));
-            if (byAiDirector && !(needed && UpgradeAffordable(f)) && ConserveRefuses(f.UpgradeCost, "upgrading the " + f.Title, out message)) return false;
+            // The AI Director upgrades only what leaves the agency its reserve, and while saving money (every goal of the year
+            // met) only from what it earned above the year's opening balance (2026-10-30: with every goal met it spent 225,000
+            // of 238,000 funds on the VAB for next year's missions and left the agency nearly broke).
+            if (byAiDirector && ConserveRefuses(f.UpgradeCost, "upgrading the " + f.Title, out message)) return false;
+            if (byAiDirector && !UpgradeAffordable(f))
+            {
+                message = "upgrading the " + f.Title + " costs " + Money(f.UpgradeCost) + " and would leave less than the " + Money(UpgradeReserve()) + " the agency keeps in hand; save for it";
+                return false;
+            }
             if (!Ledger.CanAfford(f.UpgradeCost)) { message = "upgrading the " + f.Title + " costs " + Money(f.UpgradeCost) + "; the agency has " + Money(Ledger.Balance); return false; }
             Ledger.Withdraw(f.UpgradeCost, KSA.Core.Finance.LedgerCategory.Facilities, "Upgrade: " + f.Title + " to level " + (f.Level + 1), CurrentDay, CurrentYear);
             string why;
@@ -799,6 +804,7 @@ namespace KSA.Core
                         FacilityOption f = n.Facility;
                         string price = f.CanUpgrade ? Money(f.UpgradeCost) : "price shown at the Space Center";
                         string verdict = !FacilityHost.CanUpgradeNow ? "upgrade it as soon as the Space Center is on screen"
+                            : DirectorConserving() && f.UpgradeCost > DirectorSpendable() ? "WAITS FOR NEXT YEAR: every goal this year is met, so the agency saves its money; pay for it from next year's budget"
                             : UpgradeAffordable(f) ? "AFFORDABLE NOW: upgrade it this turn"
                             : "SAVE FOR IT: you have " + Money(Ledger.Balance) + "; start nothing optional that keeps you from reaching " + Money(f.UpgradeCost + UpgradeReserve());
                         sb.AppendLine("UPGRADE NEEDED: " + f.Id + " to level " + (f.Level + 1) + " (" + price + ") would free " + string.Join(", ", n.Unlocks.ToArray()) + ". " + verdict + ".");
