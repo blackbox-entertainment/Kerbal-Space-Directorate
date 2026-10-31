@@ -199,8 +199,10 @@ namespace KSA.Core
         public static PartJob JobFor(MissionType type)
         {
             if (type == null) return PartJob.LaunchVehicle;
+            if (type.IsAircraft) return PartJob.Plane;
             switch (type.Profile)
             {
+                case MissionProfile.Land: return PartJob.LanderReturn;
                 case MissionProfile.Station: return PartJob.StationModule;
                 case MissionProfile.Base:
                     return string.Equals(type.Body, "Eve", StringComparison.OrdinalIgnoreCase) ? PartJob.CloudCityModule : PartJob.BaseModule;

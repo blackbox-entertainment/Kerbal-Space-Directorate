@@ -161,6 +161,37 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void EachKindOfCraftGetsItsOwnParts()
+        {
+            var parts = new PartCatalog();
+            parts.Add(new PartInfo { Name = "mk1pod.v2", Kind = PartKind.Command, CrewCapacity = 1 });
+            parts.Add(new PartInfo { Name = "Mark2Cockpit", Kind = PartKind.Command, CrewCapacity = 1 });
+            parts.Add(new PartInfo { Name = "landingLeg1", Kind = PartKind.LandingLeg });
+            parts.Add(new PartInfo { Name = "turboJet", Kind = PartKind.Jet });
+            parts.Add(new PartInfo { Name = "liquidEngine", Kind = PartKind.Engine });
+            System.Func<PartJob, string, bool> has = (job, name) => PartFilter.ForJob(parts, job, false).Exists(p => p.Name == name);
+            foreach (PartJob rocket in new[] { PartJob.LaunchVehicle, PartJob.LanderReturn, PartJob.StationModule, PartJob.BaseModule })
+            {
+                Assert.That(has(rocket, "Mark2Cockpit"), Is.False, rocket + ": no plane cockpit");
+                Assert.That(has(rocket, "mk1pod.v2"), Is.True, rocket + ": a crew pod");
+                Assert.That(has(rocket, "liquidEngine"), Is.True, rocket + ": shared parts");
+                Assert.That(has(rocket, "turboJet"), Is.False, rocket + ": no jets");
+            }
+            Assert.That(has(PartJob.Plane, "Mark2Cockpit"), Is.True);
+            Assert.That(has(PartJob.Plane, "turboJet"), Is.True);
+            Assert.That(has(PartJob.LaunchVehicle, "landingLeg1"), Is.False, "no legs on an orbiter");
+            Assert.That(has(PartJob.LanderReturn, "landingLeg1"), Is.True);
+            Assert.That(has(PartJob.BaseModule, "landingLeg1"), Is.True);
+            MissionCatalog missions = ShippedConfigs.Missions();
+            Assert.That(Agency.JobFor(missions.Get("KerbinOrbit")), Is.EqualTo(PartJob.LaunchVehicle));
+            Assert.That(Agency.JobFor(missions.Get("MunFlyby")), Is.EqualTo(PartJob.LaunchVehicle));
+            Assert.That(Agency.JobFor(missions.Get("MunLanding")), Is.EqualTo(PartJob.LanderReturn));
+            Assert.That(Agency.JobFor(missions.Get("StationCoreKerbin")), Is.EqualTo(PartJob.StationModule));
+            Assert.That(Agency.JobFor(missions.Get("MunBaseModule")), Is.EqualTo(PartJob.BaseModule));
+            Assert.That(Agency.JobFor(missions.Get("FirstFlightKerbin")), Is.EqualTo(PartJob.Plane));
+        }
+
+        [Test]
         public void ARocketHasACapsuleAndDecouplersThatFit()
         {
             Agency a = Make.Agency(new FakeClock(), new ListLogger());

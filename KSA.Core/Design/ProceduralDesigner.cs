@@ -21,8 +21,7 @@ namespace KSA.Core.Design
         /// </summary>
         public const int Revision = 2; // 2: upper stages that light in the air carry fins; real capsules; decouplers that fit
 
-        /// <summary>A plane's cockpit (Mk1 Inline, Mk2, Mk3): no place for a rocket crew; T: "looks like one for a jet fighter".</summary>
-        private static bool IsPlaneCockpit(PartInfo p) { return p.Name.IndexOf("cockpit", StringComparison.OrdinalIgnoreCase) >= 0; }
+        private static bool IsPlaneCockpit(PartInfo p) { return PartFilter.IsPlaneCockpit(p); }
 
         private const double G0 = 9.80665;
         private const int MaxTanks = 8;

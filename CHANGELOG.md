@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.13 (2026-10-30), test build
+
+- **Parts by job.** Designs now draw from five categories: flybys and orbits, landers and returns, station building, base building (cloud cities keep their own list), and planes. Parts can belong to several. A plane's cockpit belongs only to planes; jets and wings stay out of rockets; landing legs go to landers and bases.
+
 ## 0.8.12 (2026-10-30), test build
 
 - **Upper stages stay straight.** The first bench flight tracked its turn perfectly, then its finless second stage tumbled 1.5 s after separating at 17.5 km. An upper stage now gets fins unless the launch stage has 2,800 m/s at sea level (was 1,500), and in the air the next engine lights 0.3 s after separation instead of 1.5 s. Unflown engineers' rockets are redrawn (design rules revision 2).

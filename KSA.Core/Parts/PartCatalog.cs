@@ -17,7 +17,12 @@ namespace KSA.Core.Parts
         Wing
     }
 
-    public enum PartJob { LaunchVehicle = 0, StationModule = 1, BaseModule = 2, CloudCityModule = 3 }
+    /// <summary>
+    /// What a craft is for, and so which parts it may use (2026-10-30, T: categorise the parts into flybys and orbits, landers
+    /// and returns, orbit station building, landing and base building, and planes; some parts belong to several).
+    /// LaunchVehicle is the flyby and orbit category. Appended so saved values stay put.
+    /// </summary>
+    public enum PartJob { LaunchVehicle = 0, StationModule = 1, BaseModule = 2, CloudCityModule = 3, LanderReturn = 4, Plane = 5 }
 
     /// <summary>What the design pipeline needs to know about a part. Generic names; the host fills it from the game.</summary>
     public sealed class PartInfo
@@ -94,12 +99,26 @@ namespace KSA.Core.Parts
                 case PartJob.BaseModule:
                     return new[] { PartKind.Command, PartKind.Habitat, PartKind.Power, PartKind.LandingLeg, PartKind.Wheel, PartKind.LifeSupport, PartKind.Industry, PartKind.Science, PartKind.Structural, PartKind.Docking,
                                    PartKind.Tank, PartKind.Engine, PartKind.Decoupler, PartKind.Booster, PartKind.Fairing, PartKind.Antenna, PartKind.Fin };
+                case PartJob.LanderReturn:
+                    return new[] { PartKind.Command, PartKind.Tank, PartKind.Engine, PartKind.Booster, PartKind.Decoupler, PartKind.Parachute, PartKind.HeatShield, PartKind.Fairing, PartKind.Structural, PartKind.Antenna, PartKind.Power, PartKind.Fin,
+                                   PartKind.LandingLeg, PartKind.Docking, PartKind.Rcs };
+                case PartJob.Plane:
+                    return new[] { PartKind.Command, PartKind.Jet, PartKind.Wing, PartKind.Fin, PartKind.Wheel, PartKind.Tank, PartKind.Engine, PartKind.Parachute, PartKind.Antenna, PartKind.Power, PartKind.Science, PartKind.Structural, PartKind.HeatShield };
                 case PartJob.CloudCityModule:
                     return new[] { PartKind.Envelope, PartKind.Command, PartKind.Habitat, PartKind.Power, PartKind.LifeSupport, PartKind.Structural, PartKind.Docking,
                                    PartKind.Tank, PartKind.Engine, PartKind.Decoupler, PartKind.Booster, PartKind.Fairing, PartKind.HeatShield, PartKind.Fin };
                 default:
                     return new[] { PartKind.Command, PartKind.Tank, PartKind.Engine, PartKind.Booster, PartKind.Decoupler, PartKind.Parachute, PartKind.HeatShield, PartKind.Fairing, PartKind.Structural, PartKind.Antenna, PartKind.Power, PartKind.Fin };
             }
+        }
+
+        /// <summary>A plane's cockpit (Mk1 Inline, Mk2, Mk3): T: "the capsule looks like one for a jet fighter".</summary>
+        public static bool IsPlaneCockpit(PartInfo p) { return p != null && p.Name.IndexOf("cockpit", StringComparison.OrdinalIgnoreCase) >= 0; }
+
+        /// <summary>The rules a part kind alone cannot say: a plane's cockpit belongs to planes and nothing else.</summary>
+        public static bool Suits(PartJob job, PartInfo p)
+        {
+            return !IsPlaneCockpit(p) || job == PartJob.Plane;
         }
 
         /// <summary>Parts for the job: allowed kinds only, DLC parts only if allowed, at most <paramref name="maxPerKind"/> of each kind (cheapest first).</summary>
@@ -113,7 +132,7 @@ namespace KSA.Core.Parts
                 var ofKind = new List<PartInfo>();
                 foreach (PartInfo p in catalog.All)
                 {
-                    if (p.Kind != kind) continue;
+                    if (p.Kind != kind || !Suits(job, p)) continue;
                     if (p.RequiresDlc && !allowDlc) continue;
                     ofKind.Add(p);
                 }
