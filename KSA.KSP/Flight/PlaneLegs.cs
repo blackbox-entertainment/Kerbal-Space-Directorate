@@ -199,6 +199,7 @@ namespace KSA.KSP.Flight
                 case Phases.Deorbit:
                     c.Sas(VesselAutopilot.AutopilotMode.Retrograde, false);
                     if (c.AttitudeError(-v.obt_velocity) < 10) { c.EnsureEngine(ref line); c.Throttle = 1f; }
+                    else if (c.AttitudeError(-v.obt_velocity) > 30) c.Throttle = 0; // never burn far off retrograde (2026-10-30)
                     if (v.orbit.PeA < _targetPe || c.NoThrustAvailable()) { c.Throttle = 0; _phase = Phases.Reentry; line = "Deorbit complete; periapsis " + Math.Round(v.orbit.PeA / 1000) + " km."; }
                     break;
                 case Phases.Reentry:

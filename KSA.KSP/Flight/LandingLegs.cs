@@ -148,7 +148,8 @@ namespace KSA.KSP.Flight
                         c.Sas(VesselAutopilot.AutopilotMode.Retrograde, false);
                         Status = "Aligning retrograde for deorbit.";
                         if (warping) { c.StopWarp(); break; }
-                        if (ctx.Now - _phaseStart > 5)
+                        // Only once the nose is on retrograde: a burn the wrong way raises the orbit (2026-10-30, Kerbin orbit).
+                        if (ctx.Now - _phaseStart > 5 && c.AttitudeError(-v.obt_velocity) < 15)
                         {
                             c.EnsureEngine(ref line);
                             c.Throttle = 1f;

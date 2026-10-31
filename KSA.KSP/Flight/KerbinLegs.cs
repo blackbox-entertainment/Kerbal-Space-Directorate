@@ -333,6 +333,7 @@ namespace KSA.KSP.Flight
         private readonly double _seconds;
         private double _until;
         private readonly int _orbits;
+
         public HoldOrbitLeg(double seconds) { _seconds = seconds; }
         /// <summary>Hold for a whole number of orbits (the period is read when the leg begins).</summary>
         public HoldOrbitLeg(int orbits) { _orbits = Math.Max(1, orbits); }
@@ -355,12 +356,15 @@ namespace KSA.KSP.Flight
             if (_orbits > 0 && ctx.Vessel != null && ctx.Vessel.orbit != null && ctx.Vessel.orbit.period > 0 && !double.IsInfinity(ctx.Vessel.orbit.period)) { seconds = ctx.Vessel.orbit.period * _orbits; ctx.Say("Holding for " + _orbits + " orbit" + (_orbits == 1 ? "" : "s") + " (" + Math.Round(seconds / 60) + " min)."); }
             _until = ctx.Now + seconds;
             ctx.Control.Throttle = 0;
-            ctx.Control.Sas(VesselAutopilot.AutopilotMode.Prograde, false);
+            // Face retrograde for the whole hold, so the deorbit burn needs no turn later (2026-10-30: Valentina held prograde,
+            // the deorbit burn lit after a fixed 5 s while she still pointed forward, and it raised her apoapsis to 1,064 km).
+            ctx.Control.Sas(VesselAutopilot.AutopilotMode.Retrograde, false);
         }
 
         public string Step(FlightContext ctx)
         {
             if (ctx.Now >= _until) { State = LegState.Done; return null; }
+
             Status = "In orbit, " + Math.Round(_until - ctx.Now) + " s to go.";
             if (_until - ctx.Now > 60) ctx.Control.WarpTo(_until - 20);
             return null;
@@ -392,6 +396,8 @@ namespace KSA.KSP.Flight
         private double _lastShed;
         private double _lastAttitudeLog = -1;
 
+        private bool _waitSaid;
+        private const double AlignDeg = 15, AbortDeg = 30;
         public ReentryLeg(double targetPeriapsis) { _targetPe = targetPeriapsis; }
         public string Name { get { return "Reentry"; } }
         public string Status { get; private set; }
@@ -420,22 +426,55 @@ namespace KSA.KSP.Flight
             switch (_phase)
             {
                 case Phases.Deorbit:
-                    c.Sas(VesselAutopilot.AutopilotMode.Retrograde, false);
-                    if (ctx.Now - _phaseStart > 5)
                     {
-                        c.EnsureEngine(ref line);
-                        c.Throttle = 1f;
-                        _phase = Phases.Burn; _phaseStart = ctx.Now;
-                        line = line ?? "Deorbit burn started.";
+                        c.Throttle = 0;
+                        c.Sas(VesselAutopilot.AutopilotMode.Retrograde, false);
+                        // Never light the engine until the nose is on retrograde: a burn the wrong way throws the craft into a
+                        // higher orbit (2026-10-30). A craft that cannot turn (flat battery) waits in its safe orbit instead.
+                        double off = c.AttitudeError(-v.obt_velocity);
+                        double charge = VesselControl.ChargeFraction(v);
+                        Status = "Deorbit: turning retrograde, " + Math.Round(off) + " deg to go" + (charge >= 0 && charge < 0.02 ? " (charge reads empty)" : string.Empty) + ".";
+                        if (ctx.Now - _phaseStart > 5 && off < AlignDeg)
+                        {
+                            c.EnsureEngine(ref line);
+                            c.Throttle = 1f;
+                            _phase = Phases.Burn; _phaseStart = ctx.Now;
+                            line = line ?? "Deorbit burn started.";
+                        }
+                        else if (ctx.Now - _lastAttitudeLog > 30)
+                        {
+                            _lastAttitudeLog = ctx.Now;
+                            KsaCore.Log.Info("Deorbit waiting: " + Math.Round(off) + " deg off retrograde" + ChargeLog.Note(v));
+                            if (ctx.Now - _phaseStart > 120 && !_waitSaid)
+                            {
+                                _waitSaid = true;
+                                line = "Cannot turn retrograde for the deorbit burn (" + Math.Round(off) + " deg off" + ChargeLog.Note(v) + "); holding the engine until the craft points the right way.";
+                            }
+                        }
                     }
                     break;
                 case Phases.Burn:
                     c.AutoStage(ref line);
-                    if (v.orbit.PeA < _targetPe || c.NoThrustAvailable())
+                    c.Sas(VesselAutopilot.AutopilotMode.Retrograde, false);
+                    if (v.orbit.PeA < _targetPe)
                     {
                         c.Throttle = 0;
                         _phase = Phases.Reentry; _phaseStart = ctx.Now; Status = "Reentry.";
                         line = "Deorbit complete; periapsis " + Math.Round(v.orbit.PeA / 1000) + " km.";
+                    }
+                    else if (c.NoThrustAvailable())
+                    {
+                        c.Throttle = 0;
+                        _phase = Phases.Reentry; _phaseStart = ctx.Now; Status = "Reentry.";
+                        line = "Propellant exhausted during the deorbit burn; periapsis still " + Math.Round(v.orbit.PeA / 1000) + " km.";
+                        if (v.orbit.PeA > atmo) ctx.Cause(KSA.Core.Flight.FailureCause.OutOfFuel, line);
+                    }
+                    else if (c.AttitudeError(-v.obt_velocity) > AbortDeg)
+                    {
+                        // Drifted off retrograde: stop burning and turn back before going on.
+                        c.Throttle = 0;
+                        _phase = Phases.Deorbit; _phaseStart = ctx.Now - 5;
+                        line = "Deorbit burn paused: the nose drifted off retrograde.";
                     }
                     break;
                 case Phases.Reentry:

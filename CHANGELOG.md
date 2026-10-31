@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.7.10 (2026-10-30), test build
+
+- **Deorbit burns point the right way.** The deorbit burn lit after a fixed 5 seconds wherever the nose pointed. Valentina was still facing prograde after her orbit, so the burn raised her apoapsis from 96 km to 1,064 km and emptied the tank. Now the crew holds retrograde through the whole orbit, the engine lights only within 15 degrees of retrograde, and the burn pauses if the nose drifts more than 30 degrees off. The same check now guards the deorbit before a Mun or Minmus landing and a spaceplane's deorbit.
+- **An honest report.** A deorbit burn that runs out of propellant with the periapsis still above the air says so (and the next design gets more fuel) instead of "Deorbit complete".
+
 ## 0.7.9 (2026-10-30), release
 
 Everything since 0.7.5, from the test builds 0.7.6 to 0.7.8 below. In short:
