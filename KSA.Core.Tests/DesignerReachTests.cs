@@ -198,6 +198,17 @@ namespace KSA.Core.Tests
                 Assert.That(has(rocket, "liquidEngine"), Is.True, rocket + ": shared parts");
                 Assert.That(has(rocket, "turboJet"), Is.False, rocket + ": no jets");
             }
+            parts.Add(new PartInfo { Name = "cupola", Kind = PartKind.Command, CrewCapacity = 1 });
+            parts.Add(new PartInfo { Name = "landerCabinSmall", Kind = PartKind.Command, CrewCapacity = 1 });
+            parts.Add(new PartInfo { Name = "KKAOSS.Control.g", Kind = PartKind.Command, CrewCapacity = 2 });
+            foreach (PartJob rocket in new[] { PartJob.LaunchVehicle, PartJob.LanderReturn })
+            {
+                Assert.That(has(rocket, "cupola"), Is.False, rocket + ": a dome is no capsule");
+                Assert.That(has(rocket, "landerCabinSmall"), Is.False, rocket + ": a lander can does not come home through the air");
+                Assert.That(has(rocket, "KKAOSS.Control.g"), Is.False, rocket + ": base parts are for bases");
+            }
+            Assert.That(has(PartJob.StationModule, "cupola"), Is.True);
+            Assert.That(has(PartJob.BaseModule, "KKAOSS.Control.g"), Is.True);
             Assert.That(has(PartJob.Plane, "Mark2Cockpit"), Is.True);
             Assert.That(has(PartJob.Plane, "turboJet"), Is.True);
             Assert.That(has(PartJob.LaunchVehicle, "landingLeg1"), Is.False, "no legs on an orbiter");

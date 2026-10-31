@@ -19,7 +19,7 @@ namespace KSA.Core.Design
         /// Raise this whenever the rules the engineers design by change (fins, engines, parachutes, margins): designs drawn
         /// up by an older revision that have not flown yet are drawn again on load (2026-10-30). 1 = 0.6.9.
         /// </summary>
-        public const int Revision = 2; // 2: upper stages that light in the air carry fins; real capsules; decouplers that fit
+        public const int Revision = 3; // 3: return capsules, at most four side boosters unless nothing else flies; 2: upper stages that light in the air carry fins; real capsules; decouplers that fit
 
         private static bool IsPlaneCockpit(PartInfo p) { return PartFilter.IsPlaneCockpit(p); }
 
@@ -396,7 +396,7 @@ namespace KSA.Core.Design
                         list.Add(o);
                         if (solids && sideBoosters)
                             foreach (PartInfo b in boosters)
-                                foreach (int nb in SideCounts) { var ob = new Option { Engine = e, Tank = t, Tanks = c, Booster = b, Boosters = nb, Awkward = awkward, Fixed = fixedEngine }; Sum(ob); list.Add(ob); }
+                                foreach (int nb in SideCounts) { var ob = new Option { Engine = e, Tank = t, Tanks = c, Booster = b, Boosters = nb, Awkward = awkward || nb > 4, Fixed = fixedEngine }; Sum(ob); list.Add(ob); }
                     }
                 }
             // A solid booster alone makes a stage too (stacked, if it can be).

@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.15 (2026-10-30), test build
+
+- **Real capsules only.** The engineers put a crew in a Cupola with a 2.5 m heat shield under it. Flybys, orbits and landings now use a capsule that comes home through the air: no cockpits, Cupolas or lander cans. Kerbal Planetary Base Systems parts are for bases only. More than four side boosters is a last resort.
+
 ## 0.8.14 (2026-10-30), test build
 
 - **Only parts that stack.** The engineers chose a Kerbal Planetary Base Systems container tank, which has one attach node, and the rocket could not be assembled. Rocket tanks and stack decouplers now need nodes at both ends and engines a top node.

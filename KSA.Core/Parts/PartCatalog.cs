@@ -115,10 +115,21 @@ namespace KSA.Core.Parts
         /// <summary>A plane's cockpit (Mk1 Inline, Mk2, Mk3): T: "the capsule looks like one for a jet fighter".</summary>
         public static bool IsPlaneCockpit(PartInfo p) { return p != null && p.Name.IndexOf("cockpit", StringComparison.OrdinalIgnoreCase) >= 0; }
 
+        /// <summary>False for crew parts that are no capsule to ride home in: cockpits, the Cupola, lander cans.</summary>
+        public static bool IsReturnCapsule(PartInfo p)
+        {
+            if (p == null || IsPlaneCockpit(p)) return false;
+            return p.Name.IndexOf("cupola", StringComparison.OrdinalIgnoreCase) < 0 && p.Name.IndexOf("lander", StringComparison.OrdinalIgnoreCase) < 0;
+        }
+
         /// <summary>The rules a part kind alone cannot say: a plane's cockpit belongs to planes and nothing else.</summary>
         public static bool Suits(PartJob job, PartInfo p)
         {
             if (IsPlaneCockpit(p) && job != PartJob.Plane) return false;
+            // Kerbal Planetary Base Systems parts are for bases (its one-node tanks and dome-like hubs on a rocket, 2026-10-30).
+            if (p != null && p.Name.StartsWith("KKAOSS", StringComparison.OrdinalIgnoreCase) && job != PartJob.BaseModule) return false;
+            // A rocket's crew rides a capsule that comes home through the air (T: "what in the hell is this thing": a Cupola).
+            if ((job == PartJob.LaunchVehicle || job == PartJob.LanderReturn) && p != null && p.Kind == PartKind.Command && p.CrewCapacity > 0 && !IsReturnCapsule(p)) return false;
             // A stack tank attaches at both ends: Kerbal Planetary Base Systems container tanks have one node and cannot be stacked (2026-10-30).
             if (p != null && p.Kind == PartKind.Tank && p.FuelMass > 0 && !(p.HasTopNode && p.HasBottomNode)) return false;
             return true;
