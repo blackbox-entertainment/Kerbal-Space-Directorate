@@ -145,6 +145,7 @@ GameData/KSA/
 | AI models | Curated per-task list in AI Setup: cheapest-that-works default plus a few flagships, player-selectable; IDs live in a ModuleManager config, benchmarked in M4. |
 | Eve and Jool cloud cities | HL Airships Core (M3). Angel-125 Airships stays compatible. Jool cloud city added 2026-10-27 (Late tier, 4-star crew, simulated only). |
 | Live flight | Built-in flight director flies Kerbin suborbital/orbital missions live (M5); other profiles simulate until a MechJeb bridge exists. MechJeb is optional, not required. Decided 2026-10-26. |
+| Flight test bench | Built 2026-10-30 (0.8.11, T: "the kerbals have to be able to fly to any planet and eventually land on them and return. that is mvp mod"): KSA.KSP/Testing/FlightTestBench + FlightTestWindow, Office button, sandbox saves only, AI Director off. Ladder of live missions, stops at the first failure, neutral crew and no AskCrew (repeatable), funds topped up, design and build skipped, report in PluginData/FlightTests/flight-tests.txt. Priority: pass the ladder before new features. |
 | Narrative | Local model only (never cloud budget); canned text first, AI rewrite in place. Post-mortems may use the cloud. Decided 2026-10-26. |
 | Courage/Stupidity drift | Planned: slow drift with missions (stupidity down, courage up on success, down on deaths/idle). Not built yet. |
 | Interviews | Paid: 200 funds first round, +100 each further round (agency.cfg). Senior panel reveals two facts per round. Blind hiring allowed. Decided 2026-10-27. |

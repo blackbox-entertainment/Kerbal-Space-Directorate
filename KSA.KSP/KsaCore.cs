@@ -266,6 +266,7 @@ namespace KSA.KSP
             if (!_reassembled) { _reassembled = true; CraftWriter.ReassembleStale(Agency); }
             int wait = Agency.Settings.AutoRolloutSeconds;
             if (wait <= 0 && Agency.DirectorOn) wait = 20; // KSA-68: the AI Director needs its flights to roll out
+            if (Testing.FlightTestBench.Active) wait = 3; // the flight test bench (2026-10-30)
             double now = UnityEngine.Time.realtimeSinceStartup;
             foreach (Project p in Agency.Projects)
             {

@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.11 (2026-10-30), test build
+
+- **Flight test bench.** In a Sandbox save the Director's Office has a Flight tests button. It flies a ladder of missions live with no one at the controls (Kerbin orbit, Mun flyby, Mun orbit, Mun landing, Minmus orbit, Minmus landing, Duna flyby, Duna orbit, Duna landing): the engineers design each rocket, the crew flies it with no pilot mistakes, and it stops at the first failure. Results go to GameData/KSA/PluginData/FlightTests/flight-tests.txt.
+
 ## 0.8.10 (2026-10-30), test build
 
 - **No more westward launches.** During the vertical climb the crew left the stock SAS hold in charge, which keeps whatever attitude the rocket drifts to. Orbiter mk III leaned west 3 degrees by 500 m, the gravity turn then followed its path, and gravity bent it on over the top: it flew west, against Kerbin's spin, burning about 350 m/s more than it should. The crew now steers to 88 degrees east from just off the pad.

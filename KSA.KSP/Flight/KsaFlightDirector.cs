@@ -20,6 +20,11 @@ namespace KSA.KSP.Flight
     {
         public static KsaFlightDirector Instance { get; private set; }
 
+        /// <summary>Why the flight program stopped, or null while it runs (the flight test bench reads it).</summary>
+        public string HaltReason { get { return _program != null && _program.Failed ? _program.Status : null; } }
+        /// <summary>The leg flying now, for the test report.</summary>
+        public string LegName { get { return _program != null ? _program.Phase : "none"; } }
+
         /// <summary>Static so it survives scene changes; cleared when the project resolves.</summary>
         public static LiveFlightState Live { get; private set; }
 
@@ -499,11 +504,12 @@ namespace KSA.KSP.Flight
                 TargetOrbitAltitude = Live.BodyOrbit,
                 ReentryPeriapsis = Live.ReentryPe,
                 MaxSiteSlope = Live.MaxSlope,
-                Crew = agency.FlightProfileFor(project.Id) ?? KSA.Core.Flight.CrewFlightProfile.Neutral(),
+                // The flight test bench flies a steady crew: no pilot mistakes, the same every run.
+                Crew = Testing.FlightTestBench.Active ? KSA.Core.Flight.CrewFlightProfile.Neutral() : agency.FlightProfileFor(project.Id) ?? KSA.Core.Flight.CrewFlightProfile.Neutral(),
                 Rng = new System.Random((int)(Live.LaunchUT * 7919) ^ (int)Live.VesselId)
             };
             string pid = project.Id;
-            _ctx.AskCrew = (req, cb) => agency.AskCrew(pid, req, cb);
+            _ctx.AskCrew = Testing.FlightTestBench.Active ? null : (Action<KSA.Core.Flight.DecisionRequest, Action<KSA.Core.Flight.CrewDecision>>)((req, cb) => agency.AskCrew(pid, req, cb));
             _ctx.IsPlane = Live.IsPlane;
             _ctx.NoteCause = NoteCause;
             _ctx.TryOrbit = !Live.IsPlane && agency.TriesForOrbit(project);
@@ -976,7 +982,7 @@ namespace KSA.KSP.Flight
         private void DirectorAutomation()
         {
             Agency agency = KsaCore.Agency;
-            if (agency == null || !agency.DirectorOn) { _goAt = -1f; _returnAt = -1f; return; }
+            if (agency == null || !(agency.DirectorOn || Testing.FlightTestBench.Active)) { _goAt = -1f; _returnAt = -1f; return; }
             float now = UnityEngine.Time.realtimeSinceStartup;
             if (_holdForLaunch && Live != null)
             {
@@ -995,7 +1001,7 @@ namespace KSA.KSP.Flight
 
         private static void ScheduleReturn()
         {
-            if (Instance == null || KsaCore.Agency == null || !KsaCore.Agency.DirectorOn) return;
+            if (Instance == null || KsaCore.Agency == null || !(KsaCore.Agency.DirectorOn || Testing.FlightTestBench.Active)) return;
             Instance._returnAt = UnityEngine.Time.realtimeSinceStartup + Math.Max(3, KsaCore.Agency.Settings.Director.ReturnSeconds);
             ScreenMessages.PostScreenMessage("[KSA] AI Director: back to the Space Center in " + KsaCore.Agency.Settings.Director.ReturnSeconds + " s.", 6f, ScreenMessageStyle.UPPER_CENTER);
         }
