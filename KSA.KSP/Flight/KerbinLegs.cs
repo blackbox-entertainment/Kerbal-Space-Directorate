@@ -171,6 +171,7 @@ namespace KSA.KSP.Flight
                     }
                     break;
                 case Phases.Circularize:
+                    if (c.OutOfDeltaV()) { c.Throttle = 0; line = "No fuel left to circularise."; State = LegState.Done; break; }
                     if (c.IsWarping) { c.StopWarp(); c.Throttle = 0; Status = "Circularising: coming out of time warp."; break; }
                     if (!c.ManualAttitude) c.PointAlong(() => Horizontal(v));
                     LogAttitude(ctx, "circularise");
