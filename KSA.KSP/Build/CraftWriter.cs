@@ -522,8 +522,8 @@ namespace KSA.KSP.Build
             sb.AppendLine("\tattRot0 = " + Q(p.Rot));
             sb.AppendLine("\tmir = 1,1,1");
             sb.AppendLine("\tsymMethod = Radial");
-            sb.AppendLine("\tautostrutMode = Off");
-            sb.AppendLine("\trigidAttachment = False");
+            sb.AppendLine("\tautostrutMode = Heaviest"); // stiff joints: tall stacks bend, then flip (2026-10-31, T)
+            sb.AppendLine("\trigidAttachment = True");
             sb.AppendLine("\tistg = " + p.Stage);
             sb.AppendLine("\tresPri = 0");
             sb.AppendLine("\tdstg = 0");

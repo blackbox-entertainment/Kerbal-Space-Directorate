@@ -19,7 +19,7 @@ namespace KSA.Core.Design
         /// Raise this whenever the rules the engineers design by change (fins, engines, parachutes, margins): designs drawn
         /// up by an older revision that have not flown yet are drawn again on load (2026-10-30). 1 = 0.6.9.
         /// </summary>
-        public const int Revision = 5; // 5: landers seat three when they can; 4: the earliest parts that do the job; 3: return capsules, at most four side boosters unless nothing else flies; 2: upper stages that light in the air carry fins; real capsules; decouplers that fit
+        public const int Revision = 6; // 6: shorter stacks; 5: landers seat three when they can; 4: the earliest parts that do the job; 3: return capsules, at most four side boosters unless nothing else flies; 2: upper stages that light in the air carry fins; real capsules; decouplers that fit
 
         private static bool IsPlaneCockpit(PartInfo p) { return PartFilter.IsPlaneCockpit(p); }
 
@@ -29,7 +29,7 @@ namespace KSA.Core.Design
         private const double G0 = 9.80665;
         private const int MaxTanks = 8;
         private const int MaxStages = 8;
-        private const double MaxSlenderness = 10;
+        private const double MaxSlenderness = 6; // per stage: two stages stacked stay near 12 to 1, about Orbiter mk III (2026-10-31, T: tall rockets flip over)
         private static readonly int[] SideCounts = { 2, 3, 4, 6, 8 };
 
         private sealed class Option

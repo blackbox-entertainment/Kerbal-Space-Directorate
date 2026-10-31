@@ -20,7 +20,7 @@ namespace KSA.Core.Tests
             {
                 message = Refuse ? "not at the Space Center" : string.Empty;
                 if (Refuse) return false;
-                foreach (FacilityOption f in List) if (f.Id == id) { f.Level++; f.MassLimit *= 5; }
+                foreach (FacilityOption f in List) if (f.Id == id) { f.Level++; f.MassLimit *= 8; }
                 return true;
             }
         }
@@ -139,7 +139,7 @@ namespace KSA.Core.Tests
             Assert.That(a.UpgradeNeeds().Exists(n => n.Facility.Id == "LaunchPad" && n.Unlocks.Exists(u => u.StartsWith("Mun landing"))), Is.True);
             string msg;
             Assert.That(a.UpgradeFacility("LaunchPad", true, out msg), Is.True, msg);
-            Assert.That(a.MissionBlocker(mun), Is.Null, "a 90 t pad takes it");
+            Assert.That(a.MissionBlocker(mun), Is.Null, "the bigger pad takes it");
         }
 
         [Test]
