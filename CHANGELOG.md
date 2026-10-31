@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.22 (2026-10-30), test build
+
+- **Kerbin orbit passes on the bench,** Orbiter mk I from pad to landing, deorbit included.
+- **Flight tests:** a Next rung button. The "cannot turn retrograde" message no longer appears while the crew is only waiting for apoapsis.
+
 ## 0.8.21 (2026-10-30), test build
 
 - **Handing back on the way down.** A flight that has been to orbit and is coming down now resumes at reentry, where time warp works. It had restarted the ascent, which tried to circularise a capsule with no fuel and held warp at 1x. Circularising also gives up when there is no fuel left.

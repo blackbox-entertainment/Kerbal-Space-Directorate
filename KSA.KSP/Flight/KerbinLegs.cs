@@ -504,7 +504,7 @@ namespace KSA.KSP.Flight
                         {
                             _lastAttitudeLog = ctx.Now;
                             KsaCore.Log.Info("Deorbit waiting: " + Math.Round(off) + " deg off retrograde" + ChargeLog.Note(v));
-                            if (ctx.Now - _phaseStart > 120 && !_waitSaid)
+                            if (atAp && off >= AlignDeg && ctx.Now - _phaseStart > 120 && !_waitSaid)
                             {
                                 _waitSaid = true;
                                 line = "Cannot turn retrograde for the deorbit burn (" + Math.Round(off) + " deg off" + ChargeLog.Note(v) + "); holding the engine until the craft points the right way.";

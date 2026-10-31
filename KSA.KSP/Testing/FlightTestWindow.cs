@@ -49,10 +49,11 @@ namespace KSA.KSP.Testing
             var list = new DialogGUIScrollList(new Vector2(Width - 30f, 360f), false, true,
                 new DialogGUIVerticalLayout(false, false, 3f, new RectOffset(6, 6, 6, 6), TextAnchor.UpperLeft, KsaUi.Scrollable(items)));
             var buttons = new DialogGUIHorizontalLayout(true, false, 4f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
-                new DialogGUIButton("Start from the first", () => { string m; FlightTestBench.Start(0, out m); ScreenMessages.PostScreenMessage("[KSA] " + m, 8f, ScreenMessageStyle.UPPER_CENTER); Refresh(); }, 170f, 30f, false),
+                new DialogGUIButton("Start from the first", () => { string m; FlightTestBench.Start(0, out m); ScreenMessages.PostScreenMessage("[KSA] " + m, 8f, ScreenMessageStyle.UPPER_CENTER); Refresh(); }, 150f, 30f, false),
                 new DialogGUIButton("Resume", () => { string m; FlightTestBench.Start(FlightTestBench.Index, out m); ScreenMessages.PostScreenMessage("[KSA] " + m, 8f, ScreenMessageStyle.UPPER_CENTER); Refresh(); }, 90f, 30f, false),
-                new DialogGUIButton("Stop", () => { FlightTestBench.Stop("stopped by the Director"); Refresh(); }, 80f, 30f, false),
-                new DialogGUIButton("Refresh", Refresh, 90f, 30f, false),
+                new DialogGUIButton("Next rung", () => { string m; FlightTestBench.Start(FlightTestBench.Index + 1, out m); ScreenMessages.PostScreenMessage("[KSA] " + m, 8f, ScreenMessageStyle.UPPER_CENTER); Refresh(); }, 100f, 30f, false),
+                new DialogGUIButton("Stop", () => { FlightTestBench.Stop("stopped by the Director"); Refresh(); }, 60f, 30f, false),
+                new DialogGUIButton("Refresh", Refresh, 75f, 30f, false),
                 new DialogGUIFlexibleSpace(),
                 new DialogGUIButton("Close", OnCloseClicked, 90f, 30f, true));
             var content = new DialogGUIVerticalLayout(true, true, 4f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft, list, buttons);
