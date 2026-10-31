@@ -33,7 +33,7 @@ namespace KSA.KSP.Testing
         {
             float textWidth = Width - 60f;
             var items = new List<DialogGUIBase>();
-            Line(items, "Flies each mission live, one after another, with no one at the controls. It stops at the first failure. Results go to:", textWidth);
+            Line(items, "Flies each mission live, one after another, with no one at the controls. Fly runs one mission; Start from the first runs them all and stops at the first failure. Results go to:", textWidth);
             Line(items, "<color=#888888>" + FlightTestBench.ReportPath + "</color>", textWidth);
             string blocker = FlightTestBench.Blocker();
             if (blocker != null && !FlightTestBench.Active) Line(items, "<color=#ffd27f>Cannot run here: " + blocker + ".</color>", textWidth);
@@ -44,14 +44,17 @@ namespace KSA.KSP.Testing
                 string result = FlightTestBench.Results.Find(r => r.StartsWith("PASS " + id + ":") || r.StartsWith("FAIL " + id + ":"));
                 string mark = result != null ? (result.StartsWith("PASS") ? "<color=#8be28b>" + result + "</color>" : "<color=#ff8080>" + result + "</color>")
                     : FlightTestBench.Active && i == FlightTestBench.Index ? "<color=#ffd27f>" + id + ": flying now</color>" : "<color=#888888>" + id + "</color>";
-                Line(items, (i + 1) + ". " + mark, textWidth);
+                int rung = i; // one mission on its own (T: "pick the mission / test without having to start from the beginning")
+                string text = (i + 1) + ". " + mark;
+                float rowWidth = textWidth - 80f;
+                items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
+                    new DialogGUIButton("Fly", () => { string m; FlightTestBench.Start(rung, true, out m); ScreenMessages.PostScreenMessage("[KSA] " + m, 8f, ScreenMessageStyle.UPPER_CENTER); Refresh(); }, 60f, 26f, false),
+                    new DialogGUILabel(text, rowWidth, KsaUi.LabelHeight(text, rowWidth, LineHeight))));
             }
             var list = new DialogGUIScrollList(new Vector2(Width - 30f, 360f), false, true,
                 new DialogGUIVerticalLayout(false, false, 3f, new RectOffset(6, 6, 6, 6), TextAnchor.UpperLeft, KsaUi.Scrollable(items)));
             var buttons = new DialogGUIHorizontalLayout(true, false, 4f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
                 new DialogGUIButton("Start from the first", () => { string m; FlightTestBench.Start(0, out m); ScreenMessages.PostScreenMessage("[KSA] " + m, 8f, ScreenMessageStyle.UPPER_CENTER); Refresh(); }, 150f, 30f, false),
-                new DialogGUIButton("Resume", () => { string m; FlightTestBench.Start(FlightTestBench.Index, out m); ScreenMessages.PostScreenMessage("[KSA] " + m, 8f, ScreenMessageStyle.UPPER_CENTER); Refresh(); }, 90f, 30f, false),
-                new DialogGUIButton("Next rung", () => { string m; FlightTestBench.Start(FlightTestBench.Index + 1, out m); ScreenMessages.PostScreenMessage("[KSA] " + m, 8f, ScreenMessageStyle.UPPER_CENTER); Refresh(); }, 100f, 30f, false),
                 new DialogGUIButton("Stop", () => { FlightTestBench.Stop("stopped by the Director"); Refresh(); }, 60f, 30f, false),
                 new DialogGUIButton("Refresh", Refresh, 75f, 30f, false),
                 new DialogGUIFlexibleSpace(),

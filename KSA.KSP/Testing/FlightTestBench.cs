@@ -54,16 +54,24 @@ namespace KSA.KSP.Testing
             return null;
         }
 
+        private static bool _single;
+
         /// <summary>Starts the ladder at <paramref name="from"/> (0 = the first rung).</summary>
-        public static bool Start(int from, out string message)
+        public static bool Start(int from, out string message) { return Start(from, false, out message); }
+
+        /// <summary>Starts at a rung; with <paramref name="single"/> it flies that mission alone, and keeps the other results.</summary>
+        public static bool Start(int from, bool single, out string message)
         {
             message = Blocker();
+            if (message == null && Active) message = "a flight test is running; stop it first";
             if (message != null) return false;
+            _single = single;
             Active = true;
             KsaCore.Agency.SkipSupplyPlanning = true; // the bench tests the flying, not the larder
             Index = Math.Max(0, Math.Min(Ladder.Length - 1, from));
             _projectId = string.Empty;
-            Results.Clear();
+            if (single) { string id = Ladder[Index]; Results.RemoveAll(r => r.StartsWith("PASS " + id + ":") || r.StartsWith("FAIL " + id + ":")); }
+            else Results.Clear();
             Write("=== Flight tests started " + DateTime.Now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture) + ", KSA v" + Core.CoreInfo.Version + ", from " + Ladder[Index] + " ===");
             message = "Flight tests started at " + Ladder[Index] + ". Leave the game running; results go to " + ReportPath;
             KsaCore.Log.Info("Flight test bench: " + message);
@@ -193,6 +201,7 @@ namespace KSA.KSP.Testing
             Record(pass, mission, detail);
             _projectId = string.Empty;
             if (!pass) { Stop(mission + " failed"); return; }
+            if (_single) { Stop(mission + " passed"); return; }
             Index++;
         }
 

@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.23 (2026-10-30), test build
+
+- **Flight tests: pick a mission.** A Fly button on every mission flies that one alone and keeps the other results.
+
 ## 0.8.22 (2026-10-30), test build
 
 - **Kerbin orbit passes on the bench,** Orbiter mk I from pad to landing, deorbit included.
