@@ -19,7 +19,7 @@ namespace KSA.Core.Design
         /// Raise this whenever the rules the engineers design by change (fins, engines, parachutes, margins): designs drawn
         /// up by an older revision that have not flown yet are drawn again on load (2026-10-30). 1 = 0.6.9.
         /// </summary>
-        public const int Revision = 7; // 7: heat shield, panels and antennas; 6: shorter stacks; 5: landers seat three when they can; 4: the earliest parts that do the job; 3: return capsules, at most four side boosters unless nothing else flies; 2: upper stages that light in the air carry fins; real capsules; decouplers that fit
+        public const int Revision = 8; // 8: pods with a reaction wheel; 7: heat shield, panels and antennas; 6: shorter stacks; 5: landers seat three when they can; 4: the earliest parts that do the job; 3: return capsules, at most four side boosters unless nothing else flies; 2: upper stages that light in the air carry fins; real capsules; decouplers that fit
 
         private static bool IsPlaneCockpit(PartInfo p) { return PartFilter.IsPlaneCockpit(p); }
 
@@ -109,6 +109,9 @@ namespace KSA.Core.Design
             why = null;
             if (req == null || catalog == null) { why = "nothing to design with"; return null; }
             var allowed = req.AllowedParts;
+            // A pod with no reaction wheel (the KV pods) cannot turn the craft with the engine off: others first (2026-10-31).
+            if (allowed.Exists(p => p.Kind == PartKind.Command && p.CrewCapacity > 0 && !p.Tags.Contains("nowheel")))
+                allowed = allowed.FindAll(p => !p.Tags.Contains("nowheel"));
             // More margin after a flight of this mission ran dry (2026-10-30).
             double margin = req.DeltaVMargin;
             int crew = Math.Max(0, req.CrewSize);

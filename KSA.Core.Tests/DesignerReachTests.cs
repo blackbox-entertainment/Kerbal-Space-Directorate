@@ -522,6 +522,20 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void APodWithNoReactionWheelIsNotPickedWhenAnotherWillDo()
+        {
+            Agency a = Make.Agency(new FakeClock(), new ListLogger());
+            PartCatalog parts = StockParts();
+            parts.Add(new PartInfo { Name = "kv1Pod", Title = "kv1Pod", Kind = PartKind.Command, Mass = 0.5, Diameter = 1.25, CrewCapacity = 1, HasTopNode = true, HasBottomNode = true, Tags = { "nowheel" } });
+            a.Parts = parts;
+            a.Requirements = MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
+            string why; bool viaDepot;
+            DesignRecord r = a.DesignWithinTech(a.Catalogs.Missions.Get("MunOrbit"), 1, 100, out why, out viaDepot);
+            Assert.That(r, Is.Not.Null, why);
+            Assert.That(r.Plan.Payload.Command, Is.EqualTo("mk1pod.v2"));
+        }
+
+        [Test]
         public void TheReviewRejectsWhatNeverMadeOrbit()
         {
             PartCatalog parts = StockParts();

@@ -602,6 +602,15 @@ namespace KSA.KSP.Flight
         /// True when a lit engine can swivel (ModuleGimbal): it steers the rocket, but only while it burns, so a turn far
         /// from the burn direction is made on a little throttle (2026-10-30).
         /// </summary>
+        /// <summary>True when something aboard turns the craft without an engine: a reaction wheel or RCS thrusters.</summary>
+        public bool HasWheelOrRcs()
+        {
+            if (_v == null) return false;
+            foreach (Part p in _v.parts)
+                if (p.FindModuleImplementing<ModuleReactionWheel>() != null || p.FindModuleImplementing<ModuleRCS>() != null) return true;
+            return false;
+        }
+
         public bool CanSteerWithEngine()
         {
             if (_v == null) return false;

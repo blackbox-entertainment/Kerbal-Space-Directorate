@@ -155,6 +155,8 @@ namespace KSA.KSP.Flight
                         // the periapsis). Light the next engine ahead of the burn so its length can be worked out.
                         if (!_pointedFlat) { c.PointAlong(() => Horizontal(v)); _pointedFlat = true; }
                         LogAttitude(ctx, "coast");
+                        // With no reaction wheel the engine is the only thing that can stop a tumble (2026-10-31).
+                        c.Throttle = !c.HasWheelOrRcs() && VesselControl.TurnRate(v) >= 5 && c.CanSteerWithEngine() ? SteerThrottle : 0f;
                         if (v.orbit.timeToAp < 120) c.EnsureEngine(ref line);
                         double halfBurn = CircularizeBurnTime(v, c) / 2;
                         // Out of warp well before the burn: engines do not fire on rails (2026-10-30).
@@ -185,8 +187,11 @@ namespace KSA.KSP.Flight
                         bool aligned = offFlat < 15 && turn < 5;
                         // Off the horizon, a swivelling engine turns the rocket on a little throttle; the pod's reaction
                         // wheel alone could not swing a full upper stage (2026-10-30: stuck at 45 deg, burn never lit).
-                        c.Throttle = v.orbit.PeA > atmo + 2000 ? 0f : aligned ? 1f : (c.CanSteerWithEngine() && turn < 10 ? SteerThrottle : 0f);
-                        if (turn >= 10) Status = "Circularising: engine off until the craft steadies (turning " + Math.Round(turn) + " deg/s).";
+                        // A KV pod has no reaction wheel: engine off, a tumble never stops, so the swivelling engine stops it
+                        // (2026-10-31: 21 deg/s for three minutes past apoapsis, the burn never lit, back into the air).
+                        bool engineSteadies = !c.HasWheelOrRcs() && c.CanSteerWithEngine();
+                        c.Throttle = v.orbit.PeA > atmo + 2000 ? 0f : aligned ? 1f : (c.CanSteerWithEngine() && (turn < 10 || engineSteadies) ? SteerThrottle : 0f);
+                        if (turn >= 10) Status = engineSteadies ? "Circularising: steadying the craft on the engine (turning " + Math.Round(turn) + " deg/s)." : "Circularising: engine off until the craft steadies (turning " + Math.Round(turn) + " deg/s).";
                         else if (!aligned) Status = "Circularising: turning to the horizon (" + Math.Round(offFlat) + " deg to go" + (c.Throttle > 0 ? ", steering on the engine" : string.Empty) + ").";
                         else { Status = "Circularising."; c.AutoStage(ref line); }
                         if (turn >= 10 && !_spinNoted) { _spinNoted = true; line = "Engine off: the craft is turning " + Math.Round(turn) + " deg/s; the crew steadies it before burning."; }

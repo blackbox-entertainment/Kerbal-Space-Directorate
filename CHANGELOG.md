@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.35 (2026-10-31), test build
+
+- **Stopping a tumble with no reaction wheel.** KV pods have no reaction wheel, so a craft spinning with its engine off never stopped and the circularisation burn never lit. With no wheel or RCS aboard, the crew now steadies it on a little throttle from a swivelling engine.
+- **Engineers avoid those pods.** They pick a pod with a reaction wheel when one will do.
+
 ## 0.8.34 (2026-10-31), test build
 
 - **The kit T fitted, on every engineers' rocket.** Crewed flights from orbit or beyond get a heat shield, even on a pod with its own ablator. Flights leaving Kerbin also get 8 solar panels and 4 high-gain antennas on the top stage. Delete saved "Engineers ..." craft to have them redrawn.
