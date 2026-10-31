@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.39 (2026-10-31), test build
+
+- **Rockets burn oxidizer too.** The engineers could fill a stage with jet-fuel tanks, which hold no oxidizer, so that stage could never fire. Those tanks are now for planes only, and an engine missing one propellant no longer counts as delta-v in What can this fly? Delete saved "Engineers ..." craft and draw them again.
+
 ## 0.8.38 (2026-10-31), test build
 
 - **Kerbals on the pad are free.** A reloaded save could list a kerbal as still flying an old test, which blocked the mission list. Anyone seated in a rocket on the pad can now fly it unless they work on a project still on the ground.

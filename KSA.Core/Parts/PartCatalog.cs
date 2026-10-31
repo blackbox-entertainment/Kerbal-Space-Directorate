@@ -132,6 +132,8 @@ namespace KSA.Core.Parts
             if (p != null && p.Name.StartsWith("KKAOSS", StringComparison.OrdinalIgnoreCase) && job != PartJob.BaseModule) return false;
             // A rocket's crew rides a capsule that comes home through the air (T: "what in the hell is this thing": a Cupola).
             if ((job == PartJob.LaunchVehicle || job == PartJob.LanderReturn) && p != null && p.Kind == PartKind.Command && p.CrewCapacity > 0 && !IsReturnCapsule(p)) return false;
+            // Rockets burn fuel and oxidizer: tanks with no oxidizer are for jets (2026-10-31).
+            if (job != PartJob.Plane && p != null && p.Kind == PartKind.Tank && p.Tags.Contains("nooxidizer")) return false;
             // A stack tank attaches at both ends: Kerbal Planetary Base Systems container tanks have one node and cannot be stacked (2026-10-30).
             if (p != null && p.Kind == PartKind.Tank && p.FuelMass > 0 && !(p.HasTopNode && p.HasBottomNode)) return false;
             return true;

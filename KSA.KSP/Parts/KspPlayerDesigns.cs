@@ -245,6 +245,14 @@ namespace KSA.KSP.Parts
                     thrustSl += e.ThrustVac * (e.IspVac > 0 ? e.IspSl / e.IspVac : 1);
                 }
                 if (!liftoffSet) { d.LiftoffTwr = thrustSl / Math.Max(0.001, mass * G0); d.Mass = mass; liftoffSet = true; }
+                // An engine short of one propellant does not run (2026-10-31: fuel with no oxidizer counted as delta-v).
+                bool allThere = true;
+                foreach (string pr in used)
+                {
+                    string want = pr;
+                    if (!present.Exists(p => p.Fuel.ContainsKey(want) && p.Fuel[want] > 0)) allThere = false;
+                }
+                if (!allThere) continue;
                 // Burn the propellant of the group that goes next (the highest drop stage still aboard that holds some).
                 int next = -2;
                 foreach (P p in present) if (HasFuel(p, used)) next = Math.Max(next, p.DropStage);

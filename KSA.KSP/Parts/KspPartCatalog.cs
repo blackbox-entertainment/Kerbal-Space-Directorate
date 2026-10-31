@@ -179,6 +179,8 @@ namespace KSA.KSP.Parts
             if (p.Modules != null && p.Modules.Contains("ModuleParachute") && ap.name.ToLowerInvariant().Contains("drogue")) info.Tags.Add("drogue");
             if (p.CrewCapacity > 0) info.Tags.Add("crew" + p.CrewCapacity);
             if (p.Modules != null && p.Modules.Contains("ModuleDeployableSolarPanel")) info.Tags.Add("solar");
+            // Jet fuel tanks (2026-10-31: an upper stage of Mk1 fuselage tanks had no oxidizer, so its engine could never fire).
+            if (kind == PartKind.Tank && (p.Resources == null || !p.Resources.Contains("Oxidizer"))) info.Tags.Add("nooxidizer");
             if (p.CrewCapacity > 0 && kind == PartKind.Command && p.Modules != null && !p.Modules.Contains("ModuleReactionWheel")) info.Tags.Add("nowheel");
             // Kerbalism sample experiments (goo, materials bay) take 10 minutes or more and need sample storage
             // (2026-10-30: the goo on a Suborbital hop showed "no storage space" and never ran). Read by name: no reference.

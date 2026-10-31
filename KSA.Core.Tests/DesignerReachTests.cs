@@ -536,6 +536,15 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void RocketsNeverUseTanksWithNoOxidizer()
+        {
+            var jet = new PartInfo { Name = "MK1Fuselage", Title = "Mk1 fuselage", Kind = PartKind.Tank, Mass = 0.25, FuelMass = 1.6, Diameter = 1.25, HasTopNode = true, HasBottomNode = true, Tags = { "nooxidizer" } };
+            Assert.That(PartFilter.Suits(PartJob.LaunchVehicle, jet), Is.False);
+            Assert.That(PartFilter.Suits(PartJob.LanderReturn, jet), Is.False);
+            Assert.That(PartFilter.Suits(PartJob.Plane, jet), Is.True);
+        }
+
+        [Test]
         public void TheReviewRejectsWhatNeverMadeOrbit()
         {
             PartCatalog parts = StockParts();
