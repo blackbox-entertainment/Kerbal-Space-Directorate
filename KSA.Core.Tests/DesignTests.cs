@@ -147,7 +147,6 @@ namespace KSA.Core.Tests
             {
                 MissionRequirements.Entry e = req.For(t);
                 if (t.IsAircraft) { Assert.That(e.DeltaV, Is.EqualTo(0), t.Id); continue; }
-                if (t.Id == "SoundingRocketKerbin") { Assert.That(e.DeltaV, Is.EqualTo(500), t.Id); continue; }
                 Assert.That(e.DeltaV, Is.GreaterThan(t.Id == "FleaHop" ? 300 : 1000), t.Id);
             }
             Assert.That(req.For(ShippedConfigs.Missions().Get("MunLanding")).DeltaV, Is.EqualTo(6040)); // 3400 up, 860 + 310 out, 580 down, 580 up, 310 home

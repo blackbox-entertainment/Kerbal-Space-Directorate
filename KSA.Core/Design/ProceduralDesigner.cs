@@ -19,7 +19,7 @@ namespace KSA.Core.Design
         /// Raise this whenever the rules the engineers design by change (fins, engines, parachutes, margins): designs drawn
         /// up by an older revision that have not flown yet are drawn again on load (2026-10-30). 1 = 0.6.9.
         /// </summary>
-        public const int Revision = 2; // 2: probes, with a pair of radial chutes (2026-10-30)
+        public const int Revision = 1;
 
         private const double G0 = 9.80665;
         private const int MaxTanks = 8;
@@ -60,23 +60,11 @@ namespace KSA.Core.Design
 
             // Payload: the lightest pod that seats the crew, then one of each thing the brief must carry.
             PartInfo pod = null;
-            if (crew == 0)
-            {
-                // A probe flight (2026-10-30): the lightest probe core, else the lightest pod flying empty.
-                foreach (PartInfo p in allowed)
-                {
-                    if (p.Kind != PartKind.Command) continue;
-                    bool probe = p.CrewCapacity == 0, podProbe = pod != null && pod.CrewCapacity == 0;
-                    if (pod == null || (probe && !podProbe) || (probe == podProbe && ((pod.RequiresDlc && !p.RequiresDlc) || (pod.RequiresDlc == p.RequiresDlc && p.Mass < pod.Mass)))) pod = p;
-                }
-                if (pod == null) { why = "no probe core or pod researched"; return null; }
-            }
-            else
-                foreach (PartInfo p in allowed)
-                    if (p.Kind == PartKind.Command && p.CrewCapacity >= Math.Max(1, crew) && (pod == null || (pod.RequiresDlc && !p.RequiresDlc) || (pod.RequiresDlc == p.RequiresDlc && p.Mass < pod.Mass))) pod = p; // stock before DLC pods
+            foreach (PartInfo p in allowed)
+                if (p.Kind == PartKind.Command && p.CrewCapacity >= Math.Max(1, crew) && (pod == null || (pod.RequiresDlc && !p.RequiresDlc) || (pod.RequiresDlc == p.RequiresDlc && p.Mass < pod.Mass))) pod = p; // stock before DLC pods
             // No pod seats everyone (a rescue brings the stranded home): the roomiest pod plus crew cabins (2026-10-28).
             var cabins = new List<PartInfo>();
-            if (pod == null && crew > 0)
+            if (pod == null)
             {
                 foreach (PartInfo p in allowed)
                     if (p.Kind == PartKind.Command && p.CrewCapacity > 0 && (pod == null || p.CrewCapacity > pod.CrewCapacity || (p.CrewCapacity == pod.CrewCapacity && p.Mass < pod.Mass))) pod = p;
@@ -136,7 +124,7 @@ namespace KSA.Core.Design
                 plan.Payload.TanksEmpty = true; // it goes up empty; tankers fill it
             }
             // Enough parachute for the capsule that comes down, not one small chute whatever it weighs (2026-10-29).
-            Parachutes.Fit(plan, allowed, catalog, crew == 0, req.ChuteFactor); // a probe takes radial chutes only (2026-10-30)
+            Parachutes.Fit(plan, allowed, catalog, false, req.ChuteFactor);
             double payload = pod.Mass + pod.FuelMass;
             foreach (string e in plan.Payload.Extras) { PartInfo x = catalog.Get(e); if (x != null) payload += x.Mass + (plan.Payload.TanksEmpty && x.Kind == PartKind.Tank ? 0 : x.FuelMass); }
 

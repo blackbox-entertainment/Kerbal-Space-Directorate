@@ -19,13 +19,13 @@ namespace KSA.Core.Tests
             ProgramCatalog programs = ShippedConfigs.ProgramTypes(warnings);
 
             Assert.That(warnings, Is.Empty, string.Join(" | ", warnings));
-            Assert.That(missions.Count, Is.EqualTo(73)); // + 3 probe missions, + 4 aircraft missions (2026-10-30) + 18 base and resupply missions (KSA-64), + fuel depot core and tanker (2026-10-29)
+            Assert.That(missions.Count, Is.EqualTo(70)); // + 4 aircraft missions (2026-10-30) + 18 base and resupply missions (KSA-64), + fuel depot core and tanker (2026-10-29)
             Assert.That(templates.Count, Is.EqualTo(18)); // + depot core and tanker (2026-10-29) // + 2 colony industry modules (KSA-67), - Flea cluster, + Hammer-Flea (2026-10-28)
             Assert.That(programs.Count, Is.EqualTo(16)); // + fuel depot (2026-10-29) // + 9 bases (KSA-64)
 
             foreach (MissionType t in missions.Types)
             {
-                if (t.IsAircraft || t.IsUncrewed) continue; // flown in the Director's own planes (2026-10-30)
+                if (t.IsAircraft) continue; // flown in the Director's own planes (2026-10-30)
                 Template best = templates.Best(t.Id, new string[0]);
                 Assert.That(best, Is.Not.Null, "no stock-only template for " + t.Id);
                 Assert.That(best.StockOnly, Is.True, t.Id);

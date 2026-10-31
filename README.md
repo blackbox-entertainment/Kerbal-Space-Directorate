@@ -38,12 +38,10 @@ Install these through CKAN. Use the CKAN identifier shown to find each one.
 | Stockalike Station Parts Expansion Redux | `StationPartsExpansionRedux` | Station module designs (planned) |
 | Kerbal Planetary Base Systems | `KerbalPlanetaryBaseSystems` | Surface base module designs (planned) |
 | HL Airships Core | `HooliganLabsAirships` | Eve cloud city designs (planned; cloud cities fly simulated today) |
-| Airplane Plus /L | `AirplanePlusL` | Propeller engines, small cockpits and early plane parts. Its propellers burn fuel with intake air like jets, so prop planes fly KSA's aircraft missions. Pulls in Firespitter. Pick this one, not the old "Airplane Plus" (KSP 1.8 only) |
-| Un Kerballed Start | `UnKerballedStart` | A probes-first, planes-first tech tree. A career opens with the Stayputnik probe core: KSA flies uncrewed probe missions (sounding rocket, probe to space, first satellite) to earn the Science for the first crew pod, and moves the Mk2-R radial and Mk16 parachutes, the Flea booster and the TD-06 decoupler to the start node. Pulls in Community Tech Tree. Start a new career with it. When CKAN offers recommended mods, click Uncheck All (see below) |
 
 KSA does not need MechJeb or kOS. It has its own flight director.
 
-**Mods that clash with KSA.** Leave these off (CKAN offers several as recommendations with Un Kerballed Start):
+**Mods that clash with KSA.** Leave these off:
 - **Bureaucracy and Strategia** replace the budget and strategy systems. KSA runs its own fiscal years, budgets and departments.
 - **Contract packs** (Career Evolution, Exploration Plus, Research Advancement Division, the GAP packs) add contracts. KSA switches stock contracts off and issues government goals instead.
 - **Kerbal Construction Time** adds its own build and roll-out times. KSA has its own design and build days and launch queue.
@@ -54,7 +52,7 @@ KSA does not need MechJeb or kOS. It has its own flight director.
 
 1. Open CKAN and select your KSP 1.12 install.
 2. Search for **ModuleManager** and tick it.
-3. Optional: search for **Kerbalism** and tick it. CKAN adds what it needs by itself: the default Kerbalism config, Harmony 2, KSP Community Fixes and Community Resource Pack. For propeller planes, also tick **Airplane Plus /L**.
+3. Optional: search for **Kerbalism** and tick it. CKAN adds what it needs by itself: the default Kerbalism config, Harmony 2, KSP Community Fixes and Community Resource Pack.
 4. Click **Apply changes**.
 5. Unzip the test build (`KerbalSpaceDirectorate-<version>.zip`) and copy its `GameData\KSA` folder into your KSP `GameData` folder, so you have `GameData/KSA/Plugins/KSA.KSP.dll`. CKAN cannot install KSA until it is released, so this step is manual for now. To update, delete `GameData\KSA` and copy the new one in.
 6. Start KSP and begin a new Career game. The KSA button is on the Space Center toolbar.

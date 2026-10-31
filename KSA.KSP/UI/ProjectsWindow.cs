@@ -397,10 +397,8 @@ namespace KSA.KSP.UI
 
             // Crew pick.
             PruneSelection(_selectedCrew, flyers);
-            if (selected.IsUncrewed) { Line(items, "Crew: none, it is a probe flight (simulated).", textWidth); _selectedCrew.Clear(); }
-            else
             Line(items, "Crew (" + _selectedCrew.Count + " of " + selected.CrewSize + " picked):", textWidth);
-            foreach (CrewProfile c in selected.IsUncrewed ? new List<CrewProfile>() : flyers)
+            foreach (CrewProfile c in flyers)
             {
                 string cid = c.Id;
                 bool picked = _selectedCrew.Contains(cid);

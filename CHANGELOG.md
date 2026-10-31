@@ -2,6 +2,12 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.7.8 (2026-10-30), test build
+
+- **Un Kerballed Start and Airplane Plus dropped.** KSA no longer supports either mod. The start-node patch for Un Kerballed Start is gone, and so are the three probe missions built for it (Sounding rocket, Probe to space, First satellite) with their goals (Launch a probe, A probe in space, First satellite). Every mission carries a crew again. Stock planes from the SPH still fly the aircraft missions.
+- **Kept from 0.7.7:** a design never carries a single radial parachute; an odd one gets a partner.
+- **Old saves:** a probe project in progress is dropped on load (its mission no longer exists).
+
 ## 0.7.7 (2026-10-30), test build
 
 - **Radial chutes for probes.** The Stayputnik is a sphere with no nose for a stack parachute, so a probe now carries a pair of radial parachutes (Mk2-R) on its sides, never a stack chute, whenever radial chutes are researched. With Un Kerballed Start, KSA moves the Mk2-R to the start node along with the Mk16, the Flea and the TD-06.

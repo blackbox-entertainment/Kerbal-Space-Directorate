@@ -155,7 +155,7 @@ namespace KSA.Core
         /// </summary>
         public bool BreaksNewGround(MissionType type)
         {
-            if (type == null || (type.IsUncrewed && type.Profile != MissionProfile.Suborbital)) return false; // orbital probes fly simulated for now (2026-10-30)
+            if (type == null) return false;
             if (type.IsFirst && !HasAgencyAchievement(type.PrimaryAchievement)) return true;
             // Program modules and rescues keep their own modes (assembly is simulated by default).
             if (type.ModuleRole.Length > 0 || type.IsRescue) return false;
@@ -353,6 +353,31 @@ namespace KSA.Core
             RaiseProjectChanged(p);
             UpdateProgramFor(p, null);
             return true;
+        }
+
+        /// <summary>Missions taken out of missions.cfg (0.7.8: the probe missions, dropped with Un Kerballed Start).</summary>
+        public static readonly string[] RetiredMissions = { "SoundingRocketKerbin", "ProbeToSpaceKerbin", "FirstSatelliteKerbin" };
+
+        /// <summary>
+        /// After a load, a project for a retired mission that has not flown is called off with its budget refunded in full:
+        /// nothing can design, build or fly it any more.
+        /// </summary>
+        private void DropRetiredMissionProjects(List<string> notices)
+        {
+            foreach (Project p in Projects)
+            {
+                if (!p.IsActive || p.Status == ProjectStatus.InFlight) continue;
+                if (Array.IndexOf(RetiredMissions, p.MissionTypeId) < 0 || Catalogs.Missions.Get(p.MissionTypeId) != null) continue;
+                double refund = Math.Round(p.Budget);
+                if (refund > 0) Ledger.Deposit(refund, LedgerCategory.Cancellation, "Retired mission " + p.Name, CurrentDay, CurrentYear);
+                ReleaseStaff(p);
+                p.Status = ProjectStatus.Cancelled;
+                p.EndDay = CurrentDay;
+                p.Notes.Add("Called off: this mission is no longer offered.");
+                Push(notices, p.Name + " called off: the mission is no longer offered; " + Money(refund) + " refunded.");
+                RaiseProjectChanged(p);
+                UpdateProgramFor(p, null);
+            }
         }
 
         /// <summary>Switches a project's mode before launch.</summary>

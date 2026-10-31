@@ -303,14 +303,6 @@ namespace KSA.Core
         {
             foreach (CrewProfile p in Crew.All)
                 if (p.Record.HasAchievement(pattern)) return true;
-            // Probes (2026-10-30): an uncrewed flight has no service record to carry its achievements; its report does.
-            foreach (KSA.Core.Projects.MissionReport r in Reports)
-            {
-                if (r.Crew.Count > 0 || !r.IsSuccess) continue;
-                KSA.Core.Missions.MissionType mt = Catalogs.Missions.Get(r.MissionTypeId);
-                if (mt == null || !mt.IsUncrewed) continue;
-                foreach (string a in r.Achievements) if (PatternMatches(a, pattern)) return true;
-            }
             return false;
         }
 

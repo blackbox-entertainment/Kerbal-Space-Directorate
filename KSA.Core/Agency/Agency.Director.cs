@@ -596,7 +596,6 @@ namespace KSA.Core
             // One at a time (2026-10-30: two Flea test hops ran side by side, the second reusing the first's design).
             foreach (Project p in Projects) if (p.IsActive && p.MissionTypeId == t.Id) return t.Name + " is already under way (" + p.Id + "); wait for its result";
             if (MissionsCompleted(t.Id) == 0) return null;
-            if (t.IsUncrewed && t.IsScience) return null; // probes fly again for more data, at a shrinking payout (2026-10-30)
             foreach (GoalState gs in ActiveGoals)
             {
                 GoalDefinition g = Catalogs.Goals.Get(gs.GoalId);
@@ -745,7 +744,6 @@ namespace KSA.Core
                 Template best = null;
                 foreach (Template tp in TemplatesFor(t)) if (TemplateBlocker(tp) == null) { best = tp; break; }
                 sb.AppendLine("  " + t.Id + " | " + t.Name + " | " + Money(ProjectCost(t, best)) + " | " + t.CrewSize + " | " + t.MinStars + " | " + t.DurationDays + " | " + MissionsCompleted(t.Id) + (BreaksNewGround(t) ? " | new ground: flies live" : string.Empty)
-                    + (t.IsUncrewed ? " | probe, no crew" + (t.IsScience ? ", pays about " + Math.Round(t.ScienceYield * RepeatScienceFactor(t), 1) + " Science now" : string.Empty) : string.Empty)
                     + (picked != null ? " | the human Director wants their design '" + picked.Name + "' flown for this (used automatically)" : string.Empty));
             }
             if (doneAlready.Count > 0) sb.AppendLine("ALREADY DONE OR UNDER WAY (no open goal needs them again now): " + string.Join("; ", doneAlready.ToArray()));

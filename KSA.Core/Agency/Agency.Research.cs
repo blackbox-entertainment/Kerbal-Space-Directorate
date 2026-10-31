@@ -135,23 +135,14 @@ namespace KSA.Core
                 if (!kinds.Contains(KSA.Core.Parts.PartKind.Wheel) && !kinds.Contains(KSA.Core.Parts.PartKind.LandingLeg) && !kinds.Contains(KSA.Core.Parts.PartKind.Parachute)) missing.Add("landing gear or a parachute");
                 return missing.Count == 0 ? null : "needs research: " + string.Join(", ", missing.ToArray());
             }
-            bool crewPod = false;
-            foreach (KSA.Core.Parts.PartInfo p in Parts.All) if (p.Kind == KSA.Core.Parts.PartKind.Command && p.CrewCapacity > 0) crewPod = true;
-            // Probes (2026-10-30): a probe core will do, and nothing has to come down under a parachute.
-            if (type.IsUncrewed) { if (!kinds.Contains(KSA.Core.Parts.PartKind.Command)) missing.Add("a probe core"); }
-            else
-            {
-                if (!crewPod) missing.Add("a crew pod");
-                if (!kinds.Contains(KSA.Core.Parts.PartKind.Parachute)) missing.Add("a parachute");
-            }
+            if (!kinds.Contains(KSA.Core.Parts.PartKind.Command)) missing.Add("a crew pod");
+            if (!kinds.Contains(KSA.Core.Parts.PartKind.Parachute)) missing.Add("a parachute");
             bool beyond = type.Profile != MissionProfile.Suborbital && type.Profile != MissionProfile.Orbit && type.Profile != MissionProfile.Station;
             if (type.Profile == MissionProfile.Suborbital)
             {
                 if (!kinds.Contains(KSA.Core.Parts.PartKind.Engine) && !kinds.Contains(KSA.Core.Parts.PartKind.Booster)) missing.Add("an engine or booster");
-                // Day-one boosters alone do not reach space (the Flea cluster topped out at 41 km): space needs staging. A
-                // probe's sounding rocket that stays low does not.
-                bool lowHop = type.IsUncrewed && Requirements.For(type).DeltaV < 1000;
-                if (!lowHop && !kinds.Contains(KSA.Core.Parts.PartKind.Decoupler)) missing.Add("decouplers");
+                // Day-one boosters alone do not reach space (the Flea cluster topped out at 41 km): space needs staging.
+                if (!kinds.Contains(KSA.Core.Parts.PartKind.Decoupler)) missing.Add("decouplers");
             }
             else
             {
@@ -266,24 +257,12 @@ namespace KSA.Core
             return m * curiosity;
         }
 
-        /// <summary>A repeated probe flight's share of the full science: 0.6 to the power of earlier successes, at least 0.25.</summary>
-        public double RepeatScienceFactor(MissionType type, MissionReport current = null)
-        {
-            if (type == null) return 1;
-            int before = 0;
-            foreach (MissionReport x in Reports) if (x != current && x.MissionTypeId == type.Id && x.IsSuccess) before++;
-            return Math.Max(0.25, Math.Pow(0.6, before));
-        }
-
         private void AwardMissionScience(MissionReport r, MissionType type, List<string> notices)
         {
             if (r == null || type == null || !r.IsSuccess) return;
             double points = type.Tier == MissionTier.Late ? Settings.MissionScienceLate : type.Tier == MissionTier.Mid ? Settings.MissionScienceMid : Settings.MissionScienceEarly;
             if (type.IsScience && type.ScienceYield > 0) points = type.ScienceYield * ScienceCrewMultiplier(r.Crew);
             if (r.Outcome == MissionOutcome.PartialSuccess) points *= 0.5;
-            // Probes fly the same sounding again for more data, each time a little less new (2026-10-30): 60% of the last,
-            // never under a quarter. Crewed missions are not repeated for science (RepeatBlocker).
-            if (type.IsUncrewed) points *= RepeatScienceFactor(type, r);
             points = Math.Round(points * (1 + DepartmentRung(Department.Science) * Settings.LabScienceHeadBonus), 1);
             if (points <= 0) return;
             State.ScienceEarned += points;

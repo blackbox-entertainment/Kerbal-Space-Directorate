@@ -104,6 +104,7 @@ namespace KSA.Core
         {
             if (_designsResumed) return;
             _designsResumed = true;
+            DropRetiredMissionProjects(notices);
             RecheckApprovedDesigns(notices);
             RedrawOutdatedDesigns(notices);
             BackfillLessons();
@@ -345,9 +346,8 @@ namespace KSA.Core
         /// </summary>
         private void AddAntenna(MissionType type, DesignRequest req)
         {
-            if (Parts == null || type == null) return;
-            // A probe always carries one (2026-10-30): with nobody to recover, its data goes home by radio.
-            if (!type.IsUncrewed && !string.Equals(LifeSupportMod, "Kerbalism", StringComparison.OrdinalIgnoreCase)) return;
+            if (Parts == null || type == null || type.CrewSize <= 0) return;
+            if (!string.Equals(LifeSupportMod, "Kerbalism", StringComparison.OrdinalIgnoreCase)) return;
             var antennas = new List<string>();
             foreach (PartInfo part in Parts.All)
             {
@@ -387,17 +387,11 @@ namespace KSA.Core
         /// </summary>
         private void AddParachute(MissionType type, Project p, DesignRequest req)
         {
-            if (Parts == null || type == null) return;
-            // A probe on a sounding rocket comes down under one too, when one is researched (2026-10-30, T: "it needs a parachute"),
-            // so it can be recovered; a satellite stays up.
-            if (type.IsUncrewed && type.Profile != MissionProfile.Suborbital) return;
+            if (Parts == null || type == null || type.CrewSize <= 0) return;
             if (type.Profile == MissionProfile.Base || (p != null && string.Equals(p.ModuleRole, "industry", StringComparison.OrdinalIgnoreCase))) return;
             if (IsDepotCoreMission(type)) return; // the depot keeper stays aboard
-            // A craft that docks nose first keeps its nose free: side-mounted parachutes only (2026-10-29). So does a probe: a
-            // probe core such as the Stayputnik (a sphere) has no nose for a stack parachute (2026-10-30, T: "the Stayputnik
-            // needs a radial parachute").
-            bool probe = type.IsUncrewed;
-            bool sides = probe || DocksAtDepot(type, p);
+            // A craft that docks nose first keeps its nose free: side-mounted parachutes only (2026-10-29).
+            bool sides = DocksAtDepot(type, p);
             var chutes = new List<string>();
             foreach (PartInfo part in Parts.All)
             {
@@ -410,15 +404,13 @@ namespace KSA.Core
             if (chutes.Count == 0)
             {
                 // No side parachute researched: the docking craft cannot be built yet (the rule stays, so it says why).
-                // A probe without one still flies: its data goes home by radio.
-                if (sides && !probe) req.MustInclude.Add(new KeyValuePair<string, List<string>>("a radial (side) parachute, so the nose stays free for the docking port", chutes));
+                if (sides) req.MustInclude.Add(new KeyValuePair<string, List<string>>("a radial (side) parachute, so the nose stays free for the docking port", chutes));
                 return;
             }
-            if (probe) req.MustCarry.Add("radial parachutes in a pair on the sides of the probe core (it has no nose for a stack parachute): " + string.Join(", ", chutes.ToArray()) + ".");
-            else if (sides) req.MustCarry.Add("parachutes on the sides of the pod (radial parachutes; the nose carries the docking port): " + string.Join(", ", chutes.ToArray()) + ".");
+            if (sides) req.MustCarry.Add("parachutes on the sides of the pod (radial parachutes; the nose carries the docking port): " + string.Join(", ", chutes.ToArray()) + ".");
             else req.MustCarry.Add("a parachute, as a payload extra on top of the crew pod: " + string.Join(", ", chutes.ToArray()) + ". The crew comes home and lands under it; without one the landing kills them.");
             req.MustCarry.Add("enough parachute for the capsule that comes down (pod, heat shield and everything else in the payload): each main parachute lands about " + Parachutes.TonnesPerChuteTonne.ToString("0") + " times its own mass softly (a 0.1 t chute about 2.2 t). Add radial parachutes in pairs round the pod for a heavier capsule. Drogues do not count.");
-            req.MustInclude.Add(new KeyValuePair<string, List<string>>(probe ? "a radial parachute for the probe" : "a parachute for landing", chutes));
+            req.MustInclude.Add(new KeyValuePair<string, List<string>>("a parachute for landing", chutes));
         }
 
         /// <summary>

@@ -121,6 +121,24 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void AProjectForARetiredProbeMissionIsCalledOffOnLoadWithAFullRefund()
+        {
+            Agency a = Staffed(new FakeClock());
+            Assert.That(a.Catalogs.Missions.Get("SoundingRocketKerbin"), Is.Null, "the probe missions are gone (0.7.8)");
+            a.Projects.Add(new Project { Id = "P91", MissionTypeId = "SoundingRocketKerbin", Name = "Sounding rocket", Status = ProjectStatus.Build, Budget = 1500, PhaseStartDay = a.CurrentDay });
+            // Load the save into a fresh agency, as the game does.
+            Agency b = Make.Agency(new FakeClock(), new ListLogger());
+            b.Parts = a.Parts;
+            AgencyStateSerializer.Read(AgencyStateSerializer.Write(a), b);
+            double before = b.Ledger.Balance;
+            var notices = new List<string>();
+            b.ResumeInterruptedDesigns(notices);
+            Assert.That(b.GetProject("P91").Status, Is.EqualTo(ProjectStatus.Cancelled));
+            Assert.That(b.Ledger.Balance, Is.EqualTo(before + 1500));
+            Assert.That(notices, Has.Some.Contains("no longer offered"));
+        }
+
+        [Test]
         public void ASimulatedOrbitIsNotKnowHowSoTheNextOrbitalMissionFliesLive()
         {
             Agency a = Staffed(new FakeClock());
