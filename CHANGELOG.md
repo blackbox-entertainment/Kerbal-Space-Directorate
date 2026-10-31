@@ -2,6 +2,14 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.7 (2026-10-30), release
+
+Everything since 0.8.5, from the test build 0.8.6 below. In short:
+
+- **Bases you can see.** A surface base stands on the ground at its site as one connected vessel and grows: each delivered module adds its section (core, habitat, lab, power, industry), each of the first six resupplies adds a habitat or a greenhouse, and a colony keeps adding habitats on its own. With Kerbal Planetary Base Systems it is built from that mod's modules, round a corridor junction once Composites is researched and on its own feet once Landing is; otherwise from stock parts. Power is the mod's reactor or your best solar panels. It is rebuilt at the Space Center or Tracking Station when it changes, at a flat dry spot or beside a module landed live. It carries no crew; the agency keeps its residents.
+- **Broken mod templates removed.** Three templates named craft files that never existed; a template whose craft file is missing is now never used.
+- **Kerbal Planetary Base Systems is supported** (CKAN `KerbalPlanetaryBaseSystems`). Untick the mods CKAN recommends with it (Probes Before Crew rearranges the tech tree).
+
 ## 0.8.6 (2026-10-30), test build
 
 - **Bases you can see.** A surface base now stands on the ground at its site as one connected vessel and grows: each delivered module adds its section (core, habitat, lab, power, industry), each of the first six resupplies adds a habitat or a greenhouse, and a colony keeps adding habitats on its own. With Kerbal Planetary Base Systems the base is built from that mod's modules, round a corridor junction once Composites is researched, on its own feet once Landing is; otherwise from stock parts. It is rebuilt at the Space Center or Tracking Station when it changes, at a flat dry spot (or beside a module landed live). It carries no crew; the agency keeps its residents.
