@@ -55,6 +55,22 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void TheGroundTeamOfAFlightAlreadyUpCanFlyAHangarRocket()
+        {
+            CrewProfile bill = _agency.Crew.Get("Bill Kerman");
+            var flight = new Project { Id = "P9", Name = "Up there", Status = ProjectStatus.InFlight };
+            flight.Crew.Add("Valentina Kerman");
+            _agency.Projects.Add(flight);
+            bill.ProjectId = "P9";
+            Assert.That(_agency.BusyForHangar(bill), Is.False);
+            CrewProfile val = _agency.Crew.Get("Valentina Kerman");
+            val.ProjectId = "P9";
+            Assert.That(_agency.BusyForHangar(val), Is.True);
+            flight.Status = ProjectStatus.Build;
+            Assert.That(_agency.BusyForHangar(bill), Is.True, "still working on one on the ground");
+        }
+
+        [Test]
         public void CreateProject_RejectsWrongCrewCountAndExperience_AndUnaffordable()
         {
             string msg;

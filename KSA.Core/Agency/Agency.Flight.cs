@@ -279,6 +279,17 @@ namespace KSA.Core
         }
 
         /// <summary>
+        /// A kerbal sitting in a hangar rocket is free unless flying, or crew or staff on a project still on the ground. The
+        /// ground team of a flight already up has done its job (2026-10-31: Jeb and Bill sat aboard and no missions were offered).
+        /// </summary>
+        public bool BusyForHangar(CrewProfile c)
+        {
+            if (c.IsFlying) return true;
+            Project q = c.ProjectId.Length > 0 ? GetProject(c.ProjectId) : null;
+            return q != null && q.IsActive && (q.Status != ProjectStatus.InFlight || q.Crew.Contains(c.Id));
+        }
+
+        /// <summary>
         /// KSA-62: the Director built a rocket in the hangar, seated agency kerbals and launched it. A hangar project
         /// is created on the spot (no design, build or budget) for the chosen mission type and the crew flies it, so
         /// the flight earns records, medals and a post-mortem like any other. Returns the project, or null with a reason.
@@ -293,7 +304,7 @@ namespace KSA.Core
                 {
                     CrewProfile c = Crew.Get(n);
                     if (c == null || c.Departed || c.Status == CrewStatus.Dead) continue;
-                    if (c.IsFlying || c.ProjectId.Length > 0) { message = c.Name + " is already assigned to another project."; return null; }
+                    if (BusyForHangar(c)) { message = c.Name + " is already assigned to another project."; return null; }
                     aboard.Add(c.Id);
                 }
             if (aboard.Count == 0) { message = "No agency kerbal is aboard."; return null; }

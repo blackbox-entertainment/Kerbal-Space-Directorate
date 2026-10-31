@@ -320,7 +320,7 @@ namespace KSA.KSP.Flight
             foreach (ProtoCrewMember pcm in v.GetVesselCrew())
             {
                 CrewProfile c = agency.Crew.Get(pcm.name);
-                if (c == null || c.Departed || c.Status == CrewStatus.Dead || c.IsFlying || c.ProjectId.Length > 0) continue;
+                if (c == null || c.Departed || c.Status == CrewStatus.Dead || agency.BusyForHangar(c)) continue;
                 if (best == null || (c.Role == CrewRole.Pilot && best.Role != CrewRole.Pilot) || (c.Role == best.Role && c.Stars > best.Stars)) best = c;
             }
             return best;
