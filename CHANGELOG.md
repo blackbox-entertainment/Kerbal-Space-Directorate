@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.42 (2026-10-31), test build
+
+- **Weak upper stages reach orbit.** A low-thrust stage laid flat at 50 km could top out inside the air, cut off while falling, and coast back down. The crew now keeps the nose up while the top of the climb is close, and if it is falling in the air it keeps burning along the horizon.
+
 ## 0.8.41 (2026-10-31), test build
 
 - **Design rockets replaces its own craft.** Each press redraws every "Engineers ..." craft, so there is nothing to delete by hand. Save a craft under another name to keep it.

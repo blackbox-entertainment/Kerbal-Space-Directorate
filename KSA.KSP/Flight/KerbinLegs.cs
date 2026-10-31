@@ -126,7 +126,14 @@ namespace KSA.KSP.Flight
                         Status = "Gravity turn: pitch " + Math.Round(TargetPitch(v, _orbit)) + " deg, holding apoapsis at " + Math.Round(v.orbit.ApA / 1000) + " km (throttle " + Math.Round(c.Throttle * 100) + "%).";
                     }
                     else if (_orbit && c.Throttle < 1f && v.orbit.ApA < _targetAp) c.Throttle = 1f;
-                    if (v.orbit.ApA >= _targetAp && !holding)
+                    if (_orbit && v.orbit.ApA >= _targetAp && !holding && alt < atmo && v.verticalSpeed < 0)
+                    {
+                        // Already past the top and falling in the air: there is no apoapsis to coast to, so keep burning along the
+                        // horizon (2026-10-31: a Terrier peaked at 64 km, cut off at 60 falling, and coasted back into the air).
+                        _phase = Phases.Circularize; _phaseStart = ctx.Now;
+                        Status = "Circularising.";
+                    }
+                    else if (v.orbit.ApA >= _targetAp && !holding)
                     {
                         c.Throttle = 0;
                         _phase = Phases.Coast; _phaseStart = ctx.Now;
@@ -148,6 +155,15 @@ namespace KSA.KSP.Flight
                     c.DropSpentStage(ref line); // a burnt-out booster does not ride along
                     // Fuel left in the tanks, not an engine burning: the throttle is closed while coasting.
                     if (v.orbit.ApA < atmo + 5000 || c.OutOfDeltaV()) { State = LegState.Done; break; }
+                    if (alt <= atmo && v.verticalSpeed < 0 && v.orbit.PeA < atmo)
+                    {
+                        // Falling back in the air: burn now, and resuming a saved flight lands here too.
+                        _phase = Phases.Circularize; _phaseStart = ctx.Now;
+                        Status = "Circularising.";
+                        c.EnsureEngine(ref line);
+                        line = line ?? "Falling back with the periapsis at " + Math.Round(v.orbit.PeA / 1000) + " km: burning along the horizon.";
+                        break;
+                    }
                     if (alt > atmo)
                     {
                         // Out of the air: face along the horizon, the way the circularisation burn will push (2026-10-29:
@@ -299,6 +315,8 @@ namespace KSA.KSP.Flight
         }
 
         /// <summary>The turn is flat by here; above it the rocket burns horizontally for apoapsis.</summary>
+        /// <summary>The most the nose is raised above the horizon to stop the climb topping out in the air, degrees.</summary>
+        internal const double ClimbFloor = 25;
         internal const double TurnEnd = 50000; // level by 50 km (2026-10-30, T: "turn the big rocket level at 50 to 55 km")
         /// <summary>Straight up until this surface speed, then the small kick east.</summary>
         internal const double KickSpeed = 100;
@@ -321,6 +339,10 @@ namespace KSA.KSP.Flight
             // pod cannot pull it over at 600 m/s), so it never built sideways speed. The turn starts low and slow instead.
             double program = Math.Max(0, 88 * (1 - Math.Sqrt(Math.Min(1, alt / TurnEnd))));
             if (v.srfSpeed < KickDone) return Math.Max(85, program);
+            // Short of the speed to stay up, a weak upper stage laid flat tops out and falls back in the air (2026-10-31: flat at
+            // 50 km, a Terrier peaked at 64): with the top of the climb close, the nose stays up until the apoapsis moves away.
+            if (alt > 20000 && alt < v.mainBody.atmosphereDepth && v.orbit.PeA < 0)
+                program = Math.Max(program, v.verticalSpeed <= 0 ? ClimbFloor : ClimbFloor * Math.Max(0, 1 - v.orbit.timeToAp / 60));
             Vector3d up = v.upAxis;
             // The flight path's pitch from the eastern horizon, in the up-east plane: over 90 means it leans west
             // (2026-10-30: a rocket on fixed engines drifted west; the unsigned angle read that as leaning east, so the
