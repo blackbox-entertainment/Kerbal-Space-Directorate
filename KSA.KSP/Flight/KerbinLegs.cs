@@ -206,13 +206,13 @@ namespace KSA.KSP.Flight
                         // A KV pod has no reaction wheel: engine off, a tumble never stops, so the swivelling engine stops it
                         // (2026-10-31: 21 deg/s for three minutes past apoapsis, the burn never lit, back into the air).
                         bool engineSteadies = !c.HasWheelOrRcs() && c.CanSteerWithEngine();
-                        c.Throttle = v.orbit.PeA > atmo + 2000 ? 0f : aligned ? 1f : (c.CanSteerWithEngine() && (turn < 10 || engineSteadies) ? SteerThrottle : 0f);
+                        c.Throttle = v.orbit.PeA > atmo + OrbitPeMargin ? 0f : aligned ? 1f : (c.CanSteerWithEngine() && (turn < 10 || engineSteadies) ? SteerThrottle : 0f);
                         if (turn >= 10) Status = engineSteadies ? "Circularising: steadying the craft on the engine (turning " + Math.Round(turn) + " deg/s)." : "Circularising: engine off until the craft steadies (turning " + Math.Round(turn) + " deg/s).";
                         else if (!aligned) Status = "Circularising: turning to the horizon (" + Math.Round(offFlat) + " deg to go" + (c.Throttle > 0 ? ", steering on the engine" : string.Empty) + ").";
                         else { Status = "Circularising."; c.AutoStage(ref line); }
                         if (turn >= 10 && !_spinNoted) { _spinNoted = true; line = "Engine off: the craft is turning " + Math.Round(turn) + " deg/s; the crew steadies it before burning."; }
                         // Never fling the apoapsis away chasing the periapsis.
-                        if (v.orbit.PeA <= atmo + 2000 && v.orbit.ApA > Math.Max(_targetAp * 2, _targetAp + 150000))
+                        if (v.orbit.PeA <= atmo + OrbitPeMargin && v.orbit.ApA > Math.Max(_targetAp * 2, _targetAp + 150000))
                         {
                             c.Throttle = 0;
                             line = "Burn stopped: the apoapsis ran away to " + Math.Round(v.orbit.ApA / 1000) + " km with the periapsis still at " + Math.Round(v.orbit.PeA / 1000) + " km.";
@@ -220,7 +220,7 @@ namespace KSA.KSP.Flight
                             break;
                         }
                     }
-                    if (v.orbit.PeA > atmo + 2000)
+                    if (v.orbit.PeA > atmo + OrbitPeMargin)
                     {
                         c.Throttle = 0;
                         Status = "In orbit.";
@@ -315,6 +315,8 @@ namespace KSA.KSP.Flight
         }
 
         /// <summary>The turn is flat by here; above it the rocket burns horizontally for apoapsis.</summary>
+        /// <summary>A parking orbit's periapsis clears the air by this much: 75 km at Kerbin (2026-10-31, T).</summary>
+        internal const double OrbitPeMargin = 5000;
         /// <summary>The most the nose is raised above the horizon to stop the climb topping out in the air, degrees.</summary>
         internal const double ClimbFloor = 25;
         internal const double TurnEnd = 50000; // level by 50 km (2026-10-30, T: "turn the big rocket level at 50 to 55 km")
