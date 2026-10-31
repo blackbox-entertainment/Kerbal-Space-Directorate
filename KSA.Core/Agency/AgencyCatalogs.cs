@@ -63,6 +63,8 @@ namespace KSA.Core
         public double ScienceCredited { get; set; }
         /// <summary>Day of the most recent launch, or -1: automatic launches wait launchSpacingDays after it (2026-10-28).</summary>
         public int LastLaunchDay { get; set; } = -1;
+        /// <summary>Live flights' farthest distances are measured from the surface (0.7.12); false = an older save to correct once.</summary>
+        public bool FarthestFromSurface { get; set; }
         /// <summary>Every world that can hold a colony holds one (KSA-64); announced once.</summary>
         public bool SystemColonized { get; set; }
         /// <summary>The AI runs the agency (KSA-68).</summary>

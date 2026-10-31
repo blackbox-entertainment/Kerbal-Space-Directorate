@@ -49,11 +49,19 @@ namespace KSA.Core
         private void UpdateExplorationRecord(CrewProfile c, MissionReport r)
         {
             MissionType type = Catalogs.Missions.Get(r.MissionTypeId);
-            double far = r.FarthestKm > 0 ? r.FarthestKm : (r.IsSuccess || r.Outcome == MissionOutcome.PartialSuccess) && type != null ? BodyDistances.FromHomeKm(type.Body) : 0;
+            double far = FarthestOf(r);
             if (far > c.Record.FarthestKm) c.Record.FarthestKm = far;
             double surface = r.SurfaceDays > 0 ? r.SurfaceDays : r.IsSuccess ? BodyDistances.SurfaceDaysFor(type) : 0;
             if (type != null && !string.Equals(type.Body, "Kerbin", StringComparison.OrdinalIgnoreCase)) c.Record.DaysOnOtherWorlds += surface;
             if (r.DaysInSpace > c.Record.LongestMissionDays) c.Record.LongestMissionDays = r.DaysInSpace;
+        }
+
+        /// <summary>How far from Kerbin a mission went, km: measured on a live flight, else the body table for a success.</summary>
+        private double FarthestOf(MissionReport r)
+        {
+            if (r.FarthestKm > 0) return r.FarthestKm;
+            MissionType type = Catalogs.Missions.Get(r.MissionTypeId);
+            return (r.IsSuccess || r.Outcome == MissionOutcome.PartialSuccess) && type != null ? BodyDistances.FromHomeKm(type.Body) : 0;
         }
 
         /// <summary>How many projects of this mission type finished successfully (for the "done before" marks).</summary>

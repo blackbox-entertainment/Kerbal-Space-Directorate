@@ -139,6 +139,24 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void AnOlderSavesFarthestFromKerbinIsMeasuredFromTheSurface()
+        {
+            Agency a = Staffed(new FakeClock());
+            CrewProfile jeb = a.Crew.Get("Jeb Kerman");
+            var r = new MissionReport { ProjectId = "P92", ProjectName = "Hangar flight", MissionTypeId = "KerbinOrbit", Mode = MissionMode.WatchLive, Outcome = MissionOutcome.Success, FarthestKm = 687.6, MaxAltitude = 87600 };
+            r.Crew.Add(jeb.Id);
+            a.Reports.Add(r);
+            jeb.Record.FarthestKm = 687.6;
+            a.State.FarthestFromSurface = false; // as an older save
+            Agency b = Make.Agency(new FakeClock(), new ListLogger());
+            AgencyStateSerializer.Read(AgencyStateSerializer.Write(a), b);
+            b.ResumeInterruptedDesigns(new List<string>());
+            Assert.That(b.Crew.Get(jeb.Id).Record.FarthestKm, Is.EqualTo(87.6).Within(0.01));
+            Assert.That(b.Records["Farthest"].Value, Is.EqualTo(87.6).Within(0.01));
+            Assert.That(b.State.FarthestFromSurface, Is.True);
+        }
+
+        [Test]
         public void ASimulatedOrbitIsNotKnowHowSoTheNextOrbitalMissionFliesLive()
         {
             Agency a = Staffed(new FakeClock());

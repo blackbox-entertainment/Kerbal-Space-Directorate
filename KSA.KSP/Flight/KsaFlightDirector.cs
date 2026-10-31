@@ -748,7 +748,7 @@ namespace KSA.KSP.Flight
             CelestialBody home = FlightGlobals.GetHomeBody();
             if (home != null)
             {
-                double km = Vector3d.Distance(_vessel.GetWorldPos3D(), home.position) / 1000.0;
+                double km = Math.Max(0, Vector3d.Distance(_vessel.GetWorldPos3D(), home.position) - home.Radius) / 1000.0; // from the surface (0.7.12)
                 if (km > Live.MaxDistanceFromHomeKm) Live.MaxDistanceFromHomeKm = km;
                 if (_vessel.mainBody != home && (_vessel.situation == Vessel.Situations.LANDED || _vessel.situation == Vessel.Situations.SPLASHED)) Live.SurfaceSeconds += dt;
             }

@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.7.12 (2026-10-30), test build
+
+- **A recovered live flight is always scored.** Recovering a ship from the flight scene sent the game to the Space Center, where KSA looked for the ship before KSP had reported the recovery, found none and put the project back on the pad: the flight, its firsts and records were lost (Valentina's orbit). KSA now waits 30 seconds after a scene loads before calling any live flight lost.
+- **Farthest from Kerbin measured from the surface.** Live flights measured from Kerbin's centre, so an 87.6 km hop read 687.6 km. Older saves are corrected once on load: the live flights, every crew member's farthest distance and the record.
+
 ## 0.7.11 (2026-10-30), test build
 
 - **Orbital rescues fly live.** A crew stranded in orbit aboard a real ship is rescued only by a live flight that comes alongside (within about 120 m, speeds matched) and moves the crew across; no spacewalk is needed. Such a rescue is set to Watch Live whatever mode was asked for, cannot be switched to Simulate, and waits on the pad rather than falling back to a simulation. Surface rescues and crews stranded by simulated flights are still simulated.

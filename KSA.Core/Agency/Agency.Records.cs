@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using KSA.Core.Missions;
 using KSA.Core.Narrative;
 using KSA.Core.Personnel;
 using KSA.Core.Projects;
@@ -130,6 +131,31 @@ namespace KSA.Core
             string was = " (was " + kind.Format(old.Value) + ", " + old.Holder + ")";
             Push(notices, headline + was);
             Publish(new NewsItem { Kind = NewsKind.PressRelease, Byline = AgencyName, Related = "record:" + key, Headline = headline, Body = headline + " on " + mission + was + "." }, false);
+        }
+
+        /// <summary>
+        /// Saves before 0.7.12 measured a live flight's farthest point from Kerbin's centre, so an 87 km hop read 687 km
+        /// (2026-10-30, T: "not sure these records hold anymore?"). Once per save: take the planet's radius off those flights,
+        /// then rebuild every crew member's farthest distance and the record from the mission reports.
+        /// </summary>
+        internal void FixFarthestFromSurface()
+        {
+            if (State.FarthestFromSurface) return;
+            State.FarthestFromSurface = true;
+            foreach (MissionReport r in Reports)
+                if (r.Mode == MissionMode.WatchLive && r.FarthestKm > 0) r.FarthestKm = Math.Max(0, r.FarthestKm - BodyDistances.HomeRadiusKm);
+            foreach (CrewProfile c in Crew.All)
+            {
+                double far = 0;
+                foreach (MissionReport r in Reports) if (r.Crew.Contains(c.Id) && !r.Deaths.Contains(c.Id)) far = Math.Max(far, FarthestOf(r));
+                c.Record.FarthestKm = far;
+            }
+            MissionReport best = null;
+            foreach (MissionReport r in Reports) if (r.Crew.Count > 0 && FarthestOf(r) > 0 && (best == null || FarthestOf(r) > FarthestOf(best))) best = r;
+            if (best == null) { Records.Remove("Farthest"); return; }
+            var names = new List<string>();
+            foreach (string id in best.Crew) { CrewProfile c = Crew.Get(id); names.Add(c != null ? c.Name : id); }
+            Records["Farthest"] = new RecordEntry { Key = "Farthest", Value = FarthestOf(best), Holder = string.Join(", ", names.ToArray()), Mission = best.ProjectName, Day = Calendar.DayOfYear(best.Day), Year = Calendar.YearOf(best.Day) };
         }
 
         /// <summary>An older save: build the career records from the crew's service records, quietly.</summary>

@@ -109,6 +109,7 @@ namespace KSA.Core
             RedrawOutdatedDesigns(notices);
             BackfillLessons();
             BackfillRecords();
+            FixFarthestFromSurface();
             foreach (Project p in Projects)
             {
                 if (p.Status != ProjectStatus.Design || p.Design == null || p.Design.Verdict != DesignVerdict.Pending || DesignInProgress(p.Id)) continue;

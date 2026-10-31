@@ -214,6 +214,9 @@ namespace KSA.KSP
         {
             double now = UnityEngine.Time.realtimeSinceStartup;
             if (now - _lastStrandCheck < 10) return;
+            // Just back from the flight scene: a recovered ship leaves the vessel list before KSP reports the recovery, so wait
+            // before calling any flight lost (2026-10-30: Valentina's recovered orbit was put back on the pad and never scored).
+            if (UnityEngine.Time.timeSinceLevelLoad < 30) return;
             _lastStrandCheck = now;
             if (FlightGlobals.Vessels == null) return;
             foreach (Project p in Agency.Projects)

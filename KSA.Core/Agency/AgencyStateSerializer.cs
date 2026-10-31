@@ -36,6 +36,7 @@ namespace KSA.Core
             st.AddValue("scienceEarned", s.ScienceEarned);
             st.AddValue("scienceCredited", s.ScienceCredited);
             st.AddValue("lastLaunchDay", s.LastLaunchDay);
+            st.AddValue("farthestFromSurface", s.FarthestFromSurface);
             foreach (string l in agency.LessonsLearned) st.AddValue("lessonLearned", l);
             foreach (KeyValuePair<string, List<KSA.Core.Flight.FailureCause>> kv in agency.DesignFixes)
                 foreach (KSA.Core.Flight.FailureCause c in kv.Value) st.AddValue("designFix", kv.Key + "|" + c);
@@ -228,6 +229,7 @@ namespace KSA.Core
                 s.ScienceEarned = st.GetDouble("scienceEarned", 0);
                 s.ScienceCredited = st.GetDouble("scienceCredited", 0);
                 s.LastLaunchDay = st.GetInt("lastLaunchDay", -1);
+                s.FarthestFromSurface = st.GetBool("farthestFromSurface", false);
                 agency.LessonsLearned.Clear();
                 agency.LessonsLearned.AddRange(st.GetValues("lessonLearned"));
                 agency.DesignFixes.Clear();

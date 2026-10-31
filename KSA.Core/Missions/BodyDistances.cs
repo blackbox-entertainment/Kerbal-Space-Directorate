@@ -11,6 +11,8 @@ namespace KSA.Core.Missions
     /// </summary>
     public static class BodyDistances
     {
+        /// <summary>Kerbin's radius, km: live flights measure their farthest point from the surface (0.7.12).</summary>
+        public const double HomeRadiusKm = 600;
         private static readonly Dictionary<string, double> Km = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
         {
             { "Kerbin", 0 }, { "Mun", 12000 }, { "Minmus", 47000 },
