@@ -176,13 +176,13 @@ namespace KSA.KSP.UI
                 new DialogGUIButton("AI Setup", OpenAiSetup, 95f, 30f, false),
                 new DialogGUIButton(_agency.News.Unread > 0 ? "Press Room (" + _agency.News.Unread + " new)" : "Press Room", OpenNews, 150f, 30f, false));
             var buttons3 = new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
-                new DialogGUIButton("Analytics", OpenAnalytics, 95f, 30f, false),
-                new DialogGUIButton("Campaign", OpenCampaign, 100f, 30f, false),
-                new DialogGUIButton("Departments", OpenDepartments, 110f, 30f, false),
-                new DialogGUIButton(_agency.DirectorOn ? "AI Director (on)" : "AI Director", OpenAiDirector, 150f, 30f, false),
-                new DialogGUIButton("Help", () => HelpWindow.Show("start"), 80f, 30f, false),
+                new DialogGUIButton("Analytics", OpenAnalytics, 85f, 30f, false),
+                new DialogGUIButton("Campaign", OpenCampaign, 90f, 30f, false),
+                new DialogGUIButton("Departments", OpenDepartments, 105f, 30f, false),
+                new DialogGUIButton(_agency.DirectorOn ? "AI Director (on)" : "AI Director", OpenAiDirector, 125f, 30f, false),
+                new DialogGUIButton("Help", () => HelpWindow.Show("start"), 60f, 30f, false),
                 // Sandbox saves only: the flight test bench (2026-10-30).
-                new DialogGUIButton("Flight tests", OpenFlightTests, () => HighLogic.CurrentGame != null && HighLogic.CurrentGame.Mode == Game.Modes.SANDBOX, 110f, 30f, false));
+                new DialogGUIButton("Flight tests", OpenFlightTests, () => HighLogic.CurrentGame != null && HighLogic.CurrentGame.Mode == Game.Modes.SANDBOX, 100f, 30f, false));
 
             var content = new DialogGUIVerticalLayout(true, true, 4f, new RectOffset(4, 4, 4, 4), TextAnchor.UpperLeft, list, buttons, buttons2, buttons3);
 

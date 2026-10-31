@@ -19,7 +19,10 @@ namespace KSA.Core.Design
         /// Raise this whenever the rules the engineers design by change (fins, engines, parachutes, margins): designs drawn
         /// up by an older revision that have not flown yet are drawn again on load (2026-10-30). 1 = 0.6.9.
         /// </summary>
-        public const int Revision = 1;
+        public const int Revision = 2; // 2: upper stages that light in the air carry fins; real capsules; decouplers that fit
+
+        /// <summary>A plane's cockpit (Mk1 Inline, Mk2, Mk3): no place for a rocket crew; T: "looks like one for a jet fighter".</summary>
+        private static bool IsPlaneCockpit(PartInfo p) { return p.Name.IndexOf("cockpit", StringComparison.OrdinalIgnoreCase) >= 0; }
 
         private const double G0 = 9.80665;
         private const int MaxTanks = 8;
@@ -60,14 +63,18 @@ namespace KSA.Core.Design
 
             // Payload: the lightest pod that seats the crew, then one of each thing the brief must carry.
             PartInfo pod = null;
-            foreach (PartInfo p in allowed)
-                if (p.Kind == PartKind.Command && p.CrewCapacity >= Math.Max(1, crew) && (pod == null || (pod.RequiresDlc && !p.RequiresDlc) || (pod.RequiresDlc == p.RequiresDlc && p.Mass < pod.Mass))) pod = p; // stock before DLC pods
+            foreach (bool cockpits in new[] { false, true }) // a plane's cockpit only when nothing else seats the crew (2026-10-30)
+            {
+                if (pod != null) break;
+                foreach (PartInfo p in allowed)
+                    if (p.Kind == PartKind.Command && p.CrewCapacity >= Math.Max(1, crew) && (cockpits || !IsPlaneCockpit(p)) && (pod == null || (pod.RequiresDlc && !p.RequiresDlc) || (pod.RequiresDlc == p.RequiresDlc && p.Mass < pod.Mass))) pod = p; // stock before DLC pods
+            }
             // No pod seats everyone (a rescue brings the stranded home): the roomiest pod plus crew cabins (2026-10-28).
             var cabins = new List<PartInfo>();
             if (pod == null)
             {
                 foreach (PartInfo p in allowed)
-                    if (p.Kind == PartKind.Command && p.CrewCapacity > 0 && (pod == null || p.CrewCapacity > pod.CrewCapacity || (p.CrewCapacity == pod.CrewCapacity && p.Mass < pod.Mass))) pod = p;
+                    if (p.Kind == PartKind.Command && p.CrewCapacity > 0 && !IsPlaneCockpit(p) && (pod == null || p.CrewCapacity > pod.CrewCapacity || (p.CrewCapacity == pod.CrewCapacity && p.Mass < pod.Mass))) pod = p;
                 PartInfo cabin = null;
                 foreach (PartInfo p in allowed)
                     if (p.Kind == PartKind.Habitat && p.CrewCapacity > 0 && (cabin == null || p.Mass / p.CrewCapacity < cabin.Mass / cabin.CrewCapacity)) cabin = p;
@@ -229,6 +236,26 @@ namespace KSA.Core.Design
             DesignAnalysis check = StageAnalyzer.Analyze(best, catalog, need, gravity);
             // Fins on the stage above a weak launch stage too, when the rocket still makes the mission with them (2026-10-30;
             // a Moho rocket at the edge of reach could not carry them).
+            // Each stage's decoupler as wide as the stage it sits on (2026-10-30: a 0.625 m separator, the lightest, held
+            // 1.875 m stages together).
+            var lightDecouplers = new List<string>();
+            foreach (PlanStage s in best.Stages)
+            {
+                lightDecouplers.Add(s.Decoupler);
+                if (s.Decoupler.Length == 0) continue;
+                PartInfo tank = s.Core.Count > 0 ? catalog.Get(s.Core[0].Part) : null;
+                double width = tank != null && tank.Diameter > 0 ? tank.Diameter : pod.Diameter;
+                PartInfo fit = null;
+                foreach (PartInfo p in allowed)
+                {
+                    if (p.Kind != PartKind.Decoupler || !p.IsStackable) continue;
+                    if (fit == null || Math.Abs(p.Diameter - width) < Math.Abs(fit.Diameter - width) - 0.01 || (Math.Abs(Math.Abs(p.Diameter - width) - Math.Abs(fit.Diameter - width)) <= 0.01 && p.Mass < fit.Mass)) fit = p;
+                }
+                if (fit != null) s.Decoupler = fit.Name;
+            }
+            DesignAnalysis fitted = StageAnalyzer.Analyze(best, catalog, need, gravity);
+            if (fitted.Passes || !check.Passes) check = fitted;
+            else for (int i = 0; i < best.Stages.Count; i++) best.Stages[i].Decoupler = lightDecouplers[i]; // a design at its limit keeps the lighter ones
             // After this mission tumbled before, the second stage gets fins whatever the launch stage holds (2026-10-30).
             bool tumbled = req.Fixes.Contains(Flight.FailureCause.Tumbled);
             if (fin != null && check.Passes && best.Stages.Count > 1 && !Fins.HasOn(best, catalog, 1) && Fins.AddIfMissing(best, allowed, catalog, int.MaxValue, tumbled) != null)

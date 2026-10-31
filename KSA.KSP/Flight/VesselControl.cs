@@ -379,7 +379,7 @@ namespace KSA.KSP.Flight
         /// <summary>Stages when the active engines have burnt out or nothing is burning. Sets line when it staged.</summary>
         public void AutoStage(ref string line)
         {
-            if (_v == null || Now - _lastStage < 1.5 || _v.currentStage <= 0) return;
+            if (_v == null || Now - _lastStage < 0.3 || _v.currentStage <= 0) return;
             bool anyActive = false, anyFlamedOut = false, anyThrust = false;
             foreach (ModuleEngines e in _v.FindPartModulesImplementing<ModuleEngines>())
             {
@@ -388,6 +388,10 @@ namespace KSA.KSP.Flight
                 if (e.flameout) anyFlamedOut = true;
                 if (e.finalThrust > 0.1f) anyThrust = true;
             }
+            // Nothing burning in the air: light the next engine at once. A stage coasting unpowered through air tumbles, and a
+            // swivelling engine is what holds it straight (2026-10-30: 1.5 s after separating at 17.5 km it was turning 71 deg/s).
+            bool inAir = _v.mainBody != null && _v.mainBody.atmosphere && _v.altitude < _v.mainBody.atmosphereDepth;
+            if (Now - _lastStage < 1.5 && (anyActive || !inAir)) return;
             // Stage on burnout, or when lit engines give nothing; never to fire a stage that holds only parachutes.
             // Burnout, dead thrust, or nothing lit at all with stages left: keep going down the stack (never into a chute-only stage).
             // While some engine still burns, stage only when the next stage throws away nothing that is burning (2026-10-28:

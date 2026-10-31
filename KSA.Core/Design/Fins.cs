@@ -51,12 +51,12 @@ namespace KSA.Core.Design
             return false;
         }
 
-        /// <summary>A launch stage with less than this (sea-level Isp) burns out in thick air, below about 20 km.</summary>
-        public const double LowStageDeltaV = 1500;
+        /// <summary>A launch stage with less than this (sea-level Isp) burns out in the air: 2,000 m/s of it left a rocket at 17.5 km and 775 m/s (2026-10-30).</summary>
+        public const double LowStageDeltaV = 2800;
 
         /// <summary>
         /// The stages that fly through thick air and so need fins: the launch stage, and the stage above it when the launch
-        /// stage is solid boosters only or has under 1,500 m/s at sea level: it burns out low and the next stage climbs on
+        /// stage is solid boosters only or has under 2,800 m/s at sea level: it burns out low and the next stage climbs on
         /// through the air (2026-10-30: a finless upper stage tumbled at 16 km; T's Suborbital hop mk I flew with fins on both).
         /// </summary>
         public static List<int> StagesNeedingFins(StagePlan plan, IPartCatalog catalog, bool forceUpper = false)

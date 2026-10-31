@@ -37,6 +37,25 @@ namespace KSA.KSP.Parts
         /// <summary>Call when parts are researched or purchased so the next read rebuilds the catalog.</summary>
         public static void Invalidate() { _cache = null; _cacheKey = null; _techVersion++; }
 
+        /// <summary>The first "sizeN" in a part's bulkhead profiles, in metres; 0 when it has none.</summary>
+        private static double ProfileDiameter(string profiles)
+        {
+            if (string.IsNullOrEmpty(profiles)) return 0;
+            foreach (string raw in profiles.Split(','))
+            {
+                switch (raw.Trim().ToLowerInvariant())
+                {
+                    case "size0": return 0.625;
+                    case "size1": return 1.25;
+                    case "size1p5": return 1.875;
+                    case "size2": return 2.5;
+                    case "size3": return 3.75;
+                    case "size4": return 5;
+                }
+            }
+            return 0;
+        }
+
         private static string TechStamp()
         {
             if (HighLogic.CurrentGame == null || HighLogic.CurrentGame.Mode == Game.Modes.SANDBOX || ResearchAndDevelopment.Instance == null) return "all";
@@ -130,6 +149,9 @@ namespace KSA.KSP.Parts
             info.HasBottomNode = bottom != null;
             int size = top != null ? top.size : (bottom != null ? bottom.size : -1);
             info.Diameter = size < 0 ? 0 : (size == 0 ? 0.625 : 1.25 * size);
+            // The part's own profile is the true size: the 0.625 m heat shield has size 1 nodes and passed for 1.25 m (2026-10-30).
+            double profile = ProfileDiameter(ap.bulkheadProfiles);
+            if (profile > 0) info.Diameter = profile;
             if (p.srfAttachNode != null && p.attachRules != null && p.attachRules.srfAttach) info.Tags.Add("radial");
             // Drogues slow a fast capsule but cannot land it (2026-10-29: a Kerbin orbit design carried only a Mk25 drogue).
             if (p.Modules != null && p.Modules.Contains("ModuleParachute") && ap.name.ToLowerInvariant().Contains("drogue")) info.Tags.Add("drogue");

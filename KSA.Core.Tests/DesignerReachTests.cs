@@ -161,6 +161,40 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void ARocketHasACapsuleAndDecouplersThatFit()
+        {
+            Agency a = Make.Agency(new FakeClock(), new ListLogger());
+            PartCatalog parts = StockParts();
+            parts.Add(new PartInfo { Name = "Mark2Cockpit", Title = "Mk1 Inline Cockpit", Kind = PartKind.Command, Mass = 0.1, CrewCapacity = 1, Diameter = 1.25, HasTopNode = true, HasBottomNode = true });
+            parts.Add(new PartInfo { Name = "Separator.tiny", Title = "Tiny separator", Kind = PartKind.Decoupler, Mass = 0.001, Diameter = 0.625, HasTopNode = true, HasBottomNode = true });
+            a.Parts = parts;
+            a.Requirements = MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
+            MissionType orbit = a.Catalogs.Missions.Get("KerbinOrbit");
+            string why;
+            DesignRecord r = a.EngineersDesign(new KSA.Core.Projects.Project { Id = "x", MissionTypeId = orbit.Id, Name = orbit.Name }, out why, orbit);
+            Assert.That(r, Is.Not.Null, why);
+            Assert.That(r.Plan.Payload.Command, Does.Not.Contain("Cockpit"), "a capsule, not a plane's cockpit");
+            foreach (PlanStage s in r.Plan.Stages) Assert.That(s.Decoupler, Is.Not.EqualTo("Separator.tiny"), "as wide as its stage");
+        }
+
+        [Test]
+        public void AnUpperStageThatLightsInTheAirCarriesFins()
+        {
+            Agency a = Make.Agency(new FakeClock(), new ListLogger());
+            PartCatalog parts = StockParts();
+            a.Parts = parts;
+            a.Requirements = MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
+            MissionType orbit = a.Catalogs.Missions.Get("KerbinOrbit");
+            string why;
+            DesignRecord r = a.EngineersDesign(new KSA.Core.Projects.Project { Id = "x", MissionTypeId = orbit.Id, Name = orbit.Name }, out why, orbit);
+            Assert.That(r, Is.Not.Null, why);
+            Assert.That(r.Plan.Stages.Count, Is.GreaterThan(1));
+            Assert.That(Fins.HasOn(r.Plan, parts, 0), Is.True, "launch stage");
+            if (Fins.LaunchStageDeltaV(r.Plan, parts) < Fins.LowStageDeltaV)
+                Assert.That(Fins.HasOn(r.Plan, parts, 1), Is.True, "2026-10-30: a finless second stage tumbled at 17.5 km");
+        }
+
+        [Test]
         public void WhatCanItFlyListsTheFitsFirstThenTheNearMissesByDeltaV()
         {
             Agency a = Make.Agency(new FakeClock(), new ListLogger());

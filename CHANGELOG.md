@@ -2,6 +2,12 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.12 (2026-10-30), test build
+
+- **Upper stages stay straight.** The first bench flight tracked its turn perfectly, then its finless second stage tumbled 1.5 s after separating at 17.5 km. An upper stage now gets fins unless the launch stage has 2,800 m/s at sea level (was 1,500), and in the air the next engine lights 0.3 s after separation instead of 1.5 s. Unflown engineers' rockets are redrawn (design rules revision 2).
+- **Real capsules and parts that fit.** The engineers took the lightest part that passed: a plane's cockpit for the crew pod (a plane cockpit is now only a last resort), a 0.625 m separator between 1.875 m stages (each decoupler now matches its stage, unless a design at its limit needs the lighter one), and the 0.625 m heat shield on a 1.25 m pod (part sizes now come from the part's own profile, not its attach nodes).
+- **Office window.** The Flight tests button no longer stretches the bottom row past the window.
+
 ## 0.8.11 (2026-10-30), test build
 
 - **Flight test bench.** In a Sandbox save the Director's Office has a Flight tests button. It flies a ladder of missions live with no one at the controls (Kerbin orbit, Mun flyby, Mun orbit, Mun landing, Minmus orbit, Minmus landing, Duna flyby, Duna orbit, Duna landing): the engineers design each rocket, the crew flies it with no pilot mistakes, and it stops at the first failure. Results go to GameData/KSA/PluginData/FlightTests/flight-tests.txt.
