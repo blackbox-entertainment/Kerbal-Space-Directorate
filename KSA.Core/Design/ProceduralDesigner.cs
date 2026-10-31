@@ -19,7 +19,7 @@ namespace KSA.Core.Design
         /// Raise this whenever the rules the engineers design by change (fins, engines, parachutes, margins): designs drawn
         /// up by an older revision that have not flown yet are drawn again on load (2026-10-30). 1 = 0.6.9.
         /// </summary>
-        public const int Revision = 4; // 4: the earliest parts that do the job; 3: return capsules, at most four side boosters unless nothing else flies; 2: upper stages that light in the air carry fins; real capsules; decouplers that fit
+        public const int Revision = 5; // 5: landers seat three when they can; 4: the earliest parts that do the job; 3: return capsules, at most four side boosters unless nothing else flies; 2: upper stages that light in the air carry fins; real capsules; decouplers that fit
 
         private static bool IsPlaneCockpit(PartInfo p) { return PartFilter.IsPlaneCockpit(p); }
 
@@ -57,6 +57,20 @@ namespace KSA.Core.Design
         /// Returns a plan that passes, or null. <paramref name="why"/> says what came closest when it fails.
         /// </summary>
         public static StagePlan Design(DesignRequest req, IPartCatalog catalog, MissionRequirements.Entry need, double gravity, out string why)
+        {
+            // A lander is drawn for its full crew when a pod seats them and the rocket can lift it; otherwise for the crew asked for.
+            if (req != null && req.PreferredSeats > req.CrewSize && req.AllowedParts.Exists(p => p.Kind == PartKind.Command && p.CrewCapacity >= req.PreferredSeats))
+            {
+                int asked = req.CrewSize;
+                req.CrewSize = req.PreferredSeats;
+                StagePlan roomy = DesignFor(req, catalog, need, gravity, out why);
+                req.CrewSize = asked;
+                if (roomy != null) return roomy;
+            }
+            return DesignFor(req, catalog, need, gravity, out why);
+        }
+
+        private static StagePlan DesignFor(DesignRequest req, IPartCatalog catalog, MissionRequirements.Entry need, double gravity, out string why)
         {
             why = null;
             if (req == null || catalog == null) { why = "nothing to design with"; return null; }

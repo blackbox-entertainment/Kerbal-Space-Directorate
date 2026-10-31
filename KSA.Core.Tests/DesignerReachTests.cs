@@ -464,6 +464,27 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void ALanderIsDrawnForThreeWhenAPodSeatsThemAndForItsCrewWhenNot()
+        {
+            Agency a = Make.Agency(new FakeClock(), new ListLogger());
+            a.Parts = StockParts();
+            a.Requirements = MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
+            MissionType t = a.Catalogs.Missions.Get("MunLanding");
+            string why;
+            DesignRecord r = a.EngineersDesign(new KSA.Core.Projects.Project { Id = "x", MissionTypeId = t.Id, Name = t.Name }, out why, t);
+            Assert.That(r, Is.Not.Null, why);
+            Assert.That(DesignSession.SeatsIn(r.Plan, a.Parts), Is.GreaterThanOrEqualTo(3));
+
+            var early = new PartCatalog();
+            foreach (PartInfo p in StockParts().All) if (p.Name != "mk1-3pod") early.Add(p);
+            early.Add(new PartInfo { Name = "kv2Pod", Title = "kv2Pod", Kind = PartKind.Command, Mass = 1.65, Diameter = 1.25, CrewCapacity = 2, HasTopNode = true, HasBottomNode = true });
+            a.Parts = early;
+            DesignRecord two = a.EngineersDesign(new KSA.Core.Projects.Project { Id = "y", MissionTypeId = t.Id, Name = t.Name }, out why, t);
+            Assert.That(two, Is.Not.Null, why);
+            Assert.That(DesignSession.SeatsIn(two.Plan, a.Parts), Is.EqualTo(2));
+        }
+
+        [Test]
         public void TheReviewRejectsWhatNeverMadeOrbit()
         {
             PartCatalog parts = StockParts();

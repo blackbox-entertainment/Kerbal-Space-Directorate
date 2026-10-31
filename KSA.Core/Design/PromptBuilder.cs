@@ -34,6 +34,8 @@ namespace KSA.Core.Design
         }
         public double Budget { get; set; }
         public int CrewSize { get; set; }
+        /// <summary>Seats to draw the craft for when it can be done, above <see cref="CrewSize"/> (a lander of three, 2026-10-31).</summary>
+        public int PreferredSeats { get; set; }
         public string ProjectName { get; set; }
         /// <summary>Hardware the craft must carry, one plain sentence each (KSA-67: industry modules, life support supplies).</summary>
         public List<string> MustCarry { get; } = new List<string>();

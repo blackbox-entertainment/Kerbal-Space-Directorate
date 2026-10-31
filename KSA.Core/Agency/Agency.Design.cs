@@ -224,6 +224,8 @@ namespace KSA.Core
                 Budget = p.Budget,
                 // Seats, not just the crew: a rescue also seats the kerbals it brings home (2026-10-28).
                 CrewSize = type != null ? type.Seats : p.Crew.Count,
+                // A landing mission flies two or three: its lander has room for three (2026-10-31, T).
+                PreferredSeats = type != null && type.Profile == MissionProfile.Land && type.CrewSize > 0 && type.ModuleRole.Length == 0 ? LanderSeats : 0,
                 ProjectName = p.Name
             };
             foreach (string id in p.Engineers)
@@ -593,6 +595,8 @@ namespace KSA.Core
         }
 
         /// <summary>Model name on designs the engineering team drew up without AI (ProceduralDesigner).</summary>
+        /// <summary>Seats the engineers draw a landing mission's lander for, when they can.</summary>
+        public const int LanderSeats = 3;
         public const string EngineersModel = "engineering team (by hand)";
 
         /// <summary>
