@@ -350,7 +350,8 @@ namespace KSA.KSP.Flight
         /// <summary>
         /// False while the vessel is on rails (packed) or time is warping, and for a second after it unpacks: parts must not
         /// separate then (2026-10-30: dropping out of warp at the top of the air, the capsule was decoupled in the same frame
-        /// the ship unpacked, the parts overlapped and Valentina's pod exploded). Asking stops the warp.
+        /// the ship unpacked, the parts overlapped and Valentina's pod exploded). Asking stops the warp, so call it only when
+        /// something is about to separate (0.8.3: the reentry leg asked every frame and the player could not warp at all).
         /// </summary>
         public bool PartsSafe()
         {
@@ -364,11 +365,13 @@ namespace KSA.KSP.Flight
             return _settleUntil < 0 || Now >= _settleUntil;
         }
 
-        public void Stage()
+        /// <summary>Fires the next stage; false when it could not now (not the active vessel, or parts not safe to separate).</summary>
+        public bool Stage()
         {
-            if (_v == null || _v != FlightGlobals.ActiveVessel || !PartsSafe()) return;
+            if (_v == null || _v != FlightGlobals.ActiveVessel || !PartsSafe()) return false;
             global::KSP.UI.Screens.StageManager.ActivateNextStage();
             _lastStage = Now;
+            return true;
         }
 
         public bool HasStagesLeft { get { return _v != null && _v.currentStage > 0; } }
@@ -408,7 +411,7 @@ namespace KSA.KSP.Flight
         /// </summary>
         public bool DropSpentStage(ref string line)
         {
-            if (_v == null || _v.currentStage <= 0 || Now - _lastStage < 1.5 || !PartsSafe()) return false;
+            if (_v == null || _v.currentStage <= 0 || Now - _lastStage < 1.5) return false;
             bool anyLit = false;
             foreach (ModuleEngines e in _v.FindPartModulesImplementing<ModuleEngines>())
             {
@@ -426,8 +429,7 @@ namespace KSA.KSP.Flight
                 if (p.FindModuleImplementing<ModuleEngines>() != null || p.FindModuleImplementing<ModuleParachute>() != null) return false;
                 if (p.FindModuleImplementing<ModuleDecouple>() != null || p.FindModuleImplementing<ModuleAnchoredDecoupler>() != null) decoupler = true;
             }
-            if (!decoupler) return false;
-            Stage();
+            if (!decoupler || !Stage()) return false;
             line = "Spent stage jettisoned.";
             return true;
         }
@@ -439,12 +441,13 @@ namespace KSA.KSP.Flight
         /// </summary>
         public bool ShedForReentry(ref string line)
         {
-            if (_v == null || Now - _lastStage < 1.5 || !PartsSafe()) return false;
+            if (_v == null || Now - _lastStage < 1.5) return false;
             // The decoupler nearest under the capsule, fired directly: everything below goes at once, whatever stage it
             // was put in (2026-10-29: a Director's rocket had it in the parachute stage, which the crew never fires).
             ModuleDecouple under = DecouplerUnderCapsule();
             if (under != null)
             {
+                if (!PartsSafe()) return false;
                 try
                 {
                     under.Decouple();
@@ -464,8 +467,7 @@ namespace KSA.KSP.Flight
                 if (p.FindModuleImplementing<ModuleAblator>() != null) return false; // a heat shield (it can decouple itself): keep it
                 if (p.FindModuleImplementing<ModuleDecouple>() != null || p.FindModuleImplementing<ModuleAnchoredDecoupler>() != null) decoupler = true;
             }
-            if (!decoupler) return false;
-            Stage();
+            if (!decoupler || !Stage()) return false;
             line = "Staged away everything below the capsule for the descent.";
             return true;
         }

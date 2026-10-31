@@ -495,10 +495,10 @@ namespace KSA.KSP.Flight
                     }
                     // Warp only well above the air, and leave it 15 km up: KSP drops out of warp at the edge of the atmosphere
                     // and staging in that frame tore the capsule apart (2026-10-30).
-                    if (c.IsWarping && alt < atmo + 15000) c.StopWarp();
+                    if (c.IsWarping && TimeWarp.WarpMode == TimeWarp.Modes.HIGH && alt < atmo + 15000) c.StopWarp(); // physics warp (in the air) is fine
                     else if (alt > atmo + 20000 && v.verticalSpeed > -50 && v.orbit.timeToPe > 120) c.WarpTo(ctx.Now + Math.Min(v.orbit.timeToPe, 600) - 90);
                     // Shed everything but the capsule once we are coming down, one stage every two seconds.
-                    if (v.verticalSpeed < 0 && v.currentStage > 1 && ctx.Now - _lastShed > 2 && alt < atmo) { c.Stage(); _lastShed = ctx.Now; line = "Staged away the service section for reentry."; }
+                    if (v.verticalSpeed < 0 && v.currentStage > 1 && ctx.Now - _lastShed > 2 && alt < atmo) { if (c.Stage()) { _lastShed = ctx.Now; line = "Staged away the service section for reentry."; } }
                     // Chutes: armed as soon as we are falling inside the atmosphere, so the game opens them the moment it
                     // is safe at any height; forced open below 2.5 km if still too fast, because the ground is coming either way.
                     double aboveGround = Math.Max(0, alt - Math.Max(0, v.terrainAltitude));

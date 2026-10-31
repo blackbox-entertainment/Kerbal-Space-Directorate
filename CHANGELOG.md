@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.3 (2026-10-30), test build
+
+- **Time warp works while watching again.** The 0.8.1 safety check (nothing separates while warping) stopped the warp every time it was asked, and the reentry leg asked every frame, so warp was cancelled the moment you started it. Now the warp stops only when something is actually about to be staged or decoupled. Physics warp is allowed in the air during reentry and under parachutes; only rails warp ends 15 km above the atmosphere.
+
 ## 0.8.2 (2026-10-30), test build
 
 - **Records, world by world.** The Records window now lists the firsts grouped by world, Kerbin first, with record-book names: First flight, First kerbal in space, First kerbal in orbit, First spacewalk, First kerbal on the Mun, First orbit of Duna and so on. Worlds nobody has reached share one line. Then the agency records (altitude, speed, distance, days, missions, worlds), then a new Records by world section: for each world flown to, crewed missions and successes, the longest mission, the longest surface stay, and the kerbals with the most missions and the most surface days there.
