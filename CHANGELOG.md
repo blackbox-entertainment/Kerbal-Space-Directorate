@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.7.11 (2026-10-30), test build
+
+- **Orbital rescues fly live.** A crew stranded in orbit aboard a real ship is rescued only by a live flight that comes alongside (within about 120 m, speeds matched) and moves the crew across; no spacewalk is needed. Such a rescue is set to Watch Live whatever mode was asked for, cannot be switched to Simulate, and waits on the pad rather than falling back to a simulation. Surface rescues and crews stranded by simulated flights are still simulated.
+
 ## 0.7.10 (2026-10-30), test build
 
 - **Deorbit burns point the right way.** The deorbit burn lit after a fixed 5 seconds wherever the nose pointed. Valentina was still facing prograde after her orbit, so the burn raised her apoapsis from 96 km to 1,064 km and emptied the tank. Now the crew holds retrograde through the whole orbit, the engine lights only within 15 degrees of retrograde, and the burn pauses if the nose drifts more than 30 degrees off. The same check now guards the deorbit before a Mun or Minmus landing and a spaceplane's deorbit.

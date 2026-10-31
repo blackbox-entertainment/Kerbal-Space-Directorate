@@ -143,6 +143,7 @@ namespace KSA.Core
             p.ModuleRole = "rescue";
             p.RescueId = s.Id;
             s.RescueProjectId = p.Id;
+            if (MustFlyLive(p)) p.Mode = MissionMode.WatchLive;
             message = "Rescue " + p.Id + " started for " + CrewNames(s.Crew) + " " + s.Where + ".";
             Template tp = Catalogs.Templates.Get(p.TemplateId);
             int seatsNeeded = p.Crew.Count + s.Crew.Count;
@@ -155,6 +156,18 @@ namespace KSA.Core
             Push(null, message);
             RaiseProjectChanged(p);
             return p;
+        }
+
+        /// <summary>
+        /// A crew stranded in orbit aboard a ship that is really there is rescued only by a live flight that comes alongside
+        /// (2026-10-30, T: a rescue only within reach of the stranded craft; the dice roll of a simulation brought them home
+        /// from anywhere). Surface rescues and crews stranded by a simulated flight have no ship to meet and stay simulated.
+        /// </summary>
+        public bool MustFlyLive(Project p)
+        {
+            if (p == null || p.RescueId.Length == 0) return false;
+            Stranding s = GetStranding(p.RescueId);
+            return s != null && !s.OnSurface && s.VesselId.Length > 0;
         }
 
         /// <summary>A rescue resolved: on success the stranded come home with the rescuers.</summary>

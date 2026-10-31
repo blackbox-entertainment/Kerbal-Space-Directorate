@@ -386,6 +386,7 @@ namespace KSA.Core
             Project p = GetProject(projectId);
             if (p == null) { message = "No such project."; return false; }
             if (p.Status == ProjectStatus.InFlight || !p.IsActive) { message = "Too late to change how " + p.Name + " flies."; return false; }
+            if (mode == MissionMode.Simulate && MustFlyLive(p)) { message = p.Name + " must fly live: the rescue ship has to come alongside the stranded craft."; return false; }
             p.Mode = mode;
             message = p.Name + " will " + (mode == MissionMode.WatchLive ? "be flown live." : "be simulated.");
             return true;
@@ -468,9 +469,20 @@ namespace KSA.Core
                                     break;
                                 }
                             }
+                            if (MustFlyLive(p)) p.Mode = MissionMode.WatchLive; // older saves: an orbital rescue set to simulate
                             if (p.Mode == MissionMode.WatchLive)
                             {
                                 string blocker = LiveBlocker(p);
+                                if (blocker != null && MustFlyLive(p))
+                                {
+                                    // An orbital rescue never falls back to a simulation: it waits until it can fly.
+                                    if (!p.Notes.Exists(n => n.StartsWith("Waiting to fly live")))
+                                    {
+                                        p.Notes.Add("Waiting to fly live: " + blocker);
+                                        Push(notices, p.Name + " must fly live and cannot yet: " + blocker);
+                                    }
+                                    break;
+                                }
                                 if (blocker != null)
                                 {
                                     p.Mode = MissionMode.Simulate;
@@ -545,7 +557,9 @@ namespace KSA.Core
             if (fuelWait != null) { message = p.Name + " is " + fuelWait + "."; return false; }
             if (p.Mode == MissionMode.WatchLive)
             {
-                if (LiveBlocker(p) == null) return LaunchLive(projectId, out message);
+                string live = LiveBlocker(p);
+                if (live == null) return LaunchLive(projectId, out message);
+                if (MustFlyLive(p)) { message = p.Name + " must fly live and cannot yet: " + live; return false; }
                 p.Mode = MissionMode.Simulate;
                 p.Notes.Add("Live flight not possible; flown as a simulation.");
             }

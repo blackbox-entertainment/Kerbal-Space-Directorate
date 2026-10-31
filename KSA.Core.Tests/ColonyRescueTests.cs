@@ -212,6 +212,7 @@ namespace KSA.Core.Tests
             Assert.That(s.Where, Is.EqualTo("in orbit of Kerbin"));
             Assert.That(a.WhereaboutsOf(val.Id), Does.StartWith("stranded"));
             Assert.That(val.Record.Incidents, Has.Some.Matches<IncidentEntry>(i => i.Kind == IncidentKind.Stranded));
+            s.VesselId = string.Empty; // stranded by a simulated flight: no ship to meet, so the rescue may be simulated
 
             string msg;
             Project rescue = null;
@@ -230,6 +231,26 @@ namespace KSA.Core.Tests
             Assert.That(val.Record.Incidents, Has.Some.Matches<IncidentEntry>(i => i.Kind == IncidentKind.Rescue));
             foreach (string id in rescue.Crew)
                 Assert.That(a.Crew.Get(id).Record.Incidents, Has.Some.Matches<IncidentEntry>(i => i.Kind == IncidentKind.Rescue), "the rescuers are on the record too");
+        }
+
+        [Test]
+        public void AnOrbitalRescueOfARealShipNeverFallsBackToASimulation()
+        {
+            var clock = new FakeClock();
+            Agency a = Staffed(clock);
+            Stranding s = StrandInOrbit(a, "Val Kerman");
+            string msg;
+            Project rescue = a.CreateRescue(s.Id, null, MissionMode.Simulate, out msg);
+            Assert.That(rescue, Is.Not.Null, msg);
+            Assert.That(a.MustFlyLive(rescue), Is.True);
+            Assert.That(rescue.Mode, Is.EqualTo(MissionMode.WatchLive), "set live whatever was asked");
+            Assert.That(a.SetProjectMode(rescue.Id, MissionMode.Simulate, out msg), Is.False);
+            a.LiveFlightAvailable = false; // e.g. the flight director cannot fly it now
+            for (int i = 0; i < 60; i++) { clock.AdvanceDays(5); a.Tick(); }
+            Assert.That(rescue.Status, Is.EqualTo(ProjectStatus.Ready), "waits on the pad instead of rolling the dice");
+            Assert.That(rescue.Mode, Is.EqualTo(MissionMode.WatchLive));
+            Assert.That(s.Resolved, Is.False);
+            Assert.That(a.LaunchNow(rescue.Id, out msg), Is.False);
         }
 
         [Test]
