@@ -48,6 +48,17 @@ namespace KSA.KSP.Testing
                 CraftWriter.Result w = CraftWriter.WriteTo(r.Plan, KsaCore.Agency.Parts, name, path);
                 Lines.Add(name + ": " + size + (w.Ok ? ", saved" : ", NOT saved: " + w.Error));
             }
+            // The Director's lander, one craft for each crew pod (2026-10-31).
+            foreach (Template t in KsaCore.Agency.Catalogs.Templates.Templates)
+            {
+                if (!t.Id.StartsWith("DirectorateLander", StringComparison.Ordinal) || !t.IsAvailable(KsaCore.Agency.InstalledMods)) continue;
+                string plan = Path.Combine(KSPUtil.ApplicationRootPath, Path.Combine("GameData", t.PlanFile.Replace('/', Path.DirectorySeparatorChar)));
+                StagePlan parsed; string error;
+                if (!File.Exists(plan) || !StagePlan.TryParse(File.ReadAllText(plan), out parsed, out error)) { Lines.Add(t.Name + ": no plan"); continue; }
+                string name = "Engineers " + t.Name;
+                CraftWriter.Result w = CraftWriter.WriteTo(parsed, KsaCore.Agency.Parts, name, Path.Combine(folder, name + ".craft"));
+                Lines.Add(name + (w.Ok ? ": saved" : ": NOT saved: " + w.Error));
+            }
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(ReportPath));

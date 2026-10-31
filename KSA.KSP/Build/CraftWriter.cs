@@ -197,7 +197,8 @@ namespace KSA.KSP.Build
                 if (ap == null) { result.Warnings.Add("Extra '" + extra + "' is not loaded; skipped."); continue; }
                 CorePart info = catalog != null ? catalog.Get(extra) : null;
                 PartKind kind = info != null ? info.Kind : PartKind.Other;
-                if (kind == PartKind.HeatShield || kind == PartKind.Decoupler) { belowPod.Add(extra); continue; }
+                // Stabilizers go under the pod too, as T built them: on top they would sit between the pod and its chute.
+                if (kind == PartKind.HeatShield || kind == PartKind.Decoupler || extra == "advSasModule") { belowPod.Add(extra); continue; }
                 AttachNode bottom = Node(ap, "bottom");
                 if (bottom != null && Node(topMost.Ap, "top") != null)
                 {

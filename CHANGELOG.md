@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.46 (2026-10-31), test build
+
+- **The Director's lander is now a template.** Mun and Minmus landings can use T's lander, with one pod swap for the crew: KV-1, KV-2 or KV-3 with a stabilizer when Making History is installed, a Mk1 pod with or without a crew cabin when it is not. Design rockets saves one craft of each.
+
 ## 0.8.45 (2026-10-31), test build
 
 - **No base parts on rockets.** A 3-seat lander used a Planetary Base Systems airlock as its cabin, stacked on the pod. Those parts stay on bases.
