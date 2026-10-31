@@ -65,7 +65,8 @@ namespace KSA.Core.Tests
             Assert.That(_agency.BusyForHangar(bill), Is.False);
             CrewProfile val = _agency.Crew.Get("Valentina Kerman");
             val.ProjectId = "P9";
-            Assert.That(_agency.BusyForHangar(val), Is.True);
+            val.InFlightSinceUT = 100;
+            Assert.That(_agency.BusyForHangar(val), Is.False, "she is sitting in this rocket, whatever an old flight says");
             flight.Status = ProjectStatus.Build;
             Assert.That(_agency.BusyForHangar(bill), Is.True, "still working on one on the ground");
         }

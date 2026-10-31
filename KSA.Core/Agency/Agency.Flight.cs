@@ -279,14 +279,14 @@ namespace KSA.Core
         }
 
         /// <summary>
-        /// A kerbal sitting in a hangar rocket is free unless flying, or crew or staff on a project still on the ground. The
-        /// ground team of a flight already up has done its job (2026-10-31: Jeb and Bill sat aboard and no missions were offered).
+        /// A kerbal sitting in a hangar rocket is free unless on a project still on the ground. Sitting there, they are not
+        /// flying anything else, whatever an old flight or a reloaded save says (2026-10-31: Jeb and Bill sat aboard and no
+        /// missions were offered, twice).
         /// </summary>
         public bool BusyForHangar(CrewProfile c)
         {
-            if (c.IsFlying) return true;
             Project q = c.ProjectId.Length > 0 ? GetProject(c.ProjectId) : null;
-            return q != null && q.IsActive && (q.Status != ProjectStatus.InFlight || q.Crew.Contains(c.Id));
+            return q != null && q.IsActive && q.Status != ProjectStatus.InFlight;
         }
 
         /// <summary>
@@ -305,6 +305,8 @@ namespace KSA.Core
                     CrewProfile c = Crew.Get(n);
                     if (c == null || c.Departed || c.Status == CrewStatus.Dead) continue;
                     if (BusyForHangar(c)) { message = c.Name + " is already assigned to another project."; return null; }
+                    // Off any old flight they are still listed on, so closing that flight leaves this one alone.
+                    foreach (Project old in Projects) if (old.Status == ProjectStatus.InFlight) old.Crew.Remove(c.Id);
                     aboard.Add(c.Id);
                 }
             if (aboard.Count == 0) { message = "No agency kerbal is aboard."; return null; }

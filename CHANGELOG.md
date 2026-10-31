@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.38 (2026-10-31), test build
+
+- **Kerbals on the pad are free.** A reloaded save could list a kerbal as still flying an old test, which blocked the mission list. Anyone seated in a rocket on the pad can now fly it unless they work on a project still on the ground.
+
 ## 0.8.37 (2026-10-31), test build
 
 - **The mission list on the pad, really.** Kerbals on the ground team of a flight already in the air counted as busy, so a rocket they sat in was offered no missions. Only crew flying, or working on a project still on the ground, are busy now.

@@ -52,8 +52,14 @@ namespace KSA.Core.Tests
             string msg;
             Assert.That(a.AdoptHangarLaunch("SuborbitalHop", "1", "X", new List<string> { "Stranger Kerman" }, out msg), Is.Null);
             Assert.That(msg, Does.Contain("No agency kerbal"));
-            Assert.That(a.AdoptHangarLaunch("SuborbitalHop", "2", "X", new List<string> { "Jeb Kerman" }, out msg), Is.Not.Null);
-            Assert.That(a.AdoptHangarLaunch("KerbinOrbit", "3", "Y", new List<string> { "Jeb Kerman" }, out msg), Is.Null, "Jeb is already flying");
+            Project first = a.AdoptHangarLaunch("SuborbitalHop", "2", "X", new List<string> { "Jeb Kerman" }, out msg);
+            Assert.That(first, Is.Not.Null);
+            // Seated in a new rocket, he is not on the old flight, whatever a reloaded save says.
+            Project second = a.AdoptHangarLaunch("KerbinOrbit", "3", "Y", new List<string> { "Jeb Kerman" }, out msg);
+            Assert.That(second, Is.Not.Null, msg);
+            Assert.That(first.Crew, Does.Not.Contain("Jeb Kerman"));
+            second.Status = ProjectStatus.Build;
+            Assert.That(a.AdoptHangarLaunch("KerbinOrbit", "4", "Z", new List<string> { "Jeb Kerman" }, out msg), Is.Null, "on a project still on the ground");
             Assert.That(msg, Does.Contain("already assigned"));
         }
 
