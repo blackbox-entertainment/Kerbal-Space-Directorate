@@ -147,12 +147,12 @@ namespace KSA.Core.Design
                 foreach (string n in rule.Value)
                 {
                     PartInfo x = catalog.Get(n);
-                    if (x == null) continue;
+                    if (x == null || x.Kind == PartKind.Command) continue; // a self-shielded pod counts only as the craft's own pod
                     // A heat shield must fit the pod; otherwise the lightest.
                     if (x.Kind == PartKind.HeatShield && pod.Diameter > 0 && x.Diameter > 0 && Math.Abs(x.Diameter - pod.Diameter) > 0.01) continue;
                     if (pickPart == null || Earlier(x, pickPart)) pickPart = x;
                 }
-                if (pickPart == null) foreach (string n in rule.Value) { PartInfo x = catalog.Get(n); if (x != null && (pickPart == null || x.Mass < pickPart.Mass)) pickPart = x; }
+                if (pickPart == null) foreach (string n in rule.Value) { PartInfo x = catalog.Get(n); if (x != null && x.Kind != PartKind.Command && (pickPart == null || x.Mass < pickPart.Mass)) pickPart = x; }
                 if (pickPart == null) { why = "nothing researched for " + rule.Key; return null; }
                 plan.Payload.Extras.Add(pickPart.Name);
             }

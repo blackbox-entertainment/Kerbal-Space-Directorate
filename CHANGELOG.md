@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.36 (2026-10-31), test build
+
+- **Design rockets works again.** The heat shield rule tried to add a KV pod as a shield, which 0.8.35 had ruled out, so nearly every design failed. Crew cabins are now found with Kerbalism installed, so 3-seat rockets can be drawn.
+
 ## 0.8.35 (2026-10-31), test build
 
 - **Stopping a tumble with no reaction wheel.** KV pods have no reaction wheel, so a craft spinning with its engine off never stopped and the circularisation burn never lit. With no wheel or RCS aboard, the crew now steadies it on a little throttle from a swivelling engine.

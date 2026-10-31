@@ -243,6 +243,8 @@ namespace KSA.KSP.Parts
             if (has("Greenhouse") || n.StartsWith("kerbalism-container") || n.StartsWith("kerbalism-lifesupport")) return PartKind.LifeSupport;
             if (has("ModuleDeployableSolarPanel") || has("ModuleGenerator") || (ap.category == PartCategories.Electrical)) return PartKind.Power;
             if (has("ModuleDataTransmitter") && ap.category == PartCategories.Communication) return PartKind.Antenna;
+            // Kerbalism gives crew parts an experiment module: a crew cabin is still a cabin (2026-10-31).
+            if (p.CrewCapacity > 0 && !has("ModuleScienceLab")) return PartKind.Habitat;
             if (has("ModuleScienceLab") || has("ModuleScienceExperiment") || has("Experiment") || ap.category == PartCategories.Science) return PartKind.Science;
             // Rocket fins (stock Basic Fin, AV-T1, AV-R8, Delta-Deluxe winglets; mod fins by name), not wings (2026-10-29).
             if (ap.category == PartCategories.Aero && (has("ModuleLiftingSurface") || has("ModuleControlSurface")) && (n.Contains("fin") || n.Contains("winglet"))) return PartKind.Fin;

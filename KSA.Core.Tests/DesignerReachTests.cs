@@ -526,7 +526,7 @@ namespace KSA.Core.Tests
         {
             Agency a = Make.Agency(new FakeClock(), new ListLogger());
             PartCatalog parts = StockParts();
-            parts.Add(new PartInfo { Name = "kv1Pod", Title = "kv1Pod", Kind = PartKind.Command, Mass = 0.5, Diameter = 1.25, CrewCapacity = 1, HasTopNode = true, HasBottomNode = true, Tags = { "nowheel" } });
+            parts.Add(new PartInfo { Name = "kv1Pod", Title = "kv1Pod", Kind = PartKind.Command, Mass = 0.5, Diameter = 1.25, CrewCapacity = 1, HasTopNode = true, HasBottomNode = true, Tags = { "nowheel", "heatshielded" } });
             a.Parts = parts;
             a.Requirements = MissionRequirements.Parse(ShippedConfigs.Load("dv_requirements.cfg"));
             string why; bool viaDepot;
