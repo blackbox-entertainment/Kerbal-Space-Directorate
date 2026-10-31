@@ -619,6 +619,8 @@ namespace KSA.KSP.Flight
         /// is doing and whoever is flying: when the craft is falling back through an atmosphere on a path that meets the
         /// ground, empty stages are dropped and the chutes are armed (forced open below 2.5 km if still not safe).
         /// </summary>
+        private bool _abortNoted;
+
         private void SurvivalNet()
         {
             Vessel v = _vessel;
@@ -627,6 +629,18 @@ namespace KSA.KSP.Flight
             // the net fired a chute at 166 m right after a Take Control).
             if (Live == null || !Live.AutopilotOn) return;
             if (v.situation == Vessel.Situations.LANDED || v.situation == Vessel.Situations.SPLASHED || v.situation == Vessel.Situations.PRELAUNCH) return;
+            // Tumbling in the air over home for 2 s: abort, even with engines burning. The pod leaves the rocket and the chutes
+            // arm (2026-10-31: a flipped rocket flew into the sea at 361 m/s with Jeb and Bill aboard, nothing tried).
+            if (!Live.IsPlane && v.mainBody.isHomeWorld && Live.TumbleSince >= 0 && Planetarium.GetUniversalTime() - Live.TumbleSince > 2 && v.altitude < v.mainBody.atmosphereDepth)
+            {
+                string abort = null;
+                _ctx.Control.Throttle = 0;
+                if (_ctx.Control.ShedForReentry(ref abort) && !_abortNoted) { _abortNoted = true; Log("Abort: the rocket is out of control; the crew pulls the capsule away.", null); }
+                string armed = null;
+                _ctx.Control.DeployChutes(ref armed, v.altitude - Math.Max(0, v.terrainAltitude) < 2500);
+                if (armed != null) Log(armed, null);
+                return;
+            }
             // Engines still pushing: a powered descent or a climb that is still burning, not a fall.
             foreach (ModuleEngines e in v.FindPartModulesImplementing<ModuleEngines>())
                 if (e.EngineIgnited && !e.flameout && e.finalThrust > 0.1f) return;

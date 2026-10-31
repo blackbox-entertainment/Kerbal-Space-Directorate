@@ -19,7 +19,7 @@ namespace KSA.Core.Design
         /// Raise this whenever the rules the engineers design by change (fins, engines, parachutes, margins): designs drawn
         /// up by an older revision that have not flown yet are drawn again on load (2026-10-30). 1 = 0.6.9.
         /// </summary>
-        public const int Revision = 9; // 9: tanks with oxidizer only; 8: pods with a reaction wheel; 7: heat shield, panels and antennas; 6: shorter stacks; 5: landers seat three when they can; 4: the earliest parts that do the job; 3: return capsules, at most four side boosters unless nothing else flies; 2: upper stages that light in the air carry fins; real capsules; decouplers that fit
+        public const int Revision = 10; // 10: no upper fins over side boosters; 9: tanks with oxidizer only; 8: pods with a reaction wheel; 7: heat shield, panels and antennas; 6: shorter stacks; 5: landers seat three when they can; 4: the earliest parts that do the job; 3: return capsules, at most four side boosters unless nothing else flies; 2: upper stages that light in the air carry fins; real capsules; decouplers that fit
 
         private static bool IsPlaneCockpit(PartInfo p) { return PartFilter.IsPlaneCockpit(p); }
 

@@ -327,7 +327,9 @@ namespace KSA.KSP.Build
                         {
                             Placed rd = make(radialDecouplerName);
                             rd.Stage = stageOf(radialSeq[i]);
-                            SurfaceAttach(anchor, rd, angle, 0f, result);
+                            // On the middle tank, so the boosters sit alongside the stage (2026-10-31: on the bottom tank they hung
+                            // below it, the weight went low with the fins above it, and the rocket flipped at the first turn).
+                            SurfaceAttach(stageTanks.Count > 0 ? stageTanks[stageTanks.Count / 2] : anchor, rd, angle, 0f, result);
                             host = rd;
                         }
                         Placed booster = make(rp.Part);

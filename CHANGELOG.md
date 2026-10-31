@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.40 (2026-10-31), test build
+
+- **Rockets with side boosters keep the right way up.** The engineers hung boosters from the bottom tank and set big fins above the weight, so the rocket flipped at the first turn. Boosters now sit alongside the stage, and rockets with them carry no upper-stage fins.
+- **Abort.** A rocket tumbling in Kerbin's air for 2 seconds now drops everything under the capsule and arms the chutes, even with engines burning.
+
 ## 0.8.39 (2026-10-31), test build
 
 - **Rockets burn oxidizer too.** The engineers could fill a stage with jet-fuel tanks, which hold no oxidizer, so that stage could never fire. Those tanks are now for planes only, and an engine missing one propellant no longer counts as delta-v in What can this fly? Delete saved "Engineers ..." craft and draw them again.

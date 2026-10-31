@@ -73,6 +73,8 @@ namespace KSA.Core.Design
                 if (x.Kind == PartKind.Engine) liquid = true;
                 if (x.Kind == PartKind.Booster) solid = true;
             }
+            // Side boosters keep the weight low: fins higher up sit ahead of it and turn the rocket round (2026-10-31).
+            if (!forceUpper && plan.Stages[0].Radial.Exists(p => { PartInfo x = catalog.Get(p.Part); return x != null && x.ProducesThrust; })) return list;
             // forceUpper: the mission tumbled before (2026-10-30), so the second stage gets fins whatever the first holds.
             if (forceUpper || (solid && !liquid) || LaunchStageDeltaV(plan, catalog) < LowStageDeltaV) list.Add(1);
             return list;
