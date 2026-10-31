@@ -320,7 +320,7 @@ namespace KSA.KSP.Flight
         /// <summary>The most the nose is raised above the horizon to stop the climb topping out in the air, degrees.</summary>
         internal const double ClimbFloor = 25;
         internal const double ClimbFloorMax = 75;
-        internal const double TurnEnd = 50000; // level by 50 km (2026-10-30, T: "turn the big rocket level at 50 to 55 km")
+        internal const double TurnEnd = 60000; // level by 60 km (2026-10-31, T: "wasn't supposed to level out till past 55km"; flat at 46 km a strong rocket flew 2,000 m/s in the air)
         /// <summary>Straight up until this surface speed, then the small kick east.</summary>
         internal const double KickSpeed = 100;
         /// <summary>Below this speed the kick leans at most 5 degrees off vertical.</summary>

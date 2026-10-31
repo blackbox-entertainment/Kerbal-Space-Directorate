@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.48 (2026-10-31), test build
+
+- **A later level-off.** The climb now flattens by 60 km, up from 50 km, so strong rockets are not flying near orbital speed inside the air.
+
 ## 0.8.47 (2026-10-31), test build
 
 - **Heavy rockets keep climbing.** When a low-thrust stage nears the top of its climb, the crew raises the nose as far as the thrust needs, down to 5 km, instead of following the program flat.
