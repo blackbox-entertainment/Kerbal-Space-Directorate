@@ -170,6 +170,13 @@ namespace KSA.KSP.Parts
                     if (def == null || def.density <= 0) continue;
                     p.Fuel[rn] = (p.Fuel.ContainsKey(rn) ? p.Fuel[rn] : 0) + amount * def.density;
                 }
+                // The engineers' craft leave resources out and the game fills the tanks on load (2026-10-31: they all read 0 m/s).
+                if (!n.HasNode("RESOURCE") && prefab.Resources != null)
+                    foreach (PartResource r in prefab.Resources)
+                    {
+                        PartResourceDefinition def = PartResourceLibrary.Instance != null ? PartResourceLibrary.Instance.GetDefinition(r.resourceName) : null;
+                        if (def != null && def.density > 0) p.Fuel[r.resourceName] = r.amount * def.density;
+                    }
                 d.Seats += prefab.CrewCapacity;
                 d.Cost += ap.cost;
                 // A drogue slows the pod but cannot land it: only main parachutes count (2026-10-29).

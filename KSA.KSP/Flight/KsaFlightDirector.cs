@@ -252,11 +252,18 @@ namespace KSA.KSP.Flight
                 if (p == null)
                 {
                     // KSA-62: not a project craft, but agency kerbals are aboard: offer to let them fly it.
+                    if (nearPad) KSA.KSP.Testing.FlightTestBench.ClearLeftovers(agency);
                     if (nearPad && !Declined.Contains(v.persistentId) && HangarPilot(agency, v) != null)
                     {
                         _offering = true;
                         _offerVessel = v;
                         return;
+                    }
+                    if (nearPad && !Declined.Contains(v.persistentId) && v.GetCrewCount() > 0)
+                    {
+                        // Say why no mission is offered (2026-10-31: the crew sat on a leftover project and nothing appeared).
+                        Declined.Add(v.persistentId);
+                        ScreenMessages.PostScreenMessage("[KSA] No missions offered: the crew aboard are assigned to a project, or are not agency kerbals.", 10f, ScreenMessageStyle.UPPER_CENTER);
                     }
                     // Not ours yet: a craft placed on the pad settles for a second or two, so look again a few times.
                     if (nearPad && _adoptTries++ < 12) { _adopted = false; _nextAdoptTry = UnityEngine.Time.unscaledTime + 0.5f; }

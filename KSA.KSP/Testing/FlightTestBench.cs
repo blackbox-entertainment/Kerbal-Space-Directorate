@@ -90,6 +90,20 @@ namespace KSA.KSP.Testing
             ScreenMessages.PostScreenMessage("[KSA] Flight tests stopped: " + why, 10f, ScreenMessageStyle.UPPER_CENTER);
         }
 
+        /// <summary>
+        /// A bench project left when the tests stopped keeps its crew assigned, and they could fly nothing else (2026-10-31,
+        /// T: "I should be able to pick or build a rocket then pick a mission"). Sandbox only; nothing in flight is touched.
+        /// </summary>
+        public static void ClearLeftovers(Agency agency)
+        {
+            if (Active || agency == null || HighLogic.CurrentGame == null || HighLogic.CurrentGame.Mode != Game.Modes.SANDBOX) return;
+            foreach (Project p in new List<Project>(agency.Projects))
+            {
+                string msg;
+                if (p.IsActive && p.Status != ProjectStatus.InFlight && p.Name.StartsWith("Test ", StringComparison.Ordinal)) agency.CancelProject(p.Id, out msg);
+            }
+        }
+
         private static void Write(string line)
         {
             try

@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.32 (2026-10-31), test build
+
+- **Build a rocket, then pick a mission.** Kerbals left assigned to a stopped flight test blocked the mission list on the pad with no message. Leftover test projects are now cleared in sandbox saves, and the pad says why when no missions can be offered.
+- **Engineers craft read their fuel.** Saved engineers' rockets showed 0 m/s to KSA, so no mission fitted them. Tanks with no fuel listed in the craft file now count as full.
+
 ## 0.8.31 (2026-10-31), test build
 
 - **Design rockets (research 100 or less).** A new Flight tests button has the engineers draw the Mun, Minmus and planet missions from parts in tech nodes of 100 Science or less, saves each as an "Engineers ..." craft in the VAB, and writes a table to PluginData/FlightTests/designs.txt. Those craft can be opened, edited and flown on the bench.
