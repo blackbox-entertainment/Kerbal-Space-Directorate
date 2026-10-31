@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.19 (2026-10-30), test build
+
+- **Moon flybys fly a free return.** The course correction aimed only for a height above the Mun and took the cheapest burn, which could pass behind the Mun and fling the craft away. It now looks at the path after the Mun, keeps a correction only if it stays in Kerbin's space, prefers the one that falls closest to Kerbin, and may pass up to 1,200 km above the Mun to get it.
+
 ## 0.8.18 (2026-10-30), test build
 
 - **Deorbit: warp first, then turn.** The crew lined up and then warped to apoapsis, but attitude freezes in warp, so the nose came out up to 175 degrees off with no time to turn and the burn window closed. Warp now ends 150 s before apoapsis, and the burn may start up to 4 minutes after it.

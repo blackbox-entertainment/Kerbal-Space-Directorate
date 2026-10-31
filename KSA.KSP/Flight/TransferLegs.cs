@@ -507,6 +507,35 @@ namespace KSA.KSP.Flight
             new Vector3d(1, 0, 0), new Vector3d(-1, 0, 0)
         };
 
+        /// <summary>A flyby of a moon: the world the path must fall back to afterwards (null for every other correction).</summary>
+        private readonly CelestialBody _returnTo;
+        private double _bestReturn = double.PositiveInfinity;
+        private Vessel _vessel;
+
+        /// <summary>
+        /// Where the path comes after the target: the periapsis around <paramref name="home"/>; +infinity when it leaves home's
+        /// space, NaN when the game predicts no patch that far (2026-10-30, T: "that green line has it going out to nowhere":
+        /// passing behind the Mun flings a craft away, passing ahead of it drops it back to Kerbin).
+        /// </summary>
+        private static double ReturnPeriapsis(Orbit first, CelestialBody target, CelestialBody home)
+        {
+            bool passed = false;
+            Orbit o = first;
+            for (int guard = 0; o != null && guard < 8; guard++, o = o.nextPatch)
+            {
+                if (o.referenceBody == target) { passed = true; continue; }
+                if (!passed) continue;
+                if (o.referenceBody != home || o.eccentricity >= 1 || o.patchEndTransition == Orbit.PatchTransitionType.ESCAPE) return double.PositiveInfinity;
+                return o.PeA;
+            }
+            return double.NaN;
+        }
+
+        /// <summary>A path that already comes home: back within this of Kerbin's surface needs little more than a small trim.</summary>
+        private const double GoodReturnPe = 1000000;
+
+        public CorrectionLeg(CelestialBody target, double peLo, double peHi, double maxDv, CelestialBody returnTo) : this(target, peLo, peHi, maxDv) { _returnTo = returnTo; }
+
         public CorrectionLeg(CelestialBody target, double peLo, double peHi, double maxDv)
         {
             _target = target;
@@ -523,7 +552,7 @@ namespace KSA.KSP.Flight
         {
             State = LegState.Running;
             _phase = Phases.Prepare;
-            _candidate = 0; _bestDv = double.NaN;
+            _candidate = 0; _bestDv = double.NaN; _bestReturn = double.PositiveInfinity;
             Status = "Checking the trajectory.";
             Vessel v = ctx.Vessel;
             if (v == null || v.orbit == null || _target == null) { State = LegState.Done; Status = "Nothing to correct."; return; }
@@ -559,10 +588,12 @@ namespace KSA.KSP.Flight
                     if (!NodePlanner.Available(v)) { State = LegState.Done; Status = "No solver; flying on."; line = "No patched-conic solver; correction skipped."; break; }
                     {
                         double current = TransferSupport.VesselPeriapsisAt(v, _target);
-                        if (TransferSupport.InBand(current, _peLo, _peHi))
+                        double back = _returnTo != null ? ReturnPeriapsis(v.orbit, _target, _returnTo) : double.NaN;
+                        bool comesHome = _returnTo == null || double.IsNaN(back) || back < GoodReturnPe;
+                        if (TransferSupport.InBand(current, _peLo, _peHi) && comesHome)
                         {
                             State = LegState.Done; Status = "On course.";
-                            line = "Trajectory check: " + _target.bodyName + " periapsis " + TransferSupport.Km(current) + ", no correction needed.";
+                            line = "Trajectory check: " + _target.bodyName + " periapsis " + TransferSupport.Km(current) + (double.IsNaN(back) ? string.Empty : ", then back to Kerbin at " + TransferSupport.Km(back)) + ", no correction needed.";
                             break;
                         }
                         double now = ctx.Now;
@@ -575,6 +606,7 @@ namespace KSA.KSP.Flight
                     break;
                 case Phases.Search:
                     // One candidate per frame keeps the solver hitches short.
+                    _vessel = v;
                     if (_candidate < Directions.Length) { TrySingle(v, Directions[_candidate]); }
                     else if (_candidate < Directions.Length + 4 && double.IsNaN(_bestDv)) { TryCombo(v, _candidate - Directions.Length); }
                     _candidate++;
@@ -598,6 +630,8 @@ namespace KSA.KSP.Flight
                         _phase = Phases.Burn;
                         Status = "Correction burn of " + Math.Round(_bestDv, 1) + " m/s.";
                         line = "Course correction planned: " + Math.Round(_bestDv, 1) + " m/s, predicted " + _target.bodyName + " periapsis " + TransferSupport.Km(predicted) + ".";
+                        if (_returnTo != null)
+                            line += double.IsPositiveInfinity(_bestReturn) ? " No path found that stays near Kerbin after the flyby." : double.IsNaN(_bestReturn) ? string.Empty : " Then back to Kerbin at " + TransferSupport.Km(_bestReturn) + ".";
                     }
                     break;
                 case Phases.Burn:
@@ -652,6 +686,14 @@ namespace KSA.KSP.Flight
         private void Consider(double dv, Vector3d comps)
         {
             if (double.IsNaN(dv) || dv < 0 || dv > _maxDv) return;
+            if (_returnTo != null)
+            {
+                // A flyby: the candidate that falls closest to home after the moon wins, not the cheapest.
+                double back = TransferSupport.Trial(_vessel, _ut, comps, n => ReturnPeriapsis(n.nextPatch, _target, _returnTo));
+                bool none = double.IsNaN(_bestDv);
+                if (none || (!double.IsNaN(back) && (double.IsNaN(_bestReturn) || back < _bestReturn))) { _bestDv = dv; _bestComponents = comps; _bestReturn = back; }
+                return;
+            }
             if (double.IsNaN(_bestDv) || dv < _bestDv) { _bestDv = dv; _bestComponents = comps; }
         }
 

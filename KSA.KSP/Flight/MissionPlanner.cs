@@ -124,7 +124,8 @@ namespace KSA.KSP.Flight
                     break;
                 case MissionProfile.Flyby:
                     Up(prog, ctx);
-                    Outbound(prog, ctx, target, interplanetary, Math.Max(60000, floor), Math.Max(200000, floor + 150000));
+                    // A moon flyby flies a free return: a wider band of heights, and the side that drops the craft back home.
+                    Outbound(prog, ctx, target, interplanetary, Math.Max(60000, floor), interplanetary ? Math.Max(200000, floor + 150000) : Math.Max(1200000, floor + 150000), !interplanetary);
                     prog.Add(new PassPeriapsisLeg());
                     Homebound(prog, ctx, target, interplanetary, false, peLo, peHi);
                     break;
@@ -167,7 +168,7 @@ namespace KSA.KSP.Flight
                 .Add(new RefuelLeg()).Add(new UndockLeg());
         }
 
-        private static void Outbound(MissionProgram prog, FlightContext ctx, CelestialBody target, bool interplanetary, double peLo, double peHi)
+        private static void Outbound(MissionProgram prog, FlightContext ctx, CelestialBody target, bool interplanetary, double peLo, double peHi, bool freeReturn = false)
         {
             if (interplanetary)
             {
@@ -177,8 +178,9 @@ namespace KSA.KSP.Flight
             }
             else
             {
-                prog.Add(new TransferLeg(target, (peLo + peHi) / 2)).Add(new CorrectionLeg(target, peLo, peHi, 300))
-                    .Add(new WaitForSoiLeg(target, 30)).Add(new CorrectionLeg(target, peLo, peHi, 200));
+                CelestialBody back = freeReturn ? ctx.Home : null;
+                prog.Add(new TransferLeg(target, (peLo + peHi) / 2)).Add(new CorrectionLeg(target, peLo, peHi, 300, back))
+                    .Add(new WaitForSoiLeg(target, 30)).Add(new CorrectionLeg(target, peLo, peHi, 200, back));
             }
         }
 
