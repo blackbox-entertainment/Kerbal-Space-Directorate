@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.65 (2026-10-31), test build
+
+- **Landings wait for higher sun.** The crew now looks for ground with the sun at least 50 degrees up, and settles for 15 degrees only if the orbit offers nothing better.
+
 ## 0.8.64 (2026-10-31), test build
 
 - **Landers hold 5 m/s to the ground.** The final descent no longer slows to 2 m/s, which burned fuel on weak engines.

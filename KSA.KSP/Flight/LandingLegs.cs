@@ -67,7 +67,8 @@ namespace KSA.KSP.Flight
         private const double SiteLead = 0.25;       // the descent comes down about this share of an orbit past the burn
         private const int SiteSteps = 36;           // moments looked at over one orbit
         private const double SiteSpacing = 1000;    // metres between height samples of a candidate site
-        private const double MinSunUp = 15;         // degrees above the horizon at the site
+        private const double GoodSunUp = 50;        // degrees above the horizon at the site, wanted
+        private const double MinSunUp = 15;         // and accepted when an orbit offers no better
         private const double SurveySpacing = 200;   // metres between grid cells
         private const int SurveySize = 5;           // 5x5 grid
         private const double SurveyBelow = 20000;   // start the survey below this height above terrain
@@ -327,16 +328,21 @@ namespace KSA.KSP.Flight
                 double lead = o.period * SiteLead, best = double.PositiveInfinity, bestSun = 0;
                 double accel = ctx.Control.MaxAcceleration(), g = b.gravParameter / (b.Radius * b.Radius);
                 if (accel > 0 && accel < 3 * g) lead = Math.Min(lead, 0.6 * v.obt_speed / accel);
-                for (int i = 0; i < SiteSteps; i++)
+                // High sun first (2026-10-31, T: "it could have burned earlier": 34 degrees up was too near the dark); low sun if that is all.
+                foreach (double minSun in new[] { GoodSunUp, MinSunUp })
                 {
-                    double ut = ctx.Now + 60 + o.period * i / SiteSteps;
-                    Vector3d down = (o.getPositionAtUT(ut + lead) - b.position).normalized;
-                    double sunUp = 90 - Vector3d.Angle(down, sun);
-                    if (sunUp < MinSunUp) continue;
-                    Vector3d ground = b.position + down * b.Radius;
-                    double lon = b.GetLongitude(ground) - 360 * (ut + lead - ctx.Now) / b.rotationPeriod; // the world turns meanwhile
-                    double rough = Roughness(b, b.GetLatitude(ground), lon);
-                    if (rough < best) { best = rough; bestSun = sunUp; _burnAt = ut; }
+                    if (!double.IsPositiveInfinity(best)) break;
+                    for (int i = 0; i < SiteSteps; i++)
+                    {
+                        double ut = ctx.Now + 60 + o.period * i / SiteSteps;
+                        Vector3d down = (o.getPositionAtUT(ut + lead) - b.position).normalized;
+                        double sunUp = 90 - Vector3d.Angle(down, sun);
+                        if (sunUp < minSun) continue;
+                        Vector3d ground = b.position + down * b.Radius;
+                        double lon = b.GetLongitude(ground) - 360 * (ut + lead - ctx.Now) / b.rotationPeriod; // the world turns meanwhile
+                        double rough = Roughness(b, b.GetLatitude(ground), lon);
+                        if (rough < best) { best = rough; bestSun = sunUp; _burnAt = ut; }
+                    }
                 }
                 if (double.IsPositiveInfinity(best)) ctx.Say("No sunlit ground under this orbit; landing where it comes down.");
                 else ctx.Say("Landing site chosen: sun " + Math.Round(bestSun) + " deg up, ground slope about " + LandingHelpers.Pct(best) + ", deorbit in " + TransferSupport.Countdown(_burnAt - ctx.Now) + ".");
