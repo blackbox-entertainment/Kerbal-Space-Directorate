@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.126 (2026-11-01), test build
+
+- **Handing back on a deorbit path goes to the landing.** It went back to aerobraking and called a full-power climb out of the air at 26 km.
+
 ## 0.8.125 (2026-11-01), test build
 
 - **The log follows a lander as it settles.** One "Settling:" line a second after touchdown, to find out why a lander that touched down upright at 3.3 m/s went over on its side.

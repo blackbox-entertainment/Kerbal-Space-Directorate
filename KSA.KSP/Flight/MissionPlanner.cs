@@ -259,7 +259,7 @@ namespace KSA.KSP.Flight
                 if (v.situation == Vessel.Situations.ESCAPING && headingHome && Has(prog, l => l is ReturnLeg)) { prog.SkipTo(l => l is WaitForSoiLeg && IndexAfterHome(prog, l)); return; }
                 // No need for the orbit to be logged: it only counts after a full turn, and a lander goes straight down (2026-10-31).
                 // Still orbiting through the air is aerobraking; a path that stays down is a landing (2026-11-01: a lander out of fuel at 2 km was sent back to aerobrake).
-                bool stillOrbiting = v.orbit.ApA > target.atmosphereDepth;
+                bool stillOrbiting = v.orbit.ApA > target.atmosphereDepth && v.orbit.PeA > 0.45 * target.atmosphereDepth; // a deorbit path runs far lower than any pass
                 if (descending && !logged("Land:" + tb) && v.orbit.eccentricity < 1 && Has(prog, l => l is LandingLeg)) { prog.SkipTo(l => (stillOrbiting && l is AirbrakeLeg) || l is LandingLeg); return; }
                 prog.SkipTo(l => l is CaptureLeg || l is PassPeriapsisLeg || l is CorrectionLeg);
                 return;
