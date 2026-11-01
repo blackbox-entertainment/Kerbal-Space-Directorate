@@ -660,6 +660,11 @@ namespace KSA.KSP.Flight
         }
 
         /// <summary>Advances the EVA state machine. Called from Step while the lander is active and from the watcher otherwise.</summary>
+        private const double SettledSpeed = 0.3;   // m/s over the ground
+        private const double SettleSeconds = 5;    // that still, for this long
+        private const double SettleLimit = 30;     // and no longer than this in all
+        private double _settledSince = -1;
+
         internal void Tick()
         {
             if (State != LegState.Running || _ctx == null) return;
@@ -668,6 +673,11 @@ namespace KSA.KSP.Flight
             switch (_phase)
             {
                 case Phases.Spawn:
+                    // Let the lander settle first (2026-10-31: first Mun landing, 3.8 m/s, bouncing on its legs for 7 s; Jeb stepped out
+                    // in the touchdown frame and was thrown clear at 13.6 m/s).
+                    if (v != null && v.srfSpeed > SettledSpeed) _settledSince = now;
+                    if (_settledSince < 0) _settledSince = now;
+                    if (now - _settledSince < SettleSeconds && now - _evaStart < SettleLimit) { Status = "Waiting for the lander to settle."; return; }
                     if (_spawnTried) { Finish(); return; }
                     _spawnTried = true;
                     if (LandingHelpers.Warping) { TimeWarp.SetRate(0, true); }
