@@ -207,6 +207,10 @@ namespace KSA.KSP.Flight
             if (agency == null) { _adopted = true; return; }
             Vessel v = FlightGlobals.ActiveVessel;
             if (v == null) return;
+            // A save made with a kerbal outside loads with the kerbal active: the flight is the craft nearby (2026-10-31, T: "director did not load").
+            if (v.isEVA)
+                foreach (Vessel near in FlightGlobals.VesselsLoaded)
+                    if (!near.isEVA && agency.ProjectForVessel(near.persistentId.ToString()) != null) { v = near; break; }
             _adopted = true;
 
             LaunchSpec pending = LiveFlightLauncher.Pending;

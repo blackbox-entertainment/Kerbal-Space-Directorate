@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.69 (2026-10-31), test build
+
+- **Loading a save with a kerbal outside keeps the flight.** The Flight Director now finds the craft nearby instead of looking only at the kerbal.
+
 ## 0.8.68 (2026-10-31), test build
 
 - **The Board button shows within 5 m of a free seat,** down from 30 m.
