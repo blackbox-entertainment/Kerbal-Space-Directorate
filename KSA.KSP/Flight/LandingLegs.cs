@@ -911,6 +911,7 @@ namespace KSA.KSP.Flight
     /// </summary>
     public sealed class SurfaceOpsLeg : IFlightLeg
     {
+        private double _lastSettleLog = -1;
         private enum Phases { Spawn, Outside, Boarding, Finished }
 
         private readonly double _seconds;
@@ -999,6 +1000,12 @@ namespace KSA.KSP.Flight
                     {
                         if (!_holdingUpright && v != null) { _holdingUpright = true; _ctx.Control.PointAlong(() => v.upAxis); }
                         Status = "Waiting for the lander to settle.";
+                        if (v != null && now - _lastSettleLog >= 1)
+                        {
+                            // What a lander does between touchdown and tipping (2026-11-01: 3.3 m/s, upright, legs sound, over on its side 14 s later).
+                            _lastSettleLog = now;
+                            KsaCore.Log.Info("Settling: " + Math.Round(_ctx.Control.AttitudeError(v.upAxis), 1) + " deg off up, moving " + Math.Round(v.srfSpeed, 2) + " m/s, turning " + Math.Round(v.angularVelocity.magnitude * 180 / Math.PI, 1) + " deg/s, throttle " + Math.Round(_ctx.Control.Throttle, 2) + ", " + v.situation);
+                        }
                         return;
                     }
                     if (_holdingUpright) { _holdingUpright = false; _ctx.Control.Sas(VesselAutopilot.AutopilotMode.StabilityAssist, true); }

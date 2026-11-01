@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.125 (2026-11-01), test build
+
+- **The log follows a lander as it settles.** One "Settling:" line a second after touchdown, to find out why a lander that touched down upright at 3.3 m/s went over on its side.
+
 ## 0.8.124 (2026-11-01), test build
 
 - **Warp works on the way down to a world with air.** The coast judged warp by the height the engine would have needed without air, so it cancelled warp from 74 km over Duna.
