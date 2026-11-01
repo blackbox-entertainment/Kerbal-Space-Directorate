@@ -66,7 +66,8 @@ namespace KSA.KSP.Flight
 
         private const double SiteLead = 0.25;       // the descent comes down about this share of an orbit past the burn
         private const double LongOrbit = 0.2;       // eccentricity above which the deorbit waits for the high end
-        private const double NearApoapsis = 0.04;   // of a period, either side of apoapsis
+        private const double NearApoapsis = 0.08;   // of a period, either side of apoapsis
+        private const int LongOrbitSteps = 240;     // moments looked at over one long orbit, most of them skipped
         private const int SiteSteps = 36;           // moments looked at over one orbit
         private const int SiteOrbits = 8;           // orbits searched: the world turns under the orbit, so each one crosses new ground (one orbit offered only 9%, 2026-10-31)
         private const int MaxSearches = 3;          // searches before the crew gives the landing up
@@ -413,10 +414,12 @@ namespace KSA.KSP.Flight
                 // Flat anywhere in the light (2026-10-31, T: "3% anywhere in the light, 7% fall back to anywhere in the light", "it should
                 // abort anything more than 7%"): a lander on its side goes nowhere; a morning rule took a 15% site and it tipped over.
                 double[] slopeLimit = { GoodSlope, FairSlope };
+                // Near apoapsis alone, the usual steps leave three moments an orbit (2026-11-01: "no flat ground", over and over).
+                int steps = o.eccentricity > LongOrbit ? LongOrbitSteps : SiteSteps;
                 for (int pass = 0; pass < slopeLimit.Length && double.IsPositiveInfinity(best); pass++)
-                    for (int i = 0; i < SiteSteps * SiteOrbits; i++)
+                    for (int i = 0; i < steps * SiteOrbits; i++)
                     {
-                        double ut = ctx.Now + 60 + o.period * i / SiteSteps;
+                        double ut = ctx.Now + 60 + o.period * i / steps;
                         // A long orbit is left from its high end: from the low end the same drop costs ten times the fuel (2026-11-01: 25 m/s against 300 from 742 x 70 km).
                         if (o.eccentricity > LongOrbit)
                         {
