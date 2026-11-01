@@ -64,6 +64,10 @@ namespace KSA.KSP.Flight
     {
         private enum Phases { Deorbit, DeorbitBurn, Coast, Braking, Landed, WaveOff }
 
+        private const double SiteLead = 0.25;       // the descent comes down about this share of an orbit past the burn
+        private const int SiteSteps = 36;           // moments looked at over one orbit
+        private const double SiteSpacing = 1000;    // metres between height samples of a candidate site
+        private const double MinSunUp = 15;         // degrees above the horizon at the site
         private const double SurveySpacing = 200;   // metres between grid cells
         private const int SurveySize = 5;           // 5x5 grid
         private const double SurveyBelow = 20000;   // start the survey below this height above terrain
@@ -71,6 +75,7 @@ namespace KSA.KSP.Flight
         private readonly double _maxSlope;
         private Phases _phase;
         private double _phaseStart;
+        private double _burnAt = -1;
         private bool _surveyed;
         private bool _gearDown;
         private bool _holdingUp;        // switched from retrograde to the up-hold for the last metres
@@ -146,6 +151,13 @@ namespace KSA.KSP.Flight
                 {
                     case Phases.Deorbit:
                         c.Sas(VesselAutopilot.AutopilotMode.Retrograde, false);
+                        if (_burnAt < 0) PickSite(ctx, v);
+                        if (ctx.Now < _burnAt - 30)
+                        {
+                            Status = "Waiting for the landing site: deorbit in " + TransferSupport.Countdown(_burnAt - ctx.Now) + ".";
+                            if (!warping) c.WarpTo(_burnAt - 60);
+                            break;
+                        }
                         Status = "Aligning retrograde for deorbit.";
                         if (warping) { c.StopWarp(); break; }
                         // Only once the nose is on retrograde: a burn the wrong way raises the orbit (2026-10-30, Kerbin orbit).
@@ -291,6 +303,53 @@ namespace KSA.KSP.Flight
         }
 
         /// <summary>Samples a 5x5 grid around the predicted ground-track point and picks the flattest cell.</summary>
+        /// <summary>
+        /// When to burn: over one orbit, the ground a quarter of an orbit past each moment is where the descent comes down. Keep
+        /// what the sun is on, take the flattest (2026-10-31, T: "we need to land on the sunny side of a planet even the mun",
+        /// "and some place flat"; the crew had burned wherever it happened to be, with solar panels and no idea of the sun).
+        /// </summary>
+        private void PickSite(FlightContext ctx, Vessel v)
+        {
+            _burnAt = ctx.Now;
+            try
+            {
+                CelestialBody b = v.mainBody;
+                Orbit o = v.orbit;
+                if (o == null || o.eccentricity >= 1 || b.pqsController == null) return;
+                Vector3d sun = (Planetarium.fetch.Sun.position - b.position).normalized;
+                double lead = o.period * SiteLead, best = double.PositiveInfinity, bestSun = 0;
+                for (int i = 0; i < SiteSteps; i++)
+                {
+                    double ut = ctx.Now + 60 + o.period * i / SiteSteps;
+                    Vector3d down = (o.getPositionAtUT(ut + lead) - b.position).normalized;
+                    double sunUp = 90 - Vector3d.Angle(down, sun);
+                    if (sunUp < MinSunUp) continue;
+                    Vector3d ground = b.position + down * b.Radius;
+                    double lon = b.GetLongitude(ground) - 360 * (ut + lead - ctx.Now) / b.rotationPeriod; // the world turns meanwhile
+                    double rough = Roughness(b, b.GetLatitude(ground), lon);
+                    if (rough < best) { best = rough; bestSun = sunUp; _burnAt = ut; }
+                }
+                if (double.IsPositiveInfinity(best)) ctx.Say("No sunlit ground under this orbit; landing where it comes down.");
+                else ctx.Say("Landing site chosen: sun " + Math.Round(bestSun) + " deg up, ground slope about " + LandingHelpers.Pct(best) + ", deorbit in " + TransferSupport.Countdown(_burnAt - ctx.Now) + ".");
+            }
+            catch (Exception e) { KsaCore.Log.Warn("Landing site search failed: " + e.Message); _burnAt = ctx.Now; }
+        }
+
+        /// <summary>Height difference across a 4 km patch, as a slope: rough country scores high.</summary>
+        private static double Roughness(CelestialBody b, double lat, double lon)
+        {
+            double step = SiteSpacing / b.Radius * 180 / Math.PI;
+            double stepLon = step / Math.Max(0.2, Math.Cos(lat * Math.PI / 180));
+            double low = double.PositiveInfinity, high = double.NegativeInfinity;
+            for (int i = -2; i <= 2; i++)
+                for (int j = -2; j <= 2; j++)
+                {
+                    double h = b.TerrainAltitude(lat + i * step, lon + j * stepLon);
+                    low = Math.Min(low, h); high = Math.Max(high, h);
+                }
+            return (high - low) / (4 * SiteSpacing);
+        }
+
         private void Survey(FlightContext ctx, Vessel v)
         {
             _surveyed = true;
