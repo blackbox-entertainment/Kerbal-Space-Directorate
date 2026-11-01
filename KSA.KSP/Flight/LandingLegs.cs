@@ -100,6 +100,7 @@ namespace KSA.KSP.Flight
         private const double UpHoldSpeed = 10;        // or below this surface speed, where the retrograde marker wanders
         private double _lastAttitudeLog;
         private bool _descentWarped;
+        private bool _coastWarped;
         private double _burnAt = -1;
         private double _searchAgainAt = -1;
         private int _siteStamp;
@@ -353,7 +354,16 @@ namespace KSA.KSP.Flight
             }
             else
             {
-                if (warping) c.StopWarp();
+                // 4x on the last of a long coast, ending well before the burn (2026-11-01, T: "would be nice to speed up time compression").
+                double warpFloor = 1.5 * safe + 1000;
+                bool physicsWarp = warping && TimeWarp.WarpMode == TimeWarp.Modes.LOW;
+                if (warping && !(physicsWarp && above > warpFloor)) c.StopWarp();
+                else if (!warping && !_coastWarped && !_hasAir && above > warpFloor + 3000)
+                {
+                    _coastWarped = true;
+                    TimeWarp.fetch.Mode = TimeWarp.Modes.LOW;
+                    TimeWarp.SetRate(3, false);
+                }
                 Status = "Coasting, braking in " + Math.Round(Math.Max(0, above - safe)) + " m.";
             }
         }
