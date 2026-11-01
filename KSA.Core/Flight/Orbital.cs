@@ -537,14 +537,15 @@ namespace KSA.Core.Flight.Orbital
 
         /// <summary>
         /// Final-approach descent speed schedule: 60 m/s at 600 m and above (so also at 2000 m and above), then
-        /// altitude / 10 down to a 2 m/s floor at 20 m and below. Continuous and monotonic in altitude.
+        /// altitude / 10 down to a 5 m/s floor at 50 m and below, held to the ground (2026-10-31, T: "it should maintain 5 m/s till
+        /// landing"). Continuous and monotonic in altitude.
         /// </summary>
         public static double TargetDescentSpeed(double altitudeAboveTerrain)
         {
             if (altitudeAboveTerrain >= 2000) return 60;
             double v = altitudeAboveTerrain / 10;
             if (v > 60) v = 60;
-            if (v < 2) v = 2;
+            if (v < 5) v = 5;
             return v;
         }
 
