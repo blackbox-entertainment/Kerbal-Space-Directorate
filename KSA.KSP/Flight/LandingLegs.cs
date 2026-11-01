@@ -1053,7 +1053,7 @@ namespace KSA.KSP.Flight
         private Phases _phase;
         private double _phaseStart;
         private bool _gearUp;
-        private float _kickSign = 1f;
+        private const double KickPitch = 75;      // degrees above the horizon, heading east
 
         public AirlessAscentLeg(double targetAltitude) { _target = Math.Max(5000, targetAltitude); }
 
@@ -1142,9 +1142,9 @@ namespace KSA.KSP.Flight
                         }
                         if (above > verticalUntil || v.srfSpeed > 80)
                         {
-                            _kickSign = KickSign(v);
-                            c.SasOffForKick();
-                            c.Yaw = _kickSign;
+                            // East by the compass, not by a yaw input: yaw follows however the lander happened to roll, and a kick that way
+                            // put it in an orbit tilted 113 degrees, which no fuel aboard could bring home (2026-10-31).
+                            c.PointAlong(() => ClimbDirection(v, KickPitch));
                             _phase = Phases.Kick; _phaseStart = ctx.Now;
                             Status = "Pitching east.";
                         }
@@ -1155,8 +1155,8 @@ namespace KSA.KSP.Flight
                         c.AutoStage(ref line);
                         if (ctx.Now - _phaseStart > 2.5)
                         {
-                            c.Yaw = 0f;
-                            c.Sas(VesselAutopilot.AutopilotMode.Prograde, true);
+                            if (v.mainBody.atmosphere) c.Sas(VesselAutopilot.AutopilotMode.Prograde, true);
+                            else c.PointAlong(() => ClimbDirection(v, AirlessPitch(v)));
                             _phase = Phases.Ascent; _phaseStart = ctx.Now;
                             Status = "Holding prograde.";
                             ctx.Say("Pitch program started; following prograde.");
@@ -1167,7 +1167,7 @@ namespace KSA.KSP.Flight
                         if (warping) { c.StopWarp(); break; }
                         c.Throttle = 1f;
                         c.AutoStage(ref line);
-                        c.Sas(VesselAutopilot.AutopilotMode.Prograde, v.altitude < 20000);
+                        if (v.mainBody.atmosphere) c.Sas(VesselAutopilot.AutopilotMode.Prograde, v.altitude < 20000);
                         if (v.orbit.ApA >= _target)
                         {
                             c.Throttle = 0;
@@ -1248,15 +1248,23 @@ namespace KSA.KSP.Flight
         }
 
         /// <summary>Positive yaw tilts the nose toward the control frame's right; pick the sign that points it east.</summary>
-        internal static float KickSign(Vessel v)
+        /// <summary>East, raised by the given pitch above the horizon.</summary>
+        private static Vector3d ClimbDirection(Vessel v, double pitch)
         {
-            try
-            {
-                if (v.ReferenceTransform == null) return 1f;
-                double d = Vector3d.Dot(v.ReferenceTransform.right, v.east);
-                return d < 0 ? -1f : 1f;
-            }
-            catch { return 1f; }
+            double p = pitch * Math.PI / 180;
+            return ((Vector3d)v.upAxis * Math.Sin(p) + (Vector3d)v.east * Math.Cos(p)).normalized;
+        }
+
+        /// <summary>
+        /// Off an airless world, lay over as the sideways speed builds: steep climbing wasted about 500 m/s off the Mun. Never so flat
+        /// that a falling lander meets the ground.
+        /// </summary>
+        private static double AirlessPitch(Vessel v)
+        {
+            double r = v.mainBody.Radius + v.altitude;
+            double circular = Math.Sqrt(v.mainBody.gravParameter / r);
+            double pitch = 10 + 60 * Math.Max(0, 1 - v.horizontalSrfSpeed / circular);
+            return v.verticalSpeed < 5 ? Math.Max(pitch, 45) : pitch;
         }
 
         private void Done(FlightContext ctx, Vessel v)
