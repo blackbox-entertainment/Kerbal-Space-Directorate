@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.51 (2026-10-31), test build
+
+- **The pad offers every mission the craft can fly.** The list stopped at the ten hardest, so easier ones such as Minmus landing never showed. It now scrolls.
+
 ## 0.8.50 (2026-10-31), test build
 
 - **Transfer burns stop at the Mun.** A long, low-thrust burn could drift off its node and keep going: a 5-minute burn ran 9 minutes and left Kerbin's space. The burn now ends once the path reaches the moon's orbit, and the course correction trims it.

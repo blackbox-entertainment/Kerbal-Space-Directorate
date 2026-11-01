@@ -387,7 +387,8 @@ namespace KSA.KSP.Flight
 
         /// <summary>
         /// Missions a hangar craft can fly: seats for the crew, the delta-v the mission asks for (10% grace), from the home
-        /// world. Planes get the aircraft missions and Kerbin hops and orbits; rockets everything else. At most ten, hardest first.
+        /// world. Planes get the aircraft missions and Kerbin hops and orbits; rockets everything else. All of them, hardest first
+        /// (a limit of ten dropped everything easier, 2026-10-31, T: "can it not do minmus landing?").
         /// </summary>
         private static List<MissionType> HangarMissions(Agency agency, Vessel v, double dv, bool plane)
         {
@@ -404,9 +405,10 @@ namespace KSA.KSP.Flight
                 list.Add(t);
             }
             list.Sort((a, b) => (b.IsAircraft ? 0 : agency.Requirements.For(b).DeltaV).CompareTo(a.IsAircraft ? 0 : agency.Requirements.For(a).DeltaV));
-            if (list.Count > 10) list.RemoveRange(10, list.Count - 10);
             return list;
         }
+
+        private Vector2 _offerScroll;
 
         private void DeclineHangarFlight()
         {
@@ -428,12 +430,14 @@ namespace KSA.KSP.Flight
             // Every mission this craft can fly (2026-10-30, T: "what if I build a rocket and launch, can I attach it to a mission?").
             List<MissionType> options = HangarMissions(agency, v, dv, plane);
             if (options.Count == 0) GUILayout.Label("Nothing the agency flies fits this craft: too little delta-v or too few seats.");
+            _offerScroll = GUILayout.BeginScrollView(_offerScroll, GUILayout.Height(Math.Min(10, options.Count) * 30f + 8f));
             for (int i = 0; i < options.Count; i++)
             {
                 MissionType t = options[i];
                 double need = t.IsAircraft ? 0 : agency.Requirements.For(t).DeltaV;
                 if (GUILayout.Button(t.Name + (need > 0 ? " (" + Math.Round(need) + " m/s)" : string.Empty) + (agency.MissionsCompleted(t.Id) > 0 ? ", done before" : string.Empty), GUILayout.Height(26f))) StartHangarFlight(t.Id);
             }
+            GUILayout.EndScrollView();
             if (GUILayout.Button("Let me fly", GUILayout.Height(30f))) DeclineHangarFlight();
             GUILayout.Label("The crew flies until you touch the stick, throttle or staging; then it is logged as Director-flown.");
             GUI.DragWindow();
