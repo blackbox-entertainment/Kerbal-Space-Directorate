@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.99 (2026-10-31), test build
+
+- **Transfer burns finish the plan.** The stop at the moon's orbit could cut a burn short when the planned path itself ran past the moon; it now allows for the plan.
+
 ## 0.8.98 (2026-10-31), test build
 
 - **Transfers wait for a clear path.** If another world sits on the way to the target, as the Mun did on the way to Minmus, the crew stays in its parking orbit and tries later orbits, up to 40.

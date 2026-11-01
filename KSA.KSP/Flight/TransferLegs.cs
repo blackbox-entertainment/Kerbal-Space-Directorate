@@ -182,6 +182,8 @@ namespace KSA.KSP.Flight
         private bool FarEnough(Vessel v)
         {
             if (v.orbit == null || _target.orbit == null) return false;
+            // Never short of the plan: from a high orbit the planned path itself runs past the moon (2026-10-31: 79 of a 91 m/s burn, a miss).
+            if (v.orbit.ApR < _plannedApR * 1.05) return false;
             return v.orbit.eccentricity >= 1 || v.orbit.ApR > _target.orbit.ApR + _target.sphereOfInfluence;
         }
 
@@ -305,6 +307,7 @@ namespace KSA.KSP.Flight
                 if (blocked == null) break;
             }
             if (_plan == null) { Fail("no transfer to " + _target.bodyName + " found from this orbit"); return "Transfer planning failed: no solution."; }
+            _plannedApR = n.nextPatch != null && n.nextPatch.eccentricity < 1 ? n.nextPatch.ApR : double.PositiveInfinity;
             if (blocked != null) ctx.Say(blocked + " is on every path to " + _target.bodyName + " for " + MaxWaitOrbits + " orbits; going anyway.");
             double predicted = NodePlanner.PeriapsisAt(n, _target);
             _exec = new NodeExecutor { CutOff = FarEnough };
@@ -329,6 +332,7 @@ namespace KSA.KSP.Flight
         }
 
         private const int MaxWaitOrbits = 40;
+        private double _plannedApR;
 
         public void End(FlightContext ctx)
         {
