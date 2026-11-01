@@ -68,13 +68,13 @@ namespace KSA.KSP.Flight
         private const int SiteSteps = 36;           // moments looked at over one orbit
         private const int SiteOrbits = 8;           // orbits searched: the world turns under the orbit, so each one crosses new ground (one orbit offered only 9%, 2026-10-31)
         private const int MaxSearches = 3;          // searches before the crew gives the landing up
-        private const double SteepStepAllowance = 2.5; // one steep 1 km step counts this much less than a tilt of the whole patch: the look at 400 m deals with those
+        private const double SteepStepAllowance = 2.5; // one steep step counts this much less than a tilt of the whole patch: the look at 400 m deals with those
         private const double SideStepAt = 400;      // metres above terrain: look at the ground here
         private const double SideStepCell = 100;    // metres between height samples
         private const double SideStepSpeed = 15;    // m/s across the ground at most
         private const double SideStepDone = 25;     // metres from the spot
-        private const double SideStepLimit = 90;    // seconds, then down anyway
-        private const double SiteSpacing = 1000;    // metres between height samples of a candidate site
+        private const double SideStepLimit = 120;   // seconds, then down anyway
+        private const double SiteSpacing = 250;     // metres between height samples: a 1 km patch (T), small enough for a crater floor
         private const double GoodSlope = 0.03;      // height change across the site, wanted (T; a 5% site held but leaned, the 15% one tipped the lander)
         private const double FairSlope = 0.07;      // accepted when an orbit has nothing flatter
         private const double MinSunUp = 15;         // degrees above the horizon at the site: "in the light"
@@ -384,7 +384,7 @@ namespace KSA.KSP.Flight
             catch (Exception e) { KsaCore.Log.Warn("Landing site search failed: " + e.Message); _burnAt = ctx.Now; _searches = MaxSearches; }
         }
 
-        /// <summary>The worst of the height change across a 4 km patch and the steepest step between samples: a crater wall scores high.</summary>
+        /// <summary>The worst of the height change across a 1 km patch and the steepest step between samples: a crater rim scores high.</summary>
         private static double Roughness(CelestialBody b, double lat, double lon)
         {
             double step = SiteSpacing / b.Radius * 180 / Math.PI;
@@ -622,14 +622,14 @@ namespace KSA.KSP.Flight
             return to - up * Vector3d.Dot(to, up);
         }
 
-        /// <summary>The flattest ground within 600 m. Slope of a cell = steepest step to a neighbour, 100 m apart.</summary>
+        /// <summary>The flattest ground within 1 km. Slope of a cell = steepest step to a neighbour, 100 m apart.</summary>
         private void LookForFlat(FlightContext ctx, Vessel v)
         {
             try
             {
                 CelestialBody b = v.mainBody;
                 if (b.pqsController == null) return;
-                const int half = 6;
+                const int half = 10;
                 int n = 2 * half + 1;
                 double step = SideStepCell / b.Radius * 180 / Math.PI;
                 double stepLon = step / Math.Max(0.2, Math.Cos(v.latitude * Math.PI / 180));

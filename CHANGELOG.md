@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.86 (2026-10-31), test build
+
+- **Landing sites are judged on a 1 km patch,** down from 4 km, so a crater floor can count as flat. The look at 400 m now reaches 1 km.
+
 ## 0.8.85 (2026-10-31), test build
 
 - **The Director can stop a time warp.** The crew asks for a long warp once, so stopping it by hand holds, and Take control always ends it.
