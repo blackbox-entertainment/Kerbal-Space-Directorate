@@ -2,6 +2,14 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.103 (2026-11-01), test build
+
+- **No touchdown moving sideways.** Below 60 m the crew holds height until drift is under 0.7 m/s, and on weak-gravity worlds it leans further to stop drift.
+- **A better landing point estimate** for strong landers, from the shape of the fall, not a quarter of the orbit.
+- **Nothing fit to land on within reach:** the crew climbs back to orbit once and chooses again, fuel allowing.
+- **A halted flight lets go of the throttle.**
+- **Crew stranded asks first,** and stays hidden while a kerbal is outside and just after boarding, so it cannot jump under a click.
+
 ## 0.8.102 (2026-11-01), test build
 
 - **4x on the last of a long coast down.** On airless worlds the crew uses physics warp until well before the braking burn, and the Director can too.

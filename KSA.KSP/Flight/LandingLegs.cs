@@ -69,6 +69,12 @@ namespace KSA.KSP.Flight
         private const int SiteOrbits = 8;           // orbits searched: the world turns under the orbit, so each one crosses new ground (one orbit offered only 9%, 2026-10-31)
         private const int MaxSearches = 3;          // searches before the crew gives the landing up
         private const double SteepStepAllowance = 2.5; // one steep step counts this much less than a tilt of the whole patch: the look at 400 m deals with those
+        private const double DriftHoldBelow = 60;   // metres above terrain: no lower with sideways speed
+        private const double DriftAllowed = 0.7;    // m/s sideways
+        private const double DriftHoldLimit = 40;   // seconds, then down anyway
+        private const double WaveOffFuel = 1500;    // m/s aboard to climb back and try again
+        private double _driftHoldStart = -1;
+        private bool _steepWaveOff;
         private const double SideStepAt = 2000;     // metres above terrain: look at the ground here, with room for a weak engine to stop from 60 m/s
         private const double SideStepFloor = 200;   // metres: hold at least this high while sliding
         private const double SideStepStopped = 8;   // m/s down at most before sliding
@@ -272,8 +278,16 @@ namespace KSA.KSP.Flight
                     case Phases.WaveOff:
                         {
                             if (warping) { c.StopWarp(); break; }
-                            double safePe = (_hasAir ? v.mainBody.atmosphereDepth : 0) + 6000;
-                            if (ctx.Now - _phaseStart < 3) { c.Sas(VesselAutopilot.AutopilotMode.Prograde, false); break; }
+                            double safePe = (_hasAir ? v.mainBody.atmosphereDepth : 0) + (_steepWaveOff ? 9000 : 6000);
+                            if (_steepWaveOff)
+                            {
+                                // From a hover there is no speed to follow: climb at 45 degrees along the orbit, flattening once it stays up.
+                                double p = (v.orbit.PeA < 0 ? 45 : 10) * Math.PI / 180;
+                                Vector3d up = v.upAxis;
+                                Vector3d along = v.obt_velocity - up * Vector3d.Dot(v.obt_velocity, up);
+                                c.PointAlong(() => (up * Math.Sin(p) + along.normalized * Math.Cos(p)).normalized);
+                            }
+                            else if (ctx.Now - _phaseStart < 3) { c.Sas(VesselAutopilot.AutopilotMode.Prograde, false); break; }
                             c.AutoStage(ref line);
                             if (v.orbit != null && v.orbit.PeA > safePe)
                             {
@@ -281,7 +295,7 @@ namespace KSA.KSP.Flight
                                 _surveyed = false; _surveySlope = -1; _askedCrew = false; _burnMargin = 0.15;
                                 // Plan again from the new orbit (2026-10-31: the old wait sat at 1x, the deorbit step cancelling every warp).
                                 _phase = Phases.Deorbit; _phaseStart = ctx.Now;
-                                _burnAt = -1; _searchAgainAt = -1; _searches = 0; _warpAskedFor = -1; _sideChecked = false;
+                                _burnAt = -1; _searchAgainAt = -1; _searches = 0; _warpAskedFor = -1; _sideChecked = false; _steepWaveOff = false; _holdingUp = false;
                                 ctx.Say("Back in orbit (" + LandingHelpers.Km(v.orbit.ApA) + " x " + LandingHelpers.Km(v.orbit.PeA) + " km); choosing the next pass.");
                             }
                             else if (c.NoThrustAvailable() && ctx.Now - _phaseStart > 6)
@@ -386,9 +400,8 @@ namespace KSA.KSP.Flight
                 Vector3d sun = (Planetarium.fetch.Sun.position - b.position).normalized;
                 // A weak lander brakes right after the burn, so it comes down almost under it (2026-10-31, T: "it could have waited
                 // to more in the light": a Terrier's whole descent took 130 s of braking from 46 km, not a quarter of an orbit).
-                double lead = o.period * SiteLead, best = double.PositiveInfinity, bestSun = 0;
+                double best = double.PositiveInfinity, bestSun = 0;
                 double accel = ctx.Control.MaxAcceleration(), g = b.gravParameter / (b.Radius * b.Radius);
-                if (accel > 0 && accel < 3 * g) lead = Math.Min(lead, 0.6 * v.obt_speed / accel);
                 // Flat anywhere in the light (2026-10-31, T: "3% anywhere in the light, 7% fall back to anywhere in the light", "it should
                 // abort anything more than 7%"): a lander on its side goes nowhere; a morning rule took a 15% site and it tipped over.
                 double[] slopeLimit = { GoodSlope, FairSlope };
@@ -396,7 +409,7 @@ namespace KSA.KSP.Flight
                     for (int i = 0; i < SiteSteps * SiteOrbits; i++)
                     {
                         double ut = ctx.Now + 60 + o.period * i / SiteSteps;
-                        Vector3d down = (o.getPositionAtUT(ut + lead) - b.position).normalized;
+                        double lead; Vector3d down = PredictDown(o, ut, b, accel, g, out lead);
                         double sunUp = 90 - Vector3d.Angle(down, sun);
                         if (sunUp < MinSunUp) continue;
                         Vector3d ground = b.position + down * b.Radius;
@@ -426,12 +439,11 @@ namespace KSA.KSP.Flight
         {
             CelestialBody b = v.mainBody;
             Orbit o = v.orbit;
-            double lead = o.period * SiteLead, accel = ctx.Control.MaxAcceleration(), g = b.gravParameter / (b.Radius * b.Radius);
-            if (accel > 0 && accel < 3 * g) lead = Math.Min(lead, 0.6 * v.obt_speed / accel);
+            double accel = ctx.Control.MaxAcceleration(), g = b.gravParameter / (b.Radius * b.Radius);
             double bestMiss = double.PositiveInfinity, bestUt = ctx.Now + 60;
             for (double ut = ctx.Now + 60; ut < ctx.Now + 60 + o.period * 20; ut += 5)
             {
-                Vector3d down = (o.getPositionAtUT(ut + lead) - b.position).normalized;
+                double lead; Vector3d down = PredictDown(o, ut, b, accel, g, out lead);
                 Vector3d ground = b.position + down * b.Radius;
                 double lon = b.GetLongitude(ground) - 360 * (ut + lead - ctx.Now) / b.rotationPeriod; // the world turns meanwhile
                 double miss = SurfaceDistance(b, b.GetLatitude(ground), lon, siteLat, siteLon);
@@ -441,6 +453,29 @@ namespace KSA.KSP.Flight
             _searches++;
             ctx.Say("Aiming for the Director's site: this orbit comes down " + Math.Round(bestMiss / 1000, 1) + " km from it, deorbit in " + TransferSupport.Countdown(_burnAt - ctx.Now) + "."
                 + (bestMiss > SiteReach ? " Too far to slide: the orbit does not cross it, and a plane change is not built." : string.Empty));
+        }
+
+        /// <summary>
+        /// Where a deorbit burn at ut comes down, and how long after. A weak lander brakes straight away, close under the burn. A strong one
+        /// falls most of the way round first, whatever the shape of its orbit (2026-11-01: a quarter-orbit guess was 5.6 km out on Minmus).
+        /// </summary>
+        private static Vector3d PredictDown(Orbit o, double ut, CelestialBody b, double accel, double g, out double seconds)
+        {
+            Vector3d r = o.getPositionAtUT(ut) - b.position;
+            if (accel > 0 && accel < 3 * g)
+            {
+                seconds = Math.Min(o.period * SiteLead, 0.6 * o.getOrbitalVelocityAtUT(ut).magnitude / accel);
+                return (o.getPositionAtUT(ut + seconds) - b.position).normalized;
+            }
+            double rA = r.magnitude, rP = 0.9 * b.Radius, a = (rA + rP) / 2, e = (rA - rP) / (rA + rP), p = a * (1 - e * e);
+            double cos = Math.Max(-1, Math.Min(1, (p / b.Radius - 1) / e)), f = Math.Acos(cos);
+            double ea = 2 * Math.Atan(Math.Sqrt((1 - e) / (1 + e)) * Math.Tan(f / 2));
+            double sinceLow = (ea - e * Math.Sin(ea)) * Math.Sqrt(a * a * a / b.gravParameter);
+            seconds = Math.PI * Math.Sqrt(a * a * a / b.gravParameter) - sinceLow;
+            Vector3d normal = Vector3d.Cross(r, o.getPositionAtUT(ut + 10) - b.position).normalized;
+            Vector3d side = Vector3d.Cross(normal, r.normalized);
+            double angle = Math.PI - f;
+            return (r.normalized * Math.Cos(angle) + side * Math.Sin(angle)).normalized;
         }
 
         /// <summary>Great-circle distance between two points on a world, metres.</summary>
@@ -593,6 +628,13 @@ namespace KSA.KSP.Flight
             double descentRate = -v.verticalSpeed;
             // Height held during a side-step, climbing a little if the ground rises towards it.
             double target = _stepping ? (above < SideStepFloor ? -5 : 0) : DescentMath.TargetDescentSpeed(above);
+            // Never touch down moving sideways: hold the height until the drift is gone (2026-11-01: 3.1 m/s down, soft, with 2 m/s of
+            // drift left over from a slide, and the lander tripped over its legs).
+            if (!_stepping && above < DriftHoldBelow && hSpeed > DriftAllowed && ctx.Now - _driftHoldStart < DriftHoldLimit)
+            {
+                if (_driftHoldStart < 0) _driftHoldStart = ctx.Now;
+                target = 0;
+            }
 
             if (!_gearDown && above < 500) { _gearDown = true; c.Gear(true); c.Lights(true); ctx.Say("Gear down, lights on at " + Math.Round(above) + " m."); }
 
@@ -697,7 +739,9 @@ namespace KSA.KSP.Flight
                 side -= to.normalized * Math.Min(SideStepSpeed, to.magnitude / 5);
             }
             if (side.magnitude < 0.2) return up;
-            double tilt = Math.Min(15, side.magnitude * 2) * Math.PI / 180;
+            // Thrust is only about gravity's size in a hover: weak gravity needs a deeper lean to shift the craft at all (15 degrees on Minmus never stopped 9 m/s).
+            double most = v.mainBody.GeeASL < 0.1 ? 40 : 15;
+            double tilt = Math.Min(most, side.magnitude * (v.mainBody.GeeASL < 0.1 ? 6 : 2)) * Math.PI / 180;
             return (up * Math.Cos(tilt) - side.normalized * Math.Sin(tilt)).normalized;
         }
 
@@ -789,6 +833,18 @@ namespace KSA.KSP.Flight
                 if (double.IsPositiveInfinity(best)) { ctx.Say("All this ground is in shadow; going straight down."); return; }
                 if (!_aimed && !dark && (here <= GoodSlope || (bestI == half && bestJ == half))) { ctx.Say("Ground below: " + LandingHelpers.Pct(here) + "; going straight down."); return; }
                 if (!_aimed && !dark && here <= FairSlope && best > GoodSlope) { ctx.Say("Ground below: " + LandingHelpers.Pct(here) + "; good enough."); return; }
+                // Nothing within reach is fit to land on: back to orbit, once, while the fuel allows (2026-10-31, T: "it should abort anything more than 7%").
+                double fuel = v.VesselDeltaV != null && v.VesselDeltaV.IsReady ? v.VesselDeltaV.TotalDeltaVVac : 0;
+                if (best > FairSlope && !_waveOffUsed && fuel > WaveOffFuel)
+                {
+                    _waveOffUsed = true;
+                    _aimed = false;
+                    _steepWaveOff = true;
+                    _phase = Phases.WaveOff; _phaseStart = ctx.Now;
+                    Status = "Waving off: climbing back to orbit.";
+                    ctx.Say("Ground below: " + LandingHelpers.Pct(here) + ", best nearby " + LandingHelpers.Pct(best) + ": over the limit. Waving off, back to orbit.");
+                    return;
+                }
                 _stepLat = midLat + (bestI - half) * step;
                 _stepLon = midLon + (bestJ - half) * stepLon;
                 _stepping = true;

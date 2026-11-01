@@ -185,6 +185,8 @@ namespace KSA.KSP.Flight
 
         private float _waited;
 
+        private float _strandedHiddenUntil;
+        private bool _confirmStranded;
         private bool _pickingSite;
         private float _rightDownAt;
         private Vector3 _rightDownPos;
@@ -811,6 +813,7 @@ namespace KSA.KSP.Flight
                 if (_program.Finished && !_program.Failed && _ctx.Delivered) { CheckOrbit(); Resolve(false, true); return; }
                 if (_program.Failed && !_haltNoted)
                 {
+                    _ctx.Control.Disengage(); // a halted program holds nothing: the throttle keys are the Director's (2026-11-01, T: "shift and ctrl do not work")
                     _haltNoted = true;
                     string why = _program.Status;
                     Log("Flight program halted: " + why, null);
@@ -1290,8 +1293,22 @@ namespace KSA.KSP.Flight
             // A kerbal near a seat boards at a click (2026-10-31, T: "can we add a right click to board": the hatch prompt is fiddly).
             Vessel walker = FlightGlobals.ActiveVessel;
             Part seat = walker != null && walker.isEVA && walker.evaController != null ? NearestSeat(walker) : null;
-            if (seat != null && GUILayout.Button("Board " + seat.partInfo.title)) walker.evaController.BoardPart(seat);
-            if (Live != null && CanDeclareStranded() && GUILayout.Button("Crew stranded: call for a rescue")) DeclareStranded();
+            if (seat != null && GUILayout.Button("Board " + seat.partInfo.title)) { walker.evaController.BoardPart(seat); _strandedHiddenUntil = UnityEngine.Time.unscaledTime + 5f; }
+            // Never under a moving cursor, and never on one click (2026-11-01: boarding moved this button under the click meant for Board and ended the flight).
+            bool outside = walker != null && walker.isEVA;
+            if (Live != null && !outside && UnityEngine.Time.unscaledTime >= _strandedHiddenUntil && CanDeclareStranded())
+            {
+                if (!_confirmStranded) { if (GUILayout.Button("Crew stranded...")) _confirmStranded = true; }
+                else
+                {
+                    GUILayout.Label("This ends the flight and starts the rescue clock.");
+                    GUILayout.BeginHorizontal();
+                    if (GUILayout.Button("Keep flying")) _confirmStranded = false;
+                    GUILayout.FlexibleSpace();
+                    if (GUILayout.Button("Yes, call for a rescue")) { _confirmStranded = false; DeclareStranded(); }
+                    GUILayout.EndHorizontal();
+                }
+            }
             GUI.DragWindow();
         }
     }
