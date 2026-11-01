@@ -76,6 +76,9 @@ namespace KSA.KSP.Flight
         private Phases _phase;
         private double _phaseStart;
         private const double DescentWarpFloor = 2000; // back to real time below this height above terrain
+        private const double UpHoldBelow = 300;       // straight up below this height above terrain
+        private const double UpHoldSpeed = 10;        // or below this surface speed, where the retrograde marker wanders
+        private double _lastAttitudeLog;
         private bool _descentWarped;
         private double _burnAt = -1;
         private bool _surveyed;
@@ -477,18 +480,20 @@ namespace KSA.KSP.Flight
 
             if (!_gearDown && above < 500) { _gearDown = true; c.Gear(true); c.Lights(true); ctx.Say("Gear down, lights on at " + Math.Round(above) + " m."); }
 
-            // Attitude: retrograde while moving, then hold "up" (radial out) so the lander does not chase a flipping marker.
-            if (!_holdingUp && (v.srfSpeed < 1.0 || (above < 40 && hSpeed < 1.5)))
+            // Attitude: retrograde while moving fast, then straight up, leaning a little against any sideways drift. Never the
+            // radial marker: it stands square to the velocity, so on a vertical descent it is sideways, and slowing to a stop
+            // laid the lander over and burned it into the Mun nose first at 27 m/s (2026-10-31, 39 m up, 1,887 m/s aboard).
+            if (!_holdingUp && (above < UpHoldBelow || v.srfSpeed < UpHoldSpeed))
             {
                 _holdingUp = true;
-                c.Sas(VesselAutopilot.AutopilotMode.RadialOut, true);
-            }
-            else if (_holdingUp && hSpeed > 5 && above > 100)
-            {
-                _holdingUp = false;
-                c.Sas(VesselAutopilot.AutopilotMode.Retrograde, true);
+                c.PointAlong(() => UpAgainstDrift(v));
             }
             else if (!_holdingUp) c.Sas(VesselAutopilot.AutopilotMode.Retrograde, true);
+            if (ctx.Now - _lastAttitudeLog >= 5)
+            {
+                _lastAttitudeLog = ctx.Now;
+                KsaCore.Log.Info("Descent: " + Math.Round(above) + " m, down " + Math.Round(descentRate, 1) + " m/s, sideways " + Math.Round(hSpeed, 1) + " m/s, nose " + Math.Round(c.AttitudeError(v.upAxis)) + " deg off up, " + (_holdingUp ? "up hold" : "retrograde"));
+            }
 
             // Only with the throttle open: closed on purpose while the fall is slow enough, no thrust is not an empty tank
             // (2026-10-31: 32 km up with 2,711 m/s aboard the crew declared the tanks dry and fell onto the Mun at 278 m/s).
@@ -530,8 +535,21 @@ namespace KSA.KSP.Flight
                     throttle = (float)Math.Max(0, Math.Min(1, t));
                 }
             }
+            // Tipped over, the engine only drives it down faster: stand it up first.
+            if (_holdingUp && c.AttitudeError(v.upAxis) > 45) throttle = 0f;
             c.Throttle = throttle;
             Status = "Descending " + Math.Round(descentRate, 1) + " m/s (target " + Math.Round(target, 1) + "), " + Math.Round(above) + " m.";
+        }
+
+        /// <summary>Straight up, tipped against sideways speed: 2 degrees per m/s, at most 15.</summary>
+        private static Vector3d UpAgainstDrift(Vessel v)
+        {
+            Vector3d up = v.upAxis;
+            Vector3d vel = v.srf_velocity;
+            Vector3d side = vel - up * Vector3d.Dot(vel, up);
+            if (side.magnitude < 0.2) return up;
+            double tilt = Math.Min(15, side.magnitude * 2) * Math.PI / 180;
+            return (up * Math.Cos(tilt) - side.normalized * Math.Sin(tilt)).normalized;
         }
 
         private void Touchdown(FlightContext ctx, Vessel v)
