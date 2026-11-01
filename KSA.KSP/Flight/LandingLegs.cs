@@ -76,6 +76,10 @@ namespace KSA.KSP.Flight
         private const double SideStepSpeed = 15;    // m/s across the ground at most
         private const double SideStepDone = 25;     // metres from the spot
         private const double SideStepLimit = 90;    // seconds, stopping included, then down anyway
+        private const double AimedStepLimit = 300;  // the same, sliding to the Director's site
+        private const double SiteReach = 4000;      // metres: the longest slide to the Director's site
+        private const double SiteGoodEnough = 2000; // metres: an earlier pass this much worse is still taken
+        private bool _aimed;
         private const double SideStepReserve = 1250; // m/s: enough to finish coming down, reach orbit and go home
         private double _lastStepCheck;
         private const double SiteSpacing = 250;     // metres between height samples: a 1 km patch (T), small enough for a crater floor
@@ -355,6 +359,8 @@ namespace KSA.KSP.Flight
                 CelestialBody b = v.mainBody;
                 Orbit o = v.orbit;
                 if (o == null || o.eccentricity >= 1 || b.pqsController == null) { _burnAt = ctx.Now; return; }
+                var live = KsaFlightDirector.Live;
+                if (live != null && live.HasSite && live.SiteBody == b.bodyName) { AimForSite(ctx, v, live.SiteLat, live.SiteLon); return; }
                 Vector3d sun = (Planetarium.fetch.Sun.position - b.position).normalized;
                 // A weak lander brakes right after the burn, so it comes down almost under it (2026-10-31, T: "it could have waited
                 // to more in the light": a Terrier's whole descent took 130 s of braking from 46 km, not a quarter of an orbit).
@@ -388,6 +394,39 @@ namespace KSA.KSP.Flight
                 else ctx.Say("Landing site chosen: sun " + Math.Round(bestSun) + " deg up, ground slope about " + LandingHelpers.Pct(best) + ", deorbit in " + TransferSupport.Countdown(_burnAt - ctx.Now) + ".");
             }
             catch (Exception e) { KsaCore.Log.Warn("Landing site search failed: " + e.Message); _burnAt = ctx.Now; _searches = MaxSearches; }
+        }
+
+        /// <summary>
+        /// The Director's own site (2026-10-31, T: right click to pick a spot): the burn whose descent comes down closest to it, searched
+        /// every 5 s over 20 orbits. An orbit only crosses its own ground track, so a site far off it is reported, not reached.
+        /// </summary>
+        private void AimForSite(FlightContext ctx, Vessel v, double siteLat, double siteLon)
+        {
+            CelestialBody b = v.mainBody;
+            Orbit o = v.orbit;
+            double lead = o.period * SiteLead, accel = ctx.Control.MaxAcceleration(), g = b.gravParameter / (b.Radius * b.Radius);
+            if (accel > 0 && accel < 3 * g) lead = Math.Min(lead, 0.6 * v.obt_speed / accel);
+            double bestMiss = double.PositiveInfinity, bestUt = ctx.Now + 60;
+            for (double ut = ctx.Now + 60; ut < ctx.Now + 60 + o.period * 20; ut += 5)
+            {
+                Vector3d down = (o.getPositionAtUT(ut + lead) - b.position).normalized;
+                Vector3d ground = b.position + down * b.Radius;
+                double lon = b.GetLongitude(ground) - 360 * (ut + lead - ctx.Now) / b.rotationPeriod; // the world turns meanwhile
+                double miss = SurfaceDistance(b, b.GetLatitude(ground), lon, siteLat, siteLon);
+                if (miss < bestMiss - SiteGoodEnough) { bestMiss = miss; bestUt = ut; }
+            }
+            _burnAt = bestUt;
+            _searches++;
+            ctx.Say("Aiming for the Director's site: this orbit comes down " + Math.Round(bestMiss / 1000, 1) + " km from it, deorbit in " + TransferSupport.Countdown(_burnAt - ctx.Now) + "."
+                + (bestMiss > SiteReach ? " Too far to slide: the orbit does not cross it, and a plane change is not built." : string.Empty));
+        }
+
+        /// <summary>Great-circle distance between two points on a world, metres.</summary>
+        private static double SurfaceDistance(CelestialBody b, double lat1, double lon1, double lat2, double lon2)
+        {
+            double p1 = lat1 * Math.PI / 180, p2 = lat2 * Math.PI / 180, dl = (lon1 - lon2) * Math.PI / 180;
+            double cos = Math.Sin(p1) * Math.Sin(p2) + Math.Cos(p1) * Math.Cos(p2) * Math.Cos(dl);
+            return b.Radius * Math.Acos(Math.Max(-1, Math.Min(1, cos)));
         }
 
         /// <summary>The worst of the height change across a 1 km patch and the steepest step between samples: a crater rim scores high.</summary>
@@ -546,7 +585,7 @@ namespace KSA.KSP.Flight
             // Close to the ground, look at it: anything steeper than the limit, find flat ground nearby and slide over (2026-10-31, T: "abort
             // anything more than 7% and look for something nearby that is flat").
             if (!_sideChecked && above < SideStepAt) { _sideChecked = true; if (_holdingUp) LookForFlat(ctx, v); }
-            if (_stepping && (ctx.Now - _stepStart > SideStepLimit || HorizontalTo(v).magnitude < SideStepDone))
+            if (_stepping && (ctx.Now - _stepStart > (_aimed ? AimedStepLimit : SideStepLimit) || HorizontalTo(v).magnitude < SideStepDone))
             {
                 _stepping = false;
                 ctx.Say("Over the flat spot: going down.");
@@ -557,7 +596,7 @@ namespace KSA.KSP.Flight
             {
                 _lastStepCheck = ctx.Now;
                 double fuel = v.VesselDeltaV != null && v.VesselDeltaV.IsReady ? v.VesselDeltaV.TotalDeltaVVac : double.PositiveInfinity;
-                if (PatchSlope(v.mainBody, v.latitude, v.longitude) <= FairSlope && !InShadow(v.mainBody, v.latitude, v.longitude))
+                if (!_aimed && PatchSlope(v.mainBody, v.latitude, v.longitude) <= FairSlope && !InShadow(v.mainBody, v.latitude, v.longitude))
                 {
                     _stepping = false;
                     ctx.Say("Flat ground right here: going down.");
@@ -643,7 +682,7 @@ namespace KSA.KSP.Flight
         /// Walks along the sunbeam from a point: high ground above the beam means the point is in shadow. The sun's angle alone cannot
         /// see a crater wall (2026-10-31, T: "they are not supposed to land in shadow right?").
         /// </summary>
-        private static bool InShadow(CelestialBody b, double lat, double lon)
+        internal static bool InShadow(CelestialBody b, double lat, double lon)
         {
             Vector3d ground = b.GetWorldSurfacePosition(lat, lon, b.TerrainAltitude(lat, lon) + 2);
             Vector3d sun = (Planetarium.fetch.Sun.position - ground).normalized;
@@ -657,7 +696,7 @@ namespace KSA.KSP.Flight
         }
 
         /// <summary>The steepest step across the 500 m patch round a point.</summary>
-        private static double PatchSlope(CelestialBody b, double lat, double lon)
+        internal static double PatchSlope(CelestialBody b, double lat, double lon)
         {
             double step = SideStepCell / b.Radius * 180 / Math.PI;
             double stepLon = step / Math.Max(0.2, Math.Cos(lat * Math.PI / 180));
@@ -691,10 +730,19 @@ namespace KSA.KSP.Flight
                 int n = 2 * half + 1;
                 double step = SideStepCell / b.Radius * 180 / Math.PI;
                 double stepLon = step / Math.Max(0.2, Math.Cos(v.latitude * Math.PI / 180));
+                // The flattest ground near the Director's click, when it is in reach; near the craft otherwise.
+                double midLat = v.latitude, midLon = v.longitude;
+                var live = KsaFlightDirector.Live;
+                if (live != null && live.HasSite && live.SiteBody == b.bodyName)
+                {
+                    double miss = SurfaceDistance(b, v.latitude, v.longitude, live.SiteLat, live.SiteLon);
+                    if (miss <= SiteReach) { midLat = live.SiteLat; midLon = live.SiteLon; _aimed = true; }
+                    else ctx.Say("The Director's site is " + Math.Round(miss / 1000, 1) + " km away: too far to slide, looking nearby.");
+                }
                 var h = new double[n, n];
                 for (int i = 0; i < n; i++)
                     for (int j = 0; j < n; j++)
-                        h[i, j] = b.TerrainAltitude(v.latitude + (i - half) * step, v.longitude + (j - half) * stepLon);
+                        h[i, j] = b.TerrainAltitude(midLat + (i - half) * step, midLon + (j - half) * stepLon);
                 double here = 0, best = double.PositiveInfinity;
                 int bestI = half, bestJ = half;
                 for (int i = patch; i < n - patch; i++)
@@ -712,14 +760,14 @@ namespace KSA.KSP.Flight
                         // Ties go to the nearer cell: distance adds a little.
                         double score = slope + 0.00001 * ((i - half) * (i - half) + (j - half) * (j - half));
                         // The sunbeam test only for a cell that would win: each one takes forty height samples.
-                        if (score < best && !InShadow(b, v.latitude + (i - half) * step, v.longitude + (j - half) * stepLon)) { best = score; bestI = i; bestJ = j; }
+                        if (score < best && !InShadow(b, midLat + (i - half) * step, midLon + (j - half) * stepLon)) { best = score; bestI = i; bestJ = j; }
                     }
                 bool dark = InShadow(b, v.latitude, v.longitude);
                 if (double.IsPositiveInfinity(best)) { ctx.Say("All this ground is in shadow; going straight down."); return; }
-                if (!dark && (here <= GoodSlope || (bestI == half && bestJ == half))) { ctx.Say("Ground below: " + LandingHelpers.Pct(here) + "; going straight down."); return; }
-                if (!dark && here <= FairSlope && best > GoodSlope) { ctx.Say("Ground below: " + LandingHelpers.Pct(here) + "; good enough."); return; }
-                _stepLat = v.latitude + (bestI - half) * step;
-                _stepLon = v.longitude + (bestJ - half) * stepLon;
+                if (!_aimed && !dark && (here <= GoodSlope || (bestI == half && bestJ == half))) { ctx.Say("Ground below: " + LandingHelpers.Pct(here) + "; going straight down."); return; }
+                if (!_aimed && !dark && here <= FairSlope && best > GoodSlope) { ctx.Say("Ground below: " + LandingHelpers.Pct(here) + "; good enough."); return; }
+                _stepLat = midLat + (bestI - half) * step;
+                _stepLon = midLon + (bestJ - half) * stepLon;
                 _stepping = true;
                 _stepStart = ctx.Now;
                 ctx.Say("Ground below: " + LandingHelpers.Pct(here) + "; sliding " + Math.Round(HorizontalTo(v).magnitude) + " m to a " + LandingHelpers.Pct(best) + " spot.");

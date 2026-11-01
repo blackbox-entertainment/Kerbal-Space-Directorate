@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.96 (2026-10-31), test build
+
+- **Pick landing site.** A button in the Flight Director opens the map; a short right click on the world marks the site and shows its slope and sun. The crew times the deorbit for it, then finds the flattest ground near the click, sliding up to 4 km. It only reaches ground its orbit crosses: no plane change yet, and no guided descent, so 1 km is not promised.
+
 ## 0.8.95 (2026-10-31), test build
 
 - **A much flatter climb off airless worlds.** It leans over from 300 m, starts at 40 degrees and lies down as speed builds, keeping 1.5 km clear of the ground ahead.

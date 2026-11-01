@@ -36,6 +36,10 @@ namespace KSA.KSP.Flight
 
         public sealed class LiveFlightState
         {
+            /// <summary>The Director's landing site (2026-10-31): the flattest ground near it is where the crew goes. Not saved yet.</summary>
+            public bool HasSite;
+            public string SiteBody = string.Empty;
+            public double SiteLat, SiteLon;
             public string ProjectId;
             public uint VesselId;
             public double LaunchUT;
@@ -177,10 +181,43 @@ namespace KSA.KSP.Flight
 
         private float _waited;
 
+        private bool _pickingSite;
+        private float _rightDownAt;
+        private Vector3 _rightDownPos;
+
+        /// <summary>Picking a site: a short right click on the world in the map view. A held right button still turns the camera.</summary>
+        private void WatchForSitePick()
+        {
+            if (!_pickingSite || Live == null || !MapView.MapIsEnabled) return;
+            if (Input.GetMouseButtonDown(1)) { _rightDownAt = UnityEngine.Time.unscaledTime; _rightDownPos = Input.mousePosition; }
+            if (!Input.GetMouseButtonUp(1)) return;
+            if (UnityEngine.Time.unscaledTime - _rightDownAt > 0.3f || (Input.mousePosition - _rightDownPos).magnitude > 6f) return;
+            CelestialBody b = FlightGlobals.GetBodyByName(Live.TargetBody) ?? _vessel.mainBody;
+            if (b == null || b.pqsController == null) { ScreenMessages.PostScreenMessage("[KSA] " + (b != null ? b.bodyName : "This") + " has no surface to land on.", 6f, ScreenMessageStyle.UPPER_CENTER); return; }
+            Ray ray = PlanetariumCamera.Camera.ScreenPointToRay(Input.mousePosition);
+            Vector3d centre = ScaledSpace.LocalToScaledSpace(b.position);
+            double radius = b.Radius * ScaledSpace.InverseScaleFactor;
+            Vector3d o = (Vector3d)ray.origin - centre, d = (Vector3d)ray.direction;
+            double along = Vector3d.Dot(o, d), under = along * along - (o.sqrMagnitude - radius * radius);
+            if (under < 0) { ScreenMessages.PostScreenMessage("[KSA] Right click on " + b.bodyName + " itself.", 4f, ScreenMessageStyle.UPPER_CENTER); return; }
+            Vector3d hit = ScaledSpace.ScaledToLocalSpace(centre + o + d * (-along - Math.Sqrt(under)));
+            double lat = b.GetLatitude(hit), lon = b.GetLongitude(hit);
+            Live.HasSite = true; Live.SiteBody = b.bodyName; Live.SiteLat = lat; Live.SiteLon = lon;
+            _pickingSite = false;
+            Vector3d ground = b.GetWorldSurfacePosition(lat, lon, 0) - b.position;
+            double sunUp = 90 - Vector3d.Angle(ground, Planetarium.fetch.Sun.position - b.position);
+            double slope = LandingLeg.PatchSlope(b, lat, lon);
+            string warn = (b.ocean && b.TerrainAltitude(lat, lon) <= 0 ? " WATER." : string.Empty) + (sunUp < 0 ? " NIGHT now." : string.Empty) + (slope > 0.07 ? " STEEP: the crew looks for flatter ground nearby." : string.Empty);
+            string text = "Landing site picked on " + b.bodyName + " at " + lat.ToString("0.00") + ", " + lon.ToString("0.00") + ": slope " + LandingHelpers.Pct(slope) + ", sun " + Math.Round(sunUp) + " deg up now." + warn;
+            ScreenMessages.PostScreenMessage("[KSA] " + text, 10f, ScreenMessageStyle.UPPER_CENTER);
+            Log(text, null);
+        }
+
         private void Update()
         {
             DirectorAutomation(); // KSA-68: the AI Director gives the go and brings the game home
             if (Live != null && _vessel != null && _adopted && !_offering) WatchForDirectorInput();
+            WatchForSitePick();
             // The active vessel may not exist yet in Start right after a launch; keep trying until the flight is ready.
             if (_adopted) return;
             if (UnityEngine.Time.unscaledTime < _nextAdoptTry) return;
@@ -1226,6 +1263,11 @@ namespace KSA.KSP.Flight
             }
             else GUILayout.Label("Leg: " + phase);
             GUILayout.Label(_status);
+            if (Live != null && _vessel != null && !Live.IsPlane && GUILayout.Button(_pickingSite ? "Right click the world in the map (click to cancel)" : Live.HasSite ? "Site " + Live.SiteLat.ToString("0.0") + ", " + Live.SiteLon.ToString("0.0") + ": pick again" : "Pick landing site"))
+            {
+                _pickingSite = !_pickingSite;
+                if (_pickingSite && !MapView.MapIsEnabled) MapView.EnterMapView();
+            }
             if (_science != null) GUILayout.Label("Science aboard: " + Live.SciencePoints.ToString("0.#") + " (" + (_science != null ? _science.ExperimentsRun : 0) + " experiments run)");
             GUILayout.Label("Alt " + LiveFlightResolver.FormatKm(_vessel.altitude) + "   Ap " + LiveFlightResolver.FormatKm(_vessel.orbit != null ? _vessel.orbit.ApA : 0) + "   Pe " + LiveFlightResolver.FormatKm(_vessel.orbit != null ? _vessel.orbit.PeA : 0));
             GUILayout.Label("Speed " + Math.Round(_vessel.srfSpeed) + " m/s   Stage " + _vessel.currentStage + "   " + (_vessel.mainBody != null ? _vessel.mainBody.bodyName : "") + "   " + Stamp());
