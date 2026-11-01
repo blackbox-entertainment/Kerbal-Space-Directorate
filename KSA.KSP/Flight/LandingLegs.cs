@@ -72,7 +72,7 @@ namespace KSA.KSP.Flight
         private const double SideStepAt = 2000;     // metres above terrain: look at the ground here, with room for a weak engine to stop from 60 m/s
         private const double SideStepFloor = 200;   // metres: hold at least this high while sliding
         private const double SideStepStopped = 8;   // m/s down at most before sliding
-        private const double SideStepCell = 100;    // metres between height samples
+        private const double SideStepCell = 125;    // metres between height samples
         private const double SideStepSpeed = 15;    // m/s across the ground at most
         private const double SideStepDone = 25;     // metres from the spot
         private const double SideStepLimit = 180;   // seconds, stopping included, then down anyway
@@ -626,14 +626,14 @@ namespace KSA.KSP.Flight
             return to - up * Vector3d.Dot(to, up);
         }
 
-        /// <summary>The flattest ground within 1 km. Slope of a cell = steepest step to a neighbour, 100 m apart.</summary>
+        /// <summary>The flattest ground within 1 km, judged on the 500 m patch round each point (2026-10-31, T): a target with room to miss it.</summary>
         private void LookForFlat(FlightContext ctx, Vessel v)
         {
             try
             {
                 CelestialBody b = v.mainBody;
                 if (b.pqsController == null) return;
-                const int half = 10;
+                const int half = 8, patch = 2; // 8 cells of 125 m each way; 2 cells each way is a 500 m patch
                 int n = 2 * half + 1;
                 double step = SideStepCell / b.Radius * 180 / Math.PI;
                 double stepLon = step / Math.Max(0.2, Math.Cos(v.latitude * Math.PI / 180));
@@ -643,14 +643,16 @@ namespace KSA.KSP.Flight
                         h[i, j] = b.TerrainAltitude(v.latitude + (i - half) * step, v.longitude + (j - half) * stepLon);
                 double here = 0, best = double.PositiveInfinity;
                 int bestI = half, bestJ = half;
-                for (int i = 1; i < n - 1; i++)
-                    for (int j = 1; j < n - 1; j++)
+                for (int i = patch; i < n - patch; i++)
+                    for (int j = patch; j < n - patch; j++)
                     {
                         double slope = 0;
-                        slope = Math.Max(slope, Math.Abs(h[i, j] - h[i - 1, j]));
-                        slope = Math.Max(slope, Math.Abs(h[i, j] - h[i + 1, j]));
-                        slope = Math.Max(slope, Math.Abs(h[i, j] - h[i, j - 1]));
-                        slope = Math.Max(slope, Math.Abs(h[i, j] - h[i, j + 1]));
+                        for (int a = i - patch; a <= i + patch; a++)
+                            for (int c2 = j - patch; c2 <= j + patch; c2++)
+                            {
+                                if (a > i - patch) slope = Math.Max(slope, Math.Abs(h[a, c2] - h[a - 1, c2]));
+                                if (c2 > j - patch) slope = Math.Max(slope, Math.Abs(h[a, c2] - h[a, c2 - 1]));
+                            }
                         slope /= SideStepCell;
                         if (i == half && j == half) here = slope;
                         // Ties go to the nearer cell: distance adds a little.

@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.89 (2026-10-31), test build
+
+- **The 500 m patch really is in now.** 0.8.88 listed it, but the change had not applied.
+
 ## 0.8.88 (2026-10-31), test build
 
 - **The final landing spot is judged on a 500 m patch,** sampled every 125 m, so it has room for error.
