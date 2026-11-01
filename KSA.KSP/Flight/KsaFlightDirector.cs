@@ -298,7 +298,8 @@ namespace KSA.KSP.Flight
             {
                 // Resuming after a scene change or reload: is this vessel a live project?
                 Project p = agency.ProjectForVessel(v.persistentId.ToString());
-                bool nearPad = v.mainBody == FlightGlobals.GetHomeBody() && v.srfSpeed < 2.0 && v.altitude - v.terrainAltitude < 100;
+                // Standing still on the ground, however tall (2026-11-01: a 30 m rocket on the pad reads 101 m until the terrain height loads, and no offer came).
+                bool nearPad = v.mainBody == FlightGlobals.GetHomeBody() && v.srfSpeed < 2.0 && (v.situation == Vessel.Situations.PRELAUNCH || v.LandedOrSplashed || v.altitude - v.terrainAltitude < 100);
                 if (p == null && nearPad) p = AdoptFromVab(agency, v);
                 if (p == null)
                 {
