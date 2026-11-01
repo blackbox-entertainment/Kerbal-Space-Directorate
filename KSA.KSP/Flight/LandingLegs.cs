@@ -328,22 +328,24 @@ namespace KSA.KSP.Flight
                 double lead = o.period * SiteLead, best = double.PositiveInfinity, bestSun = 0;
                 double accel = ctx.Control.MaxAcceleration(), g = b.gravParameter / (b.Radius * b.Radius);
                 if (accel > 0 && accel < 3 * g) lead = Math.Min(lead, 0.6 * v.obt_speed / accel);
-                // High sun first (2026-10-31, T: "it could have burned earlier": 34 degrees up was too near the dark); low sun if that is all.
-                foreach (double minSun in new[] { GoodSunUp, MinSunUp })
-                {
-                    if (!double.IsPositiveInfinity(best)) break;
+                // High sun first (2026-10-31, T: "it could have burned earlier": 34 degrees up was too near the dark); low sun if that is
+                // all. Morning before afternoon (T: "land near the morning side"): the Mun's day is 3 Kerbin days, and that is the crew's stay.
+                double[] sunNeeded = { GoodSunUp, GoodSunUp, MinSunUp, MinSunUp };
+                bool[] morningOnly = { true, false, true, false };
+                for (int pass = 0; pass < sunNeeded.Length && double.IsPositiveInfinity(best); pass++)
                     for (int i = 0; i < SiteSteps; i++)
                     {
                         double ut = ctx.Now + 60 + o.period * i / SiteSteps;
                         Vector3d down = (o.getPositionAtUT(ut + lead) - b.position).normalized;
                         double sunUp = 90 - Vector3d.Angle(down, sun);
-                        if (sunUp < minSun) continue;
+                        if (sunUp < sunNeeded[pass]) continue;
                         Vector3d ground = b.position + down * b.Radius;
+                        double lat = b.GetLatitude(ground);
                         double lon = b.GetLongitude(ground) - 360 * (ut + lead - ctx.Now) / b.rotationPeriod; // the world turns meanwhile
-                        double rough = Roughness(b, b.GetLatitude(ground), lon);
+                        if (morningOnly[pass] && Vector3d.Dot(sun, (b.GetWorldSurfacePosition(lat, lon + 1, 0) - b.GetWorldSurfacePosition(lat, lon, 0)).normalized) <= 0) continue; // sun in the west: afternoon
+                        double rough = Roughness(b, lat, lon);
                         if (rough < best) { best = rough; bestSun = sunUp; _burnAt = ut; }
                     }
-                }
                 if (double.IsPositiveInfinity(best)) ctx.Say("No sunlit ground under this orbit; landing where it comes down.");
                 else ctx.Say("Landing site chosen: sun " + Math.Round(bestSun) + " deg up, ground slope about " + LandingHelpers.Pct(best) + ", deorbit in " + TransferSupport.Countdown(_burnAt - ctx.Now) + ".");
             }

@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.75 (2026-10-31), test build
+
+- **Landings prefer the morning side.** With the sun in the east the crew has the whole day ahead; the afternoon side is used only when an orbit offers nothing else.
+
 ## 0.8.74 (2026-10-31), test build
 
 - **The Board button shows within 5 m of a free seat.** At 3 m a kerbal stuck on the ladder could not reach it.
