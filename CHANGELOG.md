@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.77 (2026-10-31), test build
+
+- **No liftoff lying down.** A lander more than 30 degrees off upright stays put and tells the Director, instead of lighting its engine along the ground.
+
 ## 0.8.76 (2026-10-31), test build
 
 - **Flat ground comes before morning light.** A site steeper than 8% is taken only if the whole orbit offers nothing better. A 15% site chosen for its morning sun tipped the lander over.

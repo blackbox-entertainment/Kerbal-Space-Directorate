@@ -895,6 +895,8 @@ namespace KSA.KSP.Flight
     {
         private enum Phases { Liftoff, Vertical, Kick, Ascent, Coast, Circularize }
 
+        private const double MaxLiftoffLean = 30; // degrees off upright
+
         private readonly double _target;
         private Phases _phase;
         private double _phaseStart;
@@ -959,6 +961,14 @@ namespace KSA.KSP.Flight
                 {
                     case Phases.Liftoff:
                         if (warping) { c.StopWarp(); break; }
+                        // Never light up lying down: the engine only drives the craft along the ground (2026-10-31: tipped over on a slope,
+                        // the crew followed the plan, and the lander killed all three).
+                        if (LandingHelpers.IsDown(v) && c.AttitudeError(v.upAxis) > MaxLiftoffLean)
+                        {
+                            State = LegState.Failed; Status = "The lander is on its side.";
+                            ctx.Say("The lander is " + Math.Round(c.AttitudeError(v.upAxis)) + " deg off upright: no liftoff. Director, a rescue or a reload.");
+                            break;
+                        }
                         c.Sas(VesselAutopilot.AutopilotMode.StabilityAssist, true);
                         c.Lights(false);
                         if (!c.EnsureEngine(ref line)) { Status = "Engine start."; break; }
