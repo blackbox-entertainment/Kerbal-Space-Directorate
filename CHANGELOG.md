@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.120 (2026-11-01), test build
+
+- **The climb out of the air climbs.** A crew caught in the air now pitches 35 degrees above the horizon instead of flying along its path, where the thrust only fought the drag.
+
 ## 0.8.119 (2026-11-01), test build
 
 - **No thrust in the air on an aerobraking arrival.** The capture burn now runs 80 km above the top of the air, for the same periapsis, and the crew flies the passes nose first. Engine first, with the fins in front, the rocket tumbled.

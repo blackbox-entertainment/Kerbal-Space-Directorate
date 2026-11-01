@@ -1250,11 +1250,12 @@ namespace KSA.KSP.Flight
         private readonly double _altitude;
         private Phases _phase;
         private NodeExecutor _exec;
-        private bool _inAir, _climbing;
+        private bool _inAir, _climbing, _caughtSaid;
         private int _passes;
         private double _energyBefore, _lastDrop;
 
-        private const double MaxOffForClimb = 25;     // degrees off prograde: thrust beyond this only pushes down
+        private const double MaxOffForClimb = 25;     // degrees off the climb: thrust beyond this only pushes the wrong way
+        private const double ClimbPitch = 35 * Math.PI / 180;
         private const double PassMargin = 1.5;        // of the last pass's energy loss, allowed for the next
         private const double TurnSeconds = 90;
         private const int MaxPasses = 12;
@@ -1302,11 +1303,14 @@ namespace KSA.KSP.Flight
                     // down to 26 x -19 km, and the crew rode it to the ground waiting for the air to end).
                     if (_climbing || (inAir && v.orbit.ApA < air))
                     {
-                        if (!_climbing) { _climbing = true; line = "Caught in the air at " + TransferSupport.Km(v.altitude) + ": full power to climb out."; }
-                        c.Sas(VesselAutopilot.AutopilotMode.Prograde, false);
-                        c.Throttle = c.AttitudeError(v.obt_velocity) < MaxOffForClimb ? 1f : 0f;
+                        if (!_climbing) { _climbing = true; if (!_caughtSaid) line = "Caught in the air at " + TransferSupport.Km(v.altitude) + ": full power to climb out."; _caughtSaid = true; }
+                        // Up as well as along: level in thick air the thrust only fights the drag (2026-11-01, T: 460 m/s for 2 km of apoapsis).
+                        Vector3d up = v.upAxis;
+                        Vector3d climb = (up * Math.Sin(ClimbPitch) + Vector3d.Exclude(up, v.obt_velocity).normalized * Math.Cos(ClimbPitch)).normalized;
+                        c.PointAlong(() => climb);
+                        c.Throttle = c.AttitudeError(climb) < MaxOffForClimb ? 1f : 0f;
                         Status = "Climbing out of the air: apoapsis " + TransferSupport.Km(v.orbit.ApA) + ".";
-                        if (v.orbit.ApA >= _altitude) { _climbing = false; c.Throttle = 0; }
+                        if (v.orbit.ApA >= _altitude + GoalMargin) { _climbing = false; c.Throttle = 0; }
                         break;
                     }
                     c.Throttle = 0;
