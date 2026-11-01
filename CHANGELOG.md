@@ -2,6 +2,12 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.91 (2026-10-31), test build
+
+- **The last 10 m at 2 m/s.** At 5 m/s a lander bounced on the Mun and tipped.
+- **The crew holds the lander upright through the bounces.**
+- **Nobody steps out of a lander on its side.**
+
 ## 0.8.90 (2026-10-31), test build
 
 - **The side-step picks a place.** It ends as soon as the ground underneath is 7% or flatter, after 90 seconds, or when fuel falls to 1,250 m/s.

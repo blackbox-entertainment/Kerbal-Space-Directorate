@@ -804,7 +804,9 @@ namespace KSA.KSP.Flight
         private const double SettledSpeed = 0.3;   // m/s over the ground
         private const double SettleSeconds = 5;    // that still, for this long
         private const double SettleLimit = 30;     // and no longer than this in all
+        private const double MaxEvaLean = 30;      // degrees off upright
         private double _settledSince = -1;
+        private bool _holdingUpright;
 
         internal void Tick()
         {
@@ -818,7 +820,21 @@ namespace KSA.KSP.Flight
                     // in the touchdown frame and was thrown clear at 13.6 m/s).
                     if (v != null && v.srfSpeed > SettledSpeed) _settledSince = now;
                     if (_settledSince < 0) _settledSince = now;
-                    if (now - _settledSince < SettleSeconds && now - _evaStart < SettleLimit) { Status = "Waiting for the lander to settle."; return; }
+                    // The crew keeps flying through the bounces (2026-10-31: a 1% site, engine off at first touch, nine bounces and over it went).
+                    if (now - _settledSince < SettleSeconds && now - _evaStart < SettleLimit)
+                    {
+                        if (!_holdingUpright && v != null) { _holdingUpright = true; _ctx.Control.PointAlong(() => v.upAxis); }
+                        Status = "Waiting for the lander to settle.";
+                        return;
+                    }
+                    if (_holdingUpright) { _holdingUpright = false; _ctx.Control.Sas(VesselAutopilot.AutopilotMode.StabilityAssist, true); }
+                    // Nobody steps out of a lander on its side: the hatch throws them clear (2026-10-31, Jeb, twice).
+                    if (v != null && _ctx.Control.AttitudeError(v.upAxis) > MaxEvaLean)
+                    {
+                        _ctx.Say("The lander is " + Math.Round(_ctx.Control.AttitudeError(v.upAxis)) + " deg off upright: the crew stays aboard.");
+                        Finish();
+                        return;
+                    }
                     if (_spawnTried) { Finish(); return; }
                     _spawnTried = true;
                     if (LandingHelpers.Warping) { TimeWarp.SetRate(0, true); }
