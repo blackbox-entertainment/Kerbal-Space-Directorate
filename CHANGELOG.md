@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.106 (2026-11-01), test build
+
+- **The capsule keeps its parachutes.** A descent through another world's air arms only the chutes that leave with the lander; it used to arm every chute aboard, so a Duna landing would have spent the capsule's and left none for Kerbin.
+
 ## 0.8.105 (2026-11-01), test build
 
 - **No false takeovers.** Walking a kerbal on EVA or a key touched while time is compressed no longer takes the craft from the crew. Other keys must be held for a third of a second; stage, full throttle and cut throttle still count on a tap, and the Take Control button always works.

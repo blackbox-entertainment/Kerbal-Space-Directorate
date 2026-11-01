@@ -331,7 +331,7 @@ namespace KSA.KSP.Flight
         {
             bool inAir = _hasAir && v.altitude < v.mainBody.atmosphereDepth;
             c.Sas(VesselAutopilot.AutopilotMode.Retrograde, !_hasAir || inAir);
-            if (inAir && !warping) c.DeployChutes(ref line);
+            if (inAir && !warping) c.DeployLanderChutes(ref line);
 
             // Light the engine while still high so the braking estimate uses real thrust (throttle stays zero).
             if (!warping && above < SurveyBelow && accel <= 0) c.EnsureEngine(ref line);
@@ -620,7 +620,7 @@ namespace KSA.KSP.Flight
                 TimeWarp.SetRate(3, false); // 4x
             }
             bool inAir = _hasAir && v.altitude < v.mainBody.atmosphereDepth;
-            if (inAir) c.DeployChutes(ref line);
+            if (inAir) c.DeployLanderChutes(ref line);
             c.AutoStage(ref line);
             if (accel <= 0) c.EnsureEngine(ref line);
 

@@ -813,6 +813,35 @@ namespace KSA.KSP.Flight
             else if (armed > 0) line = "Parachutes armed at " + Math.Round(_v.altitude) + " m: they open as soon as it is safe.";
         }
 
+        /// <summary>
+        /// Landing away from home: only the chutes that leave with the lander. The capsule's are for the reentry at home, and a chute
+        /// opens once (2026-11-01: a Duna descent would have armed them all, and the crew would have come home with none).
+        /// </summary>
+        public void DeployLanderChutes(ref string line)
+        {
+            if (_v == null) return;
+            int armed = 0;
+            foreach (ModuleParachute chute in _v.FindPartModulesImplementing<ModuleParachute>())
+            {
+                if (chute.deploymentState != ModuleParachute.deploymentStates.STOWED || StaysWithCapsule(chute.part)) continue;
+                chute.automateSafeDeploy = 0;
+                chute.Deploy();
+                armed++;
+            }
+            if (armed > 0) line = armed + " lander parachutes armed at " + Math.Round(_v.altitude) + " m; the capsule keeps its own for home.";
+        }
+
+        /// <summary>True when no decoupler lies between a part and the root (a heat shield's or a crew pod's built-in one does not count).</summary>
+        private static bool StaysWithCapsule(Part p)
+        {
+            for (Part q = p; q != null; q = q.parent)
+            {
+                bool decoupler = q.FindModuleImplementing<ModuleDecouple>() != null || q.FindModuleImplementing<ModuleAnchoredDecoupler>() != null;
+                if (decoupler && q.CrewCapacity == 0 && q.FindModuleImplementing<ModuleAblator>() == null) return false;
+            }
+            return true;
+        }
+
         /// <summary>Makes a docking port the control point so SAS Target mode points the port, not the pod.</summary>
         public void ControlFrom(ModuleDockingNode port)
         {
