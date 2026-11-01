@@ -81,7 +81,9 @@ namespace KSA.KSP.Flight
         private const double SiteSpacing = 250;     // metres between height samples: a 1 km patch (T), small enough for a crater floor
         private const double GoodSlope = 0.03;      // height change across the site, wanted (T; a 5% site held but leaned, the 15% one tipped the lander)
         private const double FairSlope = 0.07;      // accepted when an orbit has nothing flatter
-        private const double MinSunUp = 15;         // degrees above the horizon at the site: "in the light"
+        private const double MinSunUp = 30;         // degrees above the horizon at the site: "in the light" (at 20 a crater wall shaded the floor)
+        private const double ShadowReach = 20000;   // metres along the sunbeam tested for high ground
+        private const double ShadowStep = 500;      // metres between tests
         private const double SurveySpacing = 200;   // metres between grid cells
         private const int SurveySize = 5;           // 5x5 grid
         private const double SurveyBelow = 20000;   // start the survey below this height above terrain
@@ -555,7 +557,7 @@ namespace KSA.KSP.Flight
             {
                 _lastStepCheck = ctx.Now;
                 double fuel = v.VesselDeltaV != null && v.VesselDeltaV.IsReady ? v.VesselDeltaV.TotalDeltaVVac : double.PositiveInfinity;
-                if (PatchSlope(v.mainBody, v.latitude, v.longitude) <= FairSlope)
+                if (PatchSlope(v.mainBody, v.latitude, v.longitude) <= FairSlope && !InShadow(v.mainBody, v.latitude, v.longitude))
                 {
                     _stepping = false;
                     ctx.Say("Flat ground right here: going down.");
@@ -637,6 +639,23 @@ namespace KSA.KSP.Flight
             return (up * Math.Cos(tilt) - side.normalized * Math.Sin(tilt)).normalized;
         }
 
+        /// <summary>
+        /// Walks along the sunbeam from a point: high ground above the beam means the point is in shadow. The sun's angle alone cannot
+        /// see a crater wall (2026-10-31, T: "they are not supposed to land in shadow right?").
+        /// </summary>
+        private static bool InShadow(CelestialBody b, double lat, double lon)
+        {
+            Vector3d ground = b.GetWorldSurfacePosition(lat, lon, b.TerrainAltitude(lat, lon) + 2);
+            Vector3d sun = (Planetarium.fetch.Sun.position - ground).normalized;
+            for (double s = ShadowStep; s <= ShadowReach; s += ShadowStep)
+            {
+                Vector3d p = ground + sun * s;
+                double height = (p - b.position).magnitude - b.Radius;
+                if (b.TerrainAltitude(b.GetLatitude(p), b.GetLongitude(p)) > height) return true;
+            }
+            return false;
+        }
+
         /// <summary>The steepest step across the 500 m patch round a point.</summary>
         private static double PatchSlope(CelestialBody b, double lat, double lon)
         {
@@ -692,10 +711,13 @@ namespace KSA.KSP.Flight
                         if (i == half && j == half) here = slope;
                         // Ties go to the nearer cell: distance adds a little.
                         double score = slope + 0.00001 * ((i - half) * (i - half) + (j - half) * (j - half));
-                        if (score < best) { best = score; bestI = i; bestJ = j; }
+                        // The sunbeam test only for a cell that would win: each one takes forty height samples.
+                        if (score < best && !InShadow(b, v.latitude + (i - half) * step, v.longitude + (j - half) * stepLon)) { best = score; bestI = i; bestJ = j; }
                     }
-                if (here <= GoodSlope || (bestI == half && bestJ == half)) { ctx.Say("Ground below: " + LandingHelpers.Pct(here) + "; going straight down."); return; }
-                if (here <= FairSlope && best > GoodSlope) { ctx.Say("Ground below: " + LandingHelpers.Pct(here) + "; good enough."); return; }
+                bool dark = InShadow(b, v.latitude, v.longitude);
+                if (double.IsPositiveInfinity(best)) { ctx.Say("All this ground is in shadow; going straight down."); return; }
+                if (!dark && (here <= GoodSlope || (bestI == half && bestJ == half))) { ctx.Say("Ground below: " + LandingHelpers.Pct(here) + "; going straight down."); return; }
+                if (!dark && here <= FairSlope && best > GoodSlope) { ctx.Say("Ground below: " + LandingHelpers.Pct(here) + "; good enough."); return; }
                 _stepLat = v.latitude + (bestI - half) * step;
                 _stepLon = v.longitude + (bestJ - half) * stepLon;
                 _stepping = true;
@@ -1053,7 +1075,9 @@ namespace KSA.KSP.Flight
         private Phases _phase;
         private double _phaseStart;
         private bool _gearUp;
-        private const double KickPitch = 75;      // degrees above the horizon, heading east
+        private const double KickPitch = 60;      // degrees above the horizon, heading east
+        private const double AheadOfClimb = 10000; // metres: the ground looked at ahead of the climb
+        private const double ClearanceAhead = 1500; // metres above it
 
         public AirlessAscentLeg(double targetAltitude) { _target = Math.Max(5000, targetAltitude); }
 
@@ -1105,7 +1129,7 @@ namespace KSA.KSP.Flight
                 bool warping = LandingHelpers.Warping;
                 double above = LandingHelpers.AboveTerrain(v);
                 double atmo = v.mainBody.atmosphere ? v.mainBody.atmosphereDepth : 0;
-                double verticalUntil = v.mainBody.atmosphere ? 10000 : 1500;
+                double verticalUntil = v.mainBody.atmosphere ? 10000 : 300;
 
                 if (!_gearUp && _phase != Phases.Liftoff && above > 50 && !LandingHelpers.IsDown(v)) { _gearUp = true; c.Gear(false); }
 
@@ -1140,7 +1164,7 @@ namespace KSA.KSP.Flight
                             ctx.Say("Liftoff failed: no thrust available on " + v.mainBody.bodyName + ".");
                             break;
                         }
-                        if (above > verticalUntil || v.srfSpeed > 80)
+                        if (above > verticalUntil || v.srfSpeed > (v.mainBody.atmosphere ? 80 : 30))
                         {
                             // East by the compass, not by a yaw input: yaw follows however the lander happened to roll, and a kick that way
                             // put it in an orbit tilted 113 degrees, which no fuel aboard could bring home (2026-10-31).
@@ -1263,8 +1287,12 @@ namespace KSA.KSP.Flight
         {
             double r = v.mainBody.Radius + v.altitude;
             double circular = Math.Sqrt(v.mainBody.gravParameter / r);
-            double pitch = 10 + 60 * Math.Max(0, 1 - v.horizontalSrfSpeed / circular);
-            return v.verticalSpeed < 5 ? Math.Max(pitch, 45) : pitch;
+            // From 40 degrees, not 70: at 70 the Mun climb reached 50 km with only 114 m/s of orbital speed (2026-10-31).
+            double pitch = 5 + 35 * Math.Max(0, 1 - v.horizontalSrfSpeed / circular);
+            // Keep over the ground ahead: the Mun has 7 km peaks.
+            double ahead = AheadOfClimb / r * 180 / Math.PI / Math.Max(0.2, Math.Cos(v.latitude * Math.PI / 180));
+            bool groundAhead = v.altitude - v.mainBody.TerrainAltitude(v.latitude, v.longitude + ahead) < ClearanceAhead;
+            return v.verticalSpeed < 5 || groundAhead ? Math.Max(pitch, 45) : pitch;
         }
 
         private void Done(FlightContext ctx, Vessel v)

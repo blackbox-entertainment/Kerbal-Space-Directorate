@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.95 (2026-10-31), test build
+
+- **A much flatter climb off airless worlds.** It leans over from 300 m, starts at 40 degrees and lies down as speed builds, keeping 1.5 km clear of the ground ahead.
+- **No landing in shadow.** Sites need the sun 30 degrees up, and the look at 2 km tests each spot against the terrain, so a crater wall counts. If everything nearby is dark, the crew goes straight down and says so.
+
 ## 0.8.94 (2026-10-31), test build
 
 - **Liftoff from an airless world heads east by the compass.** A yaw kick followed however the lander had rolled, and one flight reached an orbit tilted 113 degrees that no fuel aboard could bring home.
