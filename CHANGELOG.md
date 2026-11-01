@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.74 (2026-10-31), test build
+
+- **The Board button shows within 5 m of a free seat.** At 3 m a kerbal stuck on the ladder could not reach it.
+
 ## 0.8.73 (2026-10-31), test build
 
 - **Handing back sticks.** For 3 seconds after Hand back to crew, no key counts as the Director taking over. Above the air, a takeover also closes the crew's throttle, so an engine nobody is minding cannot empty the tanks.
