@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.62 (2026-10-31), test build
+
+- **The sunny landing site allows for weak engines.** A lander that brakes straight after the deorbit comes down close under the burn, not a quarter of an orbit on, so the crew now waits until that ground is in the light.
+
 ## 0.8.61 (2026-10-31), test build
 
 - **Landers stay upright in the last metres.** The final hold used the radial marker, which lies sideways on a vertical descent, and laid the lander over into a nose-first crash. It now points straight up, leaning a little against sideways drift, and the engine waits if the craft is more than 45 degrees off.

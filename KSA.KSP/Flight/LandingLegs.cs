@@ -322,7 +322,11 @@ namespace KSA.KSP.Flight
                 Orbit o = v.orbit;
                 if (o == null || o.eccentricity >= 1 || b.pqsController == null) return;
                 Vector3d sun = (Planetarium.fetch.Sun.position - b.position).normalized;
+                // A weak lander brakes right after the burn, so it comes down almost under it (2026-10-31, T: "it could have waited
+                // to more in the light": a Terrier's whole descent took 130 s of braking from 46 km, not a quarter of an orbit).
                 double lead = o.period * SiteLead, best = double.PositiveInfinity, bestSun = 0;
+                double accel = ctx.Control.MaxAcceleration(), g = b.gravParameter / (b.Radius * b.Radius);
+                if (accel > 0 && accel < 3 * g) lead = Math.Min(lead, 0.6 * v.obt_speed / accel);
                 for (int i = 0; i < SiteSteps; i++)
                 {
                     double ut = ctx.Now + 60 + o.period * i / SiteSteps;
