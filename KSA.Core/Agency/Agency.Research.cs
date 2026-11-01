@@ -211,7 +211,9 @@ namespace KSA.Core
         /// <summary>Why a rescue for this stranding cannot fly yet, or null.</summary>
         public string RescueBlocker(Stranding s)
         {
-            return s == null ? "nobody to rescue" : MissionBlocker(RescueMissionFor(s, 1));
+            if (s == null) return "nobody to rescue";
+            MissionType t = RescueMissionFor(s, 1);
+            return MissionBlocker(t) ?? RescueTooLate(s, t, false);
         }
 
         private static bool PatternMatches(string achievement, string pattern)

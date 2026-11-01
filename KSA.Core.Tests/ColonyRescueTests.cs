@@ -289,7 +289,7 @@ namespace KSA.Core.Tests
         {
             var clock = new FakeClock();
             Agency a = Staffed(clock);
-            a.Settings.Rescue.LostAfterDays = 30;
+            a.Settings.Rescue.LostAfterDays = 200;
             Project p = LiveOrbit(a, "Gene Kerman");
             var result = new LiveFlightResult { Stranded = true, StrandedBody = "Mun", StrandedOnSurface = true, StrandedVesselId = "99", DaysInSpace = 5 };
             a.ResolveLive(p.Id, result);
@@ -304,6 +304,22 @@ namespace KSA.Core.Tests
             clock.AdvanceDays(a.Clock.DaysPerYear); a.Tick();
             Assert.That(s.Resolved, Is.True);
             Assert.That(a.Crew.Get("Gene Kerman").Status, Is.EqualTo(CrewStatus.Dead), "given up for lost");
+        }
+
+        [Test]
+        public void NoRescueIsApprovedThatWouldArriveTooLate()
+        {
+            var clock = new FakeClock();
+            Agency a = Staffed(clock);
+            a.Settings.Rescue.LostAfterDays = 3;
+            Project p = LiveOrbit(a, "Gene Kerman");
+            a.ResolveLive(p.Id, new LiveFlightResult { Stranded = true, StrandedBody = "Mun", StrandedOnSurface = true, StrandedVesselId = "99" });
+            Stranding s = a.StrandingFor("Gene Kerman");
+            string msg;
+            Project rescue = a.CreateRescue(s.Id, null, MissionMode.Simulate, out msg);
+            Assert.That(rescue, Is.Null);
+            Assert.That(msg, Does.Contain("too late"));
+            Assert.That(a.RescueBlocker(s), Does.Contain("too late"));
         }
 
         [Test]

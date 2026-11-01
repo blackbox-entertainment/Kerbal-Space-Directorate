@@ -137,6 +137,8 @@ namespace KSA.Core
             // The Director's own rocket only has to fit (seats, delta-v); otherwise the engineers must be able to build one.
             string blocked = string.IsNullOrEmpty(playerDesign) ? MissionBlocker(t) : null;
             if (blocked != null) { message = t.Name + " " + blocked + "."; return null; }
+            blocked = RescueTooLate(s, t, !string.IsNullOrEmpty(playerDesign));
+            if (blocked != null) { message = t.Name + ": " + blocked + "."; return null; }
             Catalogs.Missions.Add(t);
             Project p = CreateProject(t.Name, t.Id, null, crewIds, null, null, mode, out message, null, playerDesign);
             if (p == null) { Catalogs.Missions.Remove(t.Id); return null; }
@@ -156,6 +158,26 @@ namespace KSA.Core
             Push(null, message);
             RaiseProjectChanged(p);
             return p;
+        }
+
+        /// <summary>Days from now until a rescue could reach them: design (a day to check the Director's own rocket), build, and the flight out.</summary>
+        public int RescueDaysNeeded(MissionType t, bool ownRocket)
+        {
+            double design = ownRocket ? 1 : (Settings.DesignBaseDays + t.Difficulty * Settings.DesignBaseDays * 2) * BuildTimeFactor();
+            double build = (Settings.BuildBaseDays + t.BaseCost / 10000.0) * BuildTimeFactor();
+            return (int)Math.Ceiling(design + build + t.DurationDays / 2.0);
+        }
+
+        /// <summary>
+        /// Why a rescue would come too late, or null. No project for a crew that will be gone before the ship gets there
+        /// (2026-11-01, T: "rescue missions shouldn't be approved if the crew won't be alive by the time the rescue ship gets there").
+        /// </summary>
+        public string RescueTooLate(Stranding s, MissionType t, bool ownRocket)
+        {
+            int lostAfter = LostAfterDays();
+            if (s == null || t == null || lostAfter <= 0) return null;
+            int left = lostAfter - DaysStranded(s), needed = RescueDaysNeeded(t, ownRocket);
+            return needed <= left ? null : "too late: about " + needed + " days to reach them, and they have " + Math.Max(0, left);
         }
 
         /// <summary>
