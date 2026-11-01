@@ -66,6 +66,7 @@ namespace KSA.KSP.Flight
 
         private const double SiteLead = 0.25;       // the descent comes down about this share of an orbit past the burn
         private const int SiteSteps = 36;           // moments looked at over one orbit
+        private const int SiteOrbits = 8;           // orbits searched: the world turns under the orbit, so each one crosses new ground (one orbit offered only 9%, 2026-10-31)
         private const double SiteSpacing = 1000;    // metres between height samples of a candidate site
         private const double GoodSlope = 0.03;      // height change across the site, wanted (T; a 5% site held but leaned, the 15% one tipped the lander)
         private const double FairSlope = 0.07;      // accepted when an orbit has nothing flatter
@@ -333,7 +334,7 @@ namespace KSA.KSP.Flight
                 // its side goes nowhere; the earlier morning rule took a 15% site and it tipped over. Steeper only if the orbit has nothing else.
                 double[] slopeLimit = { GoodSlope, FairSlope, double.PositiveInfinity };
                 for (int pass = 0; pass < slopeLimit.Length && double.IsPositiveInfinity(best); pass++)
-                    for (int i = 0; i < SiteSteps; i++)
+                    for (int i = 0; i < SiteSteps * SiteOrbits; i++)
                     {
                         double ut = ctx.Now + 60 + o.period * i / SiteSteps;
                         Vector3d down = (o.getPositionAtUT(ut + lead) - b.position).normalized;
@@ -352,19 +353,22 @@ namespace KSA.KSP.Flight
             catch (Exception e) { KsaCore.Log.Warn("Landing site search failed: " + e.Message); _burnAt = ctx.Now; }
         }
 
-        /// <summary>Height difference across a 4 km patch, as a slope: rough country scores high.</summary>
+        /// <summary>The worst of the height change across a 4 km patch and the steepest step between samples: a crater wall scores high.</summary>
         private static double Roughness(CelestialBody b, double lat, double lon)
         {
             double step = SiteSpacing / b.Radius * 180 / Math.PI;
             double stepLon = step / Math.Max(0.2, Math.Cos(lat * Math.PI / 180));
-            double low = double.PositiveInfinity, high = double.NegativeInfinity;
-            for (int i = -2; i <= 2; i++)
-                for (int j = -2; j <= 2; j++)
+            double low = double.PositiveInfinity, high = double.NegativeInfinity, steepest = 0;
+            var heights = new double[5, 5];
+            for (int i = 0; i < 5; i++)
+                for (int j = 0; j < 5; j++)
                 {
-                    double h = b.TerrainAltitude(lat + i * step, lon + j * stepLon);
+                    double h = heights[i, j] = b.TerrainAltitude(lat + (i - 2) * step, lon + (j - 2) * stepLon);
                     low = Math.Min(low, h); high = Math.Max(high, h);
+                    if (i > 0) steepest = Math.Max(steepest, Math.Abs(h - heights[i - 1, j]) / SiteSpacing);
+                    if (j > 0) steepest = Math.Max(steepest, Math.Abs(h - heights[i, j - 1]) / SiteSpacing);
                 }
-            return (high - low) / (4 * SiteSpacing);
+            return Math.Max((high - low) / (4 * SiteSpacing), steepest);
         }
 
         private void Survey(FlightContext ctx, Vessel v)

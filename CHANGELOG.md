@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.82 (2026-10-31), test build
+
+- **A wider, stricter search for landing sites.** The crew looks along eight orbits, not one, since the world turns under the orbit, and a site's slope now counts the steepest step across it, so crater walls show up.
+
 ## 0.8.81 (2026-10-31), test build
 
 - **Physics warp works during circularisation.** Only rails warp, which stops the engines, is cancelled there now.
