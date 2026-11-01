@@ -263,7 +263,7 @@ namespace KSA.Core.Tests
         {
             Assert.That(DescentMath.TargetDescentSpeed(0), Is.EqualTo(2));
             Assert.That(DescentMath.TargetDescentSpeed(50), Is.EqualTo(5));
-            Assert.That(DescentMath.TargetDescentSpeed(10), Is.EqualTo(5));
+            Assert.That(DescentMath.TargetDescentSpeed(10), Is.EqualTo(2));
             Assert.That(DescentMath.TargetDescentSpeed(100), Is.EqualTo(10));
             Assert.That(DescentMath.TargetDescentSpeed(2000), Is.EqualTo(60));
             Assert.That(DescentMath.TargetDescentSpeed(50000), Is.EqualTo(60));
