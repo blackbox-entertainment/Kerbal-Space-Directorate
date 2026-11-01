@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.76 (2026-10-31), test build
+
+- **Flat ground comes before morning light.** A site steeper than 8% is taken only if the whole orbit offers nothing better. A 15% site chosen for its morning sun tipped the lander over.
+
 ## 0.8.75 (2026-10-31), test build
 
 - **Landings prefer the morning side.** With the sun in the east the crew has the whole day ahead; the afternoon side is used only when an orbit offers nothing else.
