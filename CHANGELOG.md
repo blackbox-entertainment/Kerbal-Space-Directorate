@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.110 (2026-11-01), test build
+
+- **A saved burn is replanned.** An interplanetary burn still to come is planned afresh on load, so an older save picks up the trimmed ejection; only a burn already under way is resumed.
+
 ## 0.8.109 (2026-11-01), test build
 
 - **Burns aimed at the planet, not just its orbit.** The ejection burn is now trimmed against the game's own path before it is flown (a perfect 1,047 m/s burn had missed Duna), and a flight with no encounter out around the sun works out a fresh transfer from where it is, instead of giving up. Unflown.

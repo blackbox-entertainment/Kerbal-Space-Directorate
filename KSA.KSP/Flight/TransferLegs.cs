@@ -437,6 +437,8 @@ namespace KSA.KSP.Flight
             if (NodePlanner.Available(v) && v.patchedConicSolver.maneuverNodes.Count > 0)
             {
                 ManeuverNode existing = v.patchedConicSolver.maneuverNodes[0];
+                // Only a burn under way is resumed: one still to come is planned afresh (2026-11-01: a save held a burn that missed Duna).
+                if (existing.UT - ctx.Now > StartedWithin) { NodePlanner.ClearNodes(v); return; }
                 _burnUt = existing.UT; _windowDv = existing.DeltaV.magnitude;
                 _exec = new NodeExecutor();
                 _exec.Begin(ctx);
@@ -444,6 +446,8 @@ namespace KSA.KSP.Flight
                 Status = "Resuming the ejection burn at " + TransferSupport.Date(_burnUt) + ".";
             }
         }
+
+        private const double StartedWithin = 120; // seconds before a node: its burn may already be running
 
         /// <summary>Closest the path after a node comes to the target, metres; 0 when the game shows the encounter.</summary>
         private double Miss(ManeuverNode n, double arrival)
