@@ -528,6 +528,7 @@ namespace KSA.KSP.Flight
             return -1;
         }
         private const double AlignDeg = 15, AbortDeg = 30;
+        private const double ReentryTurnSeconds = 90;
         public ReentryLeg(double targetPeriapsis) { _targetPe = targetPeriapsis; }
         public string Name { get { return "Reentry"; } }
         public string Status { get; private set; }
@@ -671,7 +672,8 @@ namespace KSA.KSP.Flight
                     if (alt > atmo + 3000 && !c.IsWarping)
                     {
                         double edge = TimeDownTo(v, atmo + 2000, ctx.Now);
-                        if (edge > ctx.Now + 20) c.WarpTo(edge - 5);
+                        // Attitude freezes on rails: come out with time to turn (2026-11-01: out 5 s before the air, 125 degrees off retrograde).
+                        if (edge > ctx.Now + ReentryTurnSeconds + 20) c.WarpTo(edge - ReentryTurnSeconds);
                     }
                     // Shed everything but the capsule once we are coming down, one stage every two seconds.
                     if (v.verticalSpeed < 0 && v.currentStage > 1 && ctx.Now - _lastShed > 2 && alt < atmo) { if (c.Stage()) { _lastShed = ctx.Now; line = "Staged away the service section for reentry."; } }

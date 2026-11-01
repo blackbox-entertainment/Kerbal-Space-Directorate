@@ -184,10 +184,15 @@ namespace KSA.KSP.Flight
             }
         }
 
+        private const double ReturnAirShare = 0.43; // 30 km on Kerbin
+
         private static void Homebound(MissionProgram prog, FlightContext ctx, CelestialBody target, bool interplanetary, bool fromOrbit, double peLo, double peHi)
         {
             CelestialBody home = ctx.Home;
-            double pe = (peLo + peHi) / 2;
+            // Back from a moon or a planet the capsule is fast: too high a periapsis skips off the air (2026-11-01: 41 km at 3.2 km/s took two passes).
+            double pe = Math.Min((peLo + peHi) / 2, ReturnAirShare * home.atmosphereDepth);
+            peLo = pe - 4000;
+            peHi = pe + 4000;
             if (interplanetary)
             {
                 if (fromOrbit) prog.Add(new ReturnLeg(home, pe)).Add(new WaitForSoiLeg(home.referenceBody, 60));

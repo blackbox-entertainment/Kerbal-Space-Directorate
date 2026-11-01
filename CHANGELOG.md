@@ -2,6 +2,12 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.105 (2026-11-01), test build
+
+- **No false takeovers.** Walking a kerbal on EVA or a key touched while time is compressed no longer takes the craft from the crew. Other keys must be held for a third of a second; stage, full throttle and cut throttle still count on a tap, and the Take Control button always works.
+- **Home on the first pass.** Returns from moons and planets aim for a 30 km periapsis (26 to 34 km) instead of 35 km; the Minmus return skipped off the air from 41 km and took two passes.
+- **Heat shield first.** Warp now ends 90 seconds before the air, not 5, so the capsule has time to turn retrograde (attitude freezes on rails; it reached the air 125 degrees off).
+
 ## 0.8.104 (2026-11-01), test build
 
 - **No rescue that would arrive too late.** A rescue is refused, for the Director and the AI Director alike, when design, build and the flight out take longer than the stranded crew has left.

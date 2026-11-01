@@ -176,6 +176,8 @@ namespace KSA.KSP.Flight
         private Vessel _offerVessel;
         private static readonly HashSet<uint> Declined = new HashSet<uint>();
         private float _inputGraceUntil;
+        private float _inputHeldSince = -1;
+        private const float InputHoldSeconds = 0.3f;
 
         private void Start()
         {
@@ -497,13 +499,25 @@ namespace KSA.KSP.Flight
         {
             if (Live == null || !Live.AutopilotOn || !Live.ManualAllowed || _holdForLaunch) return;
             if (UnityEngine.Time.unscaledTime < _inputGraceUntil) return;
-            if (!DirectorInput()) return;
+            // A kerbal walking uses the same keys, and flight keys do nothing under warp; the Take Control button always works
+            // (2026-11-01: walking to plant a flag, and a stray key while compressing time on reentry, both took the craft from the crew).
+            bool busy = (FlightGlobals.ActiveVessel != null && FlightGlobals.ActiveVessel.isEVA) || TimeWarp.CurrentRate > 1f;
+            if (busy || !DirectorInput()) { _inputHeldSince = -1; return; }
+            if (!DirectorMeansIt()) return;
             TakeControl();
             // The throttle the crew left open is not the Director's: an engine nobody is minding emptied the tanks (2026-10-31).
             if (_ctx != null && _ctx.Control != null && Live != null && _vessel != null && _vessel.situation != Vessel.Situations.PRELAUNCH && _vessel.altitude > (_vessel.mainBody.atmosphere ? _vessel.mainBody.atmosphereDepth : 0)) _ctx.Control.Throttle = 0;
             _status = "Director took the controls.";
             Log("The Director took the controls.", null);
             ScreenMessages.PostScreenMessage("[KSA] You have the vehicle. Hand back to crew from the Flight Director window.", 6f, ScreenMessageStyle.UPPER_CENTER);
+        }
+
+        /// <summary>Stage, full throttle and cut throttle count on a tap; anything else must be held, so a brushed key is not a takeover.</summary>
+        private bool DirectorMeansIt()
+        {
+            if (GameSettings.LAUNCH_STAGES.GetKey() || GameSettings.THROTTLE_FULL.GetKey() || GameSettings.THROTTLE_CUTOFF.GetKey()) return true;
+            if (_inputHeldSince < 0) _inputHeldSince = UnityEngine.Time.unscaledTime;
+            return UnityEngine.Time.unscaledTime - _inputHeldSince >= InputHoldSeconds;
         }
 
         private static bool DirectorInput()
