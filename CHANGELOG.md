@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.63 (2026-10-31), test build
+
+- **Landers stop hovering at 50 m.** A safety reserve read as "too fast" at any speed below 50 m, so the crew went to full throttle, rose, sank and hovered there. Full throttle now needs real speed and too little room to stop.
+
 ## 0.8.62 (2026-10-31), test build
 
 - **The sunny landing site allows for weak engines.** A lander that brakes straight after the deorbit comes down close under the burn, not a quarter of an orbit on, so the crew now waits until that ground is in the light.

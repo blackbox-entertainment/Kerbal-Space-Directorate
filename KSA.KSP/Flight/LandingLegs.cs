@@ -527,7 +527,9 @@ namespace KSA.KSP.Flight
             else
             {
                 double hover = Math.Min(1, g / accel);
-                bool behind = DescentMath.SafeBurnAltitude(v.srfSpeed, accel, g, 0.0) >= above;
+                // Only when too fast and out of room. SafeBurnAltitude's 50 m reserve read as "behind" at any speed below 50 m: full
+                // throttle at 1 m/s, up past 50, sink, again, a hover at 51 m with 1,600 m/s aboard (2026-10-31, T: "it is hovering").
+                bool behind = descentRate > target && DescentMath.StoppingDistance(v.srfSpeed, accel, g) * 1.1 >= above;
                 if (behind && above > 20) throttle = 1f;
                 else
                 {
