@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.113 (2026-11-01), test build
+
+- **Antennas fold before the air.** With the path dipping into an atmosphere, antennas and panels now fold half an hour ahead; warp used to run almost to the air, and nothing folds under warp.
+
 ## 0.8.112 (2026-11-01), test build
 
 - **The ejection trim no longer needs the game's preview.** The game shows no escape for a node months ahead, so the whole path, out of Kerbin's sphere and across to the target, is now worked out by the two-body sums (Ejection.ExitState).
