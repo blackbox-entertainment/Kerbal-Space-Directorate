@@ -67,7 +67,8 @@ namespace KSA.KSP.Flight
         private const double SiteLead = 0.25;       // the descent comes down about this share of an orbit past the burn
         private const int SiteSteps = 36;           // moments looked at over one orbit
         private const double SiteSpacing = 1000;    // metres between height samples of a candidate site
-        private const double GoodSlope = 0.08;      // height change across the site, wanted (the 5% site held, the 15% one tipped the lander)
+        private const double GoodSlope = 0.05;      // height change across the site, wanted (a 5% site held but leaned, the 15% one tipped the lander)
+        private const double FairSlope = 0.08;      // accepted when an orbit has nothing flatter
         private const double GoodSunUp = 50;        // degrees above the horizon at the site, wanted
         private const double MinSunUp = 15;         // and accepted when an orbit offers no better
         private const double SurveySpacing = 200;   // metres between grid cells
@@ -332,9 +333,9 @@ namespace KSA.KSP.Flight
                 // High sun first (2026-10-31, T: "it could have burned earlier": 34 degrees up was too near the dark); low sun if that is
                 // all. Morning before afternoon (T: "land near the morning side"): the Mun's day is 3 Kerbin days, and that is the crew's stay.
                 // Flat comes first of all: a lander on its side goes nowhere (2026-10-31: the morning rule took a 15% site and it tipped over).
-                double[] sunNeeded = { GoodSunUp, GoodSunUp, MinSunUp, MinSunUp, MinSunUp };
-                bool[] morningOnly = { true, false, true, false, false };
-                double[] slopeLimit = { GoodSlope, GoodSlope, GoodSlope, GoodSlope, double.PositiveInfinity };
+                double[] sunNeeded = { GoodSunUp, GoodSunUp, MinSunUp, MinSunUp, MinSunUp, MinSunUp };
+                bool[] morningOnly = { true, false, true, false, false, false };
+                double[] slopeLimit = { GoodSlope, GoodSlope, GoodSlope, GoodSlope, FairSlope, double.PositiveInfinity };
                 for (int pass = 0; pass < sunNeeded.Length && double.IsPositiveInfinity(best); pass++)
                     for (int i = 0; i < SiteSteps; i++)
                     {
