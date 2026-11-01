@@ -1246,7 +1246,7 @@ namespace KSA.KSP.Flight
         private const int MaxPasses = 12;
         private const double GoalMargin = 30000;      // metres of apoapsis over the orbit wanted: then stop
         private const double LowestShare = 0.45;      // of the air's depth: a lower periapsis is lifted back up at apoapsis
-        public const double PassShare = 0.58;         // of the air's depth: 29 km on Duna (flown 2026-11-01: 27 km took 13,500 km of apoapsis in one pass; 10 km killed the crew)
+        public const double PassShare = 0.7;          // of the air's depth: 35 km on Duna. Flown 2026-11-01, the last correction lands 7 km low: aimed 27, got 20-21 km (one good pass, one trapped); 27 km took 13,500 km of apoapsis in one pass; 10 km killed the crew
 
         public AirbrakeLeg(CelestialBody target, double orbitAltitude)
         {

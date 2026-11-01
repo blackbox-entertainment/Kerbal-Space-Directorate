@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.118 (2026-11-01), test build
+
+- **Aerobraking aims for 35 km.** The last correction has landed 7 km low on every Duna arrival, so an aim of 28 km arrived at 21 km, too deep to rely on.
+
 ## 0.8.117 (2026-11-01), test build
 
 - **Let the air slow it down.** On a world with air the landing engine now waits until 15 km above the ground, and the crew falls as fast as the engine can still stop, down to 2 km. The first Duna descent braked at 65 km, drove down at 60 m/s and ran dry at 2,262 m.
