@@ -69,8 +69,7 @@ namespace KSA.KSP.Flight
         private const double SiteSpacing = 1000;    // metres between height samples of a candidate site
         private const double GoodSlope = 0.03;      // height change across the site, wanted (T; a 5% site held but leaned, the 15% one tipped the lander)
         private const double FairSlope = 0.07;      // accepted when an orbit has nothing flatter
-        private const double GoodSunUp = 50;        // degrees above the horizon at the site, wanted
-        private const double MinSunUp = 15;         // and accepted when an orbit offers no better
+        private const double MinSunUp = 15;         // degrees above the horizon at the site: "in the light"
         private const double SurveySpacing = 200;   // metres between grid cells
         private const int SurveySize = 5;           // 5x5 grid
         private const double SurveyBelow = 20000;   // start the survey below this height above terrain
@@ -330,23 +329,20 @@ namespace KSA.KSP.Flight
                 double lead = o.period * SiteLead, best = double.PositiveInfinity, bestSun = 0;
                 double accel = ctx.Control.MaxAcceleration(), g = b.gravParameter / (b.Radius * b.Radius);
                 if (accel > 0 && accel < 3 * g) lead = Math.Min(lead, 0.6 * v.obt_speed / accel);
-                // High sun first (2026-10-31, T: "it could have burned earlier": 34 degrees up was too near the dark); low sun if that is
-                // all. Morning before afternoon (T: "land near the morning side"): the Mun's day is 3 Kerbin days, and that is the crew's stay.
-                // Flat comes first of all: a lander on its side goes nowhere (2026-10-31: the morning rule took a 15% site and it tipped over).
-                double[] sunNeeded = { GoodSunUp, GoodSunUp, MinSunUp, MinSunUp, MinSunUp, MinSunUp };
-                bool[] morningOnly = { true, false, true, false, false, false };
-                double[] slopeLimit = { GoodSlope, GoodSlope, GoodSlope, GoodSlope, FairSlope, double.PositiveInfinity };
-                for (int pass = 0; pass < sunNeeded.Length && double.IsPositiveInfinity(best); pass++)
+                // Flat anywhere in the light (2026-10-31, T: "3% anywhere in the light, 7% fall back to anywhere in the light"): a lander on
+                // its side goes nowhere; the earlier morning rule took a 15% site and it tipped over. Steeper only if the orbit has nothing else.
+                double[] slopeLimit = { GoodSlope, FairSlope, double.PositiveInfinity };
+                for (int pass = 0; pass < slopeLimit.Length && double.IsPositiveInfinity(best); pass++)
                     for (int i = 0; i < SiteSteps; i++)
                     {
                         double ut = ctx.Now + 60 + o.period * i / SiteSteps;
                         Vector3d down = (o.getPositionAtUT(ut + lead) - b.position).normalized;
                         double sunUp = 90 - Vector3d.Angle(down, sun);
-                        if (sunUp < sunNeeded[pass]) continue;
+                        if (sunUp < MinSunUp) continue;
                         Vector3d ground = b.position + down * b.Radius;
                         double lat = b.GetLatitude(ground);
                         double lon = b.GetLongitude(ground) - 360 * (ut + lead - ctx.Now) / b.rotationPeriod; // the world turns meanwhile
-                        if (morningOnly[pass] && Vector3d.Dot(sun, (b.GetWorldSurfacePosition(lat, lon + 1, 0) - b.GetWorldSurfacePosition(lat, lon, 0)).normalized) <= 0) continue; // sun in the west: afternoon
+
                         double rough = Roughness(b, lat, lon);
                         if (rough < best && rough <= slopeLimit[pass]) { best = rough; bestSun = sunUp; _burnAt = ut; }
                     }
