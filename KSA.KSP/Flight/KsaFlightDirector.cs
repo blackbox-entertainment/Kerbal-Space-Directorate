@@ -1110,7 +1110,7 @@ namespace KSA.KSP.Flight
             return best;
         }
 
-        private const double BoardRange = 30;
+        private const double BoardRange = 5;
 
         /// <summary>The stranded button shows when the crew cannot be flying home on their own: away from Kerbin's surface, not on the pad.</summary>
         private bool CanDeclareStranded()
