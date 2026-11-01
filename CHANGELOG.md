@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.127 (2026-11-01), test build
+
+- **The crew drops empty drop tanks.** When the next stage is only radial decouplers and everything they hold is out of fuel, it goes, even with the engine still burning. Unflown.
+
 ## 0.8.126 (2026-11-01), test build
 
 - **Handing back on a deorbit path goes to the landing.** It went back to aerobraking and called a full-power climb out of the air at 26 km.

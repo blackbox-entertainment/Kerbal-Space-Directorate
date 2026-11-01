@@ -830,6 +830,8 @@ namespace KSA.KSP.Flight
                     // Warp runs almost to the air and nothing folds under warp: fold as soon as the path dips into it (2026-11-01: Duna broke all four antennas).
                     if (air > 0 && _vessel.orbit != null && _vessel.orbit.PeA < air) outside = false;
                     _ctx.Control.TendDeployables(outside);
+                    string dropped = null;
+                    if (_ctx.Control.DropEmptyTanks(ref dropped)) Log(dropped, null);
                 }
                 string line = _program.Step();
                 if (line != null) Log(line, null);

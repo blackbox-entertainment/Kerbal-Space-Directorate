@@ -680,6 +680,44 @@ namespace KSA.KSP.Flight
             }
         }
 
+        /// <summary>
+        /// Drop tanks: when the next stage is only radial decouplers and everything they hold is empty of fuel, it goes, whether or not the
+        /// engine is burning (2026-11-01, T's short wide lander: the rule for spent stages waits for the engines to stop, and these feed one that never does).
+        /// </summary>
+        public bool DropEmptyTanks(ref string line)
+        {
+            if (_v == null || _v.packed || IsWarping || _v.currentStage <= 1 || Now - _lastStage < 1.5) return false;
+            int next = _v.currentStage - 1, tanks = 0;
+            foreach (Part p in _v.parts)
+            {
+                if (p.inverseStage != next) continue;
+                if (p.FindModuleImplementing<ModuleAnchoredDecoupler>() == null || p.CrewCapacity > 0) return false;
+                foreach (Part held in p.children)
+                {
+                    if (!EmptyBranch(held, ref tanks)) return false;
+                }
+            }
+            if (tanks == 0 || !Stage()) return false;
+            line = tanks + " empty drop tanks jettisoned.";
+            return true;
+        }
+
+        /// <summary>True when a branch of parts holds no fuel, crew or engine. Counts the tanks in it.</summary>
+        private static bool EmptyBranch(Part p, ref int tanks)
+        {
+            if (p.CrewCapacity > 0 || p.FindModuleImplementing<ModuleEngines>() != null) return false;
+            foreach (PartResource r in p.Resources)
+            {
+                if (r.resourceName != "LiquidFuel" && r.resourceName != "Oxidizer") continue;
+                if (r.amount > EmptyTank) return false;
+                tanks++;
+            }
+            foreach (Part child in p.children) if (!EmptyBranch(child, ref tanks)) return false;
+            return true;
+        }
+
+        private const double EmptyTank = 0.5;
+
         /// <summary>Lights the next stage if no engine is ignited (used before a burn after a long coast).</summary>
         public bool EnsureEngine(ref string line)
         {
