@@ -281,18 +281,31 @@ namespace KSA.KSP.Flight
             Ejection.Hohmann(mu, r1, r2, out hohmannTime);
             if (double.IsNaN(hohmannTime) || hohmannTime <= 0) hohmannTime = period * 2;
 
+            // A later orbit when another world sits on the path (2026-10-31: bound for Minmus, the Mun bent the flight off course; a
+            // 5 m/s correction was waiting beyond it). The moons move slowly, so this may mean many orbits in the parking orbit.
             _plan = null;
-            try
+            ManeuverNode n = null;
+            string blocked = null;
+            for (int wait = 0; wait < MaxWaitOrbits; wait++)
             {
-                _plan = TransferPlanner.Plan(OrbitAdapter.Sampler(v.orbit), OrbitAdapter.Sampler(_target.orbit), mu,
-                    now + 120, now + 1.2 * period, 0.4 * hohmannTime, 1.5 * hohmannTime, 48, 24, 0.3);
+                double from = now + 120 + wait * period;
+                TransferPlan plan = null;
+                try
+                {
+                    plan = TransferPlanner.Plan(OrbitAdapter.Sampler(v.orbit), OrbitAdapter.Sampler(_target.orbit), mu,
+                        from, from + 1.2 * period, 0.4 * hohmannTime, 1.5 * hohmannTime, 48, 24, 0.3);
+                }
+                catch (Exception e) { KsaCore.Log.Error("TransferLeg planner threw: " + e); }
+                if (plan == null) continue;
+                NodePlanner.ClearNodes(v);
+                n = NodePlanner.AddFrameDeltaV(v, plan.DepartureUt, plan.DeltaV);
+                if (n == null) { Fail("could not place the transfer node"); return null; }
+                _plan = plan;
+                blocked = WorldInTheWay(n, parent);
+                if (blocked == null) break;
             }
-            catch (Exception e) { KsaCore.Log.Error("TransferLeg planner threw: " + e); _plan = null; }
             if (_plan == null) { Fail("no transfer to " + _target.bodyName + " found from this orbit"); return "Transfer planning failed: no solution."; }
-
-            NodePlanner.ClearNodes(v);
-            ManeuverNode n = NodePlanner.AddFrameDeltaV(v, _plan.DepartureUt, _plan.DeltaV);
-            if (n == null) { Fail("could not place the transfer node"); return null; }
+            if (blocked != null) ctx.Say(blocked + " is on every path to " + _target.bodyName + " for " + MaxWaitOrbits + " orbits; going anyway.");
             double predicted = NodePlanner.PeriapsisAt(n, _target);
             _exec = new NodeExecutor { CutOff = FarEnough };
             _exec.Begin(ctx);
@@ -303,6 +316,19 @@ namespace KSA.KSP.Flight
             return "Transfer planned: " + Math.Round(_plan.DeltaVMagnitude) + " m/s at " + TransferSupport.Date(_plan.DepartureUt)
                 + ", flight time " + TransferSupport.Countdown(_plan.TimeOfFlight) + " (" + pe + ", target " + TransferSupport.Km(_arrivalPe) + ").";
         }
+
+        /// <summary>The first world other than the target that the path after a node runs into, or null.</summary>
+        private string WorldInTheWay(ManeuverNode n, CelestialBody parent)
+        {
+            foreach (Orbit o in NodePlanner.PatchesAfter(n))
+            {
+                if (o.referenceBody == _target) return null;
+                if (o.referenceBody != parent) return o.referenceBody.bodyName;
+            }
+            return null;
+        }
+
+        private const int MaxWaitOrbits = 40;
 
         public void End(FlightContext ctx)
         {
