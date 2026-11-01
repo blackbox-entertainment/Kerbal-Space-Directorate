@@ -778,6 +778,7 @@ namespace KSA.KSP.Flight
         public void StopWarp()
         {
             if (TimeWarp.fetch != null && IsWarping) TimeWarp.fetch.CancelAutoWarp();
+            if (TimeWarp.fetch != null) TimeWarp.fetch.CancelAutoWarp(); // a warp-to-time keeps running otherwise, whatever the rate is set to
             if (TimeWarp.CurrentRate > 1.01f) TimeWarp.SetRate(0, true);
         }
 

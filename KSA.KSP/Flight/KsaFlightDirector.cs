@@ -1136,6 +1136,7 @@ namespace KSA.KSP.Flight
             Live.AutopilotOn = false;
             Live.DirectorFlown = true;
             if (_program != null) _program.Disengage();
+            if (_ctx != null && _ctx.Control != null) _ctx.Control.StopWarp(); // the crew's warp is the crew's: it ends with their control
             KsaCore.Agency.SetDirectorFlown(Live.ProjectId, true);
             _status = "Director flying.";
         }

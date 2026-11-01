@@ -92,6 +92,7 @@ namespace KSA.KSP.Flight
         private bool _descentWarped;
         private double _burnAt = -1;
         private double _searchAgainAt = -1;
+        private double _warpAskedFor = -1;
         private int _searches;
         private bool _sideChecked;
         private bool _stepping;
@@ -181,13 +182,14 @@ namespace KSA.KSP.Flight
                                 break;
                             }
                             Status = "Waiting for flat ground: looking again in " + TransferSupport.Countdown(_searchAgainAt - ctx.Now) + ".";
-                            if (!warping) c.WarpTo(_searchAgainAt);
+                            // Asked once: stopped by hand, it stays stopped (2026-10-31, T: "I slash to stop the warp and it restarts").
+                            if (!warping && _warpAskedFor != _searchAgainAt) { _warpAskedFor = _searchAgainAt; c.WarpTo(_searchAgainAt); }
                             break;
                         }
                         if (ctx.Now < _burnAt - 30)
                         {
                             Status = "Waiting for the landing site: deorbit in " + TransferSupport.Countdown(_burnAt - ctx.Now) + ".";
-                            if (!warping) c.WarpTo(_burnAt - 60);
+                            if (!warping && _warpAskedFor != _burnAt) { _warpAskedFor = _burnAt; c.WarpTo(_burnAt - 60); }
                             break;
                         }
                         Status = "Aligning retrograde for deorbit.";
