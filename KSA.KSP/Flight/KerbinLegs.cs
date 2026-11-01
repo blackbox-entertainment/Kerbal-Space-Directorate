@@ -191,12 +191,12 @@ namespace KSA.KSP.Flight
                 case Phases.Circularize:
                     if (c.OutOfDeltaV()) { c.Throttle = 0; line = "No fuel left to circularise."; State = LegState.Done; break; }
                     if (c.IsWarping) { c.StopWarp(); c.Throttle = 0; Status = "Circularising: coming out of time warp."; break; }
-                    if (!c.ManualAttitude) c.PointAlong(() => Horizontal(v));
+                    if (!c.ManualAttitude) c.PointAlong(() => CircularizeDirection(v));
                     LogAttitude(ctx, "circularise");
                     {
                         // Burn only with the nose on the horizon: thrust while still pointing up only raises the apoapsis
                         // (2026-10-29: a gimbal-less upper stage burned straight up to a 2,000 km apoapsis).
-                        double offFlat = c.AttitudeError(Horizontal(v));
+                        double offFlat = c.AttitudeError(CircularizeDirection(v));
                         // Steady first (2026-10-30): a craft swinging through the horizon at 100 deg/s was "aligned" for an
                         // instant at a time and burned every which way, throwing the apoapsis out to 348 km.
                         double turn = VesselControl.TurnRate(v);
@@ -213,7 +213,8 @@ namespace KSA.KSP.Flight
                         if (turn >= 10 && !_spinNoted) { _spinNoted = true; line = "Engine off: the craft is turning " + Math.Round(turn) + " deg/s; the crew steadies it before burning."; }
                         // Never fling the apoapsis away chasing the periapsis. A long burn on a weak stage lifts both, so the limit is
                         // generous (2026-10-31: stopped at 235 x 67 km, seconds short of orbit with 4,189 m/s aboard, and flown home).
-                        if (v.orbit.PeA <= atmo + OrbitPeMargin && v.orbit.ApA > _targetAp + ApoapsisRunaway)
+                        // With the periapsis still in the air the burn goes on far longer: stopping there sends a full ship home.
+                        if (v.orbit.PeA <= atmo + OrbitPeMargin && v.orbit.ApA > _targetAp + (v.orbit.PeA > atmo ? ApoapsisRunaway : ApoapsisRunaway * 4))
                         {
                             c.Throttle = 0;
                             line = "Burn stopped: the apoapsis ran away to " + Math.Round(v.orbit.ApA / 1000) + " km with the periapsis still at " + Math.Round(v.orbit.PeA / 1000) + " km.";
@@ -351,6 +352,18 @@ namespace KSA.KSP.Flight
             if (need <= 0) return 0;
             if (accel <= need) return ClimbFloorMax;
             return Math.Min(ClimbFloorMax, Math.Max(ClimbFloor, Math.Asin(need / accel) * 180 / Math.PI + 5));
+        }
+
+        /// <summary>
+        /// Along the horizon, nose raised while low and not climbing: a periapsis cannot rise above the craft, so a weak stage
+        /// burning flat at 69 km only ran its apoapsis out to 584 km with the periapsis stuck in the air (2026-10-31).
+        /// </summary>
+        private static Vector3d CircularizeDirection(Vessel v)
+        {
+            double top = v.mainBody.atmosphereDepth + OrbitPeMargin + 3000;
+            if (v.altitude >= top || v.verticalSpeed >= 30) return Horizontal(v);
+            double p = Math.Max(10, HoldPitch(v)) * Math.PI / 180;
+            return ((Vector3d)v.upAxis * Math.Sin(p) + Horizontal(v).normalized * Math.Cos(p)).normalized;
         }
 
         internal static double TargetPitch(Vessel v, bool orbit = true)

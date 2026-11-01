@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.54 (2026-10-31), test build
+
+- **Circularising climbs when it has to.** A periapsis cannot rise above the craft, so a weak stage burning flat at 69 km only pushed its apoapsis out. The nose now rises while the craft is low and not climbing.
+- **A full ship is not sent home.** With the periapsis still in the air, the burn runs on to 2,000 km of apoapsis before it gives up.
+
 ## 0.8.53 (2026-10-31), test build
 
 - **KV pods keep what is under them.** Their base holds a decoupler; staged on the way home, it threw off the stabilizer and heat shield. Crews now switch it out of the staging before launch.
