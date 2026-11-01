@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.114 (2026-11-01), test build
+
+- **Aerobraking knows when to stop.** The crew stops when another pass like the last would take too much, and lifts the low point clear of the air at apoapsis. A crew caught with the whole orbit inside the air now climbs out at full power. On the first Duna arrival, one pass took 14,271 km of apoapsis and the second put the lander on the ground.
+
 ## 0.8.113 (2026-11-01), test build
 
 - **Antennas fold before the air.** With the path dipping into an atmosphere, antennas and panels now fold half an hour ahead; warp used to run almost to the air, and nothing folds under warp.

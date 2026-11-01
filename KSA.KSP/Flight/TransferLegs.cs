@@ -1235,9 +1235,12 @@ namespace KSA.KSP.Flight
         private readonly double _altitude;
         private Phases _phase;
         private NodeExecutor _exec;
-        private bool _inAir;
+        private bool _inAir, _climbing;
         private int _passes;
+        private double _energyBefore, _lastDrop;
 
+        private const double MaxOffForClimb = 25;     // degrees off prograde: thrust beyond this only pushes down
+        private const double PassMargin = 1.5;        // of the last pass's energy loss, allowed for the next
         private const double TurnSeconds = 90;
         private const int MaxPasses = 12;
         private const double GoalMargin = 30000;      // metres of apoapsis over the orbit wanted: then stop
@@ -1280,25 +1283,42 @@ namespace KSA.KSP.Flight
                     if (v.mainBody != _target) { Fail("left " + _target.bodyName + "'s sphere of influence"); break; }
                     if (v.LandedOrSplashed) { Fail("on the ground"); break; }
                     bool inAir = v.altitude < air;
+                    // Trapped in the air, with the whole orbit inside it: climb out now (2026-11-01: the second pass at 26 km took the orbit
+                    // down to 26 x -19 km, and the crew rode it to the ground waiting for the air to end).
+                    if (_climbing || (inAir && v.orbit.ApA < air))
+                    {
+                        if (!_climbing) { _climbing = true; line = "Caught in the air at " + TransferSupport.Km(v.altitude) + ": full power to climb out."; }
+                        c.Sas(VesselAutopilot.AutopilotMode.Prograde, false);
+                        c.Throttle = c.AttitudeError(v.obt_velocity) < MaxOffForClimb ? 1f : 0f;
+                        Status = "Climbing out of the air: apoapsis " + TransferSupport.Km(v.orbit.ApA) + ".";
+                        if (v.orbit.ApA >= _altitude) { _climbing = false; c.Throttle = 0; }
+                        break;
+                    }
                     c.Throttle = 0;
                     c.Sas(VesselAutopilot.AutopilotMode.Retrograde, inAir);
                     Status = "Aerobraking: pass " + _passes + ", " + TransferSupport.Km(v.orbit.ApA) + " x " + TransferSupport.Km(v.orbit.PeA) + ".";
+                    double mu = _target.gravParameter;
                     if (inAir)
                     {
                         if (!_inAir) { _inAir = true; _passes++; }
                         break;
                     }
+                    double energy = -mu / (2 * v.orbit.semiMajorAxis);
                     if (_inAir)
                     {
                         _inAir = false;
+                        _lastDrop = _energyBefore - energy;
                         line = "Air pass " + _passes + " done: orbit now " + TransferSupport.Km(v.orbit.ApA) + " x " + TransferSupport.Km(v.orbit.PeA) + ".";
                     }
+                    _energyBefore = energy;
                     if (v.orbit.eccentricity >= 1) { Fail("still escaping " + _target.bodyName); break; }
                     if (c.IsWarping) break;
-                    bool done = v.orbit.ApA <= _altitude + GoalMargin || _passes >= MaxPasses;
+                    // Another pass like the last would leave too little orbit: stop here (a later pass takes more than the first, the craft being slower).
+                    double wantedEnergy = -mu / (2 * _target.Radius + _altitude + v.orbit.PeA);
+                    bool done = v.orbit.ApA <= _altitude + GoalMargin || _passes >= MaxPasses || energy - _lastDrop * PassMargin < wantedEnergy;
                     if (done || v.orbit.PeA < LowestShare * air)
                     {
-                        if (PlanLift(ctx, done ? v.orbit.ApR : _target.Radius + PassShare * air, ref line)) _phase = Phases.Burn;
+                        if (PlanLift(ctx, done ? Math.Min(v.orbit.ApR, _target.Radius + _altitude) : _target.Radius + PassShare * air, ref line)) _phase = Phases.Burn;
                         break;
                     }
                     double edge = TimeToAir(v, air + 2000, ctx.Now);
