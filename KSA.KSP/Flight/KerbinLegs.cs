@@ -155,7 +155,7 @@ namespace KSA.KSP.Flight
                     c.DropSpentStage(ref line); // a burnt-out booster does not ride along
                     // Fuel left in the tanks, not an engine burning: the throttle is closed while coasting.
                     if (v.orbit.ApA < atmo + 5000 || c.OutOfDeltaV()) { State = LegState.Done; break; }
-                    if (alt <= atmo && v.verticalSpeed < 0 && v.orbit.PeA < atmo)
+                    if (alt <= atmo && v.verticalSpeed < 0 && v.orbit.PeA < atmo && !_roundOut)
                     {
                         // Falling back in the air: burn now, and resuming a saved flight lands here too.
                         _phase = Phases.Circularize; _phaseStart = ctx.Now;
@@ -180,7 +180,10 @@ namespace KSA.KSP.Flight
                         if (c.IsWarping && v.orbit.timeToAp - halfBurn < 30) c.StopWarp();
                         Status = "Coasting to apoapsis; circularisation burn in " + Math.Max(0, Math.Round(v.orbit.timeToAp - halfBurn)) + " s.";
                         // Burn centred on apoapsis, or at once if already past it (the Director handed back on the way down).
-                        if (v.orbit.timeToAp <= Math.Max(5, halfBurn) || (v.verticalSpeed < 0 && !_roundOut))
+                        // A low apoapsis: from 75 km on the way up, not half a burn before the top (2026-10-31, T: "at 75km on the way up
+                        // we should be burning to get the pe up to 75km").
+                        bool lowTop = !_roundOut && v.orbit.ApA < atmo + LowApoapsis && alt >= atmo + OrbitPeMargin;
+                        if (v.orbit.timeToAp <= Math.Max(5, halfBurn) || lowTop || (v.verticalSpeed < 0 && !_roundOut))
                         {
                             _phase = Phases.Circularize; _phaseStart = ctx.Now;
                             Status = "Circularising.";
@@ -192,9 +195,9 @@ namespace KSA.KSP.Flight
                 case Phases.Circularize:
                     if (c.OutOfDeltaV()) { c.Throttle = 0; line = "No fuel left to circularise."; State = LegState.Done; break; }
                     if (c.IsWarping) { c.StopWarp(); c.Throttle = 0; Status = "Circularising: coming out of time warp."; break; }
-                    // Clear of the air but away from apoapsis: stop and finish at the next apoapsis, where it costs next to nothing
-                    // (2026-10-31, T: "if it goes past ap and is still burning it should wait until next ap to round out the orbit").
-                    if (v.orbit.PeA > atmo && v.orbit.PeA <= atmo + OrbitPeMargin && v.orbit.timeToAp > Math.Max(30, CircularizeBurnTime(v, c) / 2 + 10))
+                    // 5 km past apoapsis with the periapsis up to 65 km: stop and finish at the next apoapsis, where it costs next to
+                    // nothing (2026-10-31, T: "5km past ap and at like 60km or 65km then we wait to near next ap to round out").
+                    if (v.orbit.PeA >= atmo - RoundOutBelowAir && v.orbit.PeA <= atmo + OrbitPeMargin && v.verticalSpeed < 0 && alt < v.orbit.ApA - PastApoapsis)
                     {
                         c.Throttle = 0;
                         _phase = Phases.Coast; _phaseStart = ctx.Now;
@@ -336,6 +339,11 @@ namespace KSA.KSP.Flight
         /// <summary>The most the nose is raised above the horizon to stop the climb topping out in the air, degrees.</summary>
         internal const double ClimbFloor = 25;
         internal const double ClimbFloorMax = 75;
+        /// <summary>Past apoapsis by this much, a periapsis within RoundOutBelowAir of the air waits for the next apoapsis.</summary>
+        internal const double PastApoapsis = 5000;
+        internal const double RoundOutBelowAir = 5000;
+        /// <summary>An apoapsis under this height above the air burns from 75 km on the way up (T: 85, 90, 92 km).</summary>
+        internal const double LowApoapsis = 40000;
         /// <summary>How far past the target the apoapsis may go while the circularisation burn is still lifting the periapsis.</summary>
         internal const double ApoapsisRunaway = 500000;
         /// <summary>Seconds to the top of the climb: at this or less the nose holds the rocket up, at TopAheadEasy it follows the program.</summary>
