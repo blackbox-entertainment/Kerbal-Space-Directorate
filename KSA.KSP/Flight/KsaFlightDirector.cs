@@ -454,6 +454,8 @@ namespace KSA.KSP.Flight
             if (UnityEngine.Time.unscaledTime < _inputGraceUntil) return;
             if (!DirectorInput()) return;
             TakeControl();
+            // The throttle the crew left open is not the Director's: an engine nobody is minding emptied the tanks (2026-10-31).
+            if (_ctx != null && _ctx.Control != null && Live != null && _vessel != null && _vessel.situation != Vessel.Situations.PRELAUNCH && _vessel.altitude > (_vessel.mainBody.atmosphere ? _vessel.mainBody.atmosphereDepth : 0)) _ctx.Control.Throttle = 0;
             _status = "Director took the controls.";
             Log("The Director took the controls.", null);
             ScreenMessages.PostScreenMessage("[KSA] You have the vehicle. Hand back to crew from the Flight Director window.", 6f, ScreenMessageStyle.UPPER_CENTER);
@@ -1142,6 +1144,9 @@ namespace KSA.KSP.Flight
         {
             if (Live == null) return;
             Live.AutopilotOn = true;
+            // A key still held from flying by hand is not a takeover (2026-10-31: handed back on the Mun, the crew lost the craft within a
+            // second, before the turn, and the engine stayed open until the tanks were dry: 1,631 m/s straight up, out of the Mun's reach).
+            _inputGraceUntil = UnityEngine.Time.unscaledTime + 3f;
             if (_program != null)
             {
                 // Re-plan from wherever the Director left us.
