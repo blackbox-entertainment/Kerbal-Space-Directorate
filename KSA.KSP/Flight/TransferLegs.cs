@@ -445,6 +445,41 @@ namespace KSA.KSP.Flight
             }
         }
 
+        /// <summary>Closest the path after a node comes to the target, metres; 0 when the game shows the encounter.</summary>
+        private double Miss(ManeuverNode n, double arrival)
+        {
+            if (!double.IsNaN(NodePlanner.PeriapsisAt(n, _target))) return 0;
+            Orbit o = NodePlanner.PatchAround(n, _origin.referenceBody);
+            if (o == null) return double.PositiveInfinity;
+            double from = o.StartUT, to = arrival + 40 * TransferSupport.Day, best = double.PositiveInfinity;
+            for (int i = 1; i <= 240; i++)
+            {
+                double t = from + (to - from) * i / 240;
+                best = Math.Min(best, (OrbitAdapter.StateAt(o, t).Position - OrbitAdapter.StateAt(_target.orbit, t).Position).Length);
+            }
+            return best;
+        }
+
+        /// <summary>Trims a burn along each axis, large steps to small, until the path meets the target or stops getting closer.</summary>
+        private Vector3d Refine(Vessel v, double ut, Vector3d comps, double arrival)
+        {
+            double best = TransferSupport.Trial(v, ut, comps, n => Miss(n, arrival));
+            Vector3d[] axes = { new Vector3d(1, 0, 0), new Vector3d(-1, 0, 0), new Vector3d(0, 1, 0), new Vector3d(0, -1, 0), new Vector3d(0, 0, 1), new Vector3d(0, 0, -1) };
+            foreach (double step in new[] { 40.0, 15.0, 5.0, 1.5, 0.5 })
+                for (int pass = 0; pass < 4 && best > 0; pass++)
+                {
+                    bool better = false;
+                    foreach (Vector3d axis in axes)
+                    {
+                        Vector3d next = comps + axis * step;
+                        double miss = TransferSupport.Trial(v, ut, next, n => Miss(n, arrival));
+                        if (!double.IsNaN(miss) && miss < best) { best = miss; comps = next; better = true; if (best <= 0) break; }
+                    }
+                    if (!better) break;
+                }
+            return comps;
+        }
+
         private bool Escaped(Vessel v)
         {
             if (v.mainBody == null) return false;
@@ -554,8 +589,13 @@ namespace KSA.KSP.Flight
 
             double dv = Ejection.DeltaV(planetMu, r, vInfMag);
             NodePlanner.ClearNodes(v);
-            ManeuverNode n = NodePlanner.Add(v, bestUt, new Vector3d(0, 0, dv));
+            // The sums aim in the parking orbit's plane and ignore the days to the edge of the sphere: trim against the game's own path
+            // (2026-11-01: a perfect 1,047 m/s burn missed Duna, and no correction out in the sun's space could find it).
+            Vector3d comps = Refine(v, bestUt, new Vector3d(0, 0, dv), plan.ArrivalUt);
+            ManeuverNode n = NodePlanner.Add(v, bestUt, comps);
             if (n == null) { Fail("could not place the ejection node"); return null; }
+            ctx.Say("Ejection trimmed to " + Math.Round(n.DeltaV.magnitude) + " m/s: " + (double.IsNaN(NodePlanner.PeriapsisAt(n, _target)) ? "closest pass " + TransferSupport.Km(Miss(n, plan.ArrivalUt)) : _target.bodyName + " encounter in the game's preview") + ".");
+            dv = n.DeltaV.magnitude;
             _burnUt = bestUt; _windowDv = dv;
             _exec = new NodeExecutor();
             _exec.Begin(ctx);
@@ -689,6 +729,7 @@ namespace KSA.KSP.Flight
                             break;
                         }
                         double now = ctx.Now;
+                        if (double.IsNaN(current) && AimFromDeepSpace(ctx, ref line)) break;
                         _ut = now + 60;
                         if (TransferSupport.EndsInTransition(v.orbit) && v.orbit.EndUT > now) _ut = Math.Max(now + 60, now + 0.1 * (v.orbit.EndUT - now));
                         NodePlanner.ClearNodes(v);
@@ -744,6 +785,38 @@ namespace KSA.KSP.Flight
                     break;
             }
             return line;
+        }
+
+        /// <summary>
+        /// Out around the sun with no encounter, small nudges find nothing: work out a fresh transfer from this orbit to the target's,
+        /// and burn it when it shows the encounter and fits the budget.
+        /// </summary>
+        private bool AimFromDeepSpace(FlightContext ctx, ref string line)
+        {
+            Vessel v = ctx.Vessel;
+            CelestialBody sun = _target.referenceBody;
+            if (sun == null || v.mainBody != sun) return false;
+            double mu = sun.gravParameter, now = ctx.Now, flight;
+            Ejection.Hohmann(mu, v.orbit.semiMajorAxis, _target.orbit.semiMajorAxis, out flight);
+            if (double.IsNaN(flight) || flight <= 0) return false;
+            TransferPlan plan = null;
+            try
+            {
+                plan = TransferPlanner.Plan(OrbitAdapter.Sampler(v.orbit), OrbitAdapter.Sampler(_target.orbit), mu,
+                    now + 600, now + 5 * TransferSupport.Day, 0.3 * flight, 1.6 * flight, 24, 30, 0.5);
+            }
+            catch (Exception e) { KsaCore.Log.Error("Deep-space correction planner threw: " + e); }
+            if (plan == null || plan.DeltaVMagnitude > _maxDv) return false;
+            NodePlanner.ClearNodes(v);
+            ManeuverNode n = NodePlanner.AddFrameDeltaV(v, plan.DepartureUt, plan.DeltaV);
+            if (n == null || double.IsNaN(NodePlanner.PeriapsisAt(n, _target))) { NodePlanner.ClearNodes(v); return false; }
+            _exec = new NodeExecutor();
+            _exec.Begin(ctx);
+            if (_exec.Failed) { NodePlanner.ClearNodes(v); return false; }
+            _phase = Phases.Burn;
+            Status = "Correction burn of " + Math.Round(plan.DeltaVMagnitude) + " m/s.";
+            line = "Deep-space correction planned: " + Math.Round(plan.DeltaVMagnitude) + " m/s, predicted " + _target.bodyName + " periapsis " + TransferSupport.Km(NodePlanner.PeriapsisAt(n, _target)) + ".";
+            return true;
         }
 
         private double Score(ManeuverNode n) { return NodePlanner.PeriapsisAt(n, _target); }
