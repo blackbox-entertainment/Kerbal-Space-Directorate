@@ -194,7 +194,8 @@ namespace KSA.KSP.Flight
                     break;
                 case Phases.Circularize:
                     if (c.OutOfDeltaV()) { c.Throttle = 0; line = "No fuel left to circularise."; State = LegState.Done; break; }
-                    if (c.IsWarping) { c.StopWarp(); c.Throttle = 0; Status = "Circularising: coming out of time warp."; break; }
+                    // Rails warp stops the engines; physics warp does not, so the Director may use it (2026-10-31, T: "weird that this won't let me compress time").
+                    if (c.IsWarping && TimeWarp.WarpMode != TimeWarp.Modes.LOW) { c.StopWarp(); c.Throttle = 0; Status = "Circularising: coming out of time warp."; break; }
                     // 5 km past apoapsis with the periapsis up to 65 km: stop and finish at the next apoapsis, where it costs next to
                     // nothing (2026-10-31, T: "5km past ap and at like 60km or 65km then we wait to near next ap to round out").
                     if (v.orbit.PeA >= atmo - RoundOutBelowAir && v.orbit.PeA <= atmo + OrbitPeMargin && v.verticalSpeed < 0 && alt < v.orbit.ApA - PastApoapsis)

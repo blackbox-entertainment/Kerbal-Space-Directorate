@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.81 (2026-10-31), test build
+
+- **Physics warp works during circularisation.** Only rails warp, which stops the engines, is cancelled there now.
+
 ## 0.8.80 (2026-10-31), test build
 
 - **Landing sites: flat anywhere in the light.** The crew takes 3% or flatter anywhere with the sun at least 15 degrees up, then 7%, and no longer holds out for morning or high sun.
