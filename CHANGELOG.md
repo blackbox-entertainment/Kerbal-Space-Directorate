@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.108 (2026-11-01), test build
+
+- **Aerobraking at Duna.** Landings on a thin-air world now aim for an 18 km periapsis, burn only enough to stay captured, let the air shorten the orbit pass by pass (up to 12), then lift out of the air at apoapsis with a small burn. Eve and Laythe, with thick air, still capture by burn alone. Unflown.
+
 ## 0.8.107 (2026-11-01), test build
 
 - **Tall rockets get their mission list.** A craft standing on the pad now counts as on the pad whatever its height; a 30 m rocket read 101 m and no offer appeared.

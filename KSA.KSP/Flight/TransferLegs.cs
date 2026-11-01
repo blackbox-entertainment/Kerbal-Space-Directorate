@@ -958,6 +958,14 @@ namespace KSA.KSP.Flight
             _altitude = Math.Max(1000, orbitAltitude);
         }
 
+        /// <summary>A capture for aerobraking: only enough to stay bound, into a long orbit that the air then shortens (AirbrakeLeg).</summary>
+        public CaptureLeg(CelestialBody target, double orbitAltitude, double looseApoapsis) : this(target, orbitAltitude) { _loose = looseApoapsis; }
+
+        private readonly double _loose;
+
+        /// <summary>The burn runs through the air on a loose capture, where the game calls the craft flying, not orbiting.</summary>
+        private bool Bound(Vessel v) { return _loose > 0 ? v.orbit != null && v.orbit.eccentricity < 1 : Captured(v); }
+
         public string Name { get { return "Orbit insertion at " + TransferSupport.BodyName(_target); } }
         public string Status { get; private set; }
         public LegState State { get; private set; }
@@ -1026,7 +1034,7 @@ namespace KSA.KSP.Flight
                 case Phases.Capture:
                     if (TransferSupport.PumpExecutor(_exec, ctx, ref line))
                     {
-                        if (!Captured(v))
+                        if (!Bound(v))
                         {
                             Fail(_exec.Failed ? "capture burn incomplete: " + _exec.FailReason : "still not bound to " + _target.bodyName + " after the burn");
                             line = line ?? ("Insertion burn did not capture; still escaping " + _target.bodyName + ".");
@@ -1051,7 +1059,7 @@ namespace KSA.KSP.Flight
         {
             Vessel v = ctx.Vessel;
             double mu = _target.gravParameter;
-            double rTarget = _target.Radius + _altitude;
+            double rTarget = _target.Radius + (_loose > 0 ? _loose : _altitude);
             double utPe = ctx.Now + v.orbit.timeToPe;
             double rPe = v.orbit.PeR;
             double vPe = OrbitAdapter.StateAt(v.orbit, utPe).Velocity.Length;
@@ -1076,7 +1084,7 @@ namespace KSA.KSP.Flight
         private bool PlanCircularise(FlightContext ctx, ref string line)
         {
             Vessel v = ctx.Vessel;
-            if (_secondPlanned || !Captured(v)) return false;
+            if (_loose > 0 || _secondPlanned || !Captured(v)) return false;
             if (v.orbit.ApA - v.orbit.PeA < 0.3 * _altitude + 5000) return false;
             if (ctx.Control.NoThrustAvailable() && !ctx.Control.HasStagesLeft) return false;
             double mu = _target.gravParameter;
@@ -1103,7 +1111,7 @@ namespace KSA.KSP.Flight
         {
             Vessel v = ctx.Vessel;
             _phase = Phases.Finished;
-            if (!Captured(v))
+            if (!Bound(v))
             {
                 Fail("orbit not stable after the insertion burns");
                 line = line ?? ("Insertion ended without a stable orbit around " + _target.bodyName + ".");
@@ -1113,6 +1121,132 @@ namespace KSA.KSP.Flight
             Status = "In a " + orbit + " orbit of " + _target.bodyName + ".";
             ctx.Say("Captured into " + orbit + " orbit of " + _target.bodyName + "; it counts as orbit after one full orbit.");
             State = LegState.Done;
+        }
+
+        public void End(FlightContext ctx)
+        {
+            ctx.Control.Throttle = 0;
+            ctx.Control.StopWarp();
+            if (_exec != null) _exec.End(ctx);
+        }
+    }
+
+    /// <summary>
+    /// Lets a thin atmosphere shorten a long orbit, pass by pass, then lifts the low point clear of the air at apoapsis
+    /// (2026-11-01, T: Duna, where a burn all the way down to a low orbit left too little fuel to land and come home).
+    /// </summary>
+    public sealed class AirbrakeLeg : IFlightLeg
+    {
+        private enum Phases { Passes, Burn, Finished }
+        private readonly CelestialBody _target;
+        private readonly double _altitude;
+        private Phases _phase;
+        private NodeExecutor _exec;
+        private bool _inAir;
+        private int _passes;
+
+        private const double TurnSeconds = 90;
+        private const int MaxPasses = 12;
+        private const double GoalMargin = 30000;      // metres of apoapsis over the orbit wanted: then stop
+        private const double LowestShare = 0.24;      // of the air's depth: a lower periapsis is lifted back up at apoapsis
+        public const double PassShare = 0.36;         // of the air's depth: where the passes fly (18 km on Duna)
+
+        public AirbrakeLeg(CelestialBody target, double orbitAltitude)
+        {
+            _target = target;
+            _altitude = orbitAltitude;
+        }
+
+        public string Name { get { return "Aerobraking at " + TransferSupport.BodyName(_target); } }
+        public string Status { get; private set; }
+        public LegState State { get; private set; }
+
+        public void Begin(FlightContext ctx)
+        {
+            State = LegState.Running;
+            _phase = Phases.Passes;
+            Status = "Aerobraking.";
+            Vessel v = ctx.Vessel;
+            if (v == null || v.orbit == null || _target == null) { Fail("no vessel orbit or target"); return; }
+            if (v.mainBody != _target) { Fail("not in " + _target.bodyName + "'s sphere of influence"); return; }
+            if (v.orbit.eccentricity < 1 && v.orbit.PeA > _target.atmosphereDepth) State = LegState.Done;
+        }
+
+        private void Fail(string why) { State = LegState.Failed; Status = "Aerobraking failed: " + why; }
+
+        public string Step(FlightContext ctx)
+        {
+            Vessel v = ctx.Vessel;
+            string line = null;
+            if (State != LegState.Running || v == null || v.orbit == null) return null;
+            VesselControl c = ctx.Control;
+            double air = _target.atmosphereDepth;
+            switch (_phase)
+            {
+                case Phases.Passes:
+                    if (v.mainBody != _target) { Fail("left " + _target.bodyName + "'s sphere of influence"); break; }
+                    if (v.LandedOrSplashed) { Fail("on the ground"); break; }
+                    bool inAir = v.altitude < air;
+                    c.Throttle = 0;
+                    c.Sas(VesselAutopilot.AutopilotMode.Retrograde, inAir);
+                    Status = "Aerobraking: pass " + _passes + ", " + TransferSupport.Km(v.orbit.ApA) + " x " + TransferSupport.Km(v.orbit.PeA) + ".";
+                    if (inAir)
+                    {
+                        if (!_inAir) { _inAir = true; _passes++; }
+                        break;
+                    }
+                    if (_inAir)
+                    {
+                        _inAir = false;
+                        line = "Air pass " + _passes + " done: orbit now " + TransferSupport.Km(v.orbit.ApA) + " x " + TransferSupport.Km(v.orbit.PeA) + ".";
+                    }
+                    if (v.orbit.eccentricity >= 1) { Fail("still escaping " + _target.bodyName); break; }
+                    if (c.IsWarping) break;
+                    bool done = v.orbit.ApA <= _altitude + GoalMargin || _passes >= MaxPasses;
+                    if (done || v.orbit.PeA < LowestShare * air)
+                    {
+                        if (PlanLift(ctx, done ? v.orbit.ApR : _target.Radius + PassShare * air, ref line)) _phase = Phases.Burn;
+                        break;
+                    }
+                    double edge = TimeToAir(v, air + 2000, ctx.Now);
+                    if (edge > ctx.Now + TurnSeconds + 20) c.WarpTo(edge - TurnSeconds);
+                    break;
+                case Phases.Burn:
+                    if (TransferSupport.PumpExecutor(_exec, ctx, ref line))
+                    {
+                        if (_exec.Failed) { Fail(_exec.FailReason); break; }
+                        if (v.orbit.PeA > air) { _phase = Phases.Finished; State = LegState.Done; ctx.Say("Aerobraking done after " + _passes + " passes: " + TransferSupport.Km(v.orbit.ApA) + " x " + TransferSupport.Km(v.orbit.PeA) + " orbit of " + _target.bodyName + "."); }
+                        else _phase = Phases.Passes;
+                    }
+                    else Status = "Lifting the orbit: " + _exec.Status;
+                    break;
+            }
+            return line;
+        }
+
+        /// <summary>A prograde burn at apoapsis that puts the low point at the given radius from the centre.</summary>
+        private bool PlanLift(FlightContext ctx, double rLow, ref string line)
+        {
+            Vessel v = ctx.Vessel;
+            double mu = _target.gravParameter, utAp = ctx.Now + v.orbit.timeToAp, rAp = v.orbit.ApR;
+            double vAp = Math.Sqrt(Math.Max(0, mu * (2 / rAp - 1 / v.orbit.semiMajorAxis)));
+            double dv = Math.Sqrt(mu * (2 / rAp - 2 / (rAp + rLow))) - vAp;
+            NodePlanner.ClearNodes(v);
+            if (NodePlanner.Add(v, utAp, new Vector3d(0, 0, dv)) == null) { Fail("could not place the lift burn"); return false; }
+            _exec = new NodeExecutor();
+            _exec.Begin(ctx);
+            if (_exec.Failed) { Fail(_exec.FailReason); return false; }
+            line = "Lifting the low point to " + TransferSupport.Km(rLow - _target.Radius) + " at apoapsis with " + Math.Round(dv) + " m/s.";
+            return true;
+        }
+
+        /// <summary>When the path next comes down to a height, or -1.</summary>
+        private static double TimeToAir(Vessel v, double altitude, double now)
+        {
+            double end = now + v.orbit.timeToPe, step = Math.Max(1, (end - now) / 400);
+            for (double t = now; t <= end; t += step)
+                if (v.orbit.getRelativePositionAtUT(t).magnitude - v.mainBody.Radius <= altitude) return t;
+            return -1;
         }
 
         public void End(FlightContext ctx)

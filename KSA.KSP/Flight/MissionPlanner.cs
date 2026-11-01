@@ -140,8 +140,17 @@ namespace KSA.KSP.Flight
                 case MissionProfile.Land:
                 case MissionProfile.Base:
                     Up(prog, ctx);
-                    Outbound(prog, ctx, target, interplanetary, Math.Max(15000, floor), Math.Max(60000, floor + 40000));
-                    prog.Add(new CaptureLeg(target, orbitAlt)).Add(new LandingLeg(ctx.MaxSiteSlope));
+                    if (profile == MissionProfile.Land && Aerobrakes(target, home))
+                    {
+                        double airPe = AirbrakeLeg.PassShare * target.atmosphereDepth;
+                        Outbound(prog, ctx, target, interplanetary, airPe - 3000, airPe + 3000);
+                        prog.Add(new CaptureLeg(target, orbitAlt, LooseCapture * target.sphereOfInfluence)).Add(new AirbrakeLeg(target, orbitAlt)).Add(new LandingLeg(ctx.MaxSiteSlope));
+                    }
+                    else
+                    {
+                        Outbound(prog, ctx, target, interplanetary, Math.Max(15000, floor), Math.Max(60000, floor + 40000));
+                        prog.Add(new CaptureLeg(target, orbitAlt)).Add(new LandingLeg(ctx.MaxSiteSlope));
+                    }
                     if (profile == MissionProfile.Base && type != null && string.Equals(type.ModuleRole, "resupply", StringComparison.OrdinalIgnoreCase))
                     {
                         // Resupply: deliver beside the base, then the relief crew stays and the old crew flies the lander home.
@@ -185,6 +194,14 @@ namespace KSA.KSP.Flight
         }
 
         private const double ReturnAirShare = 0.43; // 30 km on Kerbin
+        private const double LooseCapture = 0.3;    // of the sphere of influence: the apoapsis of a capture the air will finish
+        private const double ThinAir = 20;          // kPa at the surface: thin enough to pass through for days (Duna 6.8; Laythe and Eve are not)
+
+        /// <summary>A world whose air can finish a capture without a crew being crushed or burned on a low pass.</summary>
+        private static bool Aerobrakes(CelestialBody target, CelestialBody home)
+        {
+            return target != home && target.atmosphere && target.atmospherePressureSeaLevel < ThinAir;
+        }
 
         private static void Homebound(MissionProgram prog, FlightContext ctx, CelestialBody target, bool interplanetary, bool fromOrbit, double peLo, double peHi)
         {
@@ -233,7 +250,7 @@ namespace KSA.KSP.Flight
             if (orbitingTarget)
             {
                 if (logged("EVA:" + tb) || logged("Land:" + tb)) prog.SkipTo(l => l is ReturnLeg);
-                else prog.SkipTo(l => l is LandingLeg || l is HoldOrbitLeg || l is ReturnLeg);
+                else prog.SkipTo(l => l is AirbrakeLeg || l is LandingLeg || l is HoldOrbitLeg || l is ReturnLeg);
                 return;
             }
             if (inTargetSoi)
@@ -241,7 +258,7 @@ namespace KSA.KSP.Flight
                 // Leaving after the return burn, or part-way down to the surface: do not re-run the arrival legs.
                 if (v.situation == Vessel.Situations.ESCAPING && headingHome && Has(prog, l => l is ReturnLeg)) { prog.SkipTo(l => l is WaitForSoiLeg && IndexAfterHome(prog, l)); return; }
                 // No need for the orbit to be logged: it only counts after a full turn, and a lander goes straight down (2026-10-31).
-                if (descending && !logged("Land:" + tb) && v.orbit.eccentricity < 1 && Has(prog, l => l is LandingLeg)) { prog.SkipTo(l => l is LandingLeg); return; }
+                if (descending && !logged("Land:" + tb) && v.orbit.eccentricity < 1 && Has(prog, l => l is LandingLeg)) { prog.SkipTo(l => l is AirbrakeLeg || l is LandingLeg); return; }
                 prog.SkipTo(l => l is CaptureLeg || l is PassPeriapsisLeg || l is CorrectionLeg);
                 return;
             }
