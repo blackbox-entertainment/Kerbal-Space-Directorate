@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.124 (2026-11-01), test build
+
+- **Warp works on the way down to a world with air.** The coast judged warp by the height the engine would have needed without air, so it cancelled warp from 74 km over Duna.
+
 ## 0.8.123 (2026-11-01), test build
 
 - **The Director's site also leaves a long orbit from the high end.** A picked site used its own search, which could still burn at the low end for about 300 m/s.

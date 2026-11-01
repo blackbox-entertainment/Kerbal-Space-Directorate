@@ -365,6 +365,8 @@ namespace KSA.KSP.Flight
                 return;
             }
 
+            // With air the engine waits for 15 km, however fast the sums say it should stop from (2026-11-01, T: warp cancelled at 74 km over Duna).
+            if (_hasAir) safe = Math.Min(safe, AirBrakeHeight);
             // Warp while there is plenty of room: stop well before the burn point.
             double stopAt = Math.Max(4 * safe, 2000);
             if (above > stopAt && (!_hasAir || v.altitude > v.mainBody.atmosphereDepth || descentRate < 100))
