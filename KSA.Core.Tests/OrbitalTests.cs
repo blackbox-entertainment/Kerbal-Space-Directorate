@@ -334,5 +334,20 @@ namespace KSA.Core.Tests
             Assert.That(Vec3.AngleBetween(new Vec3(1, 0, 0), new Vec3(0, 1, 0)), Is.EqualTo(Math.PI / 2).Within(1e-12));
             Assert.That(new Vec3(1, 2.5, -3).ToString(), Is.EqualTo("(1.000, 2.500, -3.000)"));
         }
+
+        [Test]
+        public void ExitStateFindsTheEdgeOfTheSphere()
+        {
+            const double mu = 3.5316e12, soi = 84159286, r = 675000;
+            double seconds;
+            var fast = new StateVector(new Vec3(r, 0, 0), new Vec3(0, Math.Sqrt(mu / r) + 1047, 0));
+            StateVector exit = Ejection.ExitState(fast, mu, soi, out seconds);
+            Assert.That(seconds, Is.GreaterThan(3600));
+            Assert.That(exit.Position.Length, Is.EqualTo(soi).Within(1000));
+            Assert.That(Kepler.SpecificEnergy(exit, mu), Is.EqualTo(Kepler.SpecificEnergy(fast, mu)).Within(100));
+            var slow = new StateVector(new Vec3(r, 0, 0), new Vec3(0, Math.Sqrt(mu / r), 0));
+            Ejection.ExitState(slow, mu, soi, out seconds);
+            Assert.That(double.IsNaN(seconds), Is.True);
+        }
     }
 }

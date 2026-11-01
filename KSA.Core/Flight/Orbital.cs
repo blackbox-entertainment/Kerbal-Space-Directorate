@@ -445,6 +445,25 @@ namespace KSA.Core.Flight.Orbital
     /// <summary>Escape burns from a circular parking orbit, plus Hohmann basics.</summary>
     public static class Ejection
     {
+        /// <summary>
+        /// State where a path leaves a sphere of influence, and the seconds to get there; NaN seconds when it stays inside.
+        /// </summary>
+        public static StateVector ExitState(StateVector start, double mu, double soi, out double seconds)
+        {
+            seconds = double.NaN;
+            if (Kepler.SpecificEnergy(start, mu) < 0 && Kepler.Apoapsis(start, mu) < soi) return start;
+            double low = 0, high = 600, limit = 40 * 86400;
+            while (high < limit && Kepler.Propagate(start, mu, high).Position.Length < soi) { low = high; high *= 1.5; }
+            if (high >= limit) return start;
+            for (int i = 0; i < 30; i++)
+            {
+                double mid = (low + high) / 2;
+                if (Kepler.Propagate(start, mu, mid).Position.Length < soi) low = mid; else high = mid;
+            }
+            seconds = high;
+            return Kepler.Propagate(start, mu, high);
+        }
+
         /// <summary>Prograde delta-v from a circular parking orbit to leave with hyperbolic excess vInf.</summary>
         public static double DeltaV(double mu, double parkingRadius, double vInf)
         {

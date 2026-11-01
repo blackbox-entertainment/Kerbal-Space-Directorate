@@ -450,16 +450,18 @@ namespace KSA.KSP.Flight
         private const double StartedWithin = 120; // seconds before a node: its burn may already be running
 
         /// <summary>
-        /// Closest the path after a node comes to the target, metres; 0 when it passes inside the target's sphere. By the two-body sums
-        /// from the edge of the planet's sphere: the game's preview stops there this far ahead of a node (2026-11-01: "closest pass Infinity").
+        /// Closest the path after a burn comes to the target, metres; 0 when it passes inside the target's sphere. All by the two-body sums:
+        /// the game shows no path at all this far ahead of a node (2026-11-01: "closest pass Infinity", twice).
         /// </summary>
-        private double Miss(ManeuverNode n, double arrival)
+        private double Miss(Orbit parking, double ut, Vec3 burn, double arrival)
         {
-            Orbit o = n.nextPatch;
-            if (o == null || o.patchEndTransition != Orbit.PatchTransitionType.ESCAPE) return double.PositiveInfinity;
-            double exit = o.EndUT, to = arrival + 40 * TransferSupport.Day, mu = _origin.referenceBody.gravParameter, best = double.PositiveInfinity;
-            StateVector rel = OrbitAdapter.StateAt(o, exit), planet = OrbitAdapter.StateAt(_origin.orbit, exit);
-            var start = new StateVector { Position = rel.Position + planet.Position, Velocity = rel.Velocity + planet.Velocity };
+            StateVector now = OrbitAdapter.StateAt(parking, ut);
+            double seconds;
+            StateVector rel = Ejection.ExitState(new StateVector(now.Position, now.Velocity + burn), _origin.gravParameter, _origin.sphereOfInfluence, out seconds);
+            if (double.IsNaN(seconds)) return double.PositiveInfinity;
+            double exit = ut + seconds, to = arrival + 40 * TransferSupport.Day, mu = _origin.referenceBody.gravParameter, best = double.PositiveInfinity;
+            StateVector planet = OrbitAdapter.StateAt(_origin.orbit, exit);
+            var start = new StateVector(rel.Position + planet.Position, rel.Velocity + planet.Velocity);
             for (int i = 1; i <= 240; i++)
             {
                 double t = exit + (to - exit) * i / 240;
@@ -471,23 +473,25 @@ namespace KSA.KSP.Flight
         private const double NearEnough = 0.5;
 
         /// <summary>Trims a burn along each axis, large steps to small, until the path meets the target or stops getting closer.</summary>
-        private Vector3d Refine(Vessel v, double ut, Vector3d comps, double arrival)
+        private Vec3 Refine(Orbit parking, double ut, Vec3 burn, double arrival)
         {
-            double best = TransferSupport.Trial(v, ut, comps, n => Miss(n, arrival));
-            Vector3d[] axes = { new Vector3d(1, 0, 0), new Vector3d(-1, 0, 0), new Vector3d(0, 1, 0), new Vector3d(0, -1, 0), new Vector3d(0, 0, 1), new Vector3d(0, 0, -1) };
+            StateVector s = OrbitAdapter.StateAt(parking, ut);
+            Vec3 along = s.Velocity.Normalized, up = Vec3.Cross(s.Position, s.Velocity).Normalized, side = Vec3.Cross(up, along);
+            Vec3[] axes = { along, -along, up, -up, side, -side };
+            double best = Miss(parking, ut, burn, arrival);
             foreach (double step in new[] { 40.0, 15.0, 5.0, 1.5, 0.5 })
-                for (int pass = 0; pass < 4 && best > 0; pass++)
+                for (int pass = 0; pass < 8 && best > 0; pass++)
                 {
                     bool better = false;
-                    foreach (Vector3d axis in axes)
+                    foreach (Vec3 axis in axes)
                     {
-                        Vector3d next = comps + axis * step;
-                        double miss = TransferSupport.Trial(v, ut, next, n => Miss(n, arrival));
-                        if (!double.IsNaN(miss) && miss < best) { best = miss; comps = next; better = true; if (best <= 0) break; }
+                        Vec3 next = burn + axis * step;
+                        double miss = Miss(parking, ut, next, arrival);
+                        if (miss < best) { best = miss; burn = next; better = true; if (best <= 0) break; }
                     }
                     if (!better) break;
                 }
-            return comps;
+            return burn;
         }
 
         private bool Escaped(Vessel v)
@@ -601,10 +605,10 @@ namespace KSA.KSP.Flight
             NodePlanner.ClearNodes(v);
             // The sums aim in the parking orbit's plane and ignore the days to the edge of the sphere: trim against the game's own path
             // (2026-11-01: a perfect 1,047 m/s burn missed Duna, and no correction out in the sun's space could find it).
-            Vector3d comps = Refine(v, bestUt, new Vector3d(0, 0, dv), plan.ArrivalUt);
-            ManeuverNode n = NodePlanner.Add(v, bestUt, comps);
+            Vec3 burn = Refine(v.orbit, bestUt, OrbitAdapter.StateAt(v.orbit, bestUt).Velocity.Normalized * dv, plan.ArrivalUt);
+            ManeuverNode n = NodePlanner.AddFrameDeltaV(v, bestUt, burn);
             if (n == null) { Fail("could not place the ejection node"); return null; }
-            double pass = Miss(n, plan.ArrivalUt);
+            double pass = Miss(v.orbit, bestUt, burn, plan.ArrivalUt);
             ctx.Say("Ejection trimmed to " + Math.Round(n.DeltaV.magnitude) + " m/s: " + (pass > 0 ? "closest pass " + TransferSupport.Km(pass) : "the sums reach " + _target.bodyName + "'s sphere") + ".");
             dv = n.DeltaV.magnitude;
             _burnUt = bestUt; _windowDv = dv;
