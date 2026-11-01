@@ -420,12 +420,7 @@ namespace KSA.KSP.Flight
                     for (int i = 0; i < steps * SiteOrbits; i++)
                     {
                         double ut = ctx.Now + 60 + o.period * i / steps;
-                        // A long orbit is left from its high end: from the low end the same drop costs ten times the fuel (2026-11-01: 25 m/s against 300 from 742 x 70 km).
-                        if (o.eccentricity > LongOrbit)
-                        {
-                            double fromAp = Math.Abs(ut - (ctx.Now + o.timeToAp)) % o.period;
-                            if (Math.Min(fromAp, o.period - fromAp) > o.period * NearApoapsis) continue;
-                        }
+                        if (TooFarFromApoapsis(o, ut, ctx.Now)) continue;
                         double lead; Vector3d down = PredictDown(o, ut, b, accel, g, out lead);
                         double sunUp = 90 - Vector3d.Angle(down, sun);
                         if (sunUp < MinSunUp) continue;
@@ -448,6 +443,14 @@ namespace KSA.KSP.Flight
             catch (Exception e) { KsaCore.Log.Warn("Landing site search failed: " + e.Message); _burnAt = ctx.Now; _searches = MaxSearches; }
         }
 
+        /// <summary>A long orbit is left from its high end: from the low end the same drop costs ten times the fuel (2026-11-01: 25 m/s against 300 from 742 x 70 km).</summary>
+        private static bool TooFarFromApoapsis(Orbit o, double ut, double now)
+        {
+            if (o.eccentricity <= LongOrbit) return false;
+            double fromAp = Math.Abs(ut - (now + o.timeToAp)) % o.period;
+            return Math.Min(fromAp, o.period - fromAp) > o.period * NearApoapsis;
+        }
+
         /// <summary>
         /// The Director's own site (2026-10-31, T: right click to pick a spot): the burn whose descent comes down closest to it, searched
         /// every 5 s over 20 orbits. An orbit only crosses its own ground track, so a site far off it is reported, not reached.
@@ -460,6 +463,7 @@ namespace KSA.KSP.Flight
             double bestMiss = double.PositiveInfinity, bestUt = ctx.Now + 60;
             for (double ut = ctx.Now + 60; ut < ctx.Now + 60 + o.period * 20; ut += 5)
             {
+                if (TooFarFromApoapsis(o, ut, ctx.Now)) continue;
                 double lead; Vector3d down = PredictDown(o, ut, b, accel, g, out lead);
                 Vector3d ground = b.position + down * b.Radius;
                 double lon = b.GetLongitude(ground) - 360 * (ut + lead - ctx.Now) / b.rotationPeriod; // the world turns meanwhile

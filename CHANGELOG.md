@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.123 (2026-11-01), test build
+
+- **The Director's site also leaves a long orbit from the high end.** A picked site used its own search, which could still burn at the low end for about 300 m/s.
+
 ## 0.8.122 (2026-11-01), test build
 
 - **Long orbits search properly for a site.** Limiting the deorbit to near apoapsis had cut the search to about three moments an orbit, so no flat ground was ever found. It now looks at about 40 an orbit, over a wider stretch around apoapsis.
