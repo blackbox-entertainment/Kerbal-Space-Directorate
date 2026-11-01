@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.84 (2026-10-31), test build
+
+- **The landing site search finds ground again.** Counting every 1 km step at full value ruled out nearly the whole Mun; one steep step now counts for less, and the look at 400 m handles those.
+
 ## 0.8.83 (2026-10-31), test build
 
 - **No landing on anything steeper than 7%.** With no such site the crew stays in orbit and looks again (24 orbits in all), then hands the decision to the Director.

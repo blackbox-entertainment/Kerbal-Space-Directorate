@@ -68,6 +68,7 @@ namespace KSA.KSP.Flight
         private const int SiteSteps = 36;           // moments looked at over one orbit
         private const int SiteOrbits = 8;           // orbits searched: the world turns under the orbit, so each one crosses new ground (one orbit offered only 9%, 2026-10-31)
         private const int MaxSearches = 3;          // searches before the crew gives the landing up
+        private const double SteepStepAllowance = 2.5; // one steep 1 km step counts this much less than a tilt of the whole patch: the look at 400 m deals with those
         private const double SideStepAt = 400;      // metres above terrain: look at the ground here
         private const double SideStepCell = 100;    // metres between height samples
         private const double SideStepSpeed = 15;    // m/s across the ground at most
@@ -396,7 +397,7 @@ namespace KSA.KSP.Flight
                     if (i > 0) steepest = Math.Max(steepest, Math.Abs(h - heights[i - 1, j]) / SiteSpacing);
                     if (j > 0) steepest = Math.Max(steepest, Math.Abs(h - heights[i, j - 1]) / SiteSpacing);
                 }
-            return Math.Max((high - low) / (4 * SiteSpacing), steepest);
+            return Math.Max((high - low) / (4 * SiteSpacing), steepest / SteepStepAllowance);
         }
 
         private void Survey(FlightContext ctx, Vessel v)
