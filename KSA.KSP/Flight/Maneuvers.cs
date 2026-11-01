@@ -176,6 +176,8 @@ namespace KSA.KSP.Flight
         private bool _burnTimed;
         private double _tolerance = 0.3;
         private double _lateBy;
+        private double _burned, _lastStep;
+        private const double OverBurn = 1.03;
 
         public bool Done { get { return _phase == Phases.Done; } }
         public bool Failed { get { return _phase == Phases.Failed; } }
@@ -237,6 +239,7 @@ namespace KSA.KSP.Flight
                         c.EnsureEngine(ref line);
                         c.Throttle = 1f;
                         _phase = Phases.Burn; _started = now;
+                        _burned = 0; _lastStep = now;
                         _lastBurnVector = burn;
                         Status = "Burning.";
                         line = line ?? ("Burn started: " + Math.Round(_startDv) + " m/s, " + Math.Round(_burnTime) + " s.");
@@ -249,10 +252,15 @@ namespace KSA.KSP.Flight
                     break;
                 case Phases.Burn:
                     c.AutoStage(ref line);
+                    _burned += v.geeForce * 9.80665 * Math.Max(0, now - _lastStep);
+                    _lastStep = now;
                     if (!_burnTimed && c.MaxAcceleration() > 0) { double bt = c.BurnTime(burn.magnitude); if (!double.IsInfinity(bt)) { _burnTime = bt; _burnTimed = true; } }
                     double remaining = burn.magnitude;
                     // Taper: last few m/s at low throttle so we do not overshoot; cutoff when the vector flips.
-                    if (remaining < _tolerance || Vector3d.Dot(burn, _lastBurnVector) < 0 || (remaining < 2 && now - _started > _burnTime + 10) || (CutOff != null && CutOff(v)))
+                    // A long burn leaves the node behind and the vector never empties: stop on what was really burned
+                    // (2026-11-01: a 1,047 m/s ejection under warp burned 1,567 m/s and went past Duna).
+                    bool spent = _burned >= _startDv * OverBurn + 1;
+                    if (spent || remaining < _tolerance || Vector3d.Dot(burn, _lastBurnVector) < 0 || (remaining < 2 && now - _started > _burnTime + 10) || (CutOff != null && CutOff(v)))
                     {
                         c.Throttle = 0;
                         _phase = Phases.Done;

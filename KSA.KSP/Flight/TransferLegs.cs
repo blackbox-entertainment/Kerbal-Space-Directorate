@@ -449,20 +449,26 @@ namespace KSA.KSP.Flight
 
         private const double StartedWithin = 120; // seconds before a node: its burn may already be running
 
-        /// <summary>Closest the path after a node comes to the target, metres; 0 when the game shows the encounter.</summary>
+        /// <summary>
+        /// Closest the path after a node comes to the target, metres; 0 when it passes inside the target's sphere. By the two-body sums
+        /// from the edge of the planet's sphere: the game's preview stops there this far ahead of a node (2026-11-01: "closest pass Infinity").
+        /// </summary>
         private double Miss(ManeuverNode n, double arrival)
         {
-            if (!double.IsNaN(NodePlanner.PeriapsisAt(n, _target))) return 0;
-            Orbit o = NodePlanner.PatchAround(n, _origin.referenceBody);
-            if (o == null) return double.PositiveInfinity;
-            double from = o.StartUT, to = arrival + 40 * TransferSupport.Day, best = double.PositiveInfinity;
+            Orbit o = n.nextPatch;
+            if (o == null || o.patchEndTransition != Orbit.PatchTransitionType.ESCAPE) return double.PositiveInfinity;
+            double exit = o.EndUT, to = arrival + 40 * TransferSupport.Day, mu = _origin.referenceBody.gravParameter, best = double.PositiveInfinity;
+            StateVector rel = OrbitAdapter.StateAt(o, exit), planet = OrbitAdapter.StateAt(_origin.orbit, exit);
+            var start = new StateVector { Position = rel.Position + planet.Position, Velocity = rel.Velocity + planet.Velocity };
             for (int i = 1; i <= 240; i++)
             {
-                double t = from + (to - from) * i / 240;
-                best = Math.Min(best, (OrbitAdapter.StateAt(o, t).Position - OrbitAdapter.StateAt(_target.orbit, t).Position).Length);
+                double t = exit + (to - exit) * i / 240;
+                best = Math.Min(best, (Kepler.Propagate(start, mu, t - exit).Position - OrbitAdapter.StateAt(_target.orbit, t).Position).Length);
             }
-            return best;
+            return best < NearEnough * _target.sphereOfInfluence ? 0 : best;
         }
+
+        private const double NearEnough = 0.5;
 
         /// <summary>Trims a burn along each axis, large steps to small, until the path meets the target or stops getting closer.</summary>
         private Vector3d Refine(Vessel v, double ut, Vector3d comps, double arrival)
@@ -598,7 +604,8 @@ namespace KSA.KSP.Flight
             Vector3d comps = Refine(v, bestUt, new Vector3d(0, 0, dv), plan.ArrivalUt);
             ManeuverNode n = NodePlanner.Add(v, bestUt, comps);
             if (n == null) { Fail("could not place the ejection node"); return null; }
-            ctx.Say("Ejection trimmed to " + Math.Round(n.DeltaV.magnitude) + " m/s: " + (double.IsNaN(NodePlanner.PeriapsisAt(n, _target)) ? "closest pass " + TransferSupport.Km(Miss(n, plan.ArrivalUt)) : _target.bodyName + " encounter in the game's preview") + ".");
+            double pass = Miss(n, plan.ArrivalUt);
+            ctx.Say("Ejection trimmed to " + Math.Round(n.DeltaV.magnitude) + " m/s: " + (pass > 0 ? "closest pass " + TransferSupport.Km(pass) : "the sums reach " + _target.bodyName + "'s sphere") + ".");
             dv = n.DeltaV.magnitude;
             _burnUt = bestUt; _windowDv = dv;
             _exec = new NodeExecutor();
@@ -810,16 +817,21 @@ namespace KSA.KSP.Flight
                     now + 600, now + 5 * TransferSupport.Day, 0.3 * flight, 1.6 * flight, 24, 30, 0.5);
             }
             catch (Exception e) { KsaCore.Log.Error("Deep-space correction planner threw: " + e); }
-            if (plan == null || plan.DeltaVMagnitude > _maxDv) return false;
+            if (plan == null || plan.DeltaVMagnitude > _maxDv)
+            {
+                ctx.Say(plan == null ? "No fresh transfer to " + _target.bodyName + " found from here." : "A fresh transfer to " + _target.bodyName + " needs " + Math.Round(plan.DeltaVMagnitude) + " m/s, over the " + Math.Round(_maxDv) + " allowed.");
+                return false;
+            }
             NodePlanner.ClearNodes(v);
             ManeuverNode n = NodePlanner.AddFrameDeltaV(v, plan.DepartureUt, plan.DeltaV);
-            if (n == null || double.IsNaN(NodePlanner.PeriapsisAt(n, _target))) { NodePlanner.ClearNodes(v); return false; }
+            if (n == null) return false;
             _exec = new NodeExecutor();
             _exec.Begin(ctx);
             if (_exec.Failed) { NodePlanner.ClearNodes(v); return false; }
             _phase = Phases.Burn;
             Status = "Correction burn of " + Math.Round(plan.DeltaVMagnitude) + " m/s.";
-            line = "Deep-space correction planned: " + Math.Round(plan.DeltaVMagnitude) + " m/s, predicted " + _target.bodyName + " periapsis " + TransferSupport.Km(NodePlanner.PeriapsisAt(n, _target)) + ".";
+            double pe = NodePlanner.PeriapsisAt(n, _target);
+            line = "Deep-space correction planned: " + Math.Round(plan.DeltaVMagnitude) + " m/s" + (double.IsNaN(pe) ? "; the game's preview does not show the encounter yet." : ", predicted " + _target.bodyName + " periapsis " + TransferSupport.Km(pe) + ".");
             return true;
         }
 

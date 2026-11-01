@@ -2,6 +2,12 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.111 (2026-11-01), test build
+
+- **A burn stops at what it was meant to spend.** Every burn now measures the delta-v really burned and stops 3% over; a 1,047 m/s ejection had run on to 1,567 m/s and gone far past Duna.
+- **The ejection trim works.** It now follows the path by the two-body sums from the edge of Kerbin's sphere, because the game's preview does not reach that far ahead of a node.
+- **Deep-space corrections say why.** They report when no transfer is found or it costs too much, and they fly on the sums when the preview does not show the encounter yet.
+
 ## 0.8.110 (2026-11-01), test build
 
 - **A saved burn is replanned.** An interplanetary burn still to come is planned afresh on load, so an older save picks up the trimmed ejection; only a burn already under way is resumed.
