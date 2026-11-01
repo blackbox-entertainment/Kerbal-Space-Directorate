@@ -719,7 +719,8 @@ namespace KSA.KSP.Flight
             bool ours = active == _vessel || (active != null && active.isEVA);
             if (!ours) return;
             double alt = _vessel.altitude;
-            double speed = _vessel.srfSpeed;
+            // Far out, surface speed is mostly Kerbin turning under the craft (2026-10-31: a "record" 18,364 m/s at 62,000 km).
+            double speed = _vessel.mainBody != null && alt > _vessel.mainBody.atmosphereDepth ? _vessel.obt_speed : _vessel.srfSpeed;
             if (alt > Live.MaxAltitude) Live.MaxAltitude = alt;
             if (speed > Live.MaxSpeed) Live.MaxSpeed = speed;
             TrackExploration();

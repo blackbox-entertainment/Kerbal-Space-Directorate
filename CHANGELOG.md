@@ -2,6 +2,14 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.50 (2026-10-31), test build
+
+- **Transfer burns stop at the Mun.** A long, low-thrust burn could drift off its node and keep going: a 5-minute burn ran 9 minutes and left Kerbin's space. The burn now ends once the path reaches the moon's orbit, and the course correction trims it.
+- **No warping on a path that misses.** With no encounter ahead, the crew stops and hands the Director the controls, instead of warping until the oxygen runs out.
+- **A steeper climb for weak stages.** The nose now rises sooner to keep the top of the climb 45 s ahead, so a weak upper stage does not skim the air at 42 km.
+- **KV pods need a real heat shield** to return from other worlds. Their own ablator is 20 units; a 1.25 m shield holds 200.
+- **The fastest-flight record** reads orbital speed above the air (a "record" 18,364 m/s was Kerbin turning under a distant craft).
+
 ## 0.8.49 (2026-10-31), test build
 
 - **Landings no longer give up on a closed throttle.** While braking from high up, a closed throttle read as an empty tank; the crew stopped flying and fell onto the Mun with 2,711 m/s aboard. Only an open throttle with no thrust, or no delta-v left, counts now.

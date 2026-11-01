@@ -189,7 +189,7 @@ namespace KSA.KSP.Parts
             ModuleGimbal gimbal = p.FindModuleImplementing<ModuleGimbal>();
             if (gimbal != null && gimbal.gimbalRange > 0) info.Tags.Add("gimbal");
             // A crew pod with its own ablator (the Making History KV "Onion" pods) needs no separate heat shield.
-            if (p.CrewCapacity > 0 && p.Modules != null && p.Modules.Contains("ModuleAblator")) info.Tags.Add("heatshielded");
+            // Not since 2026-10-31: the KV pods hold 20 units of ablator against 200 on a 1.25 m shield, so they count as unshielded.
             return info;
         }
 

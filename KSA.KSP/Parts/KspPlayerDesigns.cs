@@ -181,7 +181,7 @@ namespace KSA.KSP.Parts
                 d.Cost += ap.cost;
                 // A drogue slows the pod but cannot land it: only main parachutes count (2026-10-29).
                 if (prefab.FindModuleImplementing<ModuleParachute>() != null && !ap.name.ToLowerInvariant().Contains("drogue")) d.HasParachute = true;
-                // Heat shields: one at least as wide as the widest crew pod, or a pod with its own ablator.
+                // Heat shields: one at least as wide as the widest crew pod; a pod's own thin ablator (20 units) is not enough alone.
                 bool ablator = prefab.FindModuleImplementing<ModuleAblator>() != null;
                 if (prefab.CrewCapacity > 0) { podSize = Math.Max(podSize, StackSize(prefab)); if (ablator) selfShielded = true; }
                 else if (ablator) shieldSize = Math.Max(shieldSize, StackSize(prefab));
@@ -190,7 +190,7 @@ namespace KSA.KSP.Parts
                 order.Add(p);
             }
             if (order.Count == 0) return null;
-            d.HasHeatShield = selfShielded || (shieldSize >= 0 && shieldSize >= podSize);
+            d.HasHeatShield = shieldSize >= 0 && (selfShielded || shieldSize >= podSize);
             d.PartCount = order.Count;
             // Tree: a part lists its children with "link".
             foreach (ConfigNode n in craft.GetNodes("PART"))

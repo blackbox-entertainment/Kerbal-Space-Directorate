@@ -182,6 +182,9 @@ namespace KSA.KSP.Flight
         public string Status { get; private set; }
         public string FailReason { get; private set; }
 
+        /// <summary>Ends the burn early whatever the node says (a long burn drifts off its node; the transfer stops on its apoapsis).</summary>
+        public Func<Vessel, bool> CutOff { get; set; }
+
         public ManeuverNode Node(Vessel v)
         {
             return NodePlanner.Available(v) && v.patchedConicSolver.maneuverNodes.Count > 0 ? v.patchedConicSolver.maneuverNodes[0] : null;
@@ -249,7 +252,7 @@ namespace KSA.KSP.Flight
                     if (!_burnTimed && c.MaxAcceleration() > 0) { double bt = c.BurnTime(burn.magnitude); if (!double.IsInfinity(bt)) { _burnTime = bt; _burnTimed = true; } }
                     double remaining = burn.magnitude;
                     // Taper: last few m/s at low throttle so we do not overshoot; cutoff when the vector flips.
-                    if (remaining < _tolerance || Vector3d.Dot(burn, _lastBurnVector) < 0 || (remaining < 2 && now - _started > _burnTime + 10))
+                    if (remaining < _tolerance || Vector3d.Dot(burn, _lastBurnVector) < 0 || (remaining < 2 && now - _started > _burnTime + 10) || (CutOff != null && CutOff(v)))
                     {
                         c.Throttle = 0;
                         _phase = Phases.Done;

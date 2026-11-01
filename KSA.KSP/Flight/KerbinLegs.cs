@@ -320,6 +320,9 @@ namespace KSA.KSP.Flight
         /// <summary>The most the nose is raised above the horizon to stop the climb topping out in the air, degrees.</summary>
         internal const double ClimbFloor = 25;
         internal const double ClimbFloorMax = 75;
+        /// <summary>Seconds to the top of the climb: at this or less the nose holds the rocket up, at TopAheadEasy it follows the program.</summary>
+        internal const double TopAheadFull = 45;
+        internal const double TopAheadEasy = 75;
         internal const double TurnEnd = 60000; // level by 60 km (2026-10-31, T: "wasn't supposed to level out till past 55km"; flat at 46 km a strong rocket flew 2,000 m/s in the air)
         /// <summary>Straight up until this surface speed, then the small kick east.</summary>
         internal const double KickSpeed = 100;
@@ -362,7 +365,9 @@ namespace KSA.KSP.Flight
             if (alt > 5000 && alt < v.mainBody.atmosphereDepth && v.orbit.PeA < 0)
             {
                 double hold = HoldPitch(v);
-                program = Math.Max(program, v.verticalSpeed <= 0 ? hold : hold * Math.Max(0, 1 - v.orbit.timeToAp / 60));
+                // 2026-10-31: 25 s from the top and held only part way, the lander skimmed at 42 km at 1,786 m/s (T's screenshot, on fire).
+                double close = Math.Max(0, Math.Min(1, (TopAheadEasy - v.orbit.timeToAp) / (TopAheadEasy - TopAheadFull)));
+                program = Math.Max(program, v.verticalSpeed <= 0 ? hold : hold * close);
             }
             Vector3d up = v.upAxis;
             // The flight path's pitch from the eastern horizon, in the up-east plane: over 90 means it leans west

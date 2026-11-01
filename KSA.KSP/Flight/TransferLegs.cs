@@ -175,6 +175,16 @@ namespace KSA.KSP.Flight
             _arrivalPe = arrivalPeriapsis;
         }
 
+        /// <summary>
+        /// The path now reaches the target's orbit: stop, whatever the node says, and let the correction trim it (2026-10-31: a
+        /// low-thrust lander burned 9 minutes on a 5-minute node, drifted off it and left Kerbin's reach with oxygen for 5 days).
+        /// </summary>
+        private bool FarEnough(Vessel v)
+        {
+            if (v.orbit == null || _target.orbit == null) return false;
+            return v.orbit.eccentricity >= 1 || v.orbit.ApR > _target.orbit.ApR + _target.sphereOfInfluence;
+        }
+
         public string Name { get { return "Transfer to " + TransferSupport.BodyName(_target); } }
         public string Status { get; private set; }
         public LegState State { get; private set; }
@@ -205,7 +215,7 @@ namespace KSA.KSP.Flight
             // Resuming with a node already planned: just fly it.
             if (NodePlanner.Available(v) && v.patchedConicSolver.maneuverNodes.Count > 0)
             {
-                _exec = new NodeExecutor();
+                _exec = new NodeExecutor { CutOff = FarEnough };
                 _exec.Begin(ctx);
                 _phase = Phases.Burn;
                 Status = "Resuming the transfer burn.";
@@ -284,7 +294,7 @@ namespace KSA.KSP.Flight
             ManeuverNode n = NodePlanner.AddFrameDeltaV(v, _plan.DepartureUt, _plan.DeltaV);
             if (n == null) { Fail("could not place the transfer node"); return null; }
             double predicted = NodePlanner.PeriapsisAt(n, _target);
-            _exec = new NodeExecutor();
+            _exec = new NodeExecutor { CutOff = FarEnough };
             _exec.Begin(ctx);
             if (_exec.Failed) { Fail(_exec.FailReason); return null; }
             _phase = Phases.Burn;
@@ -734,6 +744,14 @@ namespace KSA.KSP.Flight
             if (v == null || _body == null) { State = LegState.Failed; Status = "No vessel or body."; return; }
             if (v.mainBody == _body) { State = LegState.Done; Status = "In " + _body.bodyName + "'s sphere of influence."; return; }
             if (ctx.Control.CanSas(VesselAutopilot.AutopilotMode.StabilityAssist)) ctx.Control.Sas(VesselAutopilot.AutopilotMode.StabilityAssist, false);
+            // A moon that the path misses: never warp on while the supplies run out (2026-10-31: five days of warp to the edge of
+            // Kerbin's space, 3,381 m/s still aboard, and the crew out of oxygen). Stop here so the Director can fly it home.
+            if (_body.referenceBody == v.mainBody && TransferSupport.VesselPatchAround(v, _body) == null)
+            {
+                State = LegState.Failed;
+                Status = "This path misses " + _body.bodyName + ".";
+                ctx.Say("No " + _body.bodyName + " encounter on this path; holding here, no warp. Director, take control.");
+            }
         }
 
         public string Step(FlightContext ctx)
