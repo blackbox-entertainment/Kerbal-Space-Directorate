@@ -175,11 +175,12 @@ namespace KSA.KSP.Flight
                         c.Throttle = !c.HasWheelOrRcs() && VesselControl.TurnRate(v) >= 5 && c.CanSteerWithEngine() ? SteerThrottle : 0f;
                         if (v.orbit.timeToAp < 120) c.EnsureEngine(ref line);
                         double halfBurn = CircularizeBurnTime(v, c) / 2;
+                        if (_roundOut && !c.IsWarping && v.orbit.timeToAp - halfBurn > 120) c.WarpTo(ctx.Now + v.orbit.timeToAp - halfBurn - 60);
                         // Out of warp well before the burn: engines do not fire on rails (2026-10-30).
                         if (c.IsWarping && v.orbit.timeToAp - halfBurn < 30) c.StopWarp();
                         Status = "Coasting to apoapsis; circularisation burn in " + Math.Max(0, Math.Round(v.orbit.timeToAp - halfBurn)) + " s.";
                         // Burn centred on apoapsis, or at once if already past it (the Director handed back on the way down).
-                        if (v.orbit.timeToAp <= Math.Max(5, halfBurn) || v.verticalSpeed < 0)
+                        if (v.orbit.timeToAp <= Math.Max(5, halfBurn) || (v.verticalSpeed < 0 && !_roundOut))
                         {
                             _phase = Phases.Circularize; _phaseStart = ctx.Now;
                             Status = "Circularising.";
@@ -191,6 +192,17 @@ namespace KSA.KSP.Flight
                 case Phases.Circularize:
                     if (c.OutOfDeltaV()) { c.Throttle = 0; line = "No fuel left to circularise."; State = LegState.Done; break; }
                     if (c.IsWarping) { c.StopWarp(); c.Throttle = 0; Status = "Circularising: coming out of time warp."; break; }
+                    // Clear of the air but away from apoapsis: stop and finish at the next apoapsis, where it costs next to nothing
+                    // (2026-10-31, T: "if it goes past ap and is still burning it should wait until next ap to round out the orbit").
+                    if (v.orbit.PeA > atmo && v.orbit.PeA <= atmo + OrbitPeMargin && v.orbit.timeToAp > Math.Max(30, CircularizeBurnTime(v, c) / 2 + 10))
+                    {
+                        c.Throttle = 0;
+                        _phase = Phases.Coast; _phaseStart = ctx.Now;
+                        _roundOut = true;
+                        c.PointAlong(() => Horizontal(v)); _pointedFlat = true;
+                        line = "Clear of the air at " + Math.Round(v.orbit.ApA / 1000) + " x " + Math.Round(v.orbit.PeA / 1000) + " km: engine off, rounding out at the next apoapsis.";
+                        break;
+                    }
                     if (!c.ManualAttitude) c.PointAlong(() => CircularizeDirection(v));
                     LogAttitude(ctx, "circularise");
                     {
@@ -248,6 +260,8 @@ namespace KSA.KSP.Flight
             Vessel v = ctx.Vessel;
             FellShort = State == LegState.Done && _orbit && v != null && v.orbit != null && v.orbit.PeA < v.mainBody.atmosphereDepth;
         }
+
+        private bool _roundOut;
 
         /// <summary>An ascent for orbit that ended without one: the program goes to reentry, not on to the next burn.</summary>
         public bool FellShort { get; private set; }

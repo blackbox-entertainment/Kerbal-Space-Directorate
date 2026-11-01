@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.55 (2026-10-31), test build
+
+- **Long circularisation burns stop once clear of the air.** With the periapsis past 70 km and apoapsis behind it, the engine stops, the crew warps to the next apoapsis and rounds out the orbit there, then goes for the Mun or Minmus.
+
 ## 0.8.54 (2026-10-31), test build
 
 - **Circularising climbs when it has to.** A periapsis cannot rise above the craft, so a weak stage burning flat at 69 km only pushed its apoapsis out. The nose now rises while the craft is low and not climbing.
