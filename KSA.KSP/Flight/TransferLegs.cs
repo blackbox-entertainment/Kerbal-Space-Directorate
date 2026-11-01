@@ -1136,6 +1136,7 @@ namespace KSA.KSP.Flight
                         _candidate = 0; _bestDv = double.NaN;
                         SetBand(false);
                         NodePlanner.ClearNodes(v);
+                        if (PlanBySums(ctx, v, ref line)) break;
                         _phase = Phases.Search;
                         Status = "Searching for a return burn.";
                     }
@@ -1198,6 +1199,57 @@ namespace KSA.KSP.Flight
                     break;
             }
             return line;
+        }
+
+        /// <summary>
+        /// The cheapest prograde burn over one orbit that brings Kerbin's periapsis into the band, by the sums alone: every 30 s, every
+        /// 1 m/s. The game's path preview only checks it afterwards (2026-10-31: the preview search found nothing with 383 m/s aboard).
+        /// </summary>
+        private bool PlanBySums(FlightContext ctx, Vessel v, ref string line)
+        {
+            try
+            {
+                if (!TransferSupport.IsClosed(v.orbit)) return false;
+                CelestialBody moon = v.mainBody;
+                double now = ctx.Now, period = v.orbit.period, homeRadius = _home.Radius;
+                double fuel = v.VesselDeltaV != null && v.VesselDeltaV.IsReady ? v.VesselDeltaV.TotalDeltaVVac : 1500;
+                double maxDv = Math.Min(1500, fuel);
+                double bestDv = double.NaN, bestUt = 0, bestPe = double.NaN;
+                double closest = double.PositiveInfinity, closestDv = 0;
+                for (double ut = now + 120; ut < now + 120 + period; ut += 30)
+                {
+                    StateVector s = OrbitAdapter.StateAt(v.orbit, ut);
+                    Vec3 along = s.Velocity.Normalized;
+                    double burnUt = ut;
+                    for (double dv = 1; dv <= maxDv && (double.IsNaN(bestDv) || dv < bestDv); dv += 1)
+                    {
+                        var after = new StateVector(s.Position, s.Velocity + along * dv);
+                        double rp = ReturnMath.HomePeriapsis(after, moon.gravParameter, moon.sphereOfInfluence, _home.gravParameter, t => OrbitAdapter.StateAt(moon.orbit, burnUt + t));
+                        if (double.IsNaN(rp)) continue;
+                        double pe = rp - homeRadius;
+                        double off = Math.Abs(pe - _reentryPe);
+                        if (off < closest) { closest = off; closestDv = dv; }
+                        if (off <= 8000) { bestDv = dv; bestUt = ut; bestPe = pe; }
+                    }
+                }
+                if (double.IsNaN(bestDv))
+                {
+                    KsaCore.Log.Warn("Return sums: nothing within " + Math.Round(closest / 1000) + " km of the target periapsis, at " + closestDv + " m/s, " + Math.Round(fuel) + " m/s aboard.");
+                    return false;
+                }
+                ManeuverNode n = NodePlanner.Add(v, bestUt, new Vector3d(0, 0, bestDv));
+                if (n == null) return false;
+                double predicted = NodePlanner.PeriapsisAt(n, _home);
+                _exec = new NodeExecutor();
+                _exec.Begin(ctx);
+                if (_exec.Failed) { Fail(_exec.FailReason); return true; }
+                _phase = Phases.Burn;
+                Status = "Return burn of " + Math.Round(bestDv) + " m/s in " + TransferSupport.Countdown(bestUt - now) + ".";
+                line = "Return burn planned: " + Math.Round(bestDv) + " m/s at " + TransferSupport.Date(bestUt) + ", Kerbin periapsis " + TransferSupport.Km(bestPe)
+                    + " by the sums, " + (double.IsNaN(predicted) ? "no path in the game's preview yet" : TransferSupport.Km(predicted) + " in the game's preview") + ".";
+                return true;
+            }
+            catch (Exception e) { KsaCore.Log.Warn("Return sums failed: " + e.Message); return false; }
         }
 
         private void SetBand(bool wide)

@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.93 (2026-10-31), test build
+
+- **The crew works out the burn home from a moon by the sums.** It checks one whole orbit, every 30 s and every 1 m/s, and stays within the fuel aboard; the old search through the game's path preview is the fallback.
+
 ## 0.8.92 (2026-10-31), test build
 
 - **The descent eases from 5 m/s at 40 m to 2 m/s at 10 m,** because a sudden drop at 10 m left a weak engine no room to slow.

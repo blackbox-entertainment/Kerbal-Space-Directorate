@@ -258,6 +258,27 @@ namespace KSA.Core.Tests
             Assert.That(DescentMath.SafeBurnAltitude(200, 10, 1.63, 0.1), Is.EqualTo(2389.486 * 1.1 + 50).Within(1));
         }
 
+
+        [Test]
+        public void ReturnMath_RetrogradeEjectionFromLowMunOrbit_ComesHome()
+        {
+            // A 50 km Mun orbit, the Mun on a circle: the cheapest burn with the home periapsis near 30 km should be about 287 m/s (flown 2026-10-31).
+            const double munRadius = 200000, munSoi = 2429559, r0 = munRadius + 50000;
+            double munSpeed = 2 * Math.PI * MunOrbitRadius / MunPeriod, circular = Math.Sqrt(MunMu / r0), n = 2 * Math.PI / MunPeriod;
+            Func<double, StateVector> mun = t => new StateVector(
+                new Vec3(MunOrbitRadius * Math.Cos(n * t), MunOrbitRadius * Math.Sin(n * t), 0),
+                new Vec3(-munSpeed * Math.Sin(n * t), munSpeed * Math.Cos(n * t), 0));
+            double best = double.NaN;
+            for (double angle = 0; angle < 360; angle += 1)
+                for (double dv = 200; dv <= 400; dv += 1)
+                {
+                    double a = angle * Math.PI / 180;
+                    var start = new StateVector(new Vec3(r0 * Math.Cos(a), r0 * Math.Sin(a), 0), new Vec3(-Math.Sin(a), Math.Cos(a), 0) * (circular + dv));
+                    double rp = ReturnMath.HomePeriapsis(start, MunMu, munSoi, KerbinMu, mun);
+                    if (!double.IsNaN(rp) && Math.Abs(rp - KerbinRadius - 31000) < 8000 && (double.IsNaN(best) || dv < best)) { best = dv; break; }
+                }
+            Assert.That(best, Is.InRange(230, 340));
+        }
         [Test]
         public void DescentMath_TargetDescentSpeed_MonotonicWithFloor()
         {
