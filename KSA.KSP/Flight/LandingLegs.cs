@@ -69,6 +69,9 @@ namespace KSA.KSP.Flight
         private const int SiteOrbits = 8;           // orbits searched: the world turns under the orbit, so each one crosses new ground (one orbit offered only 9%, 2026-10-31)
         private const int MaxSearches = 3;          // searches before the crew gives the landing up
         private const double SteepStepAllowance = 2.5; // one steep step counts this much less than a tilt of the whole patch: the look at 400 m deals with those
+        private const double AirBrakeHeight = 15000; // metres above terrain: no engine higher on a world with air
+        private const double AirFallFloor = 2000;    // metres above terrain: below it the normal descent speeds
+        private const double AirFallShare = 0.7;     // of the speed the engine can just stop from
         private const double DriftHoldBelow = 60;   // metres above terrain: no lower with sideways speed
         private const double DriftAllowed = 0.7;    // m/s sideways
         private const double DriftHoldLimit = 40;   // seconds, then down anyway
@@ -343,6 +346,9 @@ namespace KSA.KSP.Flight
 
             double descentRate = -v.verticalSpeed;
             bool brakeNow = above <= safe;
+            // Air does the first of the braking for nothing: the engine waits for it (2026-11-01: from 895 m/s the sums lit it at 65 km, above the
+            // air, and the whole 2,400 m/s went on a slow drive down, out of fuel at 2,262 m).
+            if (_hasAir && above > AirBrakeHeight) brakeNow = false;
             if (_hasAir && inAir && above < 3000 && descentRate > DescentMath.TargetDescentSpeed(above) * 1.1) brakeNow = true;
             if (brakeNow)
             {
@@ -628,6 +634,8 @@ namespace KSA.KSP.Flight
             double descentRate = -v.verticalSpeed;
             // Height held during a side-step, climbing a little if the ground rises towards it.
             double target = _stepping ? (above < SideStepFloor ? -5 : 0) : DescentMath.TargetDescentSpeed(above);
+            // High in the air, fall as fast as the engine can still stop: every second at 60 m/s is a second of gravity paid for.
+            if (!_stepping && _hasAir && above >= AirFallFloor && accel > g) target = Math.Max(target, AirFallShare * Math.Sqrt(2 * (accel - g) * above));
             // Never touch down moving sideways: hold the height until the drift is gone (2026-11-01: 3.1 m/s down, soft, with 2 m/s of
             // drift left over from a slide, and the lander tripped over its legs).
             if (!_stepping && above < DriftHoldBelow && hSpeed > DriftAllowed && ctx.Now - _driftHoldStart < DriftHoldLimit)

@@ -176,7 +176,7 @@ namespace KSA.KSP.Flight
         private Vessel _offerVessel;
         private static readonly HashSet<uint> Declined = new HashSet<uint>();
         private float _inputGraceUntil;
-        private const double LastChuteHeight = 1500, LastChuteSpeed = 60;
+        private const double LastChuteHeight = 1500, LastChuteSpeed = 60, LastGearHeight = 1500;
         private float _inputHeldSince = -1;
         private const float InputHoldSeconds = 0.3f;
 
@@ -735,6 +735,7 @@ namespace KSA.KSP.Flight
             if (!Live.IsPlane && !_ctx.Control.DropSpentStage(ref line) && v.mainBody.isHomeWorld) _ctx.Control.ShedForReentry(ref line);
             if (line != null) Log(line, null);
             double aboveGround = Math.Max(0, v.altitude - Math.Max(0, v.terrainAltitude));
+            if (aboveGround < LastGearHeight) _ctx.Control.Gear(true); // whatever else has gone wrong (2026-11-01: out of fuel at 2 km, it landed with the legs up)
             string chute = null;
             // Away from home the capsule's chutes are for the way back, unless the ground is about to decide it.
             if (!v.mainBody.isHomeWorld && !(aboveGround < LastChuteHeight && v.srfSpeed > LastChuteSpeed)) _ctx.Control.DeployLanderChutes(ref chute);
