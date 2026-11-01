@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.60 (2026-10-31), test build
+
+- **Long descents run at 4x.** Once a slow descent settles, the crew goes to physics warp and comes back to real time 2 km above the ground. The Director's own physics warp is no longer cancelled above that height.
+
 ## 0.8.59 (2026-10-31), test build
 
 - **Landings pick sunny, flat ground.** Before the deorbit burn the crew looks along one orbit, keeps ground with the sun at least 15 degrees up, takes the flattest, warps there and burns.

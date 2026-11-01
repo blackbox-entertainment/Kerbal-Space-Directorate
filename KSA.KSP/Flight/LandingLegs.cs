@@ -75,6 +75,8 @@ namespace KSA.KSP.Flight
         private readonly double _maxSlope;
         private Phases _phase;
         private double _phaseStart;
+        private const double DescentWarpFloor = 2000; // back to real time below this height above terrain
+        private bool _descentWarped;
         private double _burnAt = -1;
         private bool _surveyed;
         private bool _gearDown;
@@ -454,7 +456,16 @@ namespace KSA.KSP.Flight
 
         private void Braking(FlightContext ctx, Vessel v, VesselControl c, double above, double g, double accel, bool warping, ref string line)
         {
-            if (warping) { c.StopWarp(); return; }
+            // Physics warp is safe on a long steady descent, so the crew uses it, once (2026-10-31, T: "would be nice to time
+            // compress here": a Terrier comes down from 30 km at 60 m/s, over eight minutes). Rails warp never: engines stop on rails.
+            bool physicsWarp = warping && TimeWarp.WarpMode == TimeWarp.Modes.LOW;
+            if (warping && !(physicsWarp && above > DescentWarpFloor)) { c.StopWarp(); return; }
+            if (!warping && !_descentWarped && above > DescentWarpFloor + 1000 && Math.Abs(v.verticalSpeed + DescentMath.TargetDescentSpeed(above)) < 5)
+            {
+                _descentWarped = true;
+                TimeWarp.fetch.Mode = TimeWarp.Modes.LOW;
+                TimeWarp.SetRate(3, false); // 4x
+            }
             bool inAir = _hasAir && v.altitude < v.mainBody.atmosphereDepth;
             if (inAir) c.DeployChutes(ref line);
             c.AutoStage(ref line);
