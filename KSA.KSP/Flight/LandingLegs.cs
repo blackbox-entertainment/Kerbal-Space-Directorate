@@ -67,8 +67,8 @@ namespace KSA.KSP.Flight
         private const double SiteLead = 0.25;       // the descent comes down about this share of an orbit past the burn
         private const int SiteSteps = 36;           // moments looked at over one orbit
         private const double SiteSpacing = 1000;    // metres between height samples of a candidate site
-        private const double GoodSlope = 0.05;      // height change across the site, wanted (a 5% site held but leaned, the 15% one tipped the lander)
-        private const double FairSlope = 0.08;      // accepted when an orbit has nothing flatter
+        private const double GoodSlope = 0.03;      // height change across the site, wanted (T; a 5% site held but leaned, the 15% one tipped the lander)
+        private const double FairSlope = 0.07;      // accepted when an orbit has nothing flatter
         private const double GoodSunUp = 50;        // degrees above the horizon at the site, wanted
         private const double MinSunUp = 15;         // and accepted when an orbit offers no better
         private const double SurveySpacing = 200;   // metres between grid cells

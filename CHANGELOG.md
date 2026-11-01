@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.79 (2026-10-31), test build
+
+- **Landing sites want 3% or flatter,** with 7% accepted when an orbit has nothing better.
+
 ## 0.8.78 (2026-10-31), test build
 
 - **Landing sites want 5% or flatter.** 8% is accepted only when an orbit has nothing better, and anything steeper only as a last resort.
