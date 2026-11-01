@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.67 (2026-10-31), test build
+
+- **A Board button.** A kerbal on EVA within 30 m of a free seat gets a Board button in the Flight Director window, so finding the hatch is no longer needed.
+
 ## 0.8.66 (2026-10-31), test build
 
 - **The first kerbal out waits for the lander to settle.** Stepping out in the touchdown frame threw Jeb clear while the lander was still bouncing on its legs.

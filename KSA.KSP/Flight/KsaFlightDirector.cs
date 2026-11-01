@@ -1092,6 +1092,26 @@ namespace KSA.KSP.Flight
             ScreenMessages.PostScreenMessage("[KSA] Crew stranded " + (result.StrandedOnSurface ? "on " : "in orbit of ") + result.StrandedBody + ". Launch a rescue from the Projects window.", 10f, ScreenMessageStyle.UPPER_CENTER);
         }
 
+        /// <summary>The closest part with a free seat within BoardRange of a kerbal on EVA, or null.</summary>
+        private static Part NearestSeat(Vessel kerbal)
+        {
+            Part best = null;
+            double bestDistance = BoardRange;
+            foreach (Vessel other in FlightGlobals.VesselsLoaded)
+            {
+                if (other == kerbal || other.isEVA) continue;
+                foreach (Part p in other.parts)
+                {
+                    if (p.CrewCapacity <= p.protoModuleCrew.Count) continue;
+                    double distance = Vector3d.Distance(p.transform.position, kerbal.GetWorldPos3D());
+                    if (distance < bestDistance) { bestDistance = distance; best = p; }
+                }
+            }
+            return best;
+        }
+
+        private const double BoardRange = 30;
+
         /// <summary>The stranded button shows when the crew cannot be flying home on their own: away from Kerbin's surface, not on the pad.</summary>
         private bool CanDeclareStranded()
         {
@@ -1208,6 +1228,10 @@ namespace KSA.KSP.Flight
             else GUILayout.Label("Crew flying (manual override off in agency.cfg)");
             if (_program != null && _program.Failed && Live.AutopilotOn && GUILayout.Button("Retry program")) RetryProgram();
             GUILayout.EndHorizontal();
+            // A kerbal near a seat boards at a click (2026-10-31, T: "can we add a right click to board": the hatch prompt is fiddly).
+            Vessel walker = FlightGlobals.ActiveVessel;
+            Part seat = walker != null && walker.isEVA && walker.evaController != null ? NearestSeat(walker) : null;
+            if (seat != null && GUILayout.Button("Board " + seat.partInfo.title)) walker.evaController.BoardPart(seat);
             if (Live != null && CanDeclareStranded() && GUILayout.Button("Crew stranded: call for a rescue")) DeclareStranded();
             GUI.DragWindow();
         }
