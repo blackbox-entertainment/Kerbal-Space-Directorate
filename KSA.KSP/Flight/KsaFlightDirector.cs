@@ -176,7 +176,6 @@ namespace KSA.KSP.Flight
         private Vessel _offerVessel;
         private static readonly HashSet<uint> Declined = new HashSet<uint>();
         private float _inputGraceUntil;
-        private const double FoldBeforeAir = 1800;
         private float _inputHeldSince = -1;
         private const float InputHoldSeconds = 0.3f;
 
@@ -821,8 +820,8 @@ namespace KSA.KSP.Flight
                     _lastTend = UnityEngine.Time.time;
                     double air = _vessel.mainBody.atmosphere ? _vessel.mainBody.atmosphereDepth : -1;
                     bool outside = air < 0 || _vessel.altitude > air + 20000 || (_vessel.altitude > air + 5000 && _vessel.orbit != null && _vessel.orbit.PeA > air);
-                    // Warp runs almost to the air and nothing folds under warp: fold before it, with the air still half an hour off (2026-11-01: Duna took the antennas).
-                    if (air > 0 && _vessel.orbit != null && _vessel.orbit.PeA < air && _vessel.orbit.timeToPe < FoldBeforeAir) outside = false;
+                    // Warp runs almost to the air and nothing folds under warp: fold as soon as the path dips into it (2026-11-01: Duna broke all four antennas).
+                    if (air > 0 && _vessel.orbit != null && _vessel.orbit.PeA < air) outside = false;
                     _ctx.Control.TendDeployables(outside);
                 }
                 string line = _program.Step();

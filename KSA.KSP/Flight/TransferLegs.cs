@@ -1077,6 +1077,7 @@ namespace KSA.KSP.Flight
                 State = LegState.Done; Status = "Already in orbit.";
                 return;
             }
+            if (_loose > 0) ctx.Control.TendDeployables(false); // before the long warp to the air
             if (NodePlanner.Available(v) && v.patchedConicSolver.maneuverNodes.Count > 0)
             {
                 _exec = new NodeExecutor();
