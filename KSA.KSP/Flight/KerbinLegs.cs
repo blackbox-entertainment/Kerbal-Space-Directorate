@@ -211,8 +211,9 @@ namespace KSA.KSP.Flight
                         else if (!aligned) Status = "Circularising: turning to the horizon (" + Math.Round(offFlat) + " deg to go" + (c.Throttle > 0 ? ", steering on the engine" : string.Empty) + ").";
                         else { Status = "Circularising."; c.AutoStage(ref line); }
                         if (turn >= 10 && !_spinNoted) { _spinNoted = true; line = "Engine off: the craft is turning " + Math.Round(turn) + " deg/s; the crew steadies it before burning."; }
-                        // Never fling the apoapsis away chasing the periapsis.
-                        if (v.orbit.PeA <= atmo + OrbitPeMargin && v.orbit.ApA > Math.Max(_targetAp * 2, _targetAp + 150000))
+                        // Never fling the apoapsis away chasing the periapsis. A long burn on a weak stage lifts both, so the limit is
+                        // generous (2026-10-31: stopped at 235 x 67 km, seconds short of orbit with 4,189 m/s aboard, and flown home).
+                        if (v.orbit.PeA <= atmo + OrbitPeMargin && v.orbit.ApA > _targetAp + ApoapsisRunaway)
                         {
                             c.Throttle = 0;
                             line = "Burn stopped: the apoapsis ran away to " + Math.Round(v.orbit.ApA / 1000) + " km with the periapsis still at " + Math.Round(v.orbit.PeA / 1000) + " km.";
@@ -320,6 +321,8 @@ namespace KSA.KSP.Flight
         /// <summary>The most the nose is raised above the horizon to stop the climb topping out in the air, degrees.</summary>
         internal const double ClimbFloor = 25;
         internal const double ClimbFloorMax = 75;
+        /// <summary>How far past the target the apoapsis may go while the circularisation burn is still lifting the periapsis.</summary>
+        internal const double ApoapsisRunaway = 500000;
         /// <summary>Seconds to the top of the climb: at this or less the nose holds the rocket up, at TopAheadEasy it follows the program.</summary>
         internal const double TopAheadFull = 45;
         internal const double TopAheadEasy = 75;
