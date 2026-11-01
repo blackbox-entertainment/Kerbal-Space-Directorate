@@ -1055,6 +1055,7 @@ namespace KSA.KSP.Flight
         public CaptureLeg(CelestialBody target, double orbitAltitude, double looseApoapsis) : this(target, orbitAltitude) { _loose = looseApoapsis; }
 
         private readonly double _loose;
+        private const double BurnAboveAir = 80000; // metres: the burn is over, and the craft turned round, before the air
 
         /// <summary>The burn runs through the air on a loose capture, where the game calls the craft flying, not orbiting.</summary>
         private bool Bound(Vessel v) { return _loose > 0 ? v.orbit != null && v.orbit.eccentricity < 1 : Captured(v); }
@@ -1163,7 +1164,20 @@ namespace KSA.KSP.Flight
             double dv = vPe - vNew;
             if (dv <= 0) { Fail("already slower than the capture speed at periapsis"); return null; }
             NodePlanner.ClearNodes(v);
-            ManeuverNode n = NodePlanner.Add(v, utPe, new Vector3d(0, 0, -dv));
+            ManeuverNode n = null;
+            double utHigh = _loose > 0 ? AirbrakeLeg.TimeToAir(v, _target.atmosphereDepth + BurnAboveAir, ctx.Now) : -1;
+            if (utHigh > ctx.Now + 60)
+            {
+                // Thrust in the air tumbles a tall rocket, engine first with its fins in front (2026-11-01, T): burn well above it, for the same periapsis.
+                StateVector s = OrbitAdapter.StateAt(v.orbit, utHigh);
+                double r = s.Position.Length, speed = Math.Sqrt(mu * (2 / r - 1 / aNew)), tangential = vNew * rPe / r;
+                double radial = -Math.Sqrt(Math.Max(0, speed * speed - tangential * tangential));
+                Vec3 up = s.Position.Normalized, along = Vec3.Cross(Vec3.Cross(s.Position, s.Velocity), s.Position).Normalized;
+                Vec3 burn = along * tangential + up * radial - s.Velocity;
+                dv = burn.Length;
+                n = NodePlanner.AddFrameDeltaV(v, utHigh, burn);
+            }
+            else n = NodePlanner.Add(v, utPe, new Vector3d(0, 0, -dv));
             if (n == null) { Fail("could not place the insertion node"); return null; }
             _exec = new NodeExecutor();
             _exec.Begin(ctx);
@@ -1296,7 +1310,8 @@ namespace KSA.KSP.Flight
                         break;
                     }
                     c.Throttle = 0;
-                    c.Sas(VesselAutopilot.AutopilotMode.Retrograde, inAir);
+                    // Nose first, as it flew up from Kerbin, with the fins behind it (2026-11-01, T: engine first it tumbled).
+                    c.Sas(VesselAutopilot.AutopilotMode.Prograde, inAir);
                     Status = "Aerobraking: pass " + _passes + ", " + TransferSupport.Km(v.orbit.ApA) + " x " + TransferSupport.Km(v.orbit.PeA) + ".";
                     double mu = _target.gravParameter;
                     if (inAir)
@@ -1355,7 +1370,7 @@ namespace KSA.KSP.Flight
         }
 
         /// <summary>When the path next comes down to a height, or -1.</summary>
-        private static double TimeToAir(Vessel v, double altitude, double now)
+        public static double TimeToAir(Vessel v, double altitude, double now)
         {
             double end = now + v.orbit.timeToPe, step = Math.Max(1, (end - now) / 400);
             for (double t = now; t <= end; t += step)

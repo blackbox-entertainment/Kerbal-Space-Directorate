@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.119 (2026-11-01), test build
+
+- **No thrust in the air on an aerobraking arrival.** The capture burn now runs 80 km above the top of the air, for the same periapsis, and the crew flies the passes nose first. Engine first, with the fins in front, the rocket tumbled.
+
 ## 0.8.118 (2026-11-01), test build
 
 - **Aerobraking aims for 35 km.** The last correction has landed 7 km low on every Duna arrival, so an aim of 28 km arrived at 21 km, too deep to rely on.
