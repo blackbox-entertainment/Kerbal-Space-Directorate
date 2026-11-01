@@ -65,6 +65,8 @@ namespace KSA.KSP.Flight
         private enum Phases { Deorbit, DeorbitBurn, Coast, Braking, Landed, WaveOff }
 
         private const double SiteLead = 0.25;       // the descent comes down about this share of an orbit past the burn
+        private const double LongOrbit = 0.2;       // eccentricity above which the deorbit waits for the high end
+        private const double NearApoapsis = 0.04;   // of a period, either side of apoapsis
         private const int SiteSteps = 36;           // moments looked at over one orbit
         private const int SiteOrbits = 8;           // orbits searched: the world turns under the orbit, so each one crosses new ground (one orbit offered only 9%, 2026-10-31)
         private const int MaxSearches = 3;          // searches before the crew gives the landing up
@@ -415,6 +417,12 @@ namespace KSA.KSP.Flight
                     for (int i = 0; i < SiteSteps * SiteOrbits; i++)
                     {
                         double ut = ctx.Now + 60 + o.period * i / SiteSteps;
+                        // A long orbit is left from its high end: from the low end the same drop costs ten times the fuel (2026-11-01: 25 m/s against 300 from 742 x 70 km).
+                        if (o.eccentricity > LongOrbit)
+                        {
+                            double fromAp = Math.Abs(ut - (ctx.Now + o.timeToAp)) % o.period;
+                            if (Math.Min(fromAp, o.period - fromAp) > o.period * NearApoapsis) continue;
+                        }
                         double lead; Vector3d down = PredictDown(o, ut, b, accel, g, out lead);
                         double sunUp = 90 - Vector3d.Angle(down, sun);
                         if (sunUp < MinSunUp) continue;

@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.121 (2026-11-01), test build
+
+- **Long orbits are left from the high end.** The landing's deorbit burn now waits for apoapsis on a long orbit, about 25 m/s from 742 x 70 km where the low end would cost about 300.
+- **The safety net works when the Director is flying.** It had been switched off during aerobraking whoever had the controls, so a hand-flown fall on Duna got no chutes or legs.
+
 ## 0.8.120 (2026-11-01), test build
 
 - **The climb out of the air climbs.** A crew caught in the air now pitches 35 degrees above the horizon instead of flying along its path, where the thrust only fought the drag.

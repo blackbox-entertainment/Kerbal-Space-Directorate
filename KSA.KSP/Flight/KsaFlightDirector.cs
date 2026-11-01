@@ -724,7 +724,8 @@ namespace KSA.KSP.Flight
             bool comingDown = v.orbit == null || v.orbit.PeA < atmo * 0.9; // any path that meets the air (0.5 missed a 35.7 km return from the Mun)
             if (!falling || !comingDown || v.altitude > atmo) return;
             // A pass through the air on purpose is not a fall (2026-11-01: the capsule's chutes were armed at 42 km over Duna).
-            if (_program != null && (_program.Current is AirbrakeLeg || _program.Current is CaptureLeg)) return;
+            // Only while the crew is flying it: with the Director at the controls nothing else is watching (2026-11-01: a fall to 287 m/s with no chutes).
+            if (Live.AutopilotOn && _program != null && (_program.Current is AirbrakeLeg || _program.Current is CaptureLeg)) return;
             // Nothing is burning and the craft falls back on a path that meets the ground: everything under the capsule
             // goes, spent or not, one stage at a time (2026-10-29: a hop came down with its fuelled upper stage still on,
             // fell nose first at 837 m/s and the chutes could not save it).
