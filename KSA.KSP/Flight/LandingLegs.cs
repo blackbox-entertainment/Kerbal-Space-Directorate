@@ -278,9 +278,10 @@ namespace KSA.KSP.Flight
                             {
                                 c.Throttle = 0;
                                 _surveyed = false; _surveySlope = -1; _askedCrew = false; _burnMargin = 0.15;
-                                _phase = Phases.Deorbit; _phaseStart = ctx.Now + (v.orbit.period > 0 ? v.orbit.period * 0.45 : 600);
-                                ctx.Say("Back in orbit (" + LandingHelpers.Km(v.orbit.ApA) + " x " + LandingHelpers.Km(v.orbit.PeA) + " km); next pass in half an orbit.");
-                                c.WarpTo(_phaseStart);
+                                // Plan again from the new orbit (2026-10-31: the old wait sat at 1x, the deorbit step cancelling every warp).
+                                _phase = Phases.Deorbit; _phaseStart = ctx.Now;
+                                _burnAt = -1; _searchAgainAt = -1; _searches = 0; _warpAskedFor = -1; _sideChecked = false;
+                                ctx.Say("Back in orbit (" + LandingHelpers.Km(v.orbit.ApA) + " x " + LandingHelpers.Km(v.orbit.PeA) + " km); choosing the next pass.");
                             }
                             else if (c.NoThrustAvailable() && ctx.Now - _phaseStart > 6)
                             {
@@ -517,7 +518,8 @@ namespace KSA.KSP.Flight
                 if (_surveySlope > _maxSlope)
                 {
                     ctx.Say("Warning: no cell within " + Math.Round(half * SurveySpacing) + " m is under the " + LandingHelpers.Pct(_maxSlope) + " slope limit.");
-                    AskCrewAboutSite(ctx, _surveySlope);
+                    // Without air the look at 2 km finds flat ground; waving off from here threw away a good Minmus approach (2026-10-31).
+                    if (_hasAir) AskCrewAboutSite(ctx, _surveySlope);
                 }
 
                 // Stretch goal: bias the burn timing toward the chosen cell. Downrange cell: burn a little later; uprange: a little earlier.
