@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.83 (2026-10-31), test build
+
+- **No landing on anything steeper than 7%.** With no such site the crew stays in orbit and looks again (24 orbits in all), then hands the decision to the Director.
+- **A look at the ground at 400 m.** If the ground below is too steep, the crew holds height and slides up to 600 m to the flattest spot nearby.
+
 ## 0.8.82 (2026-10-31), test build
 
 - **A wider, stricter search for landing sites.** The crew looks along eight orbits, not one, since the world turns under the orbit, and a site's slope now counts the steepest step across it, so crater walls show up.

@@ -67,6 +67,12 @@ namespace KSA.KSP.Flight
         private const double SiteLead = 0.25;       // the descent comes down about this share of an orbit past the burn
         private const int SiteSteps = 36;           // moments looked at over one orbit
         private const int SiteOrbits = 8;           // orbits searched: the world turns under the orbit, so each one crosses new ground (one orbit offered only 9%, 2026-10-31)
+        private const int MaxSearches = 3;          // searches before the crew gives the landing up
+        private const double SideStepAt = 400;      // metres above terrain: look at the ground here
+        private const double SideStepCell = 100;    // metres between height samples
+        private const double SideStepSpeed = 15;    // m/s across the ground at most
+        private const double SideStepDone = 25;     // metres from the spot
+        private const double SideStepLimit = 90;    // seconds, then down anyway
         private const double SiteSpacing = 1000;    // metres between height samples of a candidate site
         private const double GoodSlope = 0.03;      // height change across the site, wanted (T; a 5% site held but leaned, the 15% one tipped the lander)
         private const double FairSlope = 0.07;      // accepted when an orbit has nothing flatter
@@ -84,6 +90,11 @@ namespace KSA.KSP.Flight
         private double _lastAttitudeLog;
         private bool _descentWarped;
         private double _burnAt = -1;
+        private double _searchAgainAt = -1;
+        private int _searches;
+        private bool _sideChecked;
+        private bool _stepping;
+        private double _stepStart, _stepLat, _stepLon;
         private bool _surveyed;
         private bool _gearDown;
         private bool _holdingUp;        // switched from retrograde to the up-hold for the last metres
@@ -159,7 +170,19 @@ namespace KSA.KSP.Flight
                 {
                     case Phases.Deorbit:
                         c.Sas(VesselAutopilot.AutopilotMode.Retrograde, false);
-                        if (_burnAt < 0) PickSite(ctx, v);
+                        if (_burnAt < 0 && ctx.Now >= _searchAgainAt) PickSite(ctx, v);
+                        if (_burnAt < 0)
+                        {
+                            if (_searches >= MaxSearches)
+                            {
+                                State = LegState.Failed; Status = "No flat ground under this orbit.";
+                                ctx.Say("No ground of " + LandingHelpers.Pct(FairSlope) + " or flatter in the light after " + (MaxSearches * SiteOrbits) + " orbits; no landing. Director, your call.");
+                                break;
+                            }
+                            Status = "Waiting for flat ground: looking again in " + TransferSupport.Countdown(_searchAgainAt - ctx.Now) + ".";
+                            if (!warping) c.WarpTo(_searchAgainAt);
+                            break;
+                        }
                         if (ctx.Now < _burnAt - 30)
                         {
                             Status = "Waiting for the landing site: deorbit in " + TransferSupport.Countdown(_burnAt - ctx.Now) + ".";
@@ -318,21 +341,20 @@ namespace KSA.KSP.Flight
         /// </summary>
         private void PickSite(FlightContext ctx, Vessel v)
         {
-            _burnAt = ctx.Now;
             try
             {
                 CelestialBody b = v.mainBody;
                 Orbit o = v.orbit;
-                if (o == null || o.eccentricity >= 1 || b.pqsController == null) return;
+                if (o == null || o.eccentricity >= 1 || b.pqsController == null) { _burnAt = ctx.Now; return; }
                 Vector3d sun = (Planetarium.fetch.Sun.position - b.position).normalized;
                 // A weak lander brakes right after the burn, so it comes down almost under it (2026-10-31, T: "it could have waited
                 // to more in the light": a Terrier's whole descent took 130 s of braking from 46 km, not a quarter of an orbit).
                 double lead = o.period * SiteLead, best = double.PositiveInfinity, bestSun = 0;
                 double accel = ctx.Control.MaxAcceleration(), g = b.gravParameter / (b.Radius * b.Radius);
                 if (accel > 0 && accel < 3 * g) lead = Math.Min(lead, 0.6 * v.obt_speed / accel);
-                // Flat anywhere in the light (2026-10-31, T: "3% anywhere in the light, 7% fall back to anywhere in the light"): a lander on
-                // its side goes nowhere; the earlier morning rule took a 15% site and it tipped over. Steeper only if the orbit has nothing else.
-                double[] slopeLimit = { GoodSlope, FairSlope, double.PositiveInfinity };
+                // Flat anywhere in the light (2026-10-31, T: "3% anywhere in the light, 7% fall back to anywhere in the light", "it should
+                // abort anything more than 7%"): a lander on its side goes nowhere; a morning rule took a 15% site and it tipped over.
+                double[] slopeLimit = { GoodSlope, FairSlope };
                 for (int pass = 0; pass < slopeLimit.Length && double.IsPositiveInfinity(best); pass++)
                     for (int i = 0; i < SiteSteps * SiteOrbits; i++)
                     {
@@ -347,10 +369,16 @@ namespace KSA.KSP.Flight
                         double rough = Roughness(b, lat, lon);
                         if (rough < best && rough <= slopeLimit[pass]) { best = rough; bestSun = sunUp; _burnAt = ut; }
                     }
-                if (double.IsPositiveInfinity(best)) ctx.Say("No sunlit ground under this orbit; landing where it comes down.");
+                _searches++;
+                if (double.IsPositiveInfinity(best))
+                {
+                    _burnAt = -1;
+                    _searchAgainAt = ctx.Now + o.period * SiteOrbits;
+                    if (_searches < MaxSearches) ctx.Say("No ground of " + LandingHelpers.Pct(FairSlope) + " or flatter in the light yet; staying in orbit and looking again.");
+                }
                 else ctx.Say("Landing site chosen: sun " + Math.Round(bestSun) + " deg up, ground slope about " + LandingHelpers.Pct(best) + ", deorbit in " + TransferSupport.Countdown(_burnAt - ctx.Now) + ".");
             }
-            catch (Exception e) { KsaCore.Log.Warn("Landing site search failed: " + e.Message); _burnAt = ctx.Now; }
+            catch (Exception e) { KsaCore.Log.Warn("Landing site search failed: " + e.Message); _burnAt = ctx.Now; _searches = MaxSearches; }
         }
 
         /// <summary>The worst of the height change across a 4 km patch and the steepest step between samples: a crater wall scores high.</summary>
@@ -492,7 +520,7 @@ namespace KSA.KSP.Flight
 
             double hSpeed = v.horizontalSrfSpeed;
             double descentRate = -v.verticalSpeed;
-            double target = DescentMath.TargetDescentSpeed(above);
+            double target = _stepping ? 0 : DescentMath.TargetDescentSpeed(above); // height held during a side-step
 
             if (!_gearDown && above < 500) { _gearDown = true; c.Gear(true); c.Lights(true); ctx.Say("Gear down, lights on at " + Math.Round(above) + " m."); }
 
@@ -502,9 +530,17 @@ namespace KSA.KSP.Flight
             if (!_holdingUp && (above < UpHoldBelow || v.srfSpeed < UpHoldSpeed))
             {
                 _holdingUp = true;
-                c.PointAlong(() => UpAgainstDrift(v));
+                c.PointAlong(() => StandAndSteer(v));
             }
             else if (!_holdingUp) c.Sas(VesselAutopilot.AutopilotMode.Retrograde, true);
+            // Close to the ground, look at it: anything steeper than the limit, find flat ground nearby and slide over (2026-10-31, T: "abort
+            // anything more than 7% and look for something nearby that is flat").
+            if (!_sideChecked && above < SideStepAt) { _sideChecked = true; if (_holdingUp) LookForFlat(ctx, v); }
+            if (_stepping && (ctx.Now - _stepStart > SideStepLimit || HorizontalTo(v).magnitude < SideStepDone))
+            {
+                _stepping = false;
+                ctx.Say("Over the flat spot: going down.");
+            }
             if (ctx.Now - _lastAttitudeLog >= 5)
             {
                 _lastAttitudeLog = ctx.Now;
@@ -559,15 +595,70 @@ namespace KSA.KSP.Flight
             Status = "Descending " + Math.Round(descentRate, 1) + " m/s (target " + Math.Round(target, 1) + "), " + Math.Round(above) + " m.";
         }
 
-        /// <summary>Straight up, tipped against sideways speed: 2 degrees per m/s, at most 15.</summary>
-        private static Vector3d UpAgainstDrift(Vessel v)
+        /// <summary>Straight up, tipped against the sideways speed it does not want: 2 degrees per m/s, at most 15. A side-step wants speed towards the spot.</summary>
+        private Vector3d StandAndSteer(Vessel v)
         {
             Vector3d up = v.upAxis;
             Vector3d vel = v.srf_velocity;
             Vector3d side = vel - up * Vector3d.Dot(vel, up);
+            if (_stepping)
+            {
+                Vector3d to = HorizontalTo(v);
+                side -= to.normalized * Math.Min(SideStepSpeed, to.magnitude / 5);
+            }
             if (side.magnitude < 0.2) return up;
             double tilt = Math.Min(15, side.magnitude * 2) * Math.PI / 180;
             return (up * Math.Cos(tilt) - side.normalized * Math.Sin(tilt)).normalized;
+        }
+
+        /// <summary>From the craft to the spot it is sliding to, along the ground.</summary>
+        private Vector3d HorizontalTo(Vessel v)
+        {
+            Vector3d up = v.upAxis;
+            Vector3d to = v.mainBody.GetWorldSurfacePosition(_stepLat, _stepLon, 0) - v.GetWorldPos3D();
+            return to - up * Vector3d.Dot(to, up);
+        }
+
+        /// <summary>The flattest ground within 600 m. Slope of a cell = steepest step to a neighbour, 100 m apart.</summary>
+        private void LookForFlat(FlightContext ctx, Vessel v)
+        {
+            try
+            {
+                CelestialBody b = v.mainBody;
+                if (b.pqsController == null) return;
+                const int half = 6;
+                int n = 2 * half + 1;
+                double step = SideStepCell / b.Radius * 180 / Math.PI;
+                double stepLon = step / Math.Max(0.2, Math.Cos(v.latitude * Math.PI / 180));
+                var h = new double[n, n];
+                for (int i = 0; i < n; i++)
+                    for (int j = 0; j < n; j++)
+                        h[i, j] = b.TerrainAltitude(v.latitude + (i - half) * step, v.longitude + (j - half) * stepLon);
+                double here = 0, best = double.PositiveInfinity;
+                int bestI = half, bestJ = half;
+                for (int i = 1; i < n - 1; i++)
+                    for (int j = 1; j < n - 1; j++)
+                    {
+                        double slope = 0;
+                        slope = Math.Max(slope, Math.Abs(h[i, j] - h[i - 1, j]));
+                        slope = Math.Max(slope, Math.Abs(h[i, j] - h[i + 1, j]));
+                        slope = Math.Max(slope, Math.Abs(h[i, j] - h[i, j - 1]));
+                        slope = Math.Max(slope, Math.Abs(h[i, j] - h[i, j + 1]));
+                        slope /= SideStepCell;
+                        if (i == half && j == half) here = slope;
+                        // Ties go to the nearer cell: distance adds a little.
+                        double score = slope + 0.00001 * ((i - half) * (i - half) + (j - half) * (j - half));
+                        if (score < best) { best = score; bestI = i; bestJ = j; }
+                    }
+                if (here <= GoodSlope || (bestI == half && bestJ == half)) { ctx.Say("Ground below: " + LandingHelpers.Pct(here) + "; going straight down."); return; }
+                if (here <= FairSlope && best > GoodSlope) { ctx.Say("Ground below: " + LandingHelpers.Pct(here) + "; good enough."); return; }
+                _stepLat = v.latitude + (bestI - half) * step;
+                _stepLon = v.longitude + (bestJ - half) * stepLon;
+                _stepping = true;
+                _stepStart = ctx.Now;
+                ctx.Say("Ground below: " + LandingHelpers.Pct(here) + "; sliding " + Math.Round(HorizontalTo(v).magnitude) + " m to a " + LandingHelpers.Pct(best) + " spot.");
+            }
+            catch (Exception e) { KsaCore.Log.Warn("Side-step search failed: " + e.Message); }
         }
 
         private void Touchdown(FlightContext ctx, Vessel v)
