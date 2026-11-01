@@ -686,6 +686,10 @@ namespace KSA.KSP.Flight
                 bool rcs = false;
                 foreach (ModuleRCS r in v.FindPartModulesImplementing<ModuleRCS>()) if (r.rcsEnabled) { rcs = true; break; }
                 if (rcs) v.ActionGroups.SetGroup(KSPActionGroup.RCS, true);
+                // A KV pod has a decoupler in its base (2026-10-31): staged, it threw off the stabilizer and heat shield fitted under it.
+                foreach (Part p in v.parts)
+                    if (p.CrewCapacity > 0)
+                        foreach (ModuleAnchoredDecoupler d in p.FindModulesImplementing<ModuleAnchoredDecoupler>()) d.stagingEnabled = false;
                 Log("Pre-launch checks: SAS on" + (rcs ? ", RCS on." : "; no RCS thrusters aboard."), null);
             }
             catch (Exception e) { KsaCore.Log.Warn("Pre-launch checks: " + e.Message); }

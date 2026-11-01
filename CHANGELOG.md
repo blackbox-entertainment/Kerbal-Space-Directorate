@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.53 (2026-10-31), test build
+
+- **KV pods keep what is under them.** Their base holds a decoupler; staged on the way home, it threw off the stabilizer and heat shield. Crews now switch it out of the staging before launch.
+
 ## 0.8.52 (2026-10-31), test build
 
 - **Circularising no longer gives up just short of orbit.** On a weak stage the long burn lifts apoapsis as well as periapsis; the limit that stopped it was too tight and sent a healthy rocket home from 235 x 67 km. The burn now carries on until apoapsis is 500 km over target.
