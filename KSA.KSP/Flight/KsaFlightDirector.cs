@@ -176,6 +176,7 @@ namespace KSA.KSP.Flight
         private Vessel _offerVessel;
         private static readonly HashSet<uint> Declined = new HashSet<uint>();
         private float _inputGraceUntil;
+        private const double LastChuteHeight = 1500, LastChuteSpeed = 60;
         private float _inputHeldSince = -1;
         private const float InputHoldSeconds = 0.3f;
 
@@ -722,6 +723,8 @@ namespace KSA.KSP.Flight
             bool falling = v.verticalSpeed < -10;
             bool comingDown = v.orbit == null || v.orbit.PeA < atmo * 0.9; // any path that meets the air (0.5 missed a 35.7 km return from the Mun)
             if (!falling || !comingDown || v.altitude > atmo) return;
+            // A pass through the air on purpose is not a fall (2026-11-01: the capsule's chutes were armed at 42 km over Duna).
+            if (_program != null && (_program.Current is AirbrakeLeg || _program.Current is CaptureLeg)) return;
             // Nothing is burning and the craft falls back on a path that meets the ground: everything under the capsule
             // goes, spent or not, one stage at a time (2026-10-29: a hop came down with its fuelled upper stage still on,
             // fell nose first at 837 m/s and the chutes could not save it).
@@ -733,7 +736,9 @@ namespace KSA.KSP.Flight
             if (line != null) Log(line, null);
             double aboveGround = Math.Max(0, v.altitude - Math.Max(0, v.terrainAltitude));
             string chute = null;
-            _ctx.Control.DeployChutes(ref chute, aboveGround < 2500);
+            // Away from home the capsule's chutes are for the way back, unless the ground is about to decide it.
+            if (!v.mainBody.isHomeWorld && !(aboveGround < LastChuteHeight && v.srfSpeed > LastChuteSpeed)) _ctx.Control.DeployLanderChutes(ref chute);
+            else _ctx.Control.DeployChutes(ref chute, aboveGround < 2500);
             if (chute != null) Log(chute + (_netNoted ? string.Empty : " (falling back: the crew arms the chutes whatever the flight plan says)"), null);
             if (chute != null) _netNoted = true;
         }

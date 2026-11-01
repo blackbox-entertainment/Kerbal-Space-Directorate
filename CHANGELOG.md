@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.116 (2026-11-01), test build
+
+- **Aerobraking at 29 km.** Passes now aim for 29 km on Duna instead of 18; 27 km did the job on the first arrival, and 10 km on the second destroyed the lander.
+- **The survival net leaves the capsule's chutes alone.** It no longer arms chutes during a capture or an aerobraking pass, and away from home it arms only the lander's, unless the ground is under 1,500 m and the craft is still fast.
+
 ## 0.8.115 (2026-11-01), test build
 
 - **Antennas fold as soon as the path dips into the air**, not half an hour before it: the half-hour rule from 0.8.113 could fall inside a long warp, when nothing folds. The saves show all four HG-5s went from extended to broken on the first Duna pass.
