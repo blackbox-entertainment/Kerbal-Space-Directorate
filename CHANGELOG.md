@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.90 (2026-10-31), test build
+
+- **The side-step picks a place.** It ends as soon as the ground underneath is 7% or flatter, after 90 seconds, or when fuel falls to 1,250 m/s.
+
 ## 0.8.89 (2026-10-31), test build
 
 - **The 500 m patch really is in now.** 0.8.88 listed it, but the change had not applied.

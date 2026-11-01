@@ -75,7 +75,9 @@ namespace KSA.KSP.Flight
         private const double SideStepCell = 125;    // metres between height samples
         private const double SideStepSpeed = 15;    // m/s across the ground at most
         private const double SideStepDone = 25;     // metres from the spot
-        private const double SideStepLimit = 180;   // seconds, stopping included, then down anyway
+        private const double SideStepLimit = 90;    // seconds, stopping included, then down anyway
+        private const double SideStepReserve = 1250; // m/s: enough to finish coming down, reach orbit and go home
+        private double _lastStepCheck;
         private const double SiteSpacing = 250;     // metres between height samples: a 1 km patch (T), small enough for a crater floor
         private const double GoodSlope = 0.03;      // height change across the site, wanted (T; a 5% site held but leaned, the 15% one tipped the lander)
         private const double FairSlope = 0.07;      // accepted when an orbit has nothing flatter
@@ -547,6 +549,23 @@ namespace KSA.KSP.Flight
                 _stepping = false;
                 ctx.Say("Over the flat spot: going down.");
             }
+            // Pick a place: hovering burns the fuel home, so flat ground underneath ends the slide, and so does the reserve
+            // (2026-10-31, T: "at some point needs to pick a place or abort and come home": 200 m/s gone over a flat crater floor).
+            if (_stepping && ctx.Now - _lastStepCheck >= 3)
+            {
+                _lastStepCheck = ctx.Now;
+                double fuel = v.VesselDeltaV != null && v.VesselDeltaV.IsReady ? v.VesselDeltaV.TotalDeltaVVac : double.PositiveInfinity;
+                if (PatchSlope(v.mainBody, v.latitude, v.longitude) <= FairSlope)
+                {
+                    _stepping = false;
+                    ctx.Say("Flat ground right here: going down.");
+                }
+                else if (fuel < SideStepReserve)
+                {
+                    _stepping = false;
+                    ctx.Say("Down to " + Math.Round(fuel) + " m/s: no more sliding, going down here.");
+                }
+            }
             if (ctx.Now - _lastAttitudeLog >= 5)
             {
                 _lastAttitudeLog = ctx.Now;
@@ -616,6 +635,22 @@ namespace KSA.KSP.Flight
             if (side.magnitude < 0.2) return up;
             double tilt = Math.Min(15, side.magnitude * 2) * Math.PI / 180;
             return (up * Math.Cos(tilt) - side.normalized * Math.Sin(tilt)).normalized;
+        }
+
+        /// <summary>The steepest step across the 500 m patch round a point.</summary>
+        private static double PatchSlope(CelestialBody b, double lat, double lon)
+        {
+            double step = SideStepCell / b.Radius * 180 / Math.PI;
+            double stepLon = step / Math.Max(0.2, Math.Cos(lat * Math.PI / 180));
+            double slope = 0;
+            for (int i = -2; i <= 2; i++)
+                for (int j = -2; j <= 2; j++)
+                {
+                    double h = b.TerrainAltitude(lat + i * step, lon + j * stepLon);
+                    if (i > -2) slope = Math.Max(slope, Math.Abs(h - b.TerrainAltitude(lat + (i - 1) * step, lon + j * stepLon)));
+                    if (j > -2) slope = Math.Max(slope, Math.Abs(h - b.TerrainAltitude(lat + i * step, lon + (j - 1) * stepLon)));
+                }
+            return slope / SideStepCell;
         }
 
         /// <summary>From the craft to the spot it is sliding to, along the ground.</summary>
