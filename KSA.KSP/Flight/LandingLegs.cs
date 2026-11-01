@@ -102,6 +102,7 @@ namespace KSA.KSP.Flight
         private bool _descentWarped;
         private double _burnAt = -1;
         private double _searchAgainAt = -1;
+        private int _siteStamp;
         private double _warpAskedFor = -1;
         private int _searches;
         private bool _sideChecked;
@@ -182,6 +183,16 @@ namespace KSA.KSP.Flight
                 {
                     case Phases.Deorbit:
                         c.Sas(VesselAutopilot.AutopilotMode.Retrograde, false);
+                        // The Director can pick from orbit, any time before the burn (2026-10-31, T): the crew holds while the map is open for
+                        // it, and plans again for a new site.
+                        var site = KsaFlightDirector.Live;
+                        if (site != null && site.PickingSite)
+                        {
+                            Status = "Holding in orbit: the Director is picking a site.";
+                            if (warping) c.StopWarp();
+                            break;
+                        }
+                        if (site != null && site.SiteStamp != _siteStamp) { _siteStamp = site.SiteStamp; _burnAt = -1; _searchAgainAt = -1; _searches = 0; if (warping) { c.StopWarp(); break; } }
                         if (_burnAt < 0 && ctx.Now >= _searchAgainAt) PickSite(ctx, v);
                         if (_burnAt < 0)
                         {

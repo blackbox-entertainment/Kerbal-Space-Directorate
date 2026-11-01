@@ -38,6 +38,10 @@ namespace KSA.KSP.Flight
         {
             /// <summary>The Director's landing site (2026-10-31): the flattest ground near it is where the crew goes. Not saved yet.</summary>
             public bool HasSite;
+            /// <summary>The map is open for a pick: the crew holds off its deorbit.</summary>
+            public bool PickingSite;
+            /// <summary>Goes up with each pick, so a descent not yet begun plans again.</summary>
+            public int SiteStamp;
             public string SiteBody = string.Empty;
             public double SiteLat, SiteLon;
             public string ProjectId;
@@ -203,7 +207,9 @@ namespace KSA.KSP.Flight
             Vector3d hit = ScaledSpace.ScaledToLocalSpace(centre + o + d * (-along - Math.Sqrt(under)));
             double lat = b.GetLatitude(hit), lon = b.GetLongitude(hit);
             Live.HasSite = true; Live.SiteBody = b.bodyName; Live.SiteLat = lat; Live.SiteLon = lon;
+            Live.SiteStamp++;
             _pickingSite = false;
+            Live.PickingSite = false;
             Vector3d ground = b.GetWorldSurfacePosition(lat, lon, 0) - b.position;
             double sunUp = 90 - Vector3d.Angle(ground, Planetarium.fetch.Sun.position - b.position);
             double slope = LandingLeg.PatchSlope(b, lat, lon);
@@ -1266,6 +1272,7 @@ namespace KSA.KSP.Flight
             if (Live != null && _vessel != null && !Live.IsPlane && GUILayout.Button(_pickingSite ? "Right click the world in the map (click to cancel)" : Live.HasSite ? "Site " + Live.SiteLat.ToString("0.0") + ", " + Live.SiteLon.ToString("0.0") + ": pick again" : "Pick landing site"))
             {
                 _pickingSite = !_pickingSite;
+                Live.PickingSite = _pickingSite;
                 if (_pickingSite && !MapView.MapIsEnabled) MapView.EnterMapView();
             }
             if (_science != null) GUILayout.Label("Science aboard: " + Live.SciencePoints.ToString("0.#") + " (" + (_science != null ? _science.ExperimentsRun : 0) + " experiments run)");

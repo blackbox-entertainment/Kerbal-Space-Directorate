@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.97 (2026-10-31), test build
+
+- **Pick the site from orbit.** The crew holds its deorbit while the Director is picking, and plans again for any new site chosen before the burn.
+
 ## 0.8.96 (2026-10-31), test build
 
 - **Pick landing site.** A button in the Flight Director opens the map; a short right click on the world marks the site and shows its slope and sun. The crew times the deorbit for it, then finds the flattest ground near the click, sliding up to 4 km. It only reaches ground its orbit crosses: no plane change yet, and no guided descent, so 1 km is not promised.
