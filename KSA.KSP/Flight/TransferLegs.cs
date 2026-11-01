@@ -288,6 +288,8 @@ namespace KSA.KSP.Flight
             _plan = null;
             ManeuverNode n = null;
             string blocked = null;
+            bool reaches = false;
+            int refined = 0;
             for (int wait = 0; wait < MaxWaitOrbits; wait++)
             {
                 double from = now + 120 + wait * period;
@@ -304,11 +306,25 @@ namespace KSA.KSP.Flight
                 if (n == null) { Fail("could not place the transfer node"); return null; }
                 _plan = plan;
                 blocked = WorldInTheWay(n, parent);
-                if (blocked == null) break;
+                if (blocked != null) continue;
+                if (!double.IsNaN(NodePlanner.PeriapsisAt(n, _target))) { reaches = true; break; }
+                if (refined++ >= MaxRefines) continue;
+                // The sums aim at the moon, but the game's own path decides: trim the burn until it shows the encounter.
+                Vector3d comps = n.DeltaV;
+                NodePlanner.ClearNodes(v);
+                comps = Refine(v, plan.DepartureUt, comps, plan.TimeOfFlight);
+                n = NodePlanner.Add(v, plan.DepartureUt, comps);
+                if (n == null) { Fail("could not place the transfer node"); return null; }
+                if (!double.IsNaN(NodePlanner.PeriapsisAt(n, _target)) && WorldInTheWay(n, parent) == null) { reaches = true; break; }
             }
-            if (_plan == null) { Fail("no transfer to " + _target.bodyName + " found from this orbit"); return "Transfer planning failed: no solution."; }
+            // No encounter, no burn (2026-10-31: three Minmus burns flew plans the game never showed reaching it, and the fuel went on nothing).
+            if (!reaches)
+            {
+                NodePlanner.ClearNodes(v);
+                Fail("no path to " + _target.bodyName + " from this orbit");
+                return "No burn: no path found that reaches " + _target.bodyName + (blocked != null ? " clear of " + blocked : string.Empty) + " within " + MaxWaitOrbits + " orbits. Holding in orbit; Director, your call.";
+            }
             _plannedApR = n.nextPatch != null && n.nextPatch.eccentricity < 1 ? n.nextPatch.ApR : double.PositiveInfinity;
-            if (blocked != null) ctx.Say(blocked + " is on every path to " + _target.bodyName + " for " + MaxWaitOrbits + " orbits; going anyway.");
             double predicted = NodePlanner.PeriapsisAt(n, _target);
             _exec = new NodeExecutor { CutOff = FarEnough };
             _exec.Begin(ctx);
@@ -316,7 +332,7 @@ namespace KSA.KSP.Flight
             _phase = Phases.Burn;
             Status = "Transfer burn in " + TransferSupport.Countdown(_plan.DepartureUt - now) + ".";
             string pe = double.IsNaN(predicted) ? "no encounter in the node prediction yet" : "predicted periapsis " + TransferSupport.Km(predicted);
-            return "Transfer planned: " + Math.Round(_plan.DeltaVMagnitude) + " m/s at " + TransferSupport.Date(_plan.DepartureUt)
+            return "Transfer planned: " + Math.Round(n.DeltaV.magnitude) + " m/s at " + TransferSupport.Date(_plan.DepartureUt)
                 + ", flight time " + TransferSupport.Countdown(_plan.TimeOfFlight) + " (" + pe + ", target " + TransferSupport.Km(_arrivalPe) + ").";
         }
 
@@ -331,6 +347,42 @@ namespace KSA.KSP.Flight
             return null;
         }
 
+        /// <summary>Closest the path after a node comes to the target, metres; 0 when the game shows the encounter.</summary>
+        private double Miss(ManeuverNode n, double ut, double seconds)
+        {
+            if (!double.IsNaN(NodePlanner.PeriapsisAt(n, _target))) return 0;
+            if (n.nextPatch == null) return double.PositiveInfinity;
+            double best = double.PositiveInfinity;
+            for (int i = 1; i <= 240; i++)
+            {
+                double t = ut + seconds * i / 240;
+                best = Math.Min(best, (OrbitAdapter.StateAt(n.nextPatch, t).Position - OrbitAdapter.StateAt(_target.orbit, t).Position).Length);
+            }
+            return best;
+        }
+
+        /// <summary>Trims a burn along each axis, large steps to small, until the path meets the target or stops getting closer.</summary>
+        private Vector3d Refine(Vessel v, double ut, Vector3d comps, double tof)
+        {
+            double seconds = tof * 1.5;
+            double best = TransferSupport.Trial(v, ut, comps, n => Miss(n, ut, seconds));
+            Vector3d[] axes = { new Vector3d(1, 0, 0), new Vector3d(-1, 0, 0), new Vector3d(0, 1, 0), new Vector3d(0, -1, 0), new Vector3d(0, 0, 1), new Vector3d(0, 0, -1) };
+            foreach (double step in new[] { 40.0, 15.0, 5.0, 1.5, 0.5 })
+                for (int pass = 0; pass < 4 && best > 0; pass++)
+                {
+                    bool better = false;
+                    foreach (Vector3d axis in axes)
+                    {
+                        Vector3d next = comps + axis * step;
+                        double miss = TransferSupport.Trial(v, ut, next, n => Miss(n, ut, seconds));
+                        if (!double.IsNaN(miss) && miss < best) { best = miss; comps = next; better = true; if (best <= 0) break; }
+                    }
+                    if (!better) break;
+                }
+            return comps;
+        }
+
+        private const int MaxRefines = 8;
         private const int MaxWaitOrbits = 40;
         private double _plannedApR;
 

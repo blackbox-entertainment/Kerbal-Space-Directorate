@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.100 (2026-10-31), test build
+
+- **No encounter, no burn.** A transfer burns only when the game shows the path reaching the target. If the plan misses, the crew trims it, tries later orbits, and otherwise stays in orbit with its fuel and tells the Director.
+
 ## 0.8.99 (2026-10-31), test build
 
 - **Transfer burns finish the plan.** The stop at the moon's orbit could cut a burn short when the planned path itself ran past the moon; it now allows for the plan.
