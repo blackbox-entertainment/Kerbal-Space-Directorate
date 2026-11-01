@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.87 (2026-10-31), test build
+
+- **The side-step starts at 2 km and stops first.** From 400 m a weak lander could not stop, and it slid into the slope. It now checks the ground at 2 km, brakes to a hover, then slides at least 200 m up.
+
 ## 0.8.86 (2026-10-31), test build
 
 - **Landing sites are judged on a 1 km patch,** down from 4 km, so a crater floor can count as flat. The look at 400 m now reaches 1 km.

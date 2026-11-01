@@ -69,11 +69,13 @@ namespace KSA.KSP.Flight
         private const int SiteOrbits = 8;           // orbits searched: the world turns under the orbit, so each one crosses new ground (one orbit offered only 9%, 2026-10-31)
         private const int MaxSearches = 3;          // searches before the crew gives the landing up
         private const double SteepStepAllowance = 2.5; // one steep step counts this much less than a tilt of the whole patch: the look at 400 m deals with those
-        private const double SideStepAt = 400;      // metres above terrain: look at the ground here
+        private const double SideStepAt = 2000;     // metres above terrain: look at the ground here, with room for a weak engine to stop from 60 m/s
+        private const double SideStepFloor = 200;   // metres: hold at least this high while sliding
+        private const double SideStepStopped = 8;   // m/s down at most before sliding
         private const double SideStepCell = 100;    // metres between height samples
         private const double SideStepSpeed = 15;    // m/s across the ground at most
         private const double SideStepDone = 25;     // metres from the spot
-        private const double SideStepLimit = 120;   // seconds, then down anyway
+        private const double SideStepLimit = 180;   // seconds, stopping included, then down anyway
         private const double SiteSpacing = 250;     // metres between height samples: a 1 km patch (T), small enough for a crater floor
         private const double GoodSlope = 0.03;      // height change across the site, wanted (T; a 5% site held but leaned, the 15% one tipped the lander)
         private const double FairSlope = 0.07;      // accepted when an orbit has nothing flatter
@@ -85,7 +87,7 @@ namespace KSA.KSP.Flight
         private readonly double _maxSlope;
         private Phases _phase;
         private double _phaseStart;
-        private const double DescentWarpFloor = 2000; // back to real time below this height above terrain
+        private const double DescentWarpFloor = 3000; // back to real time below this height above terrain
         private const double UpHoldBelow = 300;       // straight up below this height above terrain
         private const double UpHoldSpeed = 10;        // or below this surface speed, where the retrograde marker wanders
         private double _lastAttitudeLog;
@@ -523,7 +525,8 @@ namespace KSA.KSP.Flight
 
             double hSpeed = v.horizontalSrfSpeed;
             double descentRate = -v.verticalSpeed;
-            double target = _stepping ? 0 : DescentMath.TargetDescentSpeed(above); // height held during a side-step
+            // Height held during a side-step, climbing a little if the ground rises towards it.
+            double target = _stepping ? (above < SideStepFloor ? -5 : 0) : DescentMath.TargetDescentSpeed(above);
 
             if (!_gearDown && above < 500) { _gearDown = true; c.Gear(true); c.Lights(true); ctx.Say("Gear down, lights on at " + Math.Round(above) + " m."); }
 
@@ -604,7 +607,8 @@ namespace KSA.KSP.Flight
             Vector3d up = v.upAxis;
             Vector3d vel = v.srf_velocity;
             Vector3d side = vel - up * Vector3d.Dot(vel, up);
-            if (_stepping)
+            // Stop first, then slide (2026-10-31: sliding while still falling hit the slope at 13 m/s sideways, 18 m up).
+            if (_stepping && Math.Abs(v.verticalSpeed) < SideStepStopped)
             {
                 Vector3d to = HorizontalTo(v);
                 side -= to.normalized * Math.Min(SideStepSpeed, to.magnitude / 5);
