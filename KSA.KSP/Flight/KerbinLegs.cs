@@ -180,8 +180,8 @@ namespace KSA.KSP.Flight
                         if (c.IsWarping && v.orbit.timeToAp - halfBurn < 30) c.StopWarp();
                         Status = "Coasting to apoapsis; circularisation burn in " + Math.Max(0, Math.Round(v.orbit.timeToAp - halfBurn)) + " s.";
                         // Burn centred on apoapsis, or at once if already past it (the Director handed back on the way down).
-                        // A low apoapsis: from 80 km on the way up, not half a burn before the top (2026-10-31, T: "the burn can start
-                        // probably around 80km"; from 75 km it reached 140 x 75 km).
+                        // A low apoapsis: from 75 km on the way up, not half a burn before the top (2026-10-31, T: "at 75km on the way up
+                        // we should be burning"; flown: 140 x 75 km at T+6 with 4,250 m/s left. 80 km was tried and dropped unflown, 0.8.57).
                         bool lowTop = !_roundOut && v.orbit.ApA < atmo + LowApoapsis && alt >= atmo + LowBurnStart;
                         if (v.orbit.timeToAp <= Math.Max(5, halfBurn) || lowTop || (v.verticalSpeed < 0 && !_roundOut))
                         {
@@ -344,7 +344,7 @@ namespace KSA.KSP.Flight
         internal const double RoundOutBelowAir = 5000;
         /// <summary>An apoapsis under this height above the air burns from LowBurnStart above the air on the way up (T: 85, 90, 92 km).</summary>
         internal const double LowApoapsis = 40000;
-        internal const double LowBurnStart = 10000;
+        internal const double LowBurnStart = 5000;
         /// <summary>How far past the target the apoapsis may go while the circularisation burn is still lifting the periapsis.</summary>
         internal const double ApoapsisRunaway = 500000;
         /// <summary>Seconds to the top of the climb: at this or less the nose holds the rocket up, at TopAheadEasy it follows the program.</summary>
