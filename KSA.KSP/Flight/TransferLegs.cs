@@ -448,7 +448,7 @@ namespace KSA.KSP.Flight
         }
 
         private const double StartedWithin = 120; // seconds before a node: its burn may already be running
-        private const double NearWindowDays = 10;
+        private const double NearWindowDays = 30;
         private const double NearWindowPrice = 1.3; // of the best excess speed in the cycle
         private const double MaxParkingApoapsis = 130000;
         private const double LowParkingApoapsis = 110000;

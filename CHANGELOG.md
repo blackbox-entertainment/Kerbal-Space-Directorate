@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.151 (2026-11-01), test build
+
+- **The mission list shows the window the crew will really take.** It looks for a window in the next 30 days costing up to 30% more, as the crew does, instead of the cheapest date in the whole cycle. The crew now looks 30 days ahead too.
+
 ## 0.8.150 (2026-11-01), test build
 
 - **Window dates survive a load.** After loading an earlier save the mission list showed dates from the later game, thousands of days out.

@@ -7,6 +7,7 @@ namespace KSA.KSP.Flight
     /// <summary>The next transfer window from the home planet, by the same search the crew flies (InterplanetaryTransferLeg).</summary>
     internal static class TransferWindows
     {
+        private const double NearDays = 30, NearPrice = 1.3;
         private static readonly Dictionary<string, KeyValuePair<double, double>> Cache = new Dictionary<string, KeyValuePair<double, double>>();
 
         /// <summary>Days out, a wait for the way home and back, by the sums, or NaN for the home planet's own system.</summary>
@@ -45,6 +46,10 @@ namespace KSA.KSP.Flight
             TransferPlan plan = TransferPlanner.Plan(OrbitAdapter.Sampler(home.orbit), OrbitAdapter.Sampler(planet.orbit), sun.gravParameter,
                 now + day, now + 1.1 * synodic, 0.5 * flight, 1.6 * flight, 60, 30, 0.5);
             if (plan == null) return double.NaN;
+            // The same choice the crew makes (InterplanetaryTransferLeg): a window close by beats a slightly cheaper one years off (2026-11-01: 9 days shown as 914).
+            TransferPlan near = TransferPlanner.Plan(OrbitAdapter.Sampler(home.orbit), OrbitAdapter.Sampler(planet.orbit), sun.gravParameter,
+                now + 600, now + NearDays * day, 0.5 * flight, 1.6 * flight, 40, 30, 0.5);
+            if (near != null && near.DeltaVMagnitude <= plan.DeltaVMagnitude * NearPrice) plan = near;
             Cache[planet.bodyName] = new KeyValuePair<double, double>(plan.DepartureUt, now);
             return (plan.DepartureUt - now) / day;
         }
