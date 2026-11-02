@@ -60,44 +60,14 @@ namespace KSA.KSP.Flight
             AutoRcs();
         }
 
-        // ------------------------------------------------------------------ automatic RCS
-        // The crew uses RCS the way a pilot would (2026-10-28): in space, while the craft is turning or tumbling, so the
-        // thrusters help the reaction wheels; off again once it is steady, to save monopropellant. Only RCS this code
-        // switched on is switched off; a leg that sets RCS itself (docking) owns it until it lets go.
+        // ------------------------------------------------------------------ RCS
+        // Thrusters are for docking only (0.8.164, T: "rcs was only supposed to be used for docking"). Until then the crew
+        // had switched them on to help the reaction wheels through every turn in space, and aligning one 23 m/s burn on the
+        // way to the tanker spent 13 of the 40 monopropellant the dock needed. The docking leg owns them through Rcs().
 
-        private bool _autoRcs, _rcsOwnedByLeg;
-        private double _rcsCheckAt = -1, _rcsSteadySince = -1;
-        private bool _hasRcsCached;
+        private bool _rcsOwnedByLeg;
 
-        private void AutoRcs()
-        {
-            if (_v == null || _rcsOwnedByLeg) return;
-            double now = Now;
-            if (_rcsCheckAt < 0 || now - _rcsCheckAt > 2) { _hasRcsCached = HasRcs(); _rcsCheckAt = now; }
-            if (!_hasRcsCached) return;
-            bool inSpace = !_v.mainBody.atmosphere || _v.altitude > _v.mainBody.atmosphereDepth * 0.9;
-            bool sasWorking = _v.ActionGroups[KSPActionGroup.SAS] || _manualHold;
-            double rate = _v.angularVelocity.magnitude;
-            double err = 0;
-            if (sasWorking && _mode != VesselAutopilot.AutopilotMode.StabilityAssist)
-            {
-                Vector3d? t = HoldTarget();
-                if (t.HasValue && t.Value.magnitude > 1e-6) err = AttitudeError(t.Value);
-            }
-            bool want = inSpace && sasWorking && (rate > 0.05 || err > 5);
-            bool on = _v.ActionGroups[KSPActionGroup.RCS];
-            if (want)
-            {
-                _rcsSteadySince = -1;
-                if (!on) { _v.ActionGroups.SetGroup(KSPActionGroup.RCS, true); _autoRcs = true; }
-            }
-            else if (_autoRcs && on)
-            {
-                // Steady for two seconds (or back in the air): thrusters off.
-                if (_rcsSteadySince < 0) _rcsSteadySince = now;
-                if (now - _rcsSteadySince > 2 || !inSpace) { _v.ActionGroups.SetGroup(KSPActionGroup.RCS, false); _autoRcs = false; _rcsSteadySince = -1; }
-            }
-        }
+        private void AutoRcs() { }
 
         // ------------------------------------------------------------------ manual attitude hold
         // Stock SAS only offers prograde/retrograde/maneuver holds to pilots with at least one star (or a capable probe core).
@@ -342,7 +312,7 @@ namespace KSA.KSP.Flight
         }
 
         /// <summary>A leg takes RCS over (true) or hands it back to the automatic use (false).</summary>
-        public void Rcs(bool on) { if (_v != null) _v.ActionGroups.SetGroup(KSPActionGroup.RCS, on); _rcsOwnedByLeg = on; _autoRcs = false; }
+        public void Rcs(bool on) { if (_v != null) _v.ActionGroups.SetGroup(KSPActionGroup.RCS, on); _rcsOwnedByLeg = on; }
         public void Gear(bool down) { if (_v != null) _v.ActionGroups.SetGroup(KSPActionGroup.Gear, down); }
         public void Lights(bool on) { if (_v != null) _v.ActionGroups.SetGroup(KSPActionGroup.Light, on); }
 
