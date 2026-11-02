@@ -26,6 +26,13 @@ namespace KSA.Core
             return "waiting for the " + type.Body + " window, " + Math.Ceiling(d).ToString("0") + " days away";
         }
 
+        /// <summary>True while anyone at all is on the staff.</summary>
+        private bool HasActiveCrew()
+        {
+            foreach (Personnel.CrewProfile c in Crew.Active) return true;
+            return false;
+        }
+
         /// <summary>Why this project waits for its window, or null.</summary>
         public string WindowBlocker(Project p)
         {

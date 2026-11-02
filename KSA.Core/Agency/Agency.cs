@@ -614,7 +614,7 @@ namespace KSA.Core
 
         public bool HiringAllowed(out string reason)
         {
-            if (State.HiringFreeze) { reason = "Hiring is frozen until the next Government Review."; return false; }
+            if (State.HiringFreeze && HasActiveCrew()) { reason = "Hiring is frozen until the next Government Review."; return false; } // an agency with nobody left must be able to start again
             if (State.PendingLayoffs > 0) { reason = "The government requires " + State.PendingLayoffs + " layoff(s) before any hiring."; return false; }
             reason = string.Empty;
             return true;

@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.142 (2026-11-01), test build
+
+- **Mission reports wait for the end of a warp.** They no longer open during time warp.
+- **An empty agency can hire.** With nobody left on the staff, a hiring freeze no longer blocks recruiting.
+
 ## 0.8.141 (2026-11-01), test build
 
 - **A far pass gets a real correction.** An encounter passing far out is now fixed with a fresh transfer out around the sun; Duna had been passed at 25,334 km and captured there for 1,455 m/s.

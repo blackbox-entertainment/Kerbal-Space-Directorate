@@ -24,6 +24,7 @@ namespace KSA.KSP.UI
         private void Update()
         {
             if (Pending.Count == 0 || _dialog != null) return;
+            if (TimeWarp.CurrentRate > 1.01f) { _showAt = -1f; return; } // reports wait for the end of a warp (2026-11-01, T)
             if (HighLogic.LoadedScene != GameScenes.SPACECENTER && HighLogic.LoadedScene != GameScenes.TRACKSTATION) { _showAt = -1f; return; }
             // A moment after the scene settles, so the report opens on top of the stock recovery screen.
             if (_showAt < 0) { _showAt = Time.realtimeSinceStartup + 1.5f; return; }
