@@ -68,6 +68,29 @@ namespace KSA.KSP.Flight
         }
 
         /// <summary>Our tanks that went up empty (under 1% full): the ones the depot fills.</summary>
+        /// <summary>Our tanks grouped by stage, top stage first, without a spent booster (under 10% full) that is still attached.</summary>
+        public static List<List<Part>> StageGroups(FlightContext ctx)
+        {
+            var byStage = new SortedDictionary<int, List<Part>>();
+            foreach (Part p in OwnParts(ctx))
+            {
+                bool hasFuel = false;
+                foreach (PartResource r in p.Resources) if (IsPropellant(r) && r.maxAmount > 0) hasFuel = true;
+                if (!hasFuel) continue;
+                List<Part> list;
+                if (!byStage.TryGetValue(p.inverseStage, out list)) byStage[p.inverseStage] = list = new List<Part>();
+                list.Add(p);
+            }
+            var groups = new List<List<Part>>(byStage.Values);
+            if (groups.Count > 1)
+            {
+                List<Part> lowest = groups[groups.Count - 1];
+                double cap = Tonnes(lowest, true);
+                if (cap > 0 && Tonnes(lowest) < 0.1 * cap) groups.RemoveAt(groups.Count - 1);
+            }
+            return groups;
+        }
+
         public static List<Part> EmptyTanks(FlightContext ctx)
         {
             var list = new List<Part>();
@@ -254,7 +277,11 @@ namespace KSA.KSP.Flight
             double before = DepotOps.Tonnes(depot);
             foreach (string res in DepotOps.Propellants) DepotOps.Move(res, depot, tanks, double.MaxValue);
             // A tanker sent ahead fills everything; a depot's fuel is rationed to the tanks that launched empty.
-            if (ctx.ReportDepot == null) foreach (string res in DepotOps.Propellants) DepotOps.Move(res, depot, DepotOps.OwnParts(ctx), double.MaxValue);
+            // Top stages first (0.8.167): the lander before the drop tanks before anything lower; a nearly spent booster
+            // still hanging under the ship gets nothing (the Mk IIe core had 48 t of room and would have taken the station dry).
+            if (ctx.ReportDepot == null)
+                foreach (List<Part> group in DepotOps.StageGroups(ctx))
+                    foreach (string res in DepotOps.Propellants) DepotOps.Move(res, depot, group, double.MaxValue);
             double taken = before - DepotOps.Tonnes(depot);
             DepotOps.Report(ctx);
             double room = DepotOps.Tonnes(tanks, true) - DepotOps.Tonnes(tanks);

@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.167 (2026-11-02), test build
+
+- **Refuelling fills the top stages first.** After the tanks that launched empty, a tanker tops up stage by stage from the top, and a nearly spent booster still attached gets nothing. The Mk IIe core, 48 t of room with 144 m/s left in it, would have taken most of the station.
+
 ## 0.8.166 (2026-11-02), test build
 
 - **RCS only for the last few hundred metres** (T). The rendezvous now pushes on the main engine to a point 200 m short of the station, within 300 m and 2 m/s, before the docking leg takes over on thrusters; the approach on RCS is capped at 2 m/s. It had handed over at 2.5 km and 10 m/s, and 40 monopropellant did not cover it.
