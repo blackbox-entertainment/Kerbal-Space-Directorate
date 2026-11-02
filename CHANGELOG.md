@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.129 (2026-11-01), test build
+
+- **Help: stiffening and tumbling.** Troubleshooting now explains Autostrut, Rigid Attachment, fin placement and the booster thrust limiter.
+
 ## 0.8.128 (2026-11-01), test build
 
 - **The Director works after a revert.** A flight that the reverted save knows nothing about is forgotten, so the rocket on the pad gets its mission list.
