@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.139 (2026-11-01), test build
+
+- **A window just closing is still a window.** After reaching orbit the crew takes a transfer in the next 10 days if it costs up to 30% more excess speed, instead of the cheapest date, which could be two years off.
+
 ## 0.8.138 (2026-11-01), test build
 
 - **The window days count down.** The days on the mission buttons update as time passes, with the Projects window open.

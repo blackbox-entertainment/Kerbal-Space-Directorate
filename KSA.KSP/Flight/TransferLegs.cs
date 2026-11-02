@@ -448,6 +448,8 @@ namespace KSA.KSP.Flight
         }
 
         private const double StartedWithin = 120; // seconds before a node: its burn may already be running
+        private const double NearWindowDays = 10;
+        private const double NearWindowPrice = 1.3; // of the best excess speed in the cycle
         private const double MaxParkingApoapsis = 130000;
         private const double LowParkingApoapsis = 110000;
 
@@ -583,6 +585,15 @@ namespace KSA.KSP.Flight
             }
             catch (Exception e) { KsaCore.Log.Error("InterplanetaryTransferLeg planner threw: " + e); plan = null; }
             if (plan == null) { Fail("no transfer window to " + _target.bodyName + " found"); return "Transfer planning failed: no window found."; }
+            // The cheapest date in a whole cycle can be the next window when this one is only hours off or just gone: a little more burn now beats
+            // two more years in orbit (2026-11-01, T: launched on a good window, reached orbit and was told 913 days).
+            if (plan.DepartureUt - now > NearWindowDays * day)
+            {
+                TransferPlan near = null;
+                try { near = TransferPlanner.Plan(OrbitAdapter.Sampler(_origin.orbit), OrbitAdapter.Sampler(_target.orbit), sunMu, now + 600, now + NearWindowDays * day, 0.5 * hohmannTime, 1.6 * hohmannTime, 40, 30, 0.5); }
+                catch (Exception e) { KsaCore.Log.Error("InterplanetaryTransferLeg near search threw: " + e); }
+                if (near != null && near.DeltaVMagnitude <= plan.DeltaVMagnitude * NearWindowPrice) plan = near;
+            }
 
             // Hyperbolic excess relative to the planet, in the same frame as the parking orbit.
             Vec3 vInf = plan.DeltaV;
