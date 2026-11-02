@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.130 (2026-11-01), test build
+
+- **The parking orbit stays out of the radiation belt.** The circularisation burn now stops when the apoapsis runs 40 km past the target with the periapsis nearly clear of the air, and finishes at apoapsis. A strong engine had pushed the orbit to 390 x 75 km, and with Kerbalism the crew died during the wait for the Duna window.
+- **No long wait in the belt.** With Kerbalism, a flight whose orbit reaches over 200 km holds for the Director instead of warping to a window more than two days away.
+
 ## 0.8.129 (2026-11-01), test build
 
 - **Help: stiffening and tumbling.** Troubleshooting now explains Autostrut, Rigid Attachment, fin placement and the booster thrust limiter.

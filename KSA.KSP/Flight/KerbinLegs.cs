@@ -198,7 +198,10 @@ namespace KSA.KSP.Flight
                     if (c.IsWarping && TimeWarp.WarpMode != TimeWarp.Modes.LOW) { c.StopWarp(); c.Throttle = 0; Status = "Circularising: coming out of time warp."; break; }
                     // 5 km past apoapsis with the periapsis up to 65 km: stop and finish at the next apoapsis, where it costs next to
                     // nothing (2026-10-31, T: "5km past ap and at like 60km or 65km then we wait to near next ap to round out").
-                    if (v.orbit.PeA >= atmo - RoundOutBelowAir && v.orbit.PeA <= atmo + OrbitPeMargin && v.verticalSpeed < 0 && alt < v.orbit.ApA - PastApoapsis)
+                    // Or the top of the orbit is running away: the last few km of periapsis cost hundreds of apoapsis this low (2026-11-01: 246 x 70 went
+                    // to 390 x 75 km for 5 km, up into the radiation belt, and the crew died waiting for the window). The apoapsis burn finishes it for 2 m/s.
+                    bool runningAway = v.orbit.PeA >= atmo - RoundOutBelowAir && v.orbit.PeA <= atmo + OrbitPeMargin && v.orbit.ApA > _targetAp + ParkingOvershoot;
+                    if (runningAway || (v.orbit.PeA >= atmo - RoundOutBelowAir && v.orbit.PeA <= atmo + OrbitPeMargin && v.verticalSpeed < 0 && alt < v.orbit.ApA - PastApoapsis))
                     {
                         c.Throttle = 0;
                         _phase = Phases.Coast; _phaseStart = ctx.Now;
@@ -343,6 +346,7 @@ namespace KSA.KSP.Flight
         /// <summary>Past apoapsis by this much, a periapsis within RoundOutBelowAir of the air waits for the next apoapsis.</summary>
         internal const double PastApoapsis = 5000;
         internal const double RoundOutBelowAir = 5000;
+        internal const double ParkingOvershoot = 40000;
         /// <summary>An apoapsis under this height above the air burns from LowBurnStart above the air on the way up (T: 85, 90, 92 km).</summary>
         internal const double LowApoapsis = 40000;
         internal const double LowBurnStart = 5000;

@@ -448,6 +448,7 @@ namespace KSA.KSP.Flight
         }
 
         private const double StartedWithin = 120; // seconds before a node: its burn may already be running
+        private const double MaxParkingApoapsis = 200000;
 
         /// <summary>
         /// Closest the path after a burn comes to the target, metres; 0 when it passes inside the target's sphere. All by the two-body sums:
@@ -601,6 +602,13 @@ namespace KSA.KSP.Flight
             }
             if (bestAngle > 1.0 * Math.PI / 180) KsaCore.Log.Warn("Ejection point only matched to " + Math.Round(bestAngle * 180 / Math.PI, 2) + " degrees.");
 
+            // A long wait high up is a dose of radiation with Kerbalism: hold for the Director rather than warp through it (2026-11-01: 390 x 75 km, all three dead in 17 days).
+            if (KsaCore.Agency != null && KsaCore.Agency.LifeSupportOn && v.orbit.ApA > MaxParkingApoapsis && bestUt - now > 2 * day)
+            {
+                NodePlanner.ClearNodes(v);
+                Fail("the orbit reaches " + TransferSupport.Km(v.orbit.ApA) + ", into the radiation belt, with " + TransferSupport.Countdown(bestUt - now) + " to wait");
+                return "Holding: apoapsis " + TransferSupport.Km(v.orbit.ApA) + " is in the radiation belt and the window is " + TransferSupport.Countdown(bestUt - now) + " away. Director, lower it to about 150 km.";
+            }
             double dv = Ejection.DeltaV(planetMu, r, vInfMag);
             NodePlanner.ClearNodes(v);
             // The sums aim in the parking orbit's plane and ignore the days to the edge of the sphere: trim against the game's own path
