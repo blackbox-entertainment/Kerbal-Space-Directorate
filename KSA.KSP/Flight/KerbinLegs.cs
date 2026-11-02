@@ -200,7 +200,7 @@ namespace KSA.KSP.Flight
                     // nothing (2026-10-31, T: "5km past ap and at like 60km or 65km then we wait to near next ap to round out").
                     // Or the top of the orbit is running away: the last few km of periapsis cost hundreds of apoapsis this low (2026-11-01: 246 x 70 went
                     // to 390 x 75 km for 5 km, up into the radiation belt, and the crew died waiting for the window). The apoapsis burn finishes it for 2 m/s.
-                    bool runningAway = v.orbit.PeA >= atmo - RoundOutBelowAir && v.orbit.PeA <= atmo + OrbitPeMargin && v.orbit.ApA > _targetAp + ParkingOvershoot;
+                    bool runningAway = !_roundOut && v.orbit.PeA >= atmo - RoundOutBelowAir && v.orbit.PeA <= atmo + OrbitPeMargin && v.orbit.ApA > _targetAp + ParkingOvershoot;
                     if (runningAway || (v.orbit.PeA >= atmo - RoundOutBelowAir && v.orbit.PeA <= atmo + OrbitPeMargin && v.verticalSpeed < 0 && alt < v.orbit.ApA - PastApoapsis))
                     {
                         c.Throttle = 0;

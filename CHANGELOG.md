@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.131 (2026-11-01), test build
+
+- **The round-out burn burns.** The runaway rule from 0.8.130 cancelled the small burn at apoapsis as soon as it started, so the crew coasted on through the top of the air.
+
 ## 0.8.130 (2026-11-01), test build
 
 - **The parking orbit stays out of the radiation belt.** The circularisation burn now stops when the apoapsis runs 40 km past the target with the periapsis nearly clear of the air, and finishes at apoapsis. A strong engine had pushed the orbit to 390 x 75 km, and with Kerbalism the crew died during the wait for the Duna window.
