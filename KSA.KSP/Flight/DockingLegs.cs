@@ -75,6 +75,7 @@ namespace KSA.KSP.Flight
         private bool _phased;
         private double _phaseEnd;
         private int _closes;
+        private int _raises;
         private double _raiseTo;
 
         public string Name { get { return "Rendezvous"; } }
@@ -343,10 +344,30 @@ namespace KSA.KSP.Flight
                 case Phases.MatchPlan:
                     {
                         if (now >= _arrivalUt - 5) { _phase = Phases.Check; break; }
+                        // Match where the paths really come closest (0.8.174): a short intercept burn left the ship 48 km from the
+                        // station at the planned time, and a "match" there was 145 m/s that put the periapsis 596 km underground.
+                        double caUt, caDist;
+                        ClosestApproach(v, now, _arrivalUt + 600, out caUt, out caDist);
+                        if (caDist > CloseRange || caUt <= now + 5)
+                        {
+                            _phase = Phases.Check;
+                            line = "Closest approach is " + Math.Round(caDist / 1000) + " km, not a meeting; replanning.";
+                            break;
+                        }
+                        _arrivalUt = caUt;
                         Vec3 dv = MatchDeltaV(v);
                         if (dv.Length < 0.5) { _phase = Phases.Check; break; }
                         NodePlanner.ClearNodes(v);
-                        if (NodePlanner.AddFrameDeltaV(v, _arrivalUt, dv) == null) { Fail("maneuver nodes unavailable", ctx); break; }
+                        ManeuverNode match = NodePlanner.AddFrameDeltaV(v, _arrivalUt, dv);
+                        if (match == null) { Fail("maneuver nodes unavailable", ctx); break; }
+                        double airTop = v.mainBody.atmosphere ? v.mainBody.atmosphereDepth : 0;
+                        if (match.nextPatch != null && match.nextPatch.PeA < airTop + 5000)
+                        {
+                            NodePlanner.ClearNodes(v);
+                            _phase = Phases.Check;
+                            line = "A velocity match here would drop the periapsis into the air; replanning.";
+                            break;
+                        }
                         _burn = new NodeExecutor();
                         _burn.Begin(ctx);
                         if (_burn.Failed) { Fail(_burn.FailReason, ctx); break; }
@@ -363,12 +384,22 @@ namespace KSA.KSP.Flight
                         c.Throttle = 0;
                         double dist = StationOps.Distance(v, _target);
                         double speed = StationOps.RelativeVelocity(v, _target).magnitude;
+                        double airAbove = v.mainBody.atmosphere ? v.mainBody.atmosphereDepth : 0;
                         if (dist < DoneDistance && speed < DoneSpeed)
                         {
                             Status = "Alongside " + StationOps.NameOf(_target) + ".";
                             line = "Rendezvous: " + Math.Round(dist) + " m from " + StationOps.NameOf(_target) + ", closing at " + speed.ToString("0.0") + " m/s.";
                             ctx.Say(line, "Rendezvous:" + StationOps.BodyOf(v));
                             State = LegState.Done;
+                        }
+                        else if (v.orbit.PeA < airAbove + 5000 && v.orbit.ApA > airAbove + 5000 && _raises < 2)
+                        {
+                            // A burn left the periapsis in the air (0.8.174): raise it before any other plan, or the next intercept is from a falling ship.
+                            _raises++;
+                            _raiseTo = airAbove + 15000;
+                            _phase = Phases.RaisePlan;
+                            Status = "Periapsis in the air; raising it first.";
+                            line = "Periapsis " + Math.Round(v.orbit.PeA / 1000) + " km is in the air; raising it before another try.";
                         }
                         else if (dist < CloseRange)
                         {
@@ -401,6 +432,23 @@ namespace KSA.KSP.Flight
         }
 
         /// <summary>Delta-v that puts our velocity onto the station's at the arrival time.</summary>
+        /// <summary>When and how close the two paths come, sampled every 10 s between the two times, then refined to the second.</summary>
+        private void ClosestApproach(Vessel v, double from, double to, out double ut, out double dist)
+        {
+            ut = from; dist = double.PositiveInfinity;
+            for (double t = from; t <= to; t += 10)
+            {
+                double d = (OrbitAdapter.StateAt(_target.orbit, t).Position - OrbitAdapter.StateAt(v.orbit, t).Position).Length;
+                if (d < dist) { dist = d; ut = t; }
+            }
+            double lo = Math.Max(from, ut - 10), hi = Math.Min(to, ut + 10);
+            for (double t = lo; t <= hi; t += 1)
+            {
+                double d = (OrbitAdapter.StateAt(_target.orbit, t).Position - OrbitAdapter.StateAt(v.orbit, t).Position).Length;
+                if (d < dist) { dist = d; ut = t; }
+            }
+        }
+
         private Vec3 MatchDeltaV(Vessel v)
         {
             return OrbitAdapter.StateAt(_target.orbit, _arrivalUt).Velocity - OrbitAdapter.StateAt(v.orbit, _arrivalUt).Velocity;

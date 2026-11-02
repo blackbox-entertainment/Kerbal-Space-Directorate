@@ -786,8 +786,14 @@ namespace KSA.KSP.Flight
             // Only over the home world, where every landing is under parachutes: a lander coasting down to Duna before its
             // landing burn keeps its descent stage.
             // A plane keeps its parts: nothing of it is a spent stage (2026-10-30).
-            if (!Live.IsPlane && !_ctx.Control.DropSpentStage(ref line) && v.mainBody.isHomeWorld) _ctx.Control.ShedForReentry(ref line);
+            bool shed = false;
+            if (!Live.IsPlane && !_ctx.Control.DropSpentStage(ref line) && v.mainBody.isHomeWorld) shed = _ctx.Control.ShedForReentry(ref line);
             if (line != null) Log(line, null);
+            // The capsule is on its own and falling (0.8.174): whatever the plan was doing is over; reentry takes it from here.
+            if (shed && _program != null && !_program.Failed && !_program.Finished && !(_program.Current is ReentryLeg) && !(_program.Current is AscentLeg))
+            {
+                if (_program.AbortTo(x => x is ReentryLeg, "falling back into the air")) Log("The flight plan is off: the capsule is coming down on its own; reentry from here.", null);
+            }
             double aboveGround = Math.Max(0, v.altitude - Math.Max(0, v.terrainAltitude));
             if (aboveGround < LastGearHeight) _ctx.Control.Gear(true); // whatever else has gone wrong (2026-11-01: out of fuel at 2 km, it landed with the legs up)
             string chute = null;

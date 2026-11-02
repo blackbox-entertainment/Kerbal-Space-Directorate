@@ -2,6 +2,13 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.174 (2026-11-02), test build
+
+- **Burns never light on rails.** The 43 m/s intercept burn of a fresh Mk IIe flight "started" while the ship was still packed under warp, counted 32 m/s of nothing, and the ship arrived 48 km from the station. The node executor now waits for the unpack before it opens the throttle and counts nothing while packed.
+- **The velocity match happens where the paths really come closest, and never into the air.** Matching the station's velocity 48 km away from it was a 145 m/s burn that put the periapsis 596 km underground. The match is now planned at the closest approach (within 25 km, else replanned), and a match that would drop the periapsis into the air is refused.
+- **A periapsis in the air is raised before any other plan.** The crew had planned a second 108 m/s intercept from a falling ship.
+- **The capsule on its own ends the plan.** When the survival net drops everything under the capsule for reentry, the program jumps to the reentry leg instead of showing "Meeting the tanker, burn in 531 s" under the parachutes.
+
 ## 0.8.173 (2026-11-02), test build
 
 - **Refuelled and left for Duna** (2026-11-02, Mk IIe): docked, 29.5 t pumped in five minutes, undocked, 1,063 m/s ejection flown to the metre. The 75 m/s deep-space correction nine days out then left Duna 12,579 km off, the leg said "complete", the coast warped 336 days to the edge of Duna's space, and no 300 m/s correction reached the air from there. The crew's retry then ran the return coast out to nowhere, because entering Duna's space had logged a flyby and the resume read that as a mission done.

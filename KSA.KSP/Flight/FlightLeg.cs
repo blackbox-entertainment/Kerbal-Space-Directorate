@@ -147,6 +147,22 @@ namespace KSA.KSP.Flight
             if (FlightInputHandler.state != null) FlightInputHandler.state.mainThrottle = throttle;
         }
 
+        /// <summary>
+        /// Ends the running leg and starts the first leg that matches (0.8.174: the survival net dropped the capsule for reentry
+        /// while the plan still said "Meeting the tanker, burn in 531 s"). Halts the program when nothing matches.
+        /// </summary>
+        public bool AbortTo(Func<IFlightLeg, bool> match, string why)
+        {
+            if (!_engaged || Failed || Finished) return false;
+            IFlightLeg l = Current;
+            if (l != null && l.State == LegState.Running) l.End(_ctx);
+            _pendingAdvance = false;
+            SkipTo(match);
+            if (!_pendingAdvance) { NoteFailure(l, why); Failed = true; _ctx.Control.Throttle = 0; _index = _legs.Count; return false; }
+            Advance();
+            return true;
+        }
+
         /// <summary>Skip to the first leg of the given type (used when resuming a saved flight in a known state).</summary>
         public void SkipTo(Func<IFlightLeg, bool> match)
         {

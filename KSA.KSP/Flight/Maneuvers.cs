@@ -236,6 +236,8 @@ namespace KSA.KSP.Flight
                     if (now >= ignition)
                     {
                         c.StopWarp();
+                        // A burn lit on rails gives no thrust (0.8.174: 43 m/s "started" under warp, 32 counted, the station missed by 48 km).
+                        if (v.packed || c.IsWarping) { Status = "Waiting for warp to end."; break; }
                         c.EnsureEngine(ref line);
                         c.Throttle = 1f;
                         _phase = Phases.Burn; _started = now;
@@ -251,6 +253,7 @@ namespace KSA.KSP.Flight
                     }
                     break;
                 case Phases.Burn:
+                    if (v.packed) { c.StopWarp(); _lastStep = now; Status = "Waiting for warp to end."; break; }
                     c.AutoStage(ref line);
                     if (line != null) { _stagedAt = now; _lastBurnVector = burn; } // a stage dropped mid-burn (0.8.165): the next engine carries on
                     bool justStaged = now - _stagedAt < 3;
