@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.145 (2026-11-01), test build
+
+- **Strong engines park low.** A low apoapsis burns from 75 km on the way up only if the engine needs that long; a strong engine waits for the top. In the simulator the Mk II ends 89 x 75 km for 197 m/s instead of about 300 x 75 km for 342 m/s, and the weak Terrier still burns early. The start rule now lives in Core (KSA-76).
+
 ## 0.8.144 (2026-11-01), test build
 
 - **Duna arrivals tested off-game.** New KSA.Core/Flight/Sim: a pass through the air, fitted to three real Duna passes, and the crew's aerobraking rules moved into Core. Every arrival from 20 to 49 km is flown in the tests. That showed passes at 36 to 40 km taking 12 laps, so a pass over 31 km is now brought down to 30 km.

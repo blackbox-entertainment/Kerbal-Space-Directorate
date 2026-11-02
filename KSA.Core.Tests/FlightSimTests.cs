@@ -37,6 +37,30 @@ namespace KSA.Core.Tests
                 }
         }
 
+        /// <summary>Mk II, 2026-11-01: from 85 km apoapsis the old rule ended near 188 km, in reach of the radiation.</summary>
+        [Test]
+        public void AStrongEngineParksLow()
+        {
+            ParkingResult old = ParkingBurn.Fly(72000, 155, 2110, 70000, 250000, 47000, 350, 85000, true);
+            ParkingResult now = ParkingBurn.Fly(72000, 155, 2110, 70000, 250000, 47000, 350, 85000, false);
+            TestContext.WriteLine("old " + Math.Round(old.ApA / 1000) + " x " + Math.Round(old.PeA / 1000) + ", " + Math.Round(old.DeltaV) + " m/s; new " + Math.Round(now.ApA / 1000) + " x " + Math.Round(now.PeA / 1000) + ", " + Math.Round(now.DeltaV) + " m/s");
+            Assert.That(old.ApA, Is.GreaterThan(120000));
+            Assert.That(now.FellBack, Is.False);
+            Assert.That(now.ApA, Is.LessThan(120000));
+            Assert.That(now.PeA, Is.GreaterThanOrEqualTo(75000));
+        }
+
+        /// <summary>A Terrier on the Mun lander: too weak to wait for the top, it still burns from 75 km.</summary>
+        [Test]
+        public void AWeakEngineStillBurnsEarly()
+        {
+            ParkingResult now = ParkingBurn.Fly(72000, 155, 2110, 70000, 60000, 32000, 345, 85000, false);
+            TestContext.WriteLine("weak " + Math.Round(now.ApA / 1000) + " x " + Math.Round(now.PeA / 1000) + ", " + Math.Round(now.Seconds) + " s");
+            Assert.That(now.FellBack, Is.False);
+            Assert.That(now.PeA, Is.GreaterThanOrEqualTo(75000));
+            Assert.That(now.ApA, Is.LessThan(250000));
+        }
+
         private static string Arrive(double ap, double pe, double air, double wanted, out bool safe)
         {
             safe = false;

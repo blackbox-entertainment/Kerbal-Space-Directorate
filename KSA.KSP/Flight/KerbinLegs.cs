@@ -182,7 +182,7 @@ namespace KSA.KSP.Flight
                         // Burn centred on apoapsis, or at once if already past it (the Director handed back on the way down).
                         // A low apoapsis: from 75 km on the way up, not half a burn before the top (2026-10-31, T: "at 75km on the way up
                         // we should be burning"; flown: 140 x 75 km at T+6 with 4,250 m/s left. 80 km was tried and dropped unflown, 0.8.57).
-                        bool lowTop = !_roundOut && v.orbit.ApA < atmo + LowApoapsis && alt >= atmo + LowBurnStart;
+                        bool lowTop = KSA.Core.Flight.Sim.ParkingRules.BurnEarly(v.orbit.ApA, alt, atmo, v.orbit.timeToAp, halfBurn * 2, _roundOut); // tested in FlightSimTests
                         if (v.orbit.timeToAp <= Math.Max(5, halfBurn) || lowTop || (v.verticalSpeed < 0 && !_roundOut))
                         {
                             _phase = Phases.Circularize; _phaseStart = ctx.Now;
