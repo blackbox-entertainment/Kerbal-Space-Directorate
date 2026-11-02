@@ -694,6 +694,25 @@ namespace KSA.KSP.Flight
         private readonly CelestialBody _returnTo;
         private double _bestReturn = double.PositiveInfinity;
         private Vessel _vessel;
+        private double _budget;
+        private int _rounds;
+        private bool _trim;
+        /// <summary>Trims after a burn that left the periapsis out of band (0.8.173: one 75 m/s burn 336 days out, 12,579 km off, "complete").</summary>
+        private const int MaxRounds = 3;
+        /// <summary>What a crew turning for home keeps back for the trims and the reentry.</summary>
+        private const double HomeReserve = 150;
+        /// <summary>A correction on the way home: it may spend the fuel aboard, not a fixed allowance, and wait for a cheaper window.</summary>
+        public bool Homebound { get; set; }
+        /// <summary>Out around the sun with no path to the target within the budget: the program turns the crew for home (0.8.173).</summary>
+        public bool GaveUp { get; private set; }
+
+        /// <summary>The fuel this correction may spend: the fixed allowance, or on the way home everything aboard but a reserve.</summary>
+        private double Budget(FlightContext ctx)
+        {
+            if (!Homebound || ctx == null || ctx.Control == null) return _maxDv;
+            double aboard = ctx.Control.DeltaVAvailable();
+            return aboard > 0 ? Math.Max(_maxDv, aboard - HomeReserve) : _maxDv;
+        }
 
         /// <summary>
         /// Where the path comes after the target: the periapsis around <paramref name="home"/>; +infinity when it leaves home's
@@ -736,6 +755,7 @@ namespace KSA.KSP.Flight
             State = LegState.Running;
             _phase = Phases.Prepare;
             _candidate = 0; _bestDv = double.NaN; _bestReturn = double.PositiveInfinity;
+            _rounds = 0; _trim = false; GaveUp = false; _budget = _maxDv;
             Status = "Checking the trajectory.";
             Vessel v = ctx.Vessel;
             if (v == null || v.orbit == null || _target == null) { State = LegState.Done; Status = "Nothing to correct."; return; }
@@ -771,6 +791,7 @@ namespace KSA.KSP.Flight
                     if (!NodePlanner.Available(v)) { State = LegState.Done; Status = "No solver; flying on."; line = "No patched-conic solver; correction skipped."; break; }
                     {
                         double current = TransferSupport.VesselPeriapsisAt(v, _target);
+                        _budget = Budget(ctx);
                         double back = _returnTo != null ? ReturnPeriapsis(v.orbit, _target, _returnTo) : double.NaN;
                         bool comesHome = _returnTo == null || double.IsNaN(back) || back < GoodReturnPe;
                         if (TransferSupport.InBand(current, _peLo, _peHi) && comesHome)
@@ -781,7 +802,8 @@ namespace KSA.KSP.Flight
                         }
                         double now = ctx.Now;
                         // No encounter, or one that passes far out: small nudges do not reach (2026-11-01: 25,334 km over Duna, then 1,455 m/s to stop there).
-                        if ((double.IsNaN(current) || current > _peHi + FarOff) && AimFromDeepSpace(ctx, ref line)) break;
+                        // After a burn the preview shows where the path goes: nudge it in, never plan a fresh transfer again.
+                        if (!_trim && (double.IsNaN(current) || current > _peHi + FarOff) && AimFromDeepSpace(ctx, ref line)) break;
                         _ut = now + 60;
                         if (TransferSupport.EndsInTransition(v.orbit) && v.orbit.EndUT > now) _ut = Math.Max(now + 60, now + 0.1 * (v.orbit.EndUT - now));
                         NodePlanner.ClearNodes(v);
@@ -801,9 +823,11 @@ namespace KSA.KSP.Flight
                         if (double.IsNaN(_bestDv))
                         {
                             State = LegState.Done;
-                            Status = "No correction within " + Math.Round(_maxDv) + " m/s; flying on.";
+                            Status = "No correction within " + Math.Round(_budget) + " m/s; flying on.";
                             double cur = TransferSupport.VesselPeriapsisAt(v, _target);
-                            line = "No correction found within " + Math.Round(_maxDv) + " m/s"
+                            // Nothing reaches the target from here: the program may turn the crew for home.
+                            GaveUp = _target.referenceBody == v.mainBody && (double.IsNaN(cur) || cur > _peHi + FarOff);
+                            line = "No correction found within " + Math.Round(_budget) + " m/s"
                                 + (double.IsNaN(cur) ? "; no " + _target.bodyName + " encounter on the current path." : "; continuing with periapsis " + TransferSupport.Km(cur) + ".");
                             break;
                         }
@@ -822,9 +846,18 @@ namespace KSA.KSP.Flight
                 case Phases.Burn:
                     if (TransferSupport.PumpExecutor(_exec, ctx, ref line))
                     {
-                        _phase = Phases.Finished;
                         double pe = TransferSupport.VesselPeriapsisAt(v, _target);
                         string peText = double.IsNaN(pe) ? "no " + _target.bodyName + " encounter predicted" : "predicted " + _target.bodyName + " periapsis " + TransferSupport.Km(pe);
+                        // Out of band with the encounter showing: trim again while the lever arm is long (0.8.173).
+                        if (!_exec.Failed && !double.IsNaN(pe) && !TransferSupport.InBand(pe, _peLo, _peHi) && _rounds < MaxRounds)
+                        {
+                            _rounds++; _trim = true;
+                            _phase = Phases.Prepare;
+                            ctx.Say("Correction complete; " + peText + "; trimming (" + _rounds + " of " + MaxRounds + ").");
+                            Status = "Trimming the path.";
+                            break;
+                        }
+                        _phase = Phases.Finished;
                         if (_exec.Failed) ctx.Say("Correction burn incomplete (" + _exec.FailReason + "); " + peText + ".");
                         else ctx.Say("Correction complete; " + peText + ".");
                         Status = peText + ".";
@@ -852,15 +885,18 @@ namespace KSA.KSP.Flight
             Ejection.Hohmann(mu, v.orbit.semiMajorAxis, _target.orbit.semiMajorAxis, out flight);
             if (double.IsNaN(flight) || flight <= 0) return false;
             TransferPlan plan = null;
+            // Outbound: leave within days. Homebound (0.8.173): wait up to 200 days for a cheaper window, and weigh the arrival speed in
+            // full (a 1,741 m/s path home from beside Duna came in at 5.2 km/s excess; 200 days later it was 3.0 km/s).
+            double latest = now + (Homebound ? 200 : 5) * TransferSupport.Day;
             try
             {
                 plan = TransferPlanner.Plan(OrbitAdapter.Sampler(v.orbit), OrbitAdapter.Sampler(_target.orbit), mu,
-                    now + 600, now + 5 * TransferSupport.Day, 0.3 * flight, 1.6 * flight, 24, 30, 0.5);
+                    now + 600, latest, 0.3 * flight, 1.6 * flight, Homebound ? 40 : 24, 30, Homebound ? 1.0 : 0.5);
             }
             catch (Exception e) { KsaCore.Log.Error("Deep-space correction planner threw: " + e); }
-            if (plan == null || plan.DeltaVMagnitude > _maxDv)
+            if (plan == null || plan.DeltaVMagnitude > _budget)
             {
-                ctx.Say(plan == null ? "No fresh transfer to " + _target.bodyName + " found from here." : "A fresh transfer to " + _target.bodyName + " needs " + Math.Round(plan.DeltaVMagnitude) + " m/s, over the " + Math.Round(_maxDv) + " allowed.");
+                ctx.Say(plan == null ? "No fresh transfer to " + _target.bodyName + " found from here." : "A fresh transfer to " + _target.bodyName + " needs " + Math.Round(plan.DeltaVMagnitude) + " m/s, over the " + Math.Round(_budget) + " allowed.");
                 return false;
             }
             NodePlanner.ClearNodes(v);
@@ -872,7 +908,7 @@ namespace KSA.KSP.Flight
             _phase = Phases.Burn;
             Status = "Correction burn of " + Math.Round(plan.DeltaVMagnitude) + " m/s.";
             double pe = NodePlanner.PeriapsisAt(n, _target);
-            line = "Deep-space correction planned: " + Math.Round(plan.DeltaVMagnitude) + " m/s" + (double.IsNaN(pe) ? "; the game's preview does not show the encounter yet." : ", predicted " + _target.bodyName + " periapsis " + TransferSupport.Km(pe) + ".");
+            line = "Deep-space correction planned: " + Math.Round(plan.DeltaVMagnitude) + " m/s in " + TransferSupport.Countdown(plan.DepartureUt - now) + ", " + TransferSupport.Countdown(plan.TimeOfFlight) + " to " + _target.bodyName + (double.IsNaN(pe) ? "; the game's preview does not show the encounter yet." : ", predicted periapsis " + TransferSupport.Km(pe) + ".");
             return true;
         }
 
@@ -883,10 +919,10 @@ namespace KSA.KSP.Flight
         private void TrySingle(Vessel v, Vector3d dir)
         {
             double dv = double.NaN;
-            try { dv = NodePlanner.Bisect(v, _ut, dir, _maxDv, Score, _peLo, _peHi); } catch { dv = double.NaN; }
+            try { dv = NodePlanner.Bisect(v, _ut, dir, _budget, Score, _peLo, _peHi); } catch { dv = double.NaN; }
             if (double.IsNaN(dv))
             {
-                try { dv = TransferSupport.LineSearch(v, _ut, Vector3d.zero, dir, _maxDv, 20, Score, _peLo, _peHi); } catch { dv = double.NaN; }
+                try { dv = TransferSupport.LineSearch(v, _ut, Vector3d.zero, dir, _budget, 20, Score, _peLo, _peHi); } catch { dv = double.NaN; }
             }
             Consider(dv, dir * dv);
         }
@@ -897,9 +933,9 @@ namespace KSA.KSP.Flight
             Vector3d normal = index < 2 ? new Vector3d(0, 1, 0) : new Vector3d(0, -1, 0);
             Vector3d radial = (index % 2 == 0) ? new Vector3d(1, 0, 0) : new Vector3d(-1, 0, 0);
             double dn;
-            try { dn = TransferSupport.FirstFinite(v, _ut, normal, _maxDv, 20, Score); } catch { dn = double.NaN; }
-            if (double.IsNaN(dn) || dn >= _maxDv) return;
-            double budget = _maxDv - dn;
+            try { dn = TransferSupport.FirstFinite(v, _ut, normal, _budget, 20, Score); } catch { dn = double.NaN; }
+            if (double.IsNaN(dn) || dn >= _budget) return;
+            double budget = _budget - dn;
             double dr;
             try { dr = TransferSupport.LineSearch(v, _ut, normal * dn, radial, budget, 20, Score, _peLo, _peHi); } catch { dr = double.NaN; }
             if (double.IsNaN(dr)) return;
@@ -909,7 +945,7 @@ namespace KSA.KSP.Flight
 
         private void Consider(double dv, Vector3d comps)
         {
-            if (double.IsNaN(dv) || dv < 0 || dv > _maxDv) return;
+            if (double.IsNaN(dv) || dv < 0 || dv > _budget) return;
             if (_returnTo != null)
             {
                 // A flyby: the candidate that falls closest to home after the moon wins, not the cheapest.
@@ -934,6 +970,7 @@ namespace KSA.KSP.Flight
     {
         private readonly CelestialBody _body;
         private readonly double _maxDays;
+        private readonly double _stopBefore; // seconds short of the body's space to stop for a mid-course check (0.8.173); 0 = all the way in
         private double _deadline;
         private double _lastWarpRequest;
 
@@ -943,7 +980,10 @@ namespace KSA.KSP.Flight
             _maxDays = Math.Max(0.01, maxDays);
         }
 
-        public string Name { get { return "Coast to " + TransferSupport.BodyName(_body); } }
+        /// <summary>Stops the given days short of the body's space, so a correction can fix the path while a nudge still reaches.</summary>
+        public WaitForSoiLeg(CelestialBody body, double maxDays, double stopDaysBefore) : this(body, maxDays) { _stopBefore = Math.Max(0, stopDaysBefore) * TransferSupport.Day; }
+
+        public string Name { get { return (_stopBefore > 0 ? "Cruise toward " : "Coast to ") + TransferSupport.BodyName(_body); } }
         public string Status { get; private set; }
         public LegState State { get; private set; }
 
@@ -960,6 +1000,12 @@ namespace KSA.KSP.Flight
             if (ctx.Control.CanSas(VesselAutopilot.AutopilotMode.StabilityAssist)) ctx.Control.Sas(VesselAutopilot.AutopilotMode.StabilityAssist, false);
             // A moon that the path misses: never warp on while the supplies run out (2026-10-31: five days of warp to the edge of
             // Kerbin's space, 3,381 m/s still aboard, and the crew out of oxygen). Stop here so the Director can fly it home.
+            if (_stopBefore > 0 && TransferSupport.VesselPatchAround(v, _body) == null)
+            {
+                // No encounter yet: the correction after this leg gets its look; the coast after that halts if there is still none.
+                State = LegState.Done; Status = "No " + _body.bodyName + " encounter yet; checking the path.";
+                return;
+            }
             if (_body.referenceBody == v.mainBody && TransferSupport.VesselPatchAround(v, _body) == null)
             {
                 State = LegState.Failed;
@@ -988,6 +1034,21 @@ namespace KSA.KSP.Flight
                 State = LegState.Failed;
                 Status = "Never reached " + _body.bodyName + ".";
                 return "No " + _body.bodyName + " encounter after " + Math.Round(_maxDays, 1) + " days; coast abandoned.";
+            }
+            if (_stopBefore > 0)
+            {
+                Orbit around = TransferSupport.VesselPatchAround(v, _body);
+                double entry = around != null ? around.StartUT : double.NaN;
+                if (double.IsNaN(entry) || entry - now <= _stopBefore + 120)
+                {
+                    ctx.Control.StopWarp();
+                    State = LegState.Done;
+                    Status = double.IsNaN(entry) ? "No " + _body.bodyName + " encounter on this path." : TransferSupport.Countdown(entry - now) + " from " + _body.bodyName + ".";
+                    return double.IsNaN(entry) ? null : "Mid-course check: " + TransferSupport.Countdown(entry - now) + " from " + _body.bodyName + ", periapsis " + TransferSupport.Km(around.PeA) + ".";
+                }
+                Status = "Mid-course check in " + TransferSupport.Countdown(entry - now - _stopBefore) + ".";
+                if (!ctx.Control.IsWarping && now - _lastWarpRequest > 2) { _lastWarpRequest = now; ctx.Control.WarpTo(Math.Min(entry - _stopBefore, _deadline + 5)); }
+                return null;
             }
             double eta = double.NaN;
             if (v.orbit != null && TransferSupport.EndsInTransition(v.orbit) && v.orbit.EndUT > now) eta = v.orbit.EndUT - now;

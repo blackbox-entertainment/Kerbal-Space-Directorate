@@ -2,6 +2,14 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.173 (2026-11-02), test build
+
+- **Refuelled and left for Duna** (2026-11-02, Mk IIe): docked, 29.5 t pumped in five minutes, undocked, 1,063 m/s ejection flown to the metre. The 75 m/s deep-space correction nine days out then left Duna 12,579 km off, the leg said "complete", the coast warped 336 days to the edge of Duna's space, and no 300 m/s correction reached the air from there. The crew's retry then ran the return coast out to nowhere, because entering Duna's space had logged a flyby and the resume read that as a mission done.
+- **Corrections trim until the periapsis is in band.** After any correction burn that leaves an encounter out of band, the leg nudges again, up to three rounds, while the lever arm is long.
+- **A mid-course check 30 days out.** Interplanetary flights, out and home, cruise to 30 days short of the planet's space, check the path and correct, then coast in and correct once more.
+- **Resuming a halted flight reads the mission's own milestone.** A landing counts as done only with a landing or EVA logged, an orbit mission with an orbit, a flyby with a flyby.
+- **No path to the target: the crew turns for home.** A deep-space correction that finds nothing within its allowance hands the flight to the homebound correction, which may spend the fuel aboard less 150 m/s, waits up to 200 days for a cheaper window, and weighs the arrival speed in full (from beside Duna: 1,741 m/s now at 5.2 km/s excess, or 2,780 m/s in 200 days at 3.0 km/s). Not yet checked against the supplies aboard.
+
 ## 0.8.172 (2026-11-02), test build
 
 - **First hard dock with the Kerbin fuel station** (2026-11-02, Mk IIe, 31.8 of 160 monopropellant; the station turned its port from 148 to 1 deg off in two minutes). The refuel then failed in the same instant as the dock, before the game had merged the two craft, and the retry could not find the tanker because it was part of the ship.

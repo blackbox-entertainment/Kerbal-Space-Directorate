@@ -629,6 +629,13 @@ namespace KSA.KSP.Flight
         /// (2026-10-30: just after the ship unpacked from warp the game's delta-v read 0 for a moment; the ascent took that
         /// as out of fuel, ended before circularising, and the Mun flyby halted on a suborbital path).
         /// </summary>
+        /// <summary>The vacuum delta-v the game reads for the whole craft; 0 while it has none or the readout is not ready.</summary>
+        public double DeltaVAvailable()
+        {
+            try { return _v != null && _v.VesselDeltaV != null && _v.VesselDeltaV.IsReady ? Math.Max(0, _v.VesselDeltaV.TotalDeltaVVac) : 0; }
+            catch { return 0; }
+        }
+
         public bool OutOfDeltaV(double minimum = 15)
         {
             if (_v == null) return true;

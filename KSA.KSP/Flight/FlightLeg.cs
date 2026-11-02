@@ -199,6 +199,20 @@ namespace KSA.KSP.Flight
                     if (!_pendingAdvance) { NoteFailure(l, "no orbit reached"); Failed = true; _ctx.Control.Throttle = 0; _index = _legs.Count; return line; }
                     line = "No orbit: the flight plan is off, coming home.";
                 }
+                // Out around the sun with no path to the target (0.8.173: a halted crew beside Duna was sent on the return coast to nowhere):
+                // skip to the homebound correction, which may spend the fuel aboard, rather than coast on and halt.
+                CorrectionLeg gaveUp = l as CorrectionLeg;
+                if (gaveUp != null && gaveUp.GaveUp && !gaveUp.Homebound && _ctx.Target != null && _ctx.Target != _ctx.Home)
+                {
+                    for (int i = _index + 1; i < _legs.Count; i++)
+                    {
+                        CorrectionLeg home = _legs[i] as CorrectionLeg;
+                        if (home == null || !home.Homebound) continue;
+                        _index = i - 1; _pendingAdvance = true;
+                        line = "No path to " + _ctx.Target.bodyName + " from here; the crew turns for home.";
+                        break;
+                    }
+                }
                 Advance();
                 if (Finished) _ctx.Control.Throttle = 0;
             }

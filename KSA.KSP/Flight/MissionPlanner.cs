@@ -219,9 +219,10 @@ namespace KSA.KSP.Flight
                 CelestialBody planet = PlanetOf(target, ctx.Home);
                 bool moon = planet != target;
                 double lo = moon ? 0.9 * StagingAltitude(target) : peLo, hi = moon ? 1.1 * StagingAltitude(target) : peHi;
+                // A mid-course check 30 days out (0.8.173): the deep-space burn's error is a nudge there and 12,000 km at the edge of the planet's space.
                 prog.Add(new InterplanetaryTransferLeg(planet)).Add(new WaitForSoiLeg(ctx.Home.referenceBody, 30))
-                    .Add(new CorrectionLeg(planet, lo, hi, 400)).Add(new WaitForSoiLeg(planet, 4000))
-                    .Add(new CorrectionLeg(planet, lo, hi, 300));
+                    .Add(new CorrectionLeg(planet, lo, hi, 400)).Add(new WaitForSoiLeg(planet, 4000, MidCourseDays)).Add(new CorrectionLeg(planet, lo, hi, 300))
+                    .Add(new WaitForSoiLeg(planet, 4000)).Add(new CorrectionLeg(planet, lo, hi, 300));
                 if (moon)
                     prog.Add(new CaptureLeg(planet, StagingAltitude(target))).Add(new TransferLeg(target, (peLo + peHi) / 2)).Add(new CorrectionLeg(target, peLo, peHi, 300))
                         .Add(new WaitForSoiLeg(target, 30)).Add(new CorrectionLeg(target, peLo, peHi, 200));
@@ -233,6 +234,9 @@ namespace KSA.KSP.Flight
                     .Add(new WaitForSoiLeg(target, 30)).Add(new CorrectionLeg(target, peLo, peHi, 200, back));
             }
         }
+
+        /// <summary>Days short of a planet's space for the mid-course check (0.8.173).</summary>
+        private const double MidCourseDays = 30;
 
         /// <summary>The planet a flight must reach: the world itself, or the one a moon goes around.</summary>
         private static CelestialBody PlanetOf(CelestialBody target, CelestialBody home)
@@ -276,12 +280,13 @@ namespace KSA.KSP.Flight
                 }
                 if (fromOrbit) prog.Add(new ReturnLeg(home, pe)).Add(new WaitForSoiLeg(home.referenceBody, 60));
                 else prog.Add(new WaitForSoiLeg(home.referenceBody, 60)).Add(new TransferLeg(home, pe));
-                prog.Add(new CorrectionLeg(home, peLo, peHi, 400)).Add(new WaitForSoiLeg(home, 800)).Add(new CorrectionLeg(home, peLo, peHi, 300));
+                prog.Add(new CorrectionLeg(home, peLo, peHi, 400) { Homebound = true }).Add(new WaitForSoiLeg(home, 800, MidCourseDays)).Add(new CorrectionLeg(home, peLo, peHi, 300) { Homebound = true })
+                    .Add(new WaitForSoiLeg(home, 800)).Add(new CorrectionLeg(home, peLo, peHi, 300) { Homebound = true });
             }
             else
             {
                 if (fromOrbit) prog.Add(new ReturnLeg(home, pe));
-                prog.Add(new WaitForSoiLeg(home, 30)).Add(new CorrectionLeg(home, peLo, peHi, 300));
+                prog.Add(new WaitForSoiLeg(home, 30)).Add(new CorrectionLeg(home, peLo, peHi, 300) { Homebound = true });
             }
             prog.Add(new ReentryLeg(pe));
         }
@@ -304,7 +309,10 @@ namespace KSA.KSP.Flight
             bool orbitingTarget = v.situation == Vessel.Situations.ORBITING && body == target && target != home;
             bool inTargetSoi = body == target && target != home;
             bool inSun = body.referenceBody == null || body == home.referenceBody;
-            bool headingHome = target != home && (logged("Flyby:" + tb) || logged("Orbit:" + tb) || logged("Land:" + tb) || logged("EVA:" + tb));
+            // Heading home only once the mission's own milestone is logged (0.8.173: a flyby credited on entering Duna's space sent a
+            // halted lander, 12,443 km out with nothing done, onto the return coast to nowhere).
+            bool lands = Has(prog, l => l is LandingLeg), orbits = Has(prog, l => l is CaptureLeg || l is AirbrakeLeg);
+            bool headingHome = target != home && (logged("Land:" + tb) || logged("EVA:" + tb) || (!lands && logged("Orbit:" + tb)) || (!lands && !orbits && logged("Flyby:" + tb)));
             bool down = v.situation == Vessel.Situations.LANDED || v.situation == Vessel.Situations.SPLASHED || v.situation == Vessel.Situations.PRELAUNCH;
             bool descending = v.situation == Vessel.Situations.SUB_ORBITAL || v.situation == Vessel.Situations.FLYING;
 
