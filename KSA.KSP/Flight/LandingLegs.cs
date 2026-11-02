@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using KSA.Core.Flight.Sim;
 using KSA.Core.Flight.Orbital;
 using UnityEngine;
 
@@ -73,9 +74,7 @@ namespace KSA.KSP.Flight
         private const int SiteOrbits = 8;           // orbits searched: the world turns under the orbit, so each one crosses new ground (one orbit offered only 9%, 2026-10-31)
         private const int MaxSearches = 3;          // searches before the crew gives the landing up
         private const double SteepStepAllowance = 2.5; // one steep step counts this much less than a tilt of the whole patch: the look at 400 m deals with those
-        private const double AirBrakeHeight = 15000; // metres above terrain: no engine higher on a world with air
-        private const double AirFallFloor = 2000;    // metres above terrain: below it the normal descent speeds
-        private const double AirFallShare = 0.7;     // of the speed the engine can just stop from
+
         private const double DriftHoldBelow = 60;   // metres above terrain: no lower with sideways speed
         private const double DriftAllowed = 0.7;    // m/s sideways
         private const double DriftHoldLimit = 40;   // seconds, then down anyway
@@ -176,7 +175,7 @@ namespace KSA.KSP.Flight
             catch (Exception e) { KsaCore.Log.Error("LandingLeg.Begin: " + e); }
         }
 
-        private double DeorbitTarget(Vessel v) { return _hasAir ? 8000 : -(0.1 * v.mainBody.Radius); }
+        private double DeorbitTarget(Vessel v) { return _hasAir ? DescentRules.DeorbitPeShare * v.mainBody.atmosphereDepth : -(0.1 * v.mainBody.Radius); }
 
         public string Step(FlightContext ctx)
         {
@@ -349,11 +348,9 @@ namespace KSA.KSP.Flight
             if (!_surveyed && above < SurveyBelow && v.verticalSpeed < 0) Survey(ctx, v);
 
             double descentRate = -v.verticalSpeed;
-            bool brakeNow = above <= safe;
             // Air does the first of the braking for nothing: the engine waits for it (2026-11-01: from 895 m/s the sums lit it at 65 km, above the
             // air, and the whole 2,400 m/s went on a slow drive down, out of fuel at 2,262 m).
-            if (_hasAir && above > AirBrakeHeight) brakeNow = false;
-            if (_hasAir && inAir && above < 3000 && descentRate > DescentMath.TargetDescentSpeed(above) * 1.1) brakeNow = true;
+            bool brakeNow = DescentRules.BrakeNow(above, safe, _hasAir, inAir, descentRate);
             if (brakeNow)
             {
                 if (warping) { c.StopWarp(); return; }
@@ -367,7 +364,7 @@ namespace KSA.KSP.Flight
             }
 
             // With air the engine waits for 15 km, however fast the sums say it should stop from (2026-11-01, T: warp cancelled at 74 km over Duna).
-            if (_hasAir) safe = Math.Min(safe, AirBrakeHeight);
+            if (_hasAir) safe = Math.Min(safe, DescentRules.AirBrakeHeight);
             // Warp while there is plenty of room: stop well before the burn point.
             double stopAt = Math.Max(4 * safe, 2000);
             if (above > stopAt && (!_hasAir || v.altitude > v.mainBody.atmosphereDepth || descentRate < 100))
@@ -654,9 +651,8 @@ namespace KSA.KSP.Flight
             double hSpeed = v.horizontalSrfSpeed;
             double descentRate = -v.verticalSpeed;
             // Height held during a side-step, climbing a little if the ground rises towards it.
-            double target = _stepping ? (above < SideStepFloor ? -5 : 0) : DescentMath.TargetDescentSpeed(above);
-            // High in the air, fall as fast as the engine can still stop: every second at 60 m/s is a second of gravity paid for.
-            if (!_stepping && _hasAir && above >= AirFallFloor && accel > g) target = Math.Max(target, AirFallShare * Math.Sqrt(2 * (accel - g) * above));
+            // High in the air, fall as fast as the engine can still stop: every second at 60 m/s is a second of gravity paid for (DescentRules, flown in FlightSimTests).
+            double target = _stepping ? (above < SideStepFloor ? -5 : 0) : DescentRules.TargetSpeed(above, accel, g, _hasAir);
             // Never touch down moving sideways: hold the height until the drift is gone (2026-11-01: 3.1 m/s down, soft, with 2 m/s of
             // drift left over from a slide, and the lander tripped over its legs).
             if (!_stepping && above < DriftHoldBelow && hSpeed > DriftAllowed && ctx.Now - _driftHoldStart < DriftHoldLimit)
@@ -730,25 +726,8 @@ namespace KSA.KSP.Flight
                 return;
             }
 
-            float throttle;
-            if (accel <= 0) throttle = 1f;
-            else
-            {
-                double hover = Math.Min(1, g / accel);
-                // Only when too fast and out of room. SafeBurnAltitude's 50 m reserve read as "behind" at any speed below 50 m: full
-                // throttle at 1 m/s, up past 50, sink, again, a hover at 51 m with 1,600 m/s aboard (2026-10-31, T: "it is hovering").
-                bool behind = descentRate > target && DescentMath.StoppingDistance(v.srfSpeed, accel, g) * 1.1 >= above;
-                if (behind && above > 20) throttle = 1f;
-                else
-                {
-                    // Proportional: desired acceleration = g + 0.5 * (descentRate - target), expressed as a throttle fraction.
-                    double error = descentRate - target;
-                    double t = hover + 0.5 * error / accel;
-                    // Still carrying sideways speed: lean on the retrograde burn to kill it.
-                    if (hSpeed > 3 && !_holdingUp) t = Math.Max(t, Math.Min(1, hover + hSpeed / 20.0));
-                    throttle = (float)Math.Max(0, Math.Min(1, t));
-                }
-            }
+            // Full throttle only when too fast and out of room: a reserve read as "behind" at any speed once hovered at 51 m (2026-10-31, T: "it is hovering").
+            float throttle = (float)DescentRules.Throttle(descentRate, target, v.srfSpeed, above, accel, g, hSpeed, _holdingUp);
             // Tipped over, the engine only drives it down faster: stand it up first.
             if (_holdingUp && c.AttitudeError(v.upAxis) > 45) throttle = 0f;
             c.Throttle = throttle;

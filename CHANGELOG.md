@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.146 (2026-11-01), test build
+
+- **Duna descents in the simulator.** The crew's descent rules moved to Core (KSA-77) and fly in the tests on Duna, the Mun and Minmus. The landing engine now waits for 10 km, not 15, and a deorbit aims for 20 km over Duna: about 900 m/s down instead of about 1,220 in the simulator. Going below 8 km ends in a crash.
+
 ## 0.8.145 (2026-11-01), test build
 
 - **Strong engines park low.** A low apoapsis burns from 75 km on the way up only if the engine needs that long; a strong engine waits for the top. In the simulator the Mk II ends 89 x 75 km for 197 m/s instead of about 300 x 75 km for 342 m/s, and the weak Terrier still burns early. The start rule now lives in Core (KSA-76).

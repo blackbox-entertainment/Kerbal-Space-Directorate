@@ -32,8 +32,8 @@ namespace KSA.Core.Flight.Sim
             return new SimWorld
             {
                 Name = "Duna", Radius = 320000, Mu = 3.0136321e11, AirTop = 50000,
-                Heights = new double[] { 10000, 20000, 26500, 47700 },
-                Drag = new double[] { 6e-6, 0.9e-6, 0.83e-6, 2.3e-9 }
+                Heights = new double[] { 0, 10000, 20000, 26500, 47700 },
+                Drag = new double[] { 3.6e-5, 6e-6, 0.9e-6, 0.83e-6, 2.3e-9 }
             };
         }
     }

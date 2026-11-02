@@ -61,6 +61,46 @@ namespace KSA.Core.Tests
             Assert.That(now.ApA, Is.LessThan(250000));
         }
 
+        [Test, Explicit]
+        public void DescentGrid()
+        {
+            foreach (double pe in new double[] { 8, 12, 16, 20, 24 })
+                foreach (double h in new double[] { 15000, 12000, 10000, 8000, 6000 })
+                {
+                    DescentResult r = DescentSim.Fly(Duna, 742000, pe * 1000, 215000, 332, 30000, 12000, 0.1, h);
+                    TestContext.WriteLine("GRID pe " + pe + " floor " + h + ": " + (r.Landed ? "landed " : "no ") + Math.Round(r.TouchdownSpeed, 1) + " m/s, side " + Math.Round(r.SideSpeed, 1) + ", spent " + Math.Round(r.DeltaV) + ", lit " + Math.Round(r.BrakeHeight));
+                }
+        }
+
+        private static SimWorld Airless(string name, double radius, double mu) { return new SimWorld { Name = name, Radius = radius, Mu = mu, AirTop = 0 }; }
+
+        /// <summary>Mk II into Duna: deorbited near apoapsis, the engine waits for 15 km, down soft with fuel left for the way home.</summary>
+        [TestCase(742, 20)]
+        [TestCase(1500, 20)]
+        public void ALanderComesDownOnDuna(double ap, double pe)
+        {
+            DescentResult r = DescentSim.Fly(Duna, ap * 1000, pe * 1000, 215000, 332, 30000, 12000);
+            TestContext.WriteLine("Duna from " + ap + " km: " + r.Landed + ", " + Math.Round(r.TouchdownSpeed, 1) + " m/s, side " + Math.Round(r.SideSpeed, 1) + ", " + Math.Round(r.DeltaV) + " m/s spent, lit at " + Math.Round(r.BrakeHeight) + " m. " + r.Log);
+            Assert.That(r.Landed, Is.True);
+            Assert.That(r.OutOfFuel, Is.False);
+            Assert.That(r.TouchdownSpeed, Is.LessThan(5));
+            Assert.That(r.SideSpeed, Is.LessThan(3));
+            Assert.That(r.BrakeHeight, Is.LessThanOrEqualTo(DescentRules.AirBrakeHeight));
+            Assert.That(r.DeltaV, Is.LessThan(1000));
+        }
+
+        /// <summary>The Mun and Minmus, where the real landers came down: the same rules with no air.</summary>
+        [TestCase("Mun", 200000, 6.5138398e10, 60000, 20000)]
+        [TestCase("Minmus", 60000, 1.7658e9, 50000, -6000)]
+        public void ALanderComesDownWithNoAir(string name, double radius, double mu, double ap, double pe)
+        {
+            DescentResult r = DescentSim.Fly(Airless(name, radius, mu), ap, pe, 60000, 345, 13000, 8000);
+            TestContext.WriteLine(name + ": " + r.Landed + ", " + Math.Round(r.TouchdownSpeed, 1) + " m/s, side " + Math.Round(r.SideSpeed, 1) + ", " + Math.Round(r.DeltaV) + " m/s spent. " + r.Log);
+            Assert.That(r.Landed, Is.True);
+            Assert.That(r.TouchdownSpeed, Is.LessThan(5));
+            Assert.That(r.SideSpeed, Is.LessThan(3));
+        }
+
         private static string Arrive(double ap, double pe, double air, double wanted, out bool safe)
         {
             safe = false;
