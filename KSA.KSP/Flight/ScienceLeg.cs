@@ -87,7 +87,7 @@ namespace KSA.KSP.Flight
                 // reaction wheel went dead, so the capsule came in nose first. Below 40% charge they pause; above 60% they run.
                 double charge = VesselControl.ChargeFraction(v);
                 if (charge >= 0 && charge < LowCharge) StopKerbalismExperiments(subject, charge);
-                else if (charge < 0 || charge > LowCharge + 0.2) { _pausedForPower = false; StartKerbalismExperiments(subject); }
+                else if (charge < 0 || charge > ResumeCharge) { _pausedForPower = false; StartKerbalismExperiments(subject); } // a full battery first, or a dark side empties it (2026-11-01: 0 of 740 with 21 running)
             }
             List<ModuleScienceExperiment> exps = subject.FindPartModulesImplementing<ModuleScienceExperiment>();
             if (exps == null) return;
@@ -137,7 +137,7 @@ namespace KSA.KSP.Flight
 
         private readonly Dictionary<string, int> _kerbalismTries = new Dictionary<string, int>();
 
-        private const double LowCharge = 0.4;
+        private const double LowCharge = 0.5, ResumeCharge = 0.9;
         private bool _pausedForPower;
 
         /// <summary>Switches every running Kerbalism experiment off to save electric charge for steering (2026-10-30).</summary>

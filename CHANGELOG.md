@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.136 (2026-11-01), test build
+
+- **Science leaves power for the crew.** Kerbalism experiments now pause below 50% charge and restart only above 90%. With 21 running, the batteries were empty in the dark.
+
 ## 0.8.135 (2026-11-01), test build
 
 - **Stopped warp stays stopped.** Pressing the warp stop or slow-down key during the crew's warp holds it off for as long as that warp was to run, so it does not start again by itself. You can still warp by hand.
