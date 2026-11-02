@@ -397,31 +397,11 @@ namespace KSA.KSP.Flight
         internal static double TargetPitch(Vessel v, bool orbit = true)
         {
             if (!orbit) return 88;
-            double alt = Math.Max(0, v.altitude);
-            if (v.srfSpeed < KickSpeed) return 88;
-            // 2026-10-29: straight up to 15 km left a fast, finned rocket pointing up (fins keep the nose on the path and the
-            // pod cannot pull it over at 600 m/s), so it never built sideways speed. The turn starts low and slow instead.
-            double program = Math.Max(0, 88 * (1 - Math.Sqrt(Math.Min(1, alt / TurnEnd))));
-            if (v.srfSpeed < KickDone) return Math.Max(85, program);
-            // Short of the speed to stay up, a weak stage laid flat tops out and falls back in the air (2026-10-31: flat at 50 km a
-            // Terrier peaked at 64; a Skipper levelled out at 19): with the top of the climb close, the nose rises to where the
-            // thrust holds the rocket up, whatever the program says.
-            if (alt > 5000 && alt < v.mainBody.atmosphereDepth && v.orbit.PeA < 0)
-            {
-                double hold = HoldPitch(v);
-                // 2026-10-31: 25 s from the top and held only part way, the lander skimmed at 42 km at 1,786 m/s (T's screenshot, on fire).
-                double close = Math.Max(0, Math.Min(1, (TopAheadEasy - v.orbit.timeToAp) / (TopAheadEasy - TopAheadFull)));
-                program = Math.Max(program, v.verticalSpeed <= 0 ? hold : hold * close);
-            }
+            // Flown in FlightSimTests (AscentRules): the path pitch is signed in the up-east plane, over 90 leans west (2026-10-30).
             Vector3d up = v.upAxis;
-            // The flight path's pitch from the eastern horizon, in the up-east plane: over 90 means it leans west
-            // (2026-10-30: a rocket on fixed engines drifted west; the unsigned angle read that as leaning east, so the
-            // "stay near the path" band kept it going west and it climbed past vertical).
             Vector3d vel = v.srf_velocity;
             double pathPitch = Math.Atan2(Vector3d.Dot(vel, up), Vector3d.Dot(vel, (Vector3d)v.east)) * 180 / Math.PI;
-            double band = MaxLean(v.dynamicPressurekPa);
-            if (alt < 20000) band = Math.Min(band, 10);
-            return Math.Max(pathPitch - band, Math.Min(pathPitch + band, program));
+            return KSA.Core.Flight.Sim.AscentRules.Pitch(v.altitude, v.srfSpeed, v.mainBody.atmosphereDepth, v.orbit.PeA, v.orbit.timeToAp, v.verticalSpeed, pathPitch, v.dynamicPressurekPa, HoldPitch(v));
         }
 
         /// <summary>How far the nose may lean off the flight path, degrees: 8 in thick air (25 kPa or more), none in thin air (5 kPa or less).</summary>

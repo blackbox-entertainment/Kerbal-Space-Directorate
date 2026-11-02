@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.147 (2026-11-01), test build
+
+- **The whole Duna trip in the simulator.** The climb (AscentRules, AscentSim), long burns (BurnRules), lift-off from Duna (LiftoffSim) and the capsule's reentry now fly in the tests. The crew's pitch program and burn limit run from Core. A round trip adds up to about 4,500 m/s from Kerbin orbit; a 30 km return comes down on the first pass.
+
 ## 0.8.146 (2026-11-01), test build
 
 - **Duna descents in the simulator.** The crew's descent rules moved to Core (KSA-77) and fly in the tests on Duna, the Mun and Minmus. The landing engine now waits for 10 km, not 15, and a deorbit aims for 20 km over Duna: about 900 m/s down instead of about 1,220 in the simulator. Going below 8 km ends in a crash.

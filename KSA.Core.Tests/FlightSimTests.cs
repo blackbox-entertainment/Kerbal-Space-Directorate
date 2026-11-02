@@ -101,6 +101,63 @@ namespace KSA.Core.Tests
             Assert.That(r.SideSpeed, Is.LessThan(3));
         }
 
+        /// <summary>Mk II as built: eight Kickbacks at 75% with a Skipper on three X200-32s, then the Poodle and its tanks.</summary>
+        private static SimStage[] MkII(double limiter = 0.75)
+        {
+            return new[]
+            {
+                new SimStage { ThrustSea = 568000, ThrustVacuum = 650000, IspSea = 280, IspVacuum = 320, FuelKg = 48000, DropKg = 9000,
+                    BoosterSea = 8 * 593000 * limiter, BoosterVacuum = 8 * 670000 * limiter, BoosterIspSea = 195, BoosterIspVacuum = 220, BoosterFuelKg = 156000, BoosterDropKg = 36000 },
+                new SimStage { ThrustSea = 64000, ThrustVacuum = 250000, IspSea = 90, IspVacuum = 350, FuelKg = 32000, DropKg = 0 }
+            };
+        }
+
+        /// <summary>The climb flown in the game: boosters out at T+1:27, the Skipper's fuel gone at T+3:54, 85 km apoapsis.</summary>
+        [Test]
+        public void MkIIClimbsToSpace()
+        {
+            AscentResult r = AscentSim.Fly(MkII(), 14000, 14, 85000);
+            TestContext.WriteLine("Mk II: Ap " + Math.Round(r.ApA / 1000) + " Pe " + Math.Round(r.PeA / 1000) + " at " + Math.Round(r.Altitude / 1000) + " km, up " + Math.Round(r.UpSpeed) + " side " + Math.Round(r.SideSpeed) + ", T+" + Math.Round(r.Seconds) + " s, boosters out " + Math.Round(r.BoostersOutAt) + " s, peak q " + Math.Round(r.MaxPressure) + " kPa, " + Math.Round(r.MassKg / 1000) + " t");
+            Assert.That(r.ReachedSpace, Is.True);
+            Assert.That(r.BoostersOutAt, Is.EqualTo(87).Within(15));
+            Assert.That(r.ApA, Is.GreaterThanOrEqualTo(85000));
+        }
+
+        [Test]
+        public void ALongBurnStopsAtWhatItMeantToSpend()
+        {
+            Assert.That(BurnRules.Spent(1047, 1047), Is.False);
+            Assert.That(BurnRules.Spent(1090, 1047), Is.True, "a 1,047 m/s burn once ran on to 1,567");
+        }
+
+        /// <summary>Home from Minmus (17,000 km) and from Duna (near escape): the 41 km pass skipped; the 30 km aim must not.</summary>
+        [TestCase(17000, 41, false, Description = "the flown skip")]
+        [TestCase(17000, 34, true)]
+        [TestCase(17000, 30, true)]
+        [TestCase(17000, 26, true)]
+        [TestCase(80000, 34, true)]
+        [TestCase(80000, 30, true)]
+        public void ACapsuleComesHome(double ap, double pe, bool firstPass)
+        {
+            PassResult r = AirPass.Fly(SimWorld.KerbinCapsule(), ap * 1000, pe * 1000);
+            TestContext.WriteLine("Home from " + ap + " x " + pe + ": then " + Math.Round(r.ApA / 1000) + " x " + Math.Round(r.PeA / 1000) + (r.Crashed ? " down" : r.Trapped ? " stays in the air" : " out again"));
+            Assert.That(r.Crashed || r.Trapped, Is.EqualTo(firstPass));
+        }
+
+        /// <summary>Everything Mk II has to do, added up from the simulator's own legs: what a round trip really needs.</summary>
+        [Test]
+        public void DunaRoundTripBudget()
+        {
+            double down = DescentSim.Fly(Duna, 742000, 20000, 215000, 332, 30000, 12000).DeltaV;
+            double up = LiftoffSim.Fly(Duna, 70000, 215000, 332, 24000, 12000);
+            const double transfer = 1100, capture = 330, liftAndDeorbit = 40, home = 700;
+            double total = transfer + capture + liftAndDeorbit + down + up + home;
+            TestContext.WriteLine("Budget: down " + Math.Round(down) + ", up " + Math.Round(up) + ", total from Kerbin orbit " + Math.Round(total) + " m/s, Mk II has about 4,090. " + LiftoffSim.Why);
+            Assert.That(double.IsNaN(up), Is.False, "the lander must reach orbit from Duna");
+            Assert.That(up, Is.LessThan(1700));
+            Assert.That(total, Is.GreaterThan(3500).And.LessThan(5000), "the plan for a Duna rocket: this figure, not the map");
+        }
+
         private static string Arrive(double ap, double pe, double air, double wanted, out bool safe)
         {
             safe = false;

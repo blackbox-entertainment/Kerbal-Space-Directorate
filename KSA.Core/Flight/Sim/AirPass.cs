@@ -26,6 +26,17 @@ namespace KSA.Core.Flight.Sim
             return Drag[Drag.Length - 1] * (1 - f2);
         }
 
+        /// <summary>Kerbin as a capsule feels it, fitted to the Minmus return of 2026-11-01 (41 km at 3.2 km/s took two passes), scale height 5.8 km.</summary>
+        public static SimWorld KerbinCapsule()
+        {
+            return new SimWorld
+            {
+                Name = "Kerbin", Radius = 600000, Mu = 3.5316e12, AirTop = 70000,
+                Heights = new double[] { 0, 20000, 30000, 41000, 50000, 60000 },
+                Drag = new double[] { 8.3e-4, 2.6e-5, 4.5e-6, 7.7e-7, 1.6e-7, 3e-8 }
+            };
+        }
+
         /// <summary>Duna, fitted to the arrivals of 2026-11-01 (Mk I and Mk II landers, nose or engine first).</summary>
         public static SimWorld Duna()
         {

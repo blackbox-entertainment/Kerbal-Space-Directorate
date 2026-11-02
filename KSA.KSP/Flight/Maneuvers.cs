@@ -177,7 +177,6 @@ namespace KSA.KSP.Flight
         private double _tolerance = 0.3;
         private double _lateBy;
         private double _burned, _lastStep;
-        private const double OverBurn = 1.03;
 
         public bool Done { get { return _phase == Phases.Done; } }
         public bool Failed { get { return _phase == Phases.Failed; } }
@@ -259,7 +258,7 @@ namespace KSA.KSP.Flight
                     // Taper: last few m/s at low throttle so we do not overshoot; cutoff when the vector flips.
                     // A long burn leaves the node behind and the vector never empties: stop on what was really burned
                     // (2026-11-01: a 1,047 m/s ejection under warp burned 1,567 m/s and went past Duna).
-                    bool spent = _burned >= _startDv * OverBurn + 1;
+                    bool spent = KSA.Core.Flight.Sim.BurnRules.Spent(_burned, _startDv);
                     if (spent || remaining < _tolerance || Vector3d.Dot(burn, _lastBurnVector) < 0 || (remaining < 2 && now - _started > _burnTime + 10) || (CutOff != null && CutOff(v)))
                     {
                         c.Throttle = 0;
