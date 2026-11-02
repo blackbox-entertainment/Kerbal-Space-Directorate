@@ -691,7 +691,12 @@ namespace KSA.KSP.Flight
             foreach (Part p in _v.parts)
             {
                 if (p.inverseStage != next) continue;
-                if (p.FindModuleImplementing<ModuleAnchoredDecoupler>() == null || p.CrewCapacity > 0) return false;
+                // The tanks carry the same stage number as their decouplers (2026-11-01: empty on Duna arrival, and they stayed on).
+                if (p.FindModuleImplementing<ModuleAnchoredDecoupler>() == null)
+                {
+                    if (p.CrewCapacity > 0 || p.FindModuleImplementing<ModuleEngines>() != null || p.FindModuleImplementing<ModuleParachute>() != null || p.FindModuleImplementing<ModuleDecouple>() != null) return false;
+                    continue;
+                }
                 foreach (Part held in p.children)
                 {
                     if (!EmptyBranch(held, ref tanks)) return false;

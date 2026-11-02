@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.143 (2026-11-01), test build
+
+- **Empty drop tanks really drop.** The rule stopped at the tanks themselves, because they carry the same stage number as their decouplers.
+- **A pass that skims the air is deepened.** Above 40 km on Duna, a small burn at apoapsis brings the low point down to 30 km.
+
 ## 0.8.142 (2026-11-01), test build
 
 - **Mission reports wait for the end of a warp.** They no longer open during time warp.

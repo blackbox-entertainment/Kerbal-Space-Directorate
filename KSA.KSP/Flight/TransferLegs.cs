@@ -1304,6 +1304,8 @@ namespace KSA.KSP.Flight
         private const double MaxOffForClimb = 25;     // degrees off the climb: thrust beyond this only pushes the wrong way
         private const double ClimbPitch = 35 * Math.PI / 180;
         private const double PassMargin = 1.5;        // of the last pass's energy loss, allowed for the next
+        private const double ShallowShare = 0.8;      // of the air's depth: a higher pass barely slows the craft (40 km on Duna)
+        private const double DeepenShare = 0.6;       // of the air's depth: where a shallow pass is brought down to (30 km on Duna)
         private const double TurnSeconds = 90;
         private const int MaxPasses = 12;
         private const double GoalMargin = 30000;      // metres of apoapsis over the orbit wanted: then stop
@@ -1388,6 +1390,12 @@ namespace KSA.KSP.Flight
                         if (PlanLift(ctx, done ? Math.Min(v.orbit.ApR, _target.Radius + _altitude) : _target.Radius + PassShare * air, ref line)) _phase = Phases.Burn;
                         break;
                     }
+                    // Skimming the top of the air does nothing: a small burn at apoapsis brings the low point down (2026-11-01: 48 km took 220 km of 14,627).
+                    if (_passes >= 1 && v.orbit.PeA > ShallowShare * air)
+                    {
+                        if (PlanLift(ctx, _target.Radius + DeepenShare * air, ref line)) _phase = Phases.Burn;
+                        break;
+                    }
                     double edge = TimeToAir(v, air + 2000, ctx.Now);
                     if (edge > ctx.Now + TurnSeconds + 20) c.WarpTo(edge - TurnSeconds);
                     break;
@@ -1416,7 +1424,7 @@ namespace KSA.KSP.Flight
             _exec = new NodeExecutor();
             _exec.Begin(ctx);
             if (_exec.Failed) { Fail(_exec.FailReason); return false; }
-            line = "Lifting the low point to " + TransferSupport.Km(rLow - _target.Radius) + " at apoapsis with " + Math.Round(dv) + " m/s.";
+            line = (dv < 0 ? "Lowering" : "Lifting") + " the low point to " + TransferSupport.Km(rLow - _target.Radius) + " at apoapsis with " + Math.Round(Math.Abs(dv)) + " m/s.";
             return true;
         }
 
