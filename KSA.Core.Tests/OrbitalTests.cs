@@ -167,6 +167,47 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void TransferPlanner_NeverRunsAnInterceptThroughThePlanet()
+        {
+            // Two low Kerbin orbits a little apart in phase: the cheapest short arc dives through the ground (0.8.163).
+            const double kerbinRadius = 600000, air = 70000;
+            double rUs = kerbinRadius + 88000, rThem = kerbinRadius + 85000;
+            double pUs = Kepler.Period(KerbinMu, rUs), pThem = Kepler.Period(KerbinMu, rThem);
+            Func<double, StateVector> origin = ut => Kepler.Circular(KerbinMu, rUs, 2 * Math.PI * ut / pUs, Up);
+            Func<double, StateVector> target = ut => Kepler.Circular(KerbinMu, rThem, 2.5 + 2 * Math.PI * ut / pThem, Up);
+            double floor = kerbinRadius + air + 10000;
+            TransferPlan plan = TransferPlanner.Plan(origin, target, KerbinMu, 120, 2.5 * pUs, 0.3 * pUs, 1.5 * pUs, 60, 30, 1.0, floor);
+            Assert.That(plan, Is.Not.Null);
+            double pe = TransferPlanner.Periapsis(origin(plan.DepartureUt).Position, plan.DepartureVelocity, KerbinMu);
+            Assert.That(pe, Is.GreaterThanOrEqualTo(floor), "the arc stays above the air");
+            TestContext.Out.WriteLine("Direct plan: dv {0:0.0} m/s", plan.DeltaVMagnitude);
+        }
+
+        [Test]
+        public void Phasing_ClosesAThirdOfAnOrbitCheaply()
+        {
+            // Same picture: the station 2.5 rad ahead on a slightly lower orbit. A phasing orbit a few revolutions long
+            // costs tens of m/s, not hundreds, and brings the station overhead.
+            const double kerbinRadius = 600000, air = 70000;
+            double rUs = kerbinRadius + 88000, rThem = kerbinRadius + 85000;
+            double pUs = Kepler.Period(KerbinMu, rUs), pThem = Kepler.Period(KerbinMu, rThem);
+            Func<double, StateVector> target = ut => Kepler.Circular(KerbinMu, rThem, 2.5 + 2 * Math.PI * ut / pThem, Up);
+            StateVector us = Kepler.Circular(KerbinMu, rUs, 0, Up);
+            double floor = kerbinRadius + air + 10000;
+            PhasingPlan plan = Phasing.Plan(KerbinMu, us.Position, us.Velocity, target(0).Position, pThem, floor, 10 * kerbinRadius, 8);
+            Assert.That(plan, Is.Not.Null);
+            TestContext.Out.WriteLine("Phasing: {0} orbits, dv {1:0.0} m/s, {2:0} x {3:0} km", plan.Orbits, plan.DeltaVMagnitude, (plan.Apoapsis - kerbinRadius) / 1000, (plan.Periapsis - kerbinRadius) / 1000);
+            Assert.That(plan.DeltaVMagnitude, Is.LessThan(100));
+            Assert.That(plan.Periapsis, Is.GreaterThanOrEqualTo(floor));
+            double wait = plan.Orbits * plan.Period;
+            StateVector after = Kepler.Propagate(new StateVector(us.Position, us.Velocity + plan.DeltaV), KerbinMu, wait);
+            double gap = Phasing.LeadAngle(after.Position, target(wait).Position, Up);
+            if (gap > Math.PI) gap -= 2 * Math.PI;
+            Assert.That(Math.Abs(gap), Is.LessThan(0.03), "the station is overhead after the phasing orbits");
+            Assert.That((after.Position - us.Position).Length, Is.LessThan(5000), "back at the burn point");
+        }
+
+        [Test]
         public void TransferPlanner_ReturnsNullWhenNothingConverges()
         {
             // Origin and target always on the same ray: every Lambert call is degenerate.

@@ -51,9 +51,12 @@ namespace KSA.KSP.Flight
     /// </summary>
     public sealed class RendezvousLeg : IFlightLeg
     {
-        private enum Phases { PlanePlan, PlaneBurn, InterceptPlan, InterceptBurn, Coast, MatchPlan, MatchBurn, Check }
+        private enum Phases { PlanePlan, PlaneBurn, InterceptPlan, PhasePlan, PhaseBurn, PhaseCoast, InterceptBurn, Coast, MatchPlan, MatchBurn, Check }
 
         private const double MaxPlaneChangeDv = 1500;
+        /// <summary>A direct intercept dearer than this gets a phasing orbit first (0.8.163).</summary>
+        private const double MaxDirectIntercept = 120;
+        private const int MaxPhasingOrbits = 8;
         private const double DoneDistance = 2500;
         private const double DoneSpeed = 10;
 
@@ -63,6 +66,8 @@ namespace KSA.KSP.Flight
         private double _arrivalUt;
         private double _coastEnd;
         private int _intercepts;
+        private bool _phased;
+        private double _phaseEnd;
 
         public string Name { get { return "Rendezvous"; } }
         public string Status { get; private set; }
@@ -81,6 +86,7 @@ namespace KSA.KSP.Flight
             Status = "Looking for the station.";
             _burn = null;
             _intercepts = 0;
+            _phased = false;
             try
             {
                 Vessel v = ctx.Vessel;
@@ -168,9 +174,21 @@ namespace KSA.KSP.Flight
                         double period = v.orbit.period;
                         if (double.IsNaN(period) || period <= 0) { Fail("not in a closed orbit", ctx); break; }
                         double mu = v.mainBody.gravParameter;
+                        // Never an arc through the air (0.8.163): the cheapest intercept between two low orbits ran through Kerbin.
+                        double floor = v.mainBody.Radius + v.mainBody.atmosphereDepth + 10000;
                         TransferPlan plan = TransferPlanner.Plan(OrbitAdapter.Sampler(v.orbit), OrbitAdapter.Sampler(_target.orbit), mu,
-                            now + 120, now + 2.5 * period, 0.3 * period, 1.5 * period, 60, 30, 1.0);
-                        if (plan == null || double.IsNaN(plan.DeltaVMagnitude) || plan.DepartureUt <= now) { Fail("no intercept found", ctx); break; }
+                            now + 120, now + 2.5 * period, 0.3 * period, 1.5 * period, 60, 30, 1.0, floor);
+                        if (plan == null || double.IsNaN(plan.DeltaVMagnitude) || plan.DepartureUt <= now)
+                        {
+                            if (!_phased) { _phase = Phases.PhasePlan; Status = "No direct intercept; planning a phasing orbit."; break; }
+                            Fail("no intercept found", ctx); break;
+                        }
+                        if (!_phased && plan.DeltaVMagnitude > MaxDirectIntercept)
+                        {
+                            _phase = Phases.PhasePlan;
+                            Status = "Direct intercept costs " + Math.Round(plan.DeltaVMagnitude) + " m/s; planning a phasing orbit.";
+                            break;
+                        }
                         NodePlanner.ClearNodes(v);
                         if (NodePlanner.AddFrameDeltaV(v, plan.DepartureUt, plan.DeltaV) == null) { Fail("maneuver nodes unavailable", ctx); break; }
                         _arrivalUt = plan.ArrivalUt;
@@ -181,6 +199,43 @@ namespace KSA.KSP.Flight
                         _phase = Phases.InterceptBurn;
                         Status = "Intercept burn: " + Math.Round(plan.DeltaVMagnitude) + " m/s.";
                         line = "Intercept planned: " + Math.Round(plan.DeltaVMagnitude) + " m/s, arriving in " + Math.Round((plan.ArrivalUt - now) / 60) + " min.";
+                    }
+                    break;
+                case Phases.PhasePlan:
+                    {
+                        _phased = true;
+                        double mu = v.mainBody.gravParameter;
+                        double floor = v.mainBody.Radius + v.mainBody.atmosphereDepth + 10000;
+                        double nodeUt = now + 90;
+                        StateVector us = OrbitAdapter.StateAt(v.orbit, nodeUt), them = OrbitAdapter.StateAt(_target.orbit, nodeUt);
+                        PhasingPlan plan = Phasing.Plan(mu, us.Position, us.Velocity, them.Position, _target.orbit.period, floor, v.mainBody.sphereOfInfluence * 0.5, MaxPhasingOrbits);
+                        if (plan == null) { _phase = Phases.InterceptPlan; Status = "No phasing orbit fits; trying a direct intercept."; break; }
+                        NodePlanner.ClearNodes(v);
+                        if (NodePlanner.AddFrameDeltaV(v, nodeUt, plan.DeltaV) == null) { Fail("maneuver nodes unavailable", ctx); break; }
+                        _phaseEnd = nodeUt + plan.Orbits * plan.Period - 0.5 * plan.Period;
+                        _burn = new NodeExecutor();
+                        _burn.Begin(ctx);
+                        if (_burn.Failed) { Fail(_burn.FailReason, ctx); break; }
+                        _phase = Phases.PhaseBurn;
+                        Status = "Phasing burn: " + Math.Round(plan.DeltaVMagnitude) + " m/s.";
+                        line = "Phasing: " + Math.Round(plan.DeltaVMagnitude) + " m/s to a " + Math.Round((plan.Apoapsis - v.mainBody.Radius) / 1000) + " x " + Math.Round((plan.Periapsis - v.mainBody.Radius) / 1000)
+                            + " km orbit, " + plan.Orbits + " orbit" + (plan.Orbits == 1 ? string.Empty : "s") + " until the station comes round.";
+                    }
+                    break;
+                case Phases.PhaseBurn:
+                    line = RunBurn(ctx, Phases.PhaseCoast, "Phasing orbit; waiting for the station.");
+                    break;
+                case Phases.PhaseCoast:
+                    if (now >= _phaseEnd)
+                    {
+                        c.StopWarp();
+                        _phase = Phases.InterceptPlan;
+                        Status = "Station nearly in phase; planning the intercept.";
+                    }
+                    else
+                    {
+                        Status = "Phasing orbit, " + Math.Round((_phaseEnd - now) / 60) + " min until the intercept.";
+                        if (_phaseEnd - now > 30) c.WarpTo(_phaseEnd); else if (c.IsWarping) c.StopWarp();
                     }
                     break;
                 case Phases.InterceptBurn:

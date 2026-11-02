@@ -366,6 +366,16 @@ namespace KSA.Core.Flight.Orbital
         public static TransferPlan Plan(Func<double, StateVector> origin, Func<double, StateVector> target, double mu,
             double earliestUt, double latestUt, double minTof, double maxTof, int departureSamples, int tofSamples, double arrivalWeight)
         {
+            return Plan(origin, target, mu, earliestUt, latestUt, minTof, maxTof, departureSamples, tofSamples, arrivalWeight, 0);
+        }
+
+        /// <summary>
+        /// As above, but no transfer whose periapsis lies inside minRadius (centre distance): the cheapest arc between
+        /// two low orbits can run through the planet (0.8.163: a 278 m/s "intercept" put a Duna crew on a -167 km periapsis).
+        /// </summary>
+        public static TransferPlan Plan(Func<double, StateVector> origin, Func<double, StateVector> target, double mu,
+            double earliestUt, double latestUt, double minTof, double maxTof, int departureSamples, int tofSamples, double arrivalWeight, double minRadius)
+        {
             if (origin == null || target == null) return null;
             if (departureSamples < 1) departureSamples = 1;
             if (tofSamples < 1) tofSamples = 1;
@@ -384,7 +394,7 @@ namespace KSA.Core.Flight.Orbital
                 for (int j = 0; j < tofSamples; j++)
                 {
                     double tof = minTof + j * tofStep;
-                    Consider(origin, target, mu, dep, tof, arrivalWeight, ref best, ref bestScore);
+                    Consider(origin, target, mu, dep, tof, arrivalWeight, minRadius, ref best, ref bestScore);
                 }
             }
             if (best == null) return null;
@@ -404,7 +414,7 @@ namespace KSA.Core.Flight.Orbital
                         if (di == 0 && tj == 0) continue;
                         double dep = Clamp(cd + di * dStep, earliestUt, latestUt);
                         double tof = Clamp(ct + tj * tStep, minTof, maxTof);
-                        Consider(origin, target, mu, dep, tof, arrivalWeight, ref best, ref bestScore);
+                        Consider(origin, target, mu, dep, tof, arrivalWeight, minRadius, ref best, ref bestScore);
                     }
                 }
             }
@@ -416,14 +426,28 @@ namespace KSA.Core.Flight.Orbital
             return v < lo ? lo : (v > hi ? hi : v);
         }
 
+        /// <summary>Periapsis distance of the orbit through r with velocity v (any conic).</summary>
+        public static double Periapsis(Vec3 r, Vec3 v, double mu)
+        {
+            double rl = r.Length;
+            if (rl <= 0) return 0;
+            double energy = v.Length * v.Length / 2 - mu / rl;
+            double h = Vec3.Cross(r, v).Length;
+            double e2 = 1 + 2 * energy * h * h / (mu * mu);
+            double e = Math.Sqrt(Math.Max(0, e2));
+            double p = h * h / mu;
+            return p / (1 + e);
+        }
+
         private static void Consider(Func<double, StateVector> origin, Func<double, StateVector> target, double mu,
-            double dep, double tof, double arrivalWeight, ref TransferPlan best, ref double bestScore)
+            double dep, double tof, double arrivalWeight, double minRadius, ref TransferPlan best, ref double bestScore)
         {
             StateVector o = origin(dep);
             StateVector t = target(dep + tof);
             Vec3 normal = Vec3.Cross(o.Position, o.Velocity);
             Vec3 v1, v2;
             if (!Lambert.Solve(o.Position, t.Position, tof, mu, normal, out v1, out v2)) return;
+            if (minRadius > 0 && Periapsis(o.Position, v1, mu) < minRadius) return;
             Vec3 dv = v1 - o.Velocity;
             Vec3 arr = v2 - t.Velocity;
             double score = dv.Length + arrivalWeight * arr.Length;
