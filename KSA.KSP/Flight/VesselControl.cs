@@ -107,6 +107,14 @@ namespace KSA.KSP.Flight
             }
         }
 
+        /// <summary>
+        /// Runs the attitude hold for a craft that is not the active vessel (0.8.168, T: the station turns its port toward the
+        /// ship coming in). The hold works through SAS's rotation lock, which KSP's own controller keeps on every loaded
+        /// vessel, so no fly-by-wire hook is needed; call this every physics step.
+        /// </summary>
+        public void Drive() { if (_manualHold && _v != null && _v.loaded) ManualHold(_scratch); }
+        private readonly FlightCtrlState _scratch = new FlightCtrlState();
+
         private void ManualHold(FlightCtrlState s)
         {
             Vector3d? target = HoldTarget();

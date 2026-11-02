@@ -468,6 +468,8 @@ namespace KSA.KSP.Flight
         private const double AbortDistance = 3000;
         private const double ApproachRange = 150;
         private const double Standoff = 30;
+        /// <summary>Sideways clearance when we are behind the port plane: go round the station, never through it (0.8.168).</summary>
+        private const double KeepOut = 60;
         private const double Gain = 0.5;
         private const double Deadband = 0.05;
 
@@ -478,6 +480,8 @@ namespace KSA.KSP.Flight
         private bool _targetModeOk;
         private bool _sasOnPort;
         private double _lastSasRefresh;
+        private VesselControl _stationControl;
+        private double _stationNoted = -1e9;
 
         public string Name { get { return "Docking"; } }
         public string Status { get; private set; }
@@ -504,6 +508,7 @@ namespace KSA.KSP.Flight
                 _target = StationOps.ResolveTarget(ctx);
                 if (_target == null) { Fail("station not found in orbit", ctx); return; }
                 if (!ctx.Control.HasRcs()) { Fail("no RCS on this craft; docking needs RCS", ctx); return; }
+                if (Mono(v) < 0.5) { Fail("no monopropellant aboard; docking needs RCS", ctx); return; }
                 _started = ctx.Now;
                 ctx.Control.Throttle = 0;
                 ctx.Control.ClearInputs();
@@ -555,6 +560,20 @@ namespace KSA.KSP.Flight
             _ourPort = bestOurs; _targetPort = bestTheirs;
             ctx.Control.ControlFrom(_ourPort);
             ctx.Say("Docking " + _ourPort.part.partInfo.title + " to " + _targetPort.part.partInfo.title + " on " + StationOps.NameOf(_target) + ".");
+            // The station turns its port toward us (0.8.168, T): its reaction wheel does the pointing, so we come straight in
+            // instead of going round the back on thrusters. Works through SAS's rotation lock on the loaded station.
+            try
+            {
+                if (_target.GetCrewCount() == 0 && _target.Autopilot != null && _target.Autopilot.SAS != null)
+                {
+                    _stationControl = new VesselControl(_target);
+                    _stationControl.ControlFrom(_targetPort);
+                    ModuleDockingNode ours = _ourPort, theirs = _targetPort;
+                    _stationControl.PointAlong(() => (Vector3d)ours.nodeTransform.position - (Vector3d)theirs.nodeTransform.position);
+                    ctx.Say(StationOps.NameOf(_target) + " is turning its port toward us.");
+                }
+            }
+            catch (Exception e) { KsaCore.Log.Warn("Station aim: " + e.Message); _stationControl = null; }
             return v != null;
         }
 
@@ -610,6 +629,7 @@ namespace KSA.KSP.Flight
             if (IsDocked(ctx)) { Finish(ctx); return null; }
             if (TimeWarp.CurrentRate > 1.01f) { c.StopWarp(); c.ClearInputs(); Status = "Waiting for warp to end."; return null; }
             double now = ctx.Now;
+            if (Mono(v) < 0.2) { c.ClearInputs(); Fail("out of monopropellant", ctx); return null; }
             if (now - _started > TimeoutSeconds) { c.ClearInputs(); Fail("docking timed out", ctx); return null; }
             double vesselDist = StationOps.Distance(v, _target);
             if (vesselDist > AbortDistance) { c.ClearInputs(); Fail("drifted " + Math.Round(vesselDist / 1000.0, 1) + " km from the station", ctx); return null; }
@@ -621,11 +641,21 @@ namespace KSA.KSP.Flight
             string line = null;
             Vector3d relVel = StationOps.RelativeVelocity(v, _target);
             Vector3d desired;
+            if (havePorts && _stationControl != null)
+            {
+                _stationControl.Drive();
+                if (now - _stationNoted > 15)
+                {
+                    _stationNoted = now;
+                    double off = Vector3d.Angle(_targetPort.nodeTransform.forward, (Vector3d)_ourPort.nodeTransform.position - (Vector3d)_targetPort.nodeTransform.position);
+                    KsaCore.Log.Info("Station aim: port " + Math.Round(off) + " deg off us, station turning " + VesselControl.TurnRate(_target).ToString("0.0") + " deg/s");
+                }
+            }
 
             if (!havePorts || _phase == Phases.Approach)
             {
-                Vector3d aim = havePorts ? StandoffPoint() : _target.GetWorldPos3D();
                 Vector3d from = havePorts ? (Vector3d)_ourPort.nodeTransform.position : v.GetWorldPos3D();
+                Vector3d aim = havePorts ? AimPoint(from) : _target.GetWorldPos3D();
                 Vector3d toAim = aim - from;
                 double dist = toAim.magnitude;
                 HoldSas(ctx, false);
@@ -656,7 +686,8 @@ namespace KSA.KSP.Flight
                 {
                     // Fly to the corridor point: 30 m out on the port axis, or hold our axial distance while the lateral error is fixed.
                     double holdAxial = Clamp(axial, 10.0, Standoff);
-                    Vector3d point = tgtPos + tgtFwd * (axial > Standoff ? Standoff : holdAxial);
+                    // Behind the port plane: round the side first, never a straight line through the station (0.8.168).
+                    Vector3d point = axial < 10 ? AimPoint(ourPos) : tgtPos + tgtFwd * (axial > Standoff ? Standoff : holdAxial);
                     Vector3d err = point - ourPos;
                     double e = err.magnitude;
                     double speed = Clamp(e / 20.0, 0.2, 2.0);
@@ -692,6 +723,28 @@ namespace KSA.KSP.Flight
         private Vector3d StandoffPoint()
         {
             return (Vector3d)_targetPort.nodeTransform.position + ((Vector3d)_targetPort.nodeTransform.forward).normalized * Standoff;
+        }
+
+        /// <summary>The standoff point in front of the port, or, while we are behind the port plane, a point beside it 60 m off the axis.</summary>
+        private Vector3d AimPoint(Vector3d from)
+        {
+            Vector3d tgtPos = _targetPort.nodeTransform.position;
+            Vector3d fwd = ((Vector3d)_targetPort.nodeTransform.forward).normalized;
+            Vector3d rel = from - tgtPos;
+            double axial = Vector3d.Dot(rel, fwd);
+            if (axial >= 10) return StandoffPoint();
+            Vector3d lateral = rel - fwd * axial;
+            Vector3d side = lateral.magnitude > 1 ? lateral.normalized : Vector3d.Cross(fwd, Vector3d.up).normalized;
+            if (side.magnitude < 0.5) side = Vector3d.Cross(fwd, Vector3d.right).normalized;
+            return tgtPos + fwd * Standoff + side * KeepOut;
+        }
+
+        private static double Mono(Vessel v)
+        {
+            double total = 0;
+            if (v == null) return 0;
+            foreach (Part p in v.parts) { PartResource r = p.Resources.Get("MonoPropellant"); if (r != null) total += r.amount; }
+            return total;
         }
 
         /// <summary>Keeps SAS pointed at the station (far) or the port (near), re-asserting it every few seconds.</summary>

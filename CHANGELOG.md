@@ -2,6 +2,12 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.168 (2026-11-02), test build
+
+- **The station turns its port toward the ship coming in** (T). Once the ports are picked, the crewless station is steered on its reaction wheel through SAS's rotation lock to point its port at our port, so the approach is straight in. Logged as "Station aim:" lines. Unflown; a station with crew aboard is left alone.
+- **Never through the station.** While the ship is behind the port plane, both the approach and the line-up aim for a point beside the station, 60 m off the port axis, then come round to the front.
+- **No monopropellant, no dock.** The docking leg stops at once when the thrusters have nothing left instead of drifting about next to the station.
+
 ## 0.8.167 (2026-11-02), test build
 
 - **Refuelling fills the top stages first.** After the tanks that launched empty, a tanker tops up stage by stage from the top, and a nearly spent booster still attached gets nothing. The Mk IIe core, 48 t of room with 144 m/s left in it, would have taken most of the station.
