@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.175 (2026-11-02), test build
+
+- **Course corrections search small burns first.** Eight days out, the 69 m/s deep-space burn left Duna 4,971 km off and the trim found nothing: it bisected against the whole 400 m/s allowance, at whose far end the encounter 340 days ahead vanishes, so the band was never bracketed. The nudge needed was a fraction of a metre per second. Searches now try caps of 1, 5, 25 and 100 m/s before the full allowance.
+- **"No path to the target" means no encounter at all.** A path that still meets the target is flown on to the mid-course check; it had meant "out of band", and the crew spent 875 m/s turning for home eight days into a flight that still met Duna.
+
 ## 0.8.174 (2026-11-02), test build
 
 - **Burns never light on rails.** The 43 m/s intercept burn of a fresh Mk IIe flight "started" while the ship was still packed under warp, counted 32 m/s of nothing, and the ship arrived 48 km from the station. The node executor now waits for the unpack before it opens the throttle and counts nothing while packed.

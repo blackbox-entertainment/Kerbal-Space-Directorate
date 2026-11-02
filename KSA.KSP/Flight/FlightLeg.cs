@@ -225,7 +225,7 @@ namespace KSA.KSP.Flight
                         CorrectionLeg home = _legs[i] as CorrectionLeg;
                         if (home == null || !home.Homebound) continue;
                         _index = i - 1; _pendingAdvance = true;
-                        line = "No path to " + _ctx.Target.bodyName + " from here; the crew turns for home.";
+                        line = (line != null ? line + " " : string.Empty) + "No path to " + _ctx.Target.bodyName + " from here; the crew turns for home.";
                         break;
                     }
                 }

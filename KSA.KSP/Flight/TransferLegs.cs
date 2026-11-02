@@ -825,8 +825,10 @@ namespace KSA.KSP.Flight
                             State = LegState.Done;
                             Status = "No correction within " + Math.Round(_budget) + " m/s; flying on.";
                             double cur = TransferSupport.VesselPeriapsisAt(v, _target);
-                            // Nothing reaches the target from here: the program may turn the crew for home.
-                            GaveUp = _target.referenceBody == v.mainBody && (double.IsNaN(cur) || cur > _peHi + FarOff);
+                            // No encounter at all and no fresh transfer within the budget: the program may turn the crew for home.
+                            // A path that still meets the target is flown on; the mid-course check gets another go (0.8.175: 4,971 km over Duna
+                            // 340 days out was called "no path" and 875 m/s went on a burn for home eight days into the flight).
+                            GaveUp = _target.referenceBody == v.mainBody && double.IsNaN(cur);
                             line = "No correction found within " + Math.Round(_budget) + " m/s"
                                 + (double.IsNaN(cur) ? "; no " + _target.bodyName + " encounter on the current path." : "; continuing with periapsis " + TransferSupport.Km(cur) + ".");
                             break;
@@ -916,15 +918,33 @@ namespace KSA.KSP.Flight
 
         private double Score(ManeuverNode n) { return NodePlanner.PeriapsisAt(n, _target); }
 
+        /// <summary>
+        /// Search caps, smallest first (0.8.175): months out a nudge of a fraction of a metre per second moves the periapsis thousands of
+        /// kilometres, and a bisection against the whole allowance loses the encounter at its far end and never brackets the band.
+        /// </summary>
+        private static readonly double[] Caps = { 1, 5, 25, 100 };
+
         private void TrySingle(Vessel v, Vector3d dir)
         {
             double dv = double.NaN;
-            try { dv = NodePlanner.Bisect(v, _ut, dir, _budget, Score, _peLo, _peHi); } catch { dv = double.NaN; }
-            if (double.IsNaN(dv))
+            foreach (double cap in CapsUpTo(_budget))
             {
-                try { dv = TransferSupport.LineSearch(v, _ut, Vector3d.zero, dir, _budget, 20, Score, _peLo, _peHi); } catch { dv = double.NaN; }
+                try { dv = NodePlanner.Bisect(v, _ut, dir, cap, Score, _peLo, _peHi); } catch { dv = double.NaN; }
+                if (double.IsNaN(dv))
+                {
+                    try { dv = TransferSupport.LineSearch(v, _ut, Vector3d.zero, dir, cap, 20, Score, _peLo, _peHi); } catch { dv = double.NaN; }
+                }
+                if (!double.IsNaN(dv)) break;
             }
             Consider(dv, dir * dv);
+        }
+
+        private static List<double> CapsUpTo(double budget)
+        {
+            var caps = new List<double>();
+            foreach (double c in Caps) if (c < budget) caps.Add(c);
+            caps.Add(budget);
+            return caps;
         }
 
         /// <summary>Normal (+/-) first until an encounter exists, then radial (+/-) within what budget remains.</summary>
@@ -936,8 +956,12 @@ namespace KSA.KSP.Flight
             try { dn = TransferSupport.FirstFinite(v, _ut, normal, _budget, 20, Score); } catch { dn = double.NaN; }
             if (double.IsNaN(dn) || dn >= _budget) return;
             double budget = _budget - dn;
-            double dr;
-            try { dr = TransferSupport.LineSearch(v, _ut, normal * dn, radial, budget, 20, Score, _peLo, _peHi); } catch { dr = double.NaN; }
+            double dr = double.NaN;
+            foreach (double cap in CapsUpTo(budget))
+            {
+                try { dr = TransferSupport.LineSearch(v, _ut, normal * dn, radial, cap, 20, Score, _peLo, _peHi); } catch { dr = double.NaN; }
+                if (!double.IsNaN(dr)) break;
+            }
             if (double.IsNaN(dr)) return;
             Vector3d comps = normal * dn + radial * dr;
             Consider(comps.magnitude, comps);
