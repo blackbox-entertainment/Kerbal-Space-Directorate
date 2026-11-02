@@ -506,6 +506,8 @@ namespace KSA.KSP.Flight
             return b.Radius * Math.Acos(Math.Max(-1, Math.Min(1, cos)));
         }
 
+        private static bool IsSea(CelestialBody b, double lat, double lon) { return b.ocean && b.TerrainAltitude(lat, lon, true) < 0; }
+
         /// <summary>The worst of the height change across a 1 km patch and the steepest step between samples: a crater rim scores high.</summary>
         private static double Roughness(CelestialBody b, double lat, double lon)
         {
@@ -517,6 +519,7 @@ namespace KSA.KSP.Flight
                 for (int j = 0; j < 5; j++)
                 {
                     double h = heights[i, j] = b.TerrainAltitude(lat + (i - 2) * step, lon + (j - 2) * stepLon);
+                    if (IsSea(b, lat + (i - 2) * step, lon + (j - 2) * stepLon)) return 1; // the sea reads dead flat, and no lander stands on it
                     low = Math.Min(low, h); high = Math.Max(high, h);
                     if (i > 0) steepest = Math.Max(steepest, Math.Abs(h - heights[i - 1, j]) / SiteSpacing);
                     if (j > 0) steepest = Math.Max(steepest, Math.Abs(h - heights[i, j - 1]) / SiteSpacing);
@@ -566,6 +569,7 @@ namespace KSA.KSP.Flight
                         if (i < n - 1) worst = Math.Max(worst, Math.Abs(h[i, j] - h[i + 1, j]) / SurveySpacing);
                         if (j > 0) worst = Math.Max(worst, Math.Abs(h[i, j] - h[i, j - 1]) / SurveySpacing);
                         if (j < n - 1) worst = Math.Max(worst, Math.Abs(h[i, j] - h[i, j + 1]) / SurveySpacing);
+                        if (body.ocean && h[i, j] < 0) worst = 1;
                         slopes[i * n + j] = worst;
                     }
                 int best = DescentMath.Flattest(slopes);
@@ -776,6 +780,7 @@ namespace KSA.KSP.Flight
                 for (int j = -2; j <= 2; j++)
                 {
                     double h = b.TerrainAltitude(lat + i * step, lon + j * stepLon);
+                    if (IsSea(b, lat + i * step, lon + j * stepLon)) return 1;
                     if (i > -2) slope = Math.Max(slope, Math.Abs(h - b.TerrainAltitude(lat + (i - 1) * step, lon + j * stepLon)));
                     if (j > -2) slope = Math.Max(slope, Math.Abs(h - b.TerrainAltitude(lat + i * step, lon + (j - 1) * stepLon)));
                 }

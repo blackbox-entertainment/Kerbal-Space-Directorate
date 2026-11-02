@@ -181,9 +181,16 @@ namespace KSA.KSP.Flight
         {
             if (interplanetary)
             {
-                prog.Add(new InterplanetaryTransferLeg(target)).Add(new WaitForSoiLeg(ctx.Home.referenceBody, 30))
-                    .Add(new CorrectionLeg(target, peLo, peHi, 400)).Add(new WaitForSoiLeg(target, 800))
-                    .Add(new CorrectionLeg(target, peLo, peHi, 300));
+                // A moon of another planet (Laythe, Ike): the planet first, a high orbit of it, then across to the moon. The transfer refused these outright until 2026-11-01.
+                CelestialBody planet = PlanetOf(target, ctx.Home);
+                bool moon = planet != target;
+                double lo = moon ? 0.9 * StagingAltitude(target) : peLo, hi = moon ? 1.1 * StagingAltitude(target) : peHi;
+                prog.Add(new InterplanetaryTransferLeg(planet)).Add(new WaitForSoiLeg(ctx.Home.referenceBody, 30))
+                    .Add(new CorrectionLeg(planet, lo, hi, 400)).Add(new WaitForSoiLeg(planet, 4000))
+                    .Add(new CorrectionLeg(planet, lo, hi, 300));
+                if (moon)
+                    prog.Add(new CaptureLeg(planet, StagingAltitude(target))).Add(new TransferLeg(target, (peLo + peHi) / 2)).Add(new CorrectionLeg(target, peLo, peHi, 300))
+                        .Add(new WaitForSoiLeg(target, 30)).Add(new CorrectionLeg(target, peLo, peHi, 200));
             }
             else
             {
@@ -191,6 +198,20 @@ namespace KSA.KSP.Flight
                 prog.Add(new TransferLeg(target, (peLo + peHi) / 2)).Add(new CorrectionLeg(target, peLo, peHi, 300, back))
                     .Add(new WaitForSoiLeg(target, 30)).Add(new CorrectionLeg(target, peLo, peHi, 200, back));
             }
+        }
+
+        /// <summary>The planet a flight must reach: the world itself, or the one a moon goes around.</summary>
+        private static CelestialBody PlanetOf(CelestialBody target, CelestialBody home)
+        {
+            CelestialBody sun = home.referenceBody, b = target;
+            while (b.referenceBody != null && b.referenceBody != sun && b.referenceBody != b) b = b.referenceBody;
+            return b;
+        }
+
+        /// <summary>Half way up to the moon's orbit: cheap to capture into and clear of the planet's air and inner moons.</summary>
+        private static double StagingAltitude(CelestialBody moon)
+        {
+            return 0.5 * moon.orbit.semiMajorAxis - moon.referenceBody.Radius * 0.5;
         }
 
         private const double ReturnAirShare = 0.43; // 30 km on Kerbin
@@ -212,6 +233,13 @@ namespace KSA.KSP.Flight
             peHi = pe + 4000;
             if (interplanetary)
             {
+                // From a moon of another planet: down to the planet's staging orbit, then home from there.
+                CelestialBody planet = PlanetOf(target, home);
+                if (planet != target)
+                {
+                    prog.Add(new ReturnLeg(planet, StagingAltitude(target))).Add(new WaitForSoiLeg(planet, 30)).Add(new CaptureLeg(planet, StagingAltitude(target)));
+                    fromOrbit = true;
+                }
                 if (fromOrbit) prog.Add(new ReturnLeg(home, pe)).Add(new WaitForSoiLeg(home.referenceBody, 60));
                 else prog.Add(new WaitForSoiLeg(home.referenceBody, 60)).Add(new TransferLeg(home, pe));
                 prog.Add(new CorrectionLeg(home, peLo, peHi, 400)).Add(new WaitForSoiLeg(home, 800)).Add(new CorrectionLeg(home, peLo, peHi, 300));
@@ -280,6 +308,15 @@ namespace KSA.KSP.Flight
                 // Still climbing or coming down from a hop: the ascent leg's Begin sorts that out.
                 if (v.altitude < home.atmosphereDepth || v.orbit == null || v.orbit.ApA < ctx.ParkingAltitude * 0.9) return;
                 if (v.situation == Vessel.Situations.ESCAPING) prog.SkipTo(l => l is CorrectionLeg || l is WaitForSoiLeg);
+                return;
+            }
+            // At the planet on the way to or from one of its moons.
+            CelestialBody planetOfMoon = target != home ? PlanetOf(target, home) : null;
+            if (planetOfMoon != null && planetOfMoon != target && planetOfMoon != home && body == planetOfMoon)
+            {
+                if (headingHome) prog.SkipTo(l => l is CaptureLeg && IndexAfterHome(prog, l) || l is ReturnLeg && IndexAfterHome(prog, l));
+                else if (v.situation == Vessel.Situations.ORBITING) prog.SkipTo(l => l is TransferLeg);
+                else prog.SkipTo(l => l is CaptureLeg || l is CorrectionLeg);
                 return;
             }
             // Pulled in by a moon of the world they came for (2026-11-01: nothing matched, so the crew ran the ascent from Kerbin in Ike's space and burned every drop).

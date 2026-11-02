@@ -120,6 +120,19 @@ namespace KSA.Core.Tests
             Assert.That(r.DeltaV, Is.LessThan(1000));
         }
 
+        /// <summary>Laythe: no flight yet and no measured air, so Kerbin's capsule drag scaled to 60% of the pressure. An estimate, not a fit.</summary>
+        [Test]
+        public void ALanderComesDownOnLaytheByTheEstimate()
+        {
+            var laythe = new SimWorld { Name = "Laythe", Radius = 500000, Mu = 1.962e12, AirTop = 50000, Heights = new double[] { 0, 14000, 21000, 29000, 36000, 43000 },
+                Drag = new double[] { 5e-4, 1.56e-5, 2.7e-6, 4.6e-7, 9.6e-8, 1.8e-8 } };
+            DescentResult r = DescentSim.Fly(laythe, 120000, 20000, 250000, 345, 30000, 12000);
+            TestContext.WriteLine("Laythe: " + r.Landed + ", " + Math.Round(r.TouchdownSpeed, 1) + " m/s, side " + Math.Round(r.SideSpeed, 1) + ", " + Math.Round(r.DeltaV) + " m/s spent");
+            Assert.That(r.Landed, Is.True);
+            Assert.That(r.TouchdownSpeed, Is.LessThan(5));
+            Assert.That(r.SideSpeed, Is.LessThan(3));
+        }
+
         /// <summary>The Mun and Minmus, where the real landers came down: the same rules with no air.</summary>
         [TestCase("Mun", 200000, 6.5138398e10, 60000, 20000)]
         [TestCase("Minmus", 60000, 1.7658e9, 50000, -6000)]

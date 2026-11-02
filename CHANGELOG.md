@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.156 (2026-11-01), test build
+
+- **Moons of other planets can be reached.** A flight to Laythe or Ike goes to the planet, into a high orbit of it, across to the moon, and back the same way. The transfer used to refuse these outright. Unflown.
+- **The sea is not flat ground.** Site searches now rule out water, which read as perfectly flat.
+
 ## 0.8.155 (2026-11-01), test build
 
 - **Any low fall in aerobraking goes to the landing**, not only a failed climb: a path that meets the ground, low and falling, hands over at once.
