@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.150 (2026-11-01), test build
+
+- **Window dates survive a load.** After loading an earlier save the mission list showed dates from the later game, thousands of days out.
+
 ## 0.8.149 (2026-11-01), test build
 
 - **What can this fly? warns (KSA-70, 71).** Under each mission: thrust for that world's gravity, thrust after the first stage, food, water, oxygen for the real trip, batteries, radiation, slow departure burns, heat shield and the KV pod decoupler. Warnings, not refusals.

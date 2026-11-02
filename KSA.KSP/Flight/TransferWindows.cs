@@ -36,7 +36,8 @@ namespace KSA.KSP.Flight
 
             double now = Planetarium.GetUniversalTime(), day = TransferSupport.Day;
             KeyValuePair<double, double> known;
-            if (Cache.TryGetValue(planet.bodyName, out known) && known.Key > now) return (known.Key - now) / day;
+            // A date worked out later in the game means nothing after loading an earlier save (2026-11-01: 9 days away shown as 2,763).
+            if (Cache.TryGetValue(planet.bodyName, out known) && known.Key > now && known.Value <= now) return (known.Key - now) / day;
 
             double t1 = home.orbit.period, t2 = planet.orbit.period;
             double synodic = 1 / Math.Abs(1 / t1 - 1 / t2), flight;
@@ -44,7 +45,7 @@ namespace KSA.KSP.Flight
             TransferPlan plan = TransferPlanner.Plan(OrbitAdapter.Sampler(home.orbit), OrbitAdapter.Sampler(planet.orbit), sun.gravParameter,
                 now + day, now + 1.1 * synodic, 0.5 * flight, 1.6 * flight, 60, 30, 0.5);
             if (plan == null) return double.NaN;
-            Cache[planet.bodyName] = new KeyValuePair<double, double>(plan.DepartureUt, 0);
+            Cache[planet.bodyName] = new KeyValuePair<double, double>(plan.DepartureUt, now);
             return (plan.DepartureUt - now) / day;
         }
     }
