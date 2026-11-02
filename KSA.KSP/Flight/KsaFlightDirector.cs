@@ -1058,6 +1058,10 @@ namespace KSA.KSP.Flight
                 {
                     foreach (ProtoCrewMember c in v.GetVesselCrew())
                         if (c != null && p.Crew.Contains(c.name) && !Live.Deaths.Contains(c.name)) { Live.Deaths.Add(c.name); Log(c.name + " was killed.", null); }
+                    // A wreck has often lost its pod before this event, and the crew with it: anyone aboard no other craft is lost (2026-11-01: "vehicle lost, crew safe" with all three dead).
+                    var alive = new HashSet<string>();
+                    foreach (Vessel other in FlightGlobals.Vessels) if (other != v) foreach (ProtoCrewMember c in other.GetVesselCrew()) if (c != null) alive.Add(c.name);
+                    foreach (string name in p.Crew) if (!alive.Contains(name) && !Live.Deaths.Contains(name)) { Live.Deaths.Add(name); Log(name + " was killed.", null); }
                 }
                 catch (Exception e) { KsaCore.Log.Warn("Crew check on a destroyed vessel failed: " + e.Message); }
                 Log("Vessel destroyed.", null);

@@ -130,7 +130,11 @@ namespace KSA.KSP.Parts
                 var p = new P { Id = raw, Ap = ap, DryMass = ap.partPrefab.mass };
                 int istg; p.Stage = int.TryParse(n.GetValue("istg"), out istg) ? istg : -1;
                 Part prefab = ap.partPrefab;
-                p.Decoupler = prefab.FindModuleImplementing<ModuleDecouple>() != null || prefab.FindModuleImplementing<ModuleAnchoredDecoupler>() != null;
+                // A pod's built-in decoupler and a heat shield's do not drop anything in flight (2026-11-01: "parachutes for 0.0 t" on every KV pod).
+                bool decouples = prefab.FindModuleImplementing<ModuleDecouple>() != null || prefab.FindModuleImplementing<ModuleAnchoredDecoupler>() != null;
+                if (decouples && prefab.CrewCapacity > 0) d.PadDecoupler = true;
+                p.Decoupler = decouples && prefab.CrewCapacity == 0 && prefab.FindModuleImplementing<ModuleAblator>() == null;
+                if (prefab.Modules.Contains("ModuleWheelSuspension") || prefab.name.ToLowerInvariant().Contains("landingleg")) d.HasLegs = true;
                 // A dual-mode engine (RAPIER) is a jet and a rocket: rate it by its rocket mode, and mark the plane as
                 // having jets (2026-10-30: its first module is the air-breathing one, so its rocket delta-v was ignored).
                 ModuleEngines e = null;
@@ -166,6 +170,7 @@ namespace KSA.KSP.Parts
                     string rn = r.GetValue("name") ?? string.Empty;
                     double amount;
                     if (!double.TryParse(r.GetValue("amount"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out amount)) continue;
+                    if (rn == "Food") d.Food += amount; else if (rn == "Water") d.Water += amount; else if (rn == "Oxygen") d.Oxygen += amount; else if (rn == "ElectricCharge") d.Charge += amount;
                     PartResourceDefinition def = PartResourceLibrary.Instance != null ? PartResourceLibrary.Instance.GetDefinition(rn) : null;
                     if (def == null || def.density <= 0) continue;
                     p.Fuel[rn] = (p.Fuel.ContainsKey(rn) ? p.Fuel[rn] : 0) + amount * def.density;
@@ -206,6 +211,35 @@ namespace KSA.KSP.Parts
                 for (P q = p; q != null; q = q.Parent != null && parts.ContainsKey(q.Parent) ? parts[q.Parent] : null)
                     if (q.Decoupler && q.Stage >= 0) { drop = Math.Max(drop, q.Stage); }
                 p.DropStage = drop;
+            }
+            // Thrust left when the first stage goes: boosters out, can what remains keep climbing?
+            {
+                int first = -1;
+                foreach (P p in order) if (p.Decoupler && p.Stage > first) first = p.Stage;
+                double thrust = 0, mass = 0;
+                foreach (P p in order)
+                {
+                    if (p.DropStage >= first && first >= 0) continue;
+                    if (p.Engine) thrust += p.ThrustVac * 1000;
+                    mass += p.DryMass;
+                    foreach (double f in p.Fuel.Values) mass += f;
+                }
+                if (mass > 0 && first >= 0) d.AfterBoostersTwr = thrust / (mass * 1000 * 9.81);
+            }
+            // The last engine and what stays with it: the lander, for the warnings before launch.
+            {
+                P last = null;
+                foreach (P p in order) if (p.Engine && (last == null || p.Stage < last.Stage)) last = p;
+                if (last != null)
+                {
+                    foreach (P p in order) if (p.Engine && p.Stage == last.Stage) d.LanderThrust += p.ThrustVac * 1000;
+                    foreach (P p in order)
+                    {
+                        if (p.DropStage >= last.Stage) continue;
+                        d.LanderMass += p.DryMass;
+                        foreach (double f in p.Fuel.Values) d.LanderMass += f;
+                    }
+                }
             }
             // What comes down under the chutes: every part still attached when all the decouplers have fired, when that
             // includes the crew pod (2026-10-29). Main parachutes land about 22 times their own mass softly.

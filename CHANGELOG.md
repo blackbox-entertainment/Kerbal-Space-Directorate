@@ -2,6 +2,13 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.149 (2026-11-01), test build
+
+- **What can this fly? warns (KSA-70, 71).** Under each mission: thrust for that world's gravity, thrust after the first stage, food, water, oxygen for the real trip, batteries, radiation, slow departure burns, heat shield and the KV pod decoupler. Warnings, not refusals.
+- **Real trip lengths.** Missions to other planets count the real days out, waiting and back, so the supply check is no longer fooled by the 120 days listed for Duna.
+- **"Parachutes for 0.0 t" on KV pods is fixed.** The pod's built-in decoupler no longer counts as dropping the capsule.
+- **No more "crew safe" for a dead crew.** Anyone aboard no other craft when a vessel is destroyed is reported lost.
+
 ## 0.8.148 (2026-11-01), test build
 
 - **Simulator stories.** The five 2026-10-31 failures, long burns, light and heavy reference rockets, Moho and the climb rules now run in the tests. A 10-minute ejection burn on a Terrier loses nearly half its speed, against 3% for a 2.5-minute Poodle burn.

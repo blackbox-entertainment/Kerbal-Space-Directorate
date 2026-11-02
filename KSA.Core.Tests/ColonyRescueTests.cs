@@ -306,6 +306,32 @@ namespace KSA.Core.Tests
             Assert.That(a.Crew.Get("Gene Kerman").Status, Is.EqualTo(CrewStatus.Dead), "given up for lost");
         }
 
+        /// <summary>The rockets that lost crews on 2026-11-01, as the window now describes them (KSA-70, KSA-71).</summary>
+        [Test]
+        public void TheWarningsCatchWhatKilledTheCrews()
+        {
+            var clock = new FakeClock();
+            Agency a = Staffed(clock);
+            a.LifeSupportMod = "Kerbalism";
+            a.RoundTripDays = body => body == "Duna" ? 765 : double.NaN;
+            KSA.Core.Missions.MissionType duna = a.Catalogs.Missions.Get("DunaLanding");
+            Assert.That(a.TripDays(duna), Is.EqualTo(765), "not the 120 days the catalogue says");
+            var mkI = new KSA.Core.Design.PlayerDesign { Seats = 3, LanderMass = 30, LanderThrust = 60000, HasLegs = true, Food = 65, Water = 26, Oxygen = 8500, Charge = 240 };
+            string all = string.Join(" | ", a.PreflightWarnings(mkI, duna).ToArray());
+            Assert.That(all, Does.Contain("Weak for Duna"));
+            Assert.That(all, Does.Contain("Food and water"));
+            Assert.That(all, Does.Contain("Oxygen"));
+            Assert.That(all, Does.Contain("Batteries"));
+            Assert.That(all, Does.Contain("departure burn"));
+            Assert.That(all, Does.Contain("heat shield"));
+            var mkII = new KSA.Core.Design.PlayerDesign { Seats = 3, LanderMass = 45, LanderThrust = 250000, HasLegs = true, HasHeatShield = true, AfterBoostersTwr = 1.2, Food = 1000, Water = 700, Oxygen = 112561, Charge = 1340 };
+            string better = string.Join(" | ", a.PreflightWarnings(mkII, duna).ToArray());
+            Assert.That(better, Does.Not.Contain("Weak"));
+            Assert.That(better, Does.Not.Contain("Food and water"));
+            Assert.That(better, Does.Not.Contain("heat shield"));
+            Assert.That(better, Does.Contain("Radiation"));
+        }
+
         [Test]
         public void AMissionToAnotherPlanetWaitsForItsWindow()
         {

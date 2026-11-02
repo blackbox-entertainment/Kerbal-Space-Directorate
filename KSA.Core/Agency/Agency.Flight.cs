@@ -112,10 +112,10 @@ namespace KSA.Core
             if (h == null) return null;
             int crew = Math.Max(1, p.Crew.Count > 0 ? p.Crew.Count : type.CrewSize);
             double days = LifeSupport.SupplyDays(h.Food, h.Water, crew);
-            int need = type.DurationDays + Math.Max(0, LifeSupport.MarginDays);
+            int need = TripDays(type) + Math.Max(0, LifeSupport.MarginDays);
             if (days >= need) return null;
             return "Life support (" + LifeSupportMod + "): the craft carries food and water for " + Math.Floor(days).ToString("0") + " days for " + crew + " crew, and "
-                + type.Name + " takes " + type.DurationDays + " days (+" + LifeSupport.MarginDays + " spare), so it is simulated. A design with supply containers can fly it live.";
+                + type.Name + " takes " + TripDays(type) + " days (+" + LifeSupport.MarginDays + " spare), so it is simulated. A design with supply containers can fly it live.";
         }
 
         private bool ProfileInScope(MissionType type)

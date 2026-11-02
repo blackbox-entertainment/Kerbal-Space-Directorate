@@ -1,0 +1,69 @@
+using System;
+using System.Collections.Generic;
+using KSA.Core.Design;
+using KSA.Core.Missions;
+using KSA.Core.Projects;
+
+namespace KSA.Core
+{
+    /// <summary>
+    /// What a craft may be missing for a mission (KSA-70, KSA-71). Warnings, not refusals (2026-10-31, T: "warn before launch"):
+    /// each one is something that has lost a crew on a real flight.
+    /// </summary>
+    public sealed partial class Agency
+    {
+        /// <summary>Days out, waiting and back, by the sums, or NaN for worlds with no window. Set by the host.</summary>
+        public Func<string, double> RoundTripDays { get; set; }
+
+        private const double AfterBoostersMin = 0.8, LandingTwr = 1.2, ShadowCharge = 1000, SlowBurnSeconds = 300, RadiationDays = 500;
+
+        /// <summary>The length of a mission: what the catalogue says, or the real trip when that is longer (a Duna landing is not 120 days).</summary>
+        public int TripDays(MissionType t)
+        {
+            if (t == null) return 0;
+            double real = double.NaN;
+            try { real = RoundTripDays != null ? RoundTripDays(t.Body) : double.NaN; }
+            catch (Exception e) { Log.Warn("Trip length failed for " + t.Body + ": " + e.Message); }
+            return double.IsNaN(real) ? t.DurationDays : Math.Max(t.DurationDays, (int)Math.Ceiling(real));
+        }
+
+        /// <summary>Every warning for this craft on this mission.</summary>
+        public List<string> PreflightWarnings(PlayerDesign d, MissionType t)
+        {
+            var list = new List<string>();
+            if (d == null || t == null || t.IsAircraft) return list;
+            bool lands = t.Profile == MissionProfile.Land || t.Profile == MissionProfile.Base;
+            bool leavesKerbin = !string.Equals(t.Body, "Kerbin", StringComparison.OrdinalIgnoreCase);
+            bool windowed = RoundTripDays != null && !double.IsNaN(RoundTripDays(t.Body));
+            BodyData world = Requirements != null ? Requirements.Map.Get(t.Body) : null;
+
+            if (lands && world != null && d.LanderMass > 0 && d.LanderThrust > 0)
+            {
+                double twr = d.LanderThrust / (d.LanderMass * 1000 * world.Gravity);
+                if (twr < LandingTwr) list.Add("Weak for " + t.Body + ": the last engine gives " + twr.ToString("0.0") + " x its weight there. It may land but not lift off. Use a stronger engine.");
+            }
+            if (lands && !d.HasLegs) list.Add("No landing legs.");
+            if (d.AfterBoostersTwr > 0 && d.AfterBoostersTwr < AfterBoostersMin) list.Add("Weak second stage: once the first stage goes, the thrust is only " + d.AfterBoostersTwr.ToString("0.0") + " x the weight, short of the " + AfterBoostersMin.ToString("0.0") + " it takes to keep climbing.");
+            if (leavesKerbin && t.CrewSize > 0 && !d.HasHeatShield) list.Add("No heat shield for the return from " + t.Body + ": a pod's own ablator does not last.");
+            if (LifeSupportOn && t.CrewSize > 0)
+            {
+                int crew = Math.Max(1, t.CrewSize), days = TripDays(t);
+                double supply = LifeSupport.SupplyDays(d.Food, d.Water, crew);
+                if (supply < days + Math.Max(0, LifeSupport.MarginDays)) list.Add("Food and water for " + Math.Floor(supply) + " days, and the trip takes about " + days + ".");
+                double air = d.Oxygen / (crew * OxygenPerKerbalDay);
+                if (air < days) list.Add("Oxygen for " + Math.Floor(air) + " days, and the trip takes about " + days + ".");
+                if (windowed && days > RadiationDays) list.Add("About " + days + " days beyond Kerbin's field: check Radiation in Kerbalism's Planner.");
+            }
+            if (leavesKerbin && d.Charge < ShadowCharge && t.CrewSize > 0) list.Add("Batteries hold " + Math.Round(d.Charge) + " charge: too little for the dark side of an orbit, or for experiments running. Add batteries.");
+            if (windowed && d.LanderThrust > 0 && d.LanderMass > 0)
+            {
+                double seconds = d.LanderMass * 1000 * 1050 / d.LanderThrust;
+                if (seconds > SlowBurnSeconds) list.Add("A " + Math.Round(seconds / 60) + " minute departure burn wastes much of its speed. Use a stronger engine.");
+            }
+            if (d.PadDecoupler) list.Add("The KV pod's decoupler is in the staging: the crew switches it off, but check it is not the next stage.");
+            return list;
+        }
+
+        private const double OxygenPerKerbalDay = 37.3;
+    }
+}

@@ -9,6 +9,20 @@ namespace KSA.KSP.Flight
     {
         private static readonly Dictionary<string, KeyValuePair<double, double>> Cache = new Dictionary<string, KeyValuePair<double, double>>();
 
+        /// <summary>Days out, a wait for the way home and back, by the sums, or NaN for the home planet's own system.</summary>
+        public static double RoundTrip(string bodyName)
+        {
+            CelestialBody home = FlightGlobals.GetHomeBody();
+            CelestialBody planet = MissionPlanner.Body(bodyName);
+            if (home == null || planet == null || home.referenceBody == null) return double.NaN;
+            CelestialBody sun = home.referenceBody;
+            while (planet.referenceBody != null && planet.referenceBody != sun && planet.referenceBody != planet) planet = planet.referenceBody;
+            if (planet == home || planet == sun || planet.referenceBody != sun) return double.NaN;
+            double flight, synodic = 1 / Math.Abs(1 / home.orbit.period - 1 / planet.orbit.period);
+            Ejection.Hohmann(sun.gravParameter, home.orbit.semiMajorAxis, planet.orbit.semiMajorAxis, out flight);
+            return (2 * flight + 0.25 * synodic) / TransferSupport.Day;
+        }
+
         /// <summary>Days to the window for a world, or NaN for the home planet's own system or anything unknown.</summary>
         public static double Days(string bodyName)
         {

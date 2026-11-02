@@ -57,6 +57,18 @@ namespace KSA.Core.Design
         /// <summary>A heat shield wide enough for a crew pod is researched (the host sets it); only then is one demanded.</summary>
         public bool HeatShieldResearched { get; set; }
 
+        /// <summary>For the warnings before launch (KSA-70): supplies, power and the last engine against what stays with it, tonnes and newtons.</summary>
+        public double Food { get; set; }
+        public double Water { get; set; }
+        public double Oxygen { get; set; }
+        public double Charge { get; set; }
+        public double LanderMass { get; set; }
+        public double LanderThrust { get; set; }
+        public bool HasLegs { get; set; }
+        /// <summary>Thrust over weight once the first stage has gone, at sea-level gravity; 0 when unknown.</summary>
+        public double AfterBoostersTwr { get; set; }
+        public bool PadDecoupler { get; set; }
+
         public PlayerDesign() { Name = string.Empty; CraftPath = string.Empty; }
 
         /// <summary>
