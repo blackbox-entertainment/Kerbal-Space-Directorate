@@ -228,6 +228,7 @@ namespace KSA.KSP.Flight
         {
             DirectorAutomation(); // KSA-68: the AI Director gives the go and brings the game home
             if (Live != null && _vessel != null && _adopted && !_offering) WatchForDirectorInput();
+            if (Live != null && _ctx != null && _ctx.Control != null) _ctx.Control.WatchWarpKeys();
             WatchForSitePick();
             // The active vessel may not exist yet in Start right after a launch; keep trying until the flight is ready.
             if (_adopted) return;

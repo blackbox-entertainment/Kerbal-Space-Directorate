@@ -801,7 +801,8 @@ namespace KSA.KSP.Flight
         public void WarpTo(double ut)
         {
             if (TimeWarp.fetch == null) return;
-            if (ut <= Now + 1) return;
+            if (ut <= Now + 1 || Now < _noWarpUntil) return;
+            _warpAskedUntil = ut;
             // Out of the air, full warp: physics warp left over from the air stops at 4x (2026-10-30, T: "would be nice to speed up faster").
             bool inAir = _v != null && _v.mainBody != null && _v.mainBody.atmosphere && _v.altitude < _v.mainBody.atmosphereDepth;
             if (!inAir && TimeWarp.WarpMode == TimeWarp.Modes.LOW)
@@ -811,6 +812,20 @@ namespace KSA.KSP.Flight
             }
             else if (IsWarping) return;
             TimeWarp.fetch.WarpTo(ut);
+        }
+
+        private double _warpAskedUntil, _noWarpUntil;
+
+        /// <summary>
+        /// The Director's warp keys, every frame: stopping the crew's warp holds for as long as that warp was to run, so it does not
+        /// start again by itself (2026-11-01, T: "if I cancel warp it should not reenter warp on its own until near the next leg").
+        /// </summary>
+        public void WatchWarpKeys()
+        {
+            if (Now >= _warpAskedUntil || Now < _noWarpUntil) return;
+            if (!GameSettings.TIME_WARP_STOP.GetKeyDown() && !GameSettings.TIME_WARP_DECREASE.GetKeyDown()) return;
+            _noWarpUntil = _warpAskedUntil;
+            ScreenMessages.PostScreenMessage("[KSA] Warp stopped: the crew will not warp again until the next step.", 6f, ScreenMessageStyle.UPPER_CENTER);
         }
 
         public void StopWarp()

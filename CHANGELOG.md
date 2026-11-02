@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.135 (2026-11-01), test build
+
+- **Stopped warp stays stopped.** Pressing the warp stop or slow-down key during the crew's warp holds it off for as long as that warp was to run, so it does not start again by itself. You can still warp by hand.
+
 ## 0.8.134 (2026-11-01), test build
 
 - **Your pick, with a warning.** On the pad, missions to other planets show green (good window) or yellow (wait N days). A yellow mission can still be picked: a warning gives the date the crew will leave and the days they will wait, with Launch anyway and Back to the list. Projects still wait for their window. A waiting project's note no longer calls it waiting for fuel.
