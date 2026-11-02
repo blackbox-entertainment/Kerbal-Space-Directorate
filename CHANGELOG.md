@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.155 (2026-11-01), test build
+
+- **Any low fall in aerobraking goes to the landing**, not only a failed climb: a path that meets the ground, low and falling, hands over at once.
+
 ## 0.8.154 (2026-11-01), test build
 
 - **A crew falling low in the air lands.** Below half the height of the air and falling, the aerobrake leg stops trying to climb out and hands over to the landing.
