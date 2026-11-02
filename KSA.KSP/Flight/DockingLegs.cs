@@ -104,7 +104,7 @@ namespace KSA.KSP.Flight
                 if (_target == null) { Fail("station not found in orbit", ctx); return; }
                 double air = v.mainBody.atmosphere ? v.mainBody.atmosphereDepth : 0;
                 bool closed = v.orbit != null && v.orbit.eccentricity < 1 && (v.situation == Vessel.Situations.ORBITING || v.situation == Vessel.Situations.SUB_ORBITAL);
-                if (!closed || v.orbit.ApA < air + 20000) { Fail("not in a stable orbit", ctx); return; }
+                if (!closed || v.orbit.ApA < air + 5000) { Fail("not in a stable orbit", ctx); return; } // 0.8.170: 85 x 75 km had failed a 20 km test
                 NodePlanner.ClearNodes(v);
                 ctx.Control.Throttle = 0;
                 ctx.Control.ClearInputs();
