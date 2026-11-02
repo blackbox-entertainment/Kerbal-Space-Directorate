@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.128 (2026-11-01), test build
+
+- **The Director works after a revert.** A flight that the reverted save knows nothing about is forgotten, so the rocket on the pad gets its mission list.
+
 ## 0.8.127 (2026-11-01), test build
 
 - **The crew drops empty drop tanks.** When the next stage is only radial decouplers and everything they hold is out of fuel, it goes, even with the engine still burning. Unflown.

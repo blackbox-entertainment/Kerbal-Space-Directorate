@@ -263,6 +263,13 @@ namespace KSA.KSP.Flight
 
             LaunchSpec pending = LiveFlightLauncher.Pending;
             Project project = null;
+            // A revert puts back a save in which this flight never happened: forget it, or the same rocket on the pad finds a flight with no
+            // project and the Director stays silent (2026-11-01, T: "when I revert flight and go back and try to launch the director stops working").
+            if (pending == null && Live != null && agency.GetProject(Live.ProjectId) == null)
+            {
+                KsaCore.Log.Info("Flight " + Live.ProjectId + " is not in this save: forgotten after a revert.");
+                Live = null;
+            }
             if (pending == null && Live != null && Live.VesselId != v.persistentId && FindVessel(Live.VesselId) == null)
             {
                 // Reverted or reloaded past the live vessel: it no longer exists, so the flight is lost to the record.
