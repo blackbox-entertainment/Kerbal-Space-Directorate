@@ -60,6 +60,7 @@ namespace KSA.Core
                 double seconds = d.LanderMass * 1000 * 1050 / d.LanderThrust;
                 if (seconds > SlowBurnSeconds) list.Add("A " + Math.Round(seconds / 60) + " minute departure burn wastes much of its speed. Use a stronger engine.");
             }
+            if (d.StrandedTanks > 0) list.Add(d.StrandedTanks + " side tank" + (d.StrandedTanks == 1 ? "" : "s") + " with no fuel line: no engine can reach that fuel. Add a line from each tank to the core.");
             if (d.PadDecoupler) list.Add("The KV pod's decoupler is in the staging: the crew switches it off, but check it is not the next stage.");
             return list;
         }

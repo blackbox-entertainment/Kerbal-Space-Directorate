@@ -68,6 +68,7 @@ namespace KSA.Core.Design
         /// <summary>Thrust over weight once the first stage has gone, at sea-level gravity; 0 when unknown.</summary>
         public double AfterBoostersTwr { get; set; }
         public bool PadDecoupler { get; set; }
+        public int StrandedTanks { get; set; }
 
         public PlayerDesign() { Name = string.Empty; CraftPath = string.Empty; }
 

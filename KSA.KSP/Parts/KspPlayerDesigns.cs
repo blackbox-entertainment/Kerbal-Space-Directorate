@@ -103,6 +103,7 @@ namespace KSA.KSP.Parts
             public readonly Dictionary<string, double> Fuel = new Dictionary<string, double>();
             public HashSet<string> Propellants;
             public int DropStage = -1;  // the stage at which a decoupler takes it away, -1 = stays to the end
+            public bool Stranded;       // fuel in a side tank no engine can reach: weight, not delta-v
         }
 
         private static AvailablePart Find(string raw)
@@ -212,6 +213,15 @@ namespace KSA.KSP.Parts
                     if (q.Decoupler && q.Stage >= 0) { drop = Math.Max(drop, q.Stage); }
                 p.DropStage = drop;
             }
+            // Side tanks behind a radial decoupler feed nothing without a fuel line (2026-11-01: two X200-32s, 8,248 m/s shown, 965 real on the lander).
+            foreach (P p in order)
+            {
+                int group = p.DropStage;
+                if (group < 0 || p.Fuel.Count == 0 || p.Engine) continue;
+                if (order.Exists(q => q.DropStage == group && (q.Engine || q.Ap.name.IndexOf("fuelLine", StringComparison.OrdinalIgnoreCase) >= 0))) continue;
+                p.Stranded = true;
+                d.StrandedTanks++;
+            }
             // Thrust left when the first stage goes: boosters out, can what remains keep climbing?
             {
                 int first = -1;
@@ -284,17 +294,17 @@ namespace KSA.KSP.Parts
                 foreach (string pr in used)
                 {
                     string want = pr;
-                    if (!present.Exists(p => p.Fuel.ContainsKey(want) && p.Fuel[want] > 0)) allThere = false;
+                    if (!present.Exists(p => !p.Stranded && p.Fuel.ContainsKey(want) && p.Fuel[want] > 0)) allThere = false;
                 }
                 if (!allThere) continue;
                 // Burn the propellant of the group that goes next (the highest drop stage still aboard that holds some).
                 int next = -2;
-                foreach (P p in present) if (HasFuel(p, used)) next = Math.Max(next, p.DropStage);
+                foreach (P p in present) if (!p.Stranded && HasFuel(p, used)) next = Math.Max(next, p.DropStage);
                 if (next == -2) continue;
                 double burned = 0;
                 foreach (P p in present)
                 {
-                    if (p.DropStage != next) continue;
+                    if (p.DropStage != next || p.Stranded) continue;
                     foreach (string rn in new List<string>(p.Fuel.Keys)) if (used.Contains(rn)) { burned += p.Fuel[rn]; p.Fuel[rn] = 0; }
                 }
                 double isp = thrust / Math.Max(1e-6, flow);
