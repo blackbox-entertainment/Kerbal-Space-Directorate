@@ -319,6 +319,9 @@ namespace KSA.KSP.UI
                 int done = _agency.MissionsCompleted(t.Id);
                 string name = t.IsCustom ? t.Name + " (custom)" : t.Name;
                 string text = locked ? "<color=#888888>" + name + " (research)</color>" : done > 0 ? "<color=#8be28b>" + name + " (done" + (done > 1 ? " x" + done : "") + ")</color>" : name;
+                // How far off its window, as on the pad (2026-11-01, T): green to go, yellow to wait.
+                double days = _agency.DaysToWindow != null && !locked ? _agency.DaysToWindow(t.Body) : double.NaN;
+                if (!double.IsNaN(days)) text += " <color=" + (_agency.WindowBlocker(t) == null ? "#8be28b" : "#ffd27f") + ">" + Math.Ceiling(days) + " d</color>";
                 return new DialogGUIButton((isSel ? "> " : "") + text, () => OnSelectType(tid), 170f, ButtonHeight, false);
             });
 
@@ -329,6 +332,8 @@ namespace KSA.KSP.UI
                 Line(items, "Choose a mission type.", textWidth);
                 return;
             }
+            string windowWait = _agency.WindowBlocker(selected);
+            if (windowWait != null) Line(items, "<color=#ffd27f>This mission is " + windowWait + ". A project started now launches when it opens.</color>", textWidth);
 
             // Selected type facts.
             if (selected.Description.Length > 0) Line(items, selected.Description, textWidth);
