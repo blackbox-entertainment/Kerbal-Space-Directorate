@@ -2,6 +2,12 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.153 (2026-11-01), test build
+
+- **Long orbits turn past moons.** On the way down to an air pass the crew checks every moon and, if one is in the way, turns the orbit at apoapsis for a few m/s, keeping the low point where it was. Caught by a moon anyway, they clear its surface and ride through instead of giving up.
+- **No more ascents away from home.** A halt near a moon restarted the flight at Ascent to orbit and burned all the fuel; resuming now picks the right leg, and the ascent refuses to run anywhere but the home world.
+- Trims near apoapsis no longer repeat 0 m/s burns or slip a whole lap.
+
 ## 0.8.152 (2026-11-01), test build
 
 - **An arrival above the air still aerobrakes.** With the low point just over the top of the air on a long orbit, aerobraking was skipped and the landing search found nothing in reach. The crew now brings the low point down at apoapsis.

@@ -35,6 +35,8 @@ namespace KSA.KSP.Flight
 
         public void Begin(FlightContext ctx)
         {
+            // Never an ascent away from home (2026-11-01: a halt in Ike's space restarted it and burned the fuel for the whole way home).
+            if (ctx.Vessel != null && ctx.Vessel.mainBody != ctx.Home) { State = LegState.Failed; Status = "No ascent away from home."; return; }
             Status = "Pre-launch checks.";
             State = LegState.Running;
             Vessel v = ctx.Vessel;

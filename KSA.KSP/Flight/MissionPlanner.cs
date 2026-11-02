@@ -282,6 +282,8 @@ namespace KSA.KSP.Flight
                 if (v.situation == Vessel.Situations.ESCAPING) prog.SkipTo(l => l is CorrectionLeg || l is WaitForSoiLeg);
                 return;
             }
+            // Pulled in by a moon of the world they came for (2026-11-01: nothing matched, so the crew ran the ascent from Kerbin in Ike's space and burned every drop).
+            if (body.referenceBody == target && target != home && Has(prog, l => l is AirbrakeLeg) && !logged("Land:" + tb)) { prog.SkipTo(l => l is AirbrakeLeg); return; }
             if (inSun) { if (headingHome) prog.SkipTo(l => l is TransferLeg || (l is CorrectionLeg && IndexAfterHome(prog, l))); else prog.SkipTo(l => l is CorrectionLeg || l is WaitForSoiLeg); }
         }
 

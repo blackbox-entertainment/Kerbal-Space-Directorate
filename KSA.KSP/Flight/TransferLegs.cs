@@ -1297,8 +1297,8 @@ namespace KSA.KSP.Flight
         private readonly double _altitude;
         private Phases _phase;
         private NodeExecutor _exec;
-        private bool _inAir, _climbing, _caughtSaid;
-        private int _passes;
+        private bool _inAir, _climbing, _caughtSaid, _moonsChecked, _trimDone, _finishing;
+        private int _passes, _dodges;
         private double _energyBefore, _lastDrop;
 
         private const double MaxOffForClimb = 25;     // degrees off the climb: thrust beyond this only pushes the wrong way
@@ -1306,6 +1306,8 @@ namespace KSA.KSP.Flight
 
 
         private const double TurnSeconds = 90;
+        private const double DodgeMaxCost = 60, MoonSafeHeight = 20000, MinTrim = 0.2, JustPastTop = 3600;
+        private const int MaxDodges = 3;
 
 
 
@@ -1326,7 +1328,8 @@ namespace KSA.KSP.Flight
             Status = "Aerobraking.";
             Vessel v = ctx.Vessel;
             if (v == null || v.orbit == null || _target == null) { Fail("no vessel orbit or target"); return; }
-            if (v.mainBody != _target) { Fail("not in " + _target.bodyName + "'s sphere of influence"); return; }
+            if (v.mainBody != _target && v.mainBody.referenceBody != _target) { Fail("not in " + _target.bodyName + "'s sphere of influence"); return; }
+            if (v.mainBody != _target) return;
             // Clear of the air on a long orbit, the air has not been used yet: the rules bring the low point down at apoapsis (2026-11-01: arrived at 53 km, 3 km over the
             // air, and went straight to the landing from a 14,773 km orbit with no ground in reach).
             if (v.orbit.eccentricity < 1 && v.orbit.PeA > _target.atmosphereDepth)
@@ -1348,7 +1351,12 @@ namespace KSA.KSP.Flight
             switch (_phase)
             {
                 case Phases.Passes:
-                    if (v.mainBody != _target) { Fail("left " + _target.bodyName + "'s sphere of influence"); break; }
+                    if (v.mainBody != _target)
+                    {
+                        if (v.mainBody.referenceBody == _target) ThroughMoon(ctx);
+                        else Fail("left " + _target.bodyName + "'s sphere of influence");
+                        break;
+                    }
                     if (v.LandedOrSplashed) { Fail("on the ground"); break; }
                     bool inAir = v.altitude < air;
                     // Trapped in the air, with the whole orbit inside it: climb out now (2026-11-01: the second pass at 26 km took the orbit
@@ -1379,17 +1387,25 @@ namespace KSA.KSP.Flight
                     if (_inAir)
                     {
                         _inAir = false;
+                        _moonsChecked = false;
+                        _trimDone = false;
+                        _dodges = 0;
                         _lastDrop = _energyBefore - energy;
                         line = "Air pass " + _passes + " done: orbit now " + TransferSupport.Km(v.orbit.ApA) + " x " + TransferSupport.Km(v.orbit.PeA) + ".";
                     }
                     _energyBefore = energy;
                     if (v.orbit.eccentricity >= 1) { Fail("still escaping " + _target.bodyName); break; }
                     if (c.IsWarping) break;
+                    if (!_moonsChecked)
+                    {
+                        _moonsChecked = true;
+                        if (PlanDodge(ctx, ref line)) { _phase = Phases.Burn; break; }
+                    }
                     // The rules live in Core, where FlightSimTests fly them through every arrival height (KSA-75).
                     AirbrakeStep step = AirbrakeRules.AfterPass(_passes, v.orbit.ApA, v.orbit.PeA, air, _altitude, _target.Radius, mu, _lastDrop);
-                    if (step == AirbrakeStep.LiftClear) { if (PlanLift(ctx, Math.Min(v.orbit.ApR, _target.Radius + _altitude), ref line)) _phase = Phases.Burn; break; }
-                    if (step == AirbrakeStep.RaisePass) { if (PlanLift(ctx, _target.Radius + AirbrakeRules.PassShare * air, ref line)) _phase = Phases.Burn; break; }
-                    if (step == AirbrakeStep.DeepenPass) { if (PlanLift(ctx, _target.Radius + AirbrakeRules.DeepenShare * air, ref line)) _phase = Phases.Burn; break; }
+                    if (step == AirbrakeStep.LiftClear) { _trimDone = false; _finishing = true; if (PlanLift(ctx, Math.Min(v.orbit.ApR, _target.Radius + _altitude), ref line)) _phase = Phases.Burn; break; }
+                    if (step == AirbrakeStep.RaisePass && !_trimDone) { if (PlanLift(ctx, _target.Radius + AirbrakeRules.PassShare * air, ref line)) _phase = Phases.Burn; break; }
+                    if (step == AirbrakeStep.DeepenPass && !_trimDone) { if (PlanLift(ctx, _target.Radius + AirbrakeRules.DeepenShare * air, ref line)) _phase = Phases.Burn; break; }
                     double edge = TimeToAir(v, air + 2000, ctx.Now);
                     if (edge > ctx.Now + TurnSeconds + 20) c.WarpTo(edge - TurnSeconds);
                     break;
@@ -1397,8 +1413,9 @@ namespace KSA.KSP.Flight
                     if (TransferSupport.PumpExecutor(_exec, ctx, ref line))
                     {
                         if (_exec.Failed) { Fail(_exec.FailReason); break; }
-                        if (v.orbit.PeA > air) { _phase = Phases.Finished; State = LegState.Done; ctx.Say("Aerobraking done after " + _passes + " passes: " + TransferSupport.Km(v.orbit.ApA) + " x " + TransferSupport.Km(v.orbit.PeA) + " orbit of " + _target.bodyName + "."); }
-                        else _phase = Phases.Passes;
+                        _moonsChecked = false;
+                        if (_finishing && v.orbit.PeA > air) { _phase = Phases.Finished; State = LegState.Done; ctx.Say("Aerobraking done after " + _passes + " passes: " + TransferSupport.Km(v.orbit.ApA) + " x " + TransferSupport.Km(v.orbit.PeA) + " orbit of " + _target.bodyName + "."); }
+                        else { _finishing = false; _phase = Phases.Passes; }
                     }
                     else Status = "Lifting the orbit: " + _exec.Status;
                     break;
@@ -1406,13 +1423,73 @@ namespace KSA.KSP.Flight
             return line;
         }
 
+        /// <summary>A moon on the way down to the next pass: turn the orbit past it, at the top where that is cheap (MoonDodge).</summary>
+        private bool PlanDodge(FlightContext ctx, ref string line)
+        {
+            Vessel v = ctx.Vessel;
+            Orbit o = v.orbit;
+            List<CelestialBody> moons = _target.orbitingBodies;
+            if (moons == null || moons.Count == 0 || o.eccentricity >= 1 || _dodges >= MaxDodges) return false;
+            var at = new Func<double, Vec3>[moons.Count];
+            var reach = new double[moons.Count];
+            for (int i = 0; i < moons.Count; i++)
+            {
+                Orbit moon = moons[i].orbit;
+                at[i] = t => OrbitAdapter.StateAt(moon, t).Position;
+                reach[i] = moons[i].sphereOfInfluence * MoonDodge.Reach;
+            }
+            double now = ctx.Now, mu = _target.gravParameter, until = now + o.timeToPe + 600;
+            double hit = MoonDodge.FirstMeeting(OrbitAdapter.StateAt(o, now), mu, now, until, at, reach);
+            if (double.IsPositiveInfinity(hit)) return false;
+            bool topFirst = o.timeToAp < o.timeToPe && now + o.timeToAp < hit - 600;
+            double burn = topFirst ? now + o.timeToAp : now + TurnSeconds;
+            Vec3 dv;
+            if (!MoonDodge.Tilt(OrbitAdapter.StateAt(o, burn), mu, burn, until, at, reach, DodgeMaxCost, out dv))
+            {
+                ctx.Say("A moon lies across the path in " + Math.Round((hit - now) / TransferSupport.Day, 1) + " days and no cheap burn clears it.");
+                return false;
+            }
+            NodePlanner.ClearNodes(v);
+            if (NodePlanner.AddFrameDeltaV(v, burn, dv) == null) return false;
+            _dodges++;
+            _exec = new NodeExecutor();
+            _exec.Begin(ctx);
+            if (_exec.Failed) { Fail(_exec.FailReason); return false; }
+            line = "A moon lies across the path in " + Math.Round((hit - now) / TransferSupport.Day, 1) + " days: turning the orbit past it with " + Math.Round(dv.Length, 1) + " m/s.";
+            return true;
+        }
+
+        /// <summary>Caught by a moon after all: clear its surface and ride through. The rules take over back around the planet.</summary>
+        private void ThroughMoon(FlightContext ctx)
+        {
+            Vessel v = ctx.Vessel;
+            VesselControl c = ctx.Control;
+            Orbit o = v.orbit;
+            _moonsChecked = false;
+            _trimDone = false;
+            if (o.PeA < MoonSafeHeight && v.verticalSpeed < 0)
+            {
+                Vector3d away = Vector3d.Exclude(v.obt_velocity, v.upAxis).normalized;
+                c.PointAlong(() => away);
+                c.Throttle = c.AttitudeError(away) < 10 ? 1f : 0f;
+                Status = "Clearing " + TransferSupport.BodyName(v.mainBody) + ": low point " + TransferSupport.Km(o.PeA) + ".";
+                return;
+            }
+            c.Throttle = 0;
+            Status = "Passing " + TransferSupport.BodyName(v.mainBody) + ": low point " + TransferSupport.Km(o.PeA) + ".";
+            if (!c.IsWarping && o.patchEndTransition == Orbit.PatchTransitionType.ESCAPE && o.EndUT > ctx.Now + 120) c.WarpTo(o.EndUT - 60);
+        }
+
         /// <summary>A prograde burn at apoapsis that puts the low point at the given radius from the centre.</summary>
         private bool PlanLift(FlightContext ctx, double rLow, ref string line)
         {
             Vessel v = ctx.Vessel;
-            double mu = _target.gravParameter, utAp = ctx.Now + v.orbit.timeToAp, rAp = v.orbit.ApR;
+            double mu = _target.gravParameter, rAp = v.orbit.ApR;
+            // Just past the top after another burn: now, not a whole lap on through the air.
+            double utAp = ctx.Now + (v.orbit.period - v.orbit.timeToAp < JustPastTop ? TurnSeconds : v.orbit.timeToAp);
             double vAp = Math.Sqrt(Math.Max(0, mu * (2 / rAp - 1 / v.orbit.semiMajorAxis)));
             double dv = Math.Sqrt(mu * (2 / rAp - 2 / (rAp + rLow))) - vAp;
+            if (!_finishing && Math.Abs(dv) < MinTrim) { _trimDone = true; return false; }
             NodePlanner.ClearNodes(v);
             if (NodePlanner.Add(v, utAp, new Vector3d(0, 0, dv)) == null) { Fail("could not place the lift burn"); return false; }
             _exec = new NodeExecutor();

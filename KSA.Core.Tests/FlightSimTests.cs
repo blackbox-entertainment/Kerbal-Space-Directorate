@@ -37,6 +37,29 @@ namespace KSA.Core.Tests
                 }
         }
 
+        /// <summary>2026-11-01: a 14,747 x 53 km Duna orbit ran into Ike on the way down; the crew burned every drop trying to "ascend".</summary>
+        [Test]
+        public void ALongOrbitTurnsPastAMoon()
+        {
+            const double mu = 3.0136e11, radius = 320000, ikeRadius = 3520000, soi = 1049600;
+            double rA = radius + 14747000, rP = radius + 30000, a = (rA + rP) / 2;
+            var top = new KSA.Core.Flight.Orbital.StateVector(new KSA.Core.Flight.Orbital.Vec3(rA, 0, 0), new KSA.Core.Flight.Orbital.Vec3(0, Math.Sqrt(mu * (2 / rA - 1 / a)), 0));
+            double halfLap = Math.PI * Math.Sqrt(a * a * a / mu), crossing = 0;
+            for (double t = 0; t < halfLap; t += 60) if (KSA.Core.Flight.Orbital.Kepler.Propagate(top, mu, t).Position.Length > ikeRadius) crossing = t;
+            KSA.Core.Flight.Orbital.Vec3 meet = KSA.Core.Flight.Orbital.Kepler.Propagate(top, mu, crossing).Position;
+            double ikeRate = Math.Sqrt(mu / (ikeRadius * ikeRadius * ikeRadius)), phase = Math.Atan2(meet.Y, meet.X);
+            Func<double, KSA.Core.Flight.Orbital.Vec3> ike = t => new KSA.Core.Flight.Orbital.Vec3(ikeRadius * Math.Cos(phase + ikeRate * (t - crossing)), ikeRadius * Math.Sin(phase + ikeRate * (t - crossing)), 0);
+            var moons = new[] { ike };
+            var reach = new[] { soi * KSA.Core.Flight.Orbital.MoonDodge.Reach };
+            Assert.That(KSA.Core.Flight.Orbital.MoonDodge.FirstMeeting(top, mu, 0, halfLap, moons, reach), Is.LessThan(crossing + 1));
+            Assert.That(KSA.Core.Flight.Orbital.MoonDodge.Tilt(top, mu, 0, halfLap, moons, reach, 60, out KSA.Core.Flight.Orbital.Vec3 dv), Is.True);
+            TestContext.WriteLine("dodge " + dv.Length + " m/s");
+            var after = new KSA.Core.Flight.Orbital.StateVector(top.Position, top.Velocity + dv);
+            Assert.That(dv.Length, Is.LessThan(30));
+            Assert.That(double.IsPositiveInfinity(KSA.Core.Flight.Orbital.MoonDodge.FirstMeeting(after, mu, 0, halfLap, moons, reach)), Is.True);
+            Assert.That(KSA.Core.Flight.Orbital.Kepler.Propagate(after, mu, halfLap).Position.Length, Is.EqualTo(rP).Within(1000), "the low point stays put");
+        }
+
         /// <summary>Mk II, 2026-11-01: from 85 km apoapsis the old rule ended near 188 km, in reach of the radiation.</summary>
         [Test]
         public void AStrongEngineParksLow()
