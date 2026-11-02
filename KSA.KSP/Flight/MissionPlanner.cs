@@ -142,7 +142,7 @@ namespace KSA.KSP.Flight
                     Up(prog, ctx);
                     if (profile == MissionProfile.Land && Aerobrakes(target, home))
                     {
-                        double airPe = AirbrakeLeg.PassShare * target.atmosphereDepth;
+                        double airPe = KSA.Core.Flight.Sim.AirbrakeRules.PassShare * target.atmosphereDepth;
                         Outbound(prog, ctx, target, interplanetary, airPe - 3000, airPe + 3000);
                         prog.Add(new CaptureLeg(target, orbitAlt, LooseCapture * target.sphereOfInfluence)).Add(new AirbrakeLeg(target, orbitAlt)).Add(new LandingLeg(ctx.MaxSiteSlope));
                     }

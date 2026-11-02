@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using KSA.Core.Flight.Orbital;
+using KSA.Core.Flight.Sim;
 
 namespace KSA.KSP.Flight
 {
@@ -1303,14 +1304,11 @@ namespace KSA.KSP.Flight
 
         private const double MaxOffForClimb = 25;     // degrees off the climb: thrust beyond this only pushes the wrong way
         private const double ClimbPitch = 35 * Math.PI / 180;
-        private const double PassMargin = 1.5;        // of the last pass's energy loss, allowed for the next
-        private const double ShallowShare = 0.8;      // of the air's depth: a higher pass barely slows the craft (40 km on Duna)
-        private const double DeepenShare = 0.6;       // of the air's depth: where a shallow pass is brought down to (30 km on Duna)
+
+
         private const double TurnSeconds = 90;
-        private const int MaxPasses = 12;
-        private const double GoalMargin = 30000;      // metres of apoapsis over the orbit wanted: then stop
-        private const double LowestShare = 0.45;      // of the air's depth: a lower periapsis is lifted back up at apoapsis
-        public const double PassShare = 0.7;          // of the air's depth: 35 km on Duna. Flown 2026-11-01, the last correction lands 7 km low: aimed 27, got 20-21 km (one good pass, one trapped); 27 km took 13,500 km of apoapsis in one pass; 10 km killed the crew
+
+
 
         public AirbrakeLeg(CelestialBody target, double orbitAltitude)
         {
@@ -1359,7 +1357,7 @@ namespace KSA.KSP.Flight
                         c.PointAlong(() => climb);
                         c.Throttle = c.AttitudeError(climb) < MaxOffForClimb ? 1f : 0f;
                         Status = "Climbing out of the air: apoapsis " + TransferSupport.Km(v.orbit.ApA) + ".";
-                        if (v.orbit.ApA >= _altitude + GoalMargin) { _climbing = false; c.Throttle = 0; }
+                        if (v.orbit.ApA >= _altitude + AirbrakeRules.GoalMargin) { _climbing = false; c.Throttle = 0; }
                         break;
                     }
                     c.Throttle = 0;
@@ -1382,20 +1380,11 @@ namespace KSA.KSP.Flight
                     _energyBefore = energy;
                     if (v.orbit.eccentricity >= 1) { Fail("still escaping " + _target.bodyName); break; }
                     if (c.IsWarping) break;
-                    // Another pass like the last would leave too little orbit: stop here (a later pass takes more than the first, the craft being slower).
-                    double wantedEnergy = -mu / (2 * _target.Radius + _altitude + v.orbit.PeA);
-                    bool done = v.orbit.ApA <= _altitude + GoalMargin || _passes >= MaxPasses || energy - _lastDrop * PassMargin < wantedEnergy;
-                    if (done || v.orbit.PeA < LowestShare * air)
-                    {
-                        if (PlanLift(ctx, done ? Math.Min(v.orbit.ApR, _target.Radius + _altitude) : _target.Radius + PassShare * air, ref line)) _phase = Phases.Burn;
-                        break;
-                    }
-                    // Skimming the top of the air does nothing: a small burn at apoapsis brings the low point down (2026-11-01: 48 km took 220 km of 14,627).
-                    if (_passes >= 1 && v.orbit.PeA > ShallowShare * air)
-                    {
-                        if (PlanLift(ctx, _target.Radius + DeepenShare * air, ref line)) _phase = Phases.Burn;
-                        break;
-                    }
+                    // The rules live in Core, where FlightSimTests fly them through every arrival height (KSA-75).
+                    AirbrakeStep step = AirbrakeRules.AfterPass(_passes, v.orbit.ApA, v.orbit.PeA, air, _altitude, _target.Radius, mu, _lastDrop);
+                    if (step == AirbrakeStep.LiftClear) { if (PlanLift(ctx, Math.Min(v.orbit.ApR, _target.Radius + _altitude), ref line)) _phase = Phases.Burn; break; }
+                    if (step == AirbrakeStep.RaisePass) { if (PlanLift(ctx, _target.Radius + AirbrakeRules.PassShare * air, ref line)) _phase = Phases.Burn; break; }
+                    if (step == AirbrakeStep.DeepenPass) { if (PlanLift(ctx, _target.Radius + AirbrakeRules.DeepenShare * air, ref line)) _phase = Phases.Burn; break; }
                     double edge = TimeToAir(v, air + 2000, ctx.Now);
                     if (edge > ctx.Now + TurnSeconds + 20) c.WarpTo(edge - TurnSeconds);
                     break;

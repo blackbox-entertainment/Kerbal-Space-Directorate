@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.144 (2026-11-01), test build
+
+- **Duna arrivals tested off-game.** New KSA.Core/Flight/Sim: a pass through the air, fitted to three real Duna passes, and the crew's aerobraking rules moved into Core. Every arrival from 20 to 49 km is flown in the tests. That showed passes at 36 to 40 km taking 12 laps, so a pass over 31 km is now brought down to 30 km.
+
 ## 0.8.143 (2026-11-01), test build
 
 - **Empty drop tanks really drop.** The rule stopped at the tanks themselves, because they carry the same stage number as their decouplers.
