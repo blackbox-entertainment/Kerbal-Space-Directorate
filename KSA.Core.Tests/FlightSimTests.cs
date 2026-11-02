@@ -27,7 +27,7 @@ namespace KSA.Core.Tests
         public void EveryDunaArrivalEndsInASafeOrbit()
         {
             const double air = 50000, wanted = 70000;
-            for (double pe = 20; pe <= 49; pe += 1) // the last correction has landed from 7 km low to 14 km high of a 35 km aim
+            for (double pe = 20; pe <= 55; pe += 1) // the last correction has landed from 7 km low to 14 km high of a 35 km aim
                 foreach (double ap in new double[] { 7000, 11000, 14400 }) // the capture burn aims for 14,377 km
                 {
                     string route = Arrive(ap * 1000, pe * 1000, air, wanted, out bool safe);

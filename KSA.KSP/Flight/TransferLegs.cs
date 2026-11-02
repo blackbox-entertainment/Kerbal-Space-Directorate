@@ -1327,7 +1327,13 @@ namespace KSA.KSP.Flight
             Vessel v = ctx.Vessel;
             if (v == null || v.orbit == null || _target == null) { Fail("no vessel orbit or target"); return; }
             if (v.mainBody != _target) { Fail("not in " + _target.bodyName + "'s sphere of influence"); return; }
-            if (v.orbit.eccentricity < 1 && v.orbit.PeA > _target.atmosphereDepth) State = LegState.Done;
+            // Clear of the air on a long orbit, the air has not been used yet: the rules bring the low point down at apoapsis (2026-11-01: arrived at 53 km, 3 km over the
+            // air, and went straight to the landing from a 14,773 km orbit with no ground in reach).
+            if (v.orbit.eccentricity < 1 && v.orbit.PeA > _target.atmosphereDepth)
+            {
+                if (v.orbit.ApA <= _altitude + AirbrakeRules.GoalMargin) State = LegState.Done;
+                else _passes = 1;
+            }
         }
 
         private void Fail(string why) { State = LegState.Failed; Status = "Aerobraking failed: " + why; }

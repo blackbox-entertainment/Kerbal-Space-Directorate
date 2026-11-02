@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.152 (2026-11-01), test build
+
+- **An arrival above the air still aerobrakes.** With the low point just over the top of the air on a long orbit, aerobraking was skipped and the landing search found nothing in reach. The crew now brings the low point down at apoapsis.
+
 ## 0.8.151 (2026-11-01), test build
 
 - **The mission list shows the window the crew will really take.** It looks for a window in the next 30 days costing up to 30% more, as the crew does, instead of the cheapest date in the whole cycle. The crew now looks 30 days ahead too.
