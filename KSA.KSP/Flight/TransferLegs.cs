@@ -1363,6 +1363,14 @@ namespace KSA.KSP.Flight
                     // down to 26 x -19 km, and the crew rode it to the ground waiting for the air to end).
                     if (_climbing || (inAir && v.orbit.ApA < air))
                     {
+                        if (AirbrakeRules.TooLowToClimb(v.altitude, v.verticalSpeed, air))
+                        {
+                            _climbing = false;
+                            line = "Too low to climb out at " + TransferSupport.Km(v.altitude) + ": landing from here.";
+                            _phase = Phases.Finished;
+                            State = LegState.Done;
+                            break;
+                        }
                         if (!_climbing) { _climbing = true; if (!_caughtSaid) line = "Caught in the air at " + TransferSupport.Km(v.altitude) + ": full power to climb out."; _caughtSaid = true; }
                         // Up as well as along: level in thick air the thrust only fights the drag (2026-11-01, T: 460 m/s for 2 km of apoapsis).
                         Vector3d up = v.upAxis;

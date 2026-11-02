@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.154 (2026-11-01), test build
+
+- **A crew falling low in the air lands.** Below half the height of the air and falling, the aerobrake leg stops trying to climb out and hands over to the landing.
+
 ## 0.8.153 (2026-11-01), test build
 
 - **Long orbits turn past moons.** On the way down to an air pass the crew checks every moon and, if one is in the way, turns the orbit at apoapsis for a few m/s, keeping the low point where it was. Caught by a moon anyway, they clear its surface and ride through instead of giving up.

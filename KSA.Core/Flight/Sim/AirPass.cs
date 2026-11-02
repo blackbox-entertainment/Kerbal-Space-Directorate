@@ -124,6 +124,11 @@ namespace KSA.Core.Flight.Sim
         public const double PassMargin = 1.5;     // of the last pass's energy loss, allowed for the next
 
         /// <summary>The step after a pass, with the craft out of the air and on the way up. lastDrop is the energy that pass took, J/kg.</summary>
+        /// <summary>Caught in the air, falling and low: the engine goes to landing, not to climbing (2026-11-01: a crew waited for its nose to come round and hit Duna at 346 m/s).</summary>
+        public static bool TooLowToClimb(double altitude, double verticalSpeed, double air) { return altitude < ClimbFloorShare * air && verticalSpeed < 0; }
+
+        public const double ClimbFloorShare = 0.5;
+
         public static AirbrakeStep AfterPass(int passes, double apA, double peA, double air, double wantedOrbit, double radius, double mu, double lastDrop)
         {
             double energy = -mu / (2 * radius + apA + peA);

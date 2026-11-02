@@ -37,6 +37,14 @@ namespace KSA.Core.Tests
                 }
         }
 
+        [Test]
+        public void ACrewFallingLowInTheAirLandsInsteadOfClimbing()
+        {
+            Assert.That(AirbrakeRules.TooLowToClimb(24000, -100, 50000), Is.True);
+            Assert.That(AirbrakeRules.TooLowToClimb(30000, -100, 50000), Is.False);
+            Assert.That(AirbrakeRules.TooLowToClimb(24000, 50, 50000), Is.False);
+        }
+
         /// <summary>2026-11-01: a 14,747 x 53 km Duna orbit ran into Ike on the way down; the crew burned every drop trying to "ascend".</summary>
         [Test]
         public void ALongOrbitTurnsPastAMoon()
