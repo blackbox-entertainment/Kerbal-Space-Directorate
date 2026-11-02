@@ -177,6 +177,7 @@ namespace KSA.KSP.Flight
         private double _tolerance = 0.3;
         private double _lateBy;
         private double _burned, _lastStep;
+        private double _stagedAt = -1e9;
 
         public bool Done { get { return _phase == Phases.Done; } }
         public bool Failed { get { return _phase == Phases.Failed; } }
@@ -251,7 +252,9 @@ namespace KSA.KSP.Flight
                     break;
                 case Phases.Burn:
                     c.AutoStage(ref line);
-                    _burned += v.geeForce * 9.80665 * Math.Max(0, now - _lastStep);
+                    if (line != null) { _stagedAt = now; _lastBurnVector = burn; } // a stage dropped mid-burn (0.8.165): the next engine carries on
+                    bool justStaged = now - _stagedAt < 3;
+                    if (!justStaged && c.Throttle > 0) _burned += v.geeForce * 9.80665 * Math.Max(0, now - _lastStep);
                     _lastStep = now;
                     if (!_burnTimed && c.MaxAcceleration() > 0) { double bt = c.BurnTime(burn.magnitude); if (!double.IsInfinity(bt)) { _burnTime = bt; _burnTimed = true; } }
                     double remaining = burn.magnitude;
@@ -259,7 +262,9 @@ namespace KSA.KSP.Flight
                     // A long burn leaves the node behind and the vector never empties: stop on what was really burned
                     // (2026-11-01: a 1,047 m/s ejection under warp burned 1,567 m/s and went past Duna).
                     bool spent = KSA.Core.Flight.Sim.BurnRules.Spent(_burned, _startDv);
-                    if (spent || remaining < _tolerance || Vector3d.Dot(burn, _lastBurnVector) < 0 || (remaining < 2 && now - _started > _burnTime + 10) || (CutOff != null && CutOff(v)))
+                    bool flipped = !justStaged && Vector3d.Dot(burn, _lastBurnVector) < 0;
+                    bool overran = !justStaged && remaining < 2 && now - _started > _burnTime + 10;
+                    if (spent || remaining < _tolerance || flipped || overran || (CutOff != null && CutOff(v)))
                     {
                         c.Throttle = 0;
                         _phase = Phases.Done;
@@ -274,7 +279,7 @@ namespace KSA.KSP.Flight
                     c.Throttle = t;
                     if (c.AttitudeError(burn) > 30) c.Throttle = 0.1f;
                     _lastBurnVector = burn;
-                    if (c.NoThrustAvailable() && now - _started > 5)
+                    if (c.NoThrustAvailable() && now - _started > 5 && !justStaged)
                     {
                         c.Throttle = 0;
                         n.RemoveSelf();

@@ -333,6 +333,8 @@ namespace KSA.KSP.Flight
                 if (headingHome) { prog.SkipTo(l => l is ReentryLeg || (l is CorrectionLeg && IndexAfterHome(prog, l))); return; }
                 // Been to orbit and coming down (the Director burned for home and handed back): home, never the ascent again
                 // (2026-10-30: the crew tried to circularise a capsule with no fuel, which also held time warp at 1x).
+                // A periapsis dipped into the air on the way to the tanker (0.8.165): the crew raise it and carry on, never reentry.
+                if (descending && v.orbit != null && v.orbit.ApA > home.atmosphereDepth + 20000 && Has(prog, l => l is TankerStopLeg) && !logged("Refuel:" + home.bodyName) && TankerStopLeg.FindTanker(v, home) != null) { prog.SkipTo(l => l is TankerStopLeg); return; }
                 if (descending && logged("Orbit:Kerbin") && v.orbit != null && v.orbit.PeA < home.atmosphereDepth) { prog.SkipTo(l => l is ReentryLeg); return; }
                 // The fuel depot (2026-10-29): a tanker that has pumped goes home; a ship that has not refuelled goes back to the depot.
                 if (v.situation == Vessel.Situations.ORBITING && ctx.CargoFuel > 0 && logged("Tanker:Kerbin")) { prog.SkipTo(l => l is UndockLeg); return; }

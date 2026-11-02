@@ -2,6 +2,12 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.165 (2026-11-02), test build
+
+- **Rendezvous closes the last few km.** Inside 25 km the crew push straight at the station (about five minutes, up to 20 m/s) and kill the relative speed on arrival, up to four times; 5 km at 1 m/s had been called a miss and replanned as a fresh 8-orbit phasing, twice, until the leg gave up.
+- **A periapsis in the air is raised first.** The rendezvous leg no longer refuses an orbit whose periapsis dips into the atmosphere; it burns at apoapsis to lift it 15 km clear and carries on. On reload such a flight goes back to the tanker stop instead of reentry.
+- **Burns carry on through a stage separation.** The node executor had called an 8 m/s burn complete at 0 m/s when the core stage burnt out under it; it now gives the next engine three seconds and keeps burning.
+
 ## 0.8.164 (2026-11-02), test build
 
 - **RCS is for docking only** (T). The crew had switched the thrusters on to help the reaction wheels through every turn in space; aligning one 23 m/s burn on the way to the tanker spent 13 of the 40 monopropellant the dock needed. Only the docking leg uses them now.

@@ -51,12 +51,15 @@ namespace KSA.KSP.Flight
     /// </summary>
     public sealed class RendezvousLeg : IFlightLeg
     {
-        private enum Phases { PlanePlan, PlaneBurn, InterceptPlan, PhasePlan, PhaseBurn, PhaseCoast, InterceptBurn, Coast, MatchPlan, MatchBurn, Check }
+        private enum Phases { RaisePlan, RaiseBurn, PlanePlan, PlaneBurn, InterceptPlan, PhasePlan, PhaseBurn, PhaseCoast, ClosePlan, CloseBurn, InterceptBurn, Coast, MatchPlan, MatchBurn, Check }
 
         private const double MaxPlaneChangeDv = 1500;
         /// <summary>A direct intercept dearer than this gets a phasing orbit first (0.8.163).</summary>
         private const double MaxDirectIntercept = 120;
         private const int MaxPhasingOrbits = 8;
+        /// <summary>Inside this range the crew closes with a straight push, never a new intercept or phasing orbit (0.8.165).</summary>
+        private const double CloseRange = 25000;
+        private const int MaxCloses = 4;
         private const double DoneDistance = 2500;
         private const double DoneSpeed = 10;
 
@@ -68,6 +71,8 @@ namespace KSA.KSP.Flight
         private int _intercepts;
         private bool _phased;
         private double _phaseEnd;
+        private int _closes;
+        private double _raiseTo;
 
         public string Name { get { return "Rendezvous"; } }
         public string Status { get; private set; }
@@ -86,6 +91,7 @@ namespace KSA.KSP.Flight
             Status = "Looking for the station.";
             _burn = null;
             _intercepts = 0;
+            _closes = 0;
             _phased = false;
             try
             {
@@ -93,8 +99,9 @@ namespace KSA.KSP.Flight
                 if (v == null) { Fail("no vessel", ctx); return; }
                 _target = StationOps.ResolveTarget(ctx);
                 if (_target == null) { Fail("station not found in orbit", ctx); return; }
-                bool stable = v.orbit != null && (v.situation == Vessel.Situations.ORBITING || (v.situation == Vessel.Situations.SUB_ORBITAL && v.orbit.PeA > v.mainBody.atmosphereDepth));
-                if (!stable) { Fail("not in a stable orbit", ctx); return; }
+                double air = v.mainBody.atmosphere ? v.mainBody.atmosphereDepth : 0;
+                bool closed = v.orbit != null && v.orbit.eccentricity < 1 && (v.situation == Vessel.Situations.ORBITING || v.situation == Vessel.Situations.SUB_ORBITAL);
+                if (!closed || v.orbit.ApA < air + 20000) { Fail("not in a stable orbit", ctx); return; }
                 NodePlanner.ClearNodes(v);
                 ctx.Control.Throttle = 0;
                 ctx.Control.ClearInputs();
@@ -102,6 +109,14 @@ namespace KSA.KSP.Flight
                 {
                     Status = "Already alongside " + StationOps.NameOf(_target) + ".";
                     State = LegState.Done;
+                    return;
+                }
+                if (v.orbit.PeA < air + 5000)
+                {
+                    // A periapsis in the air (0.8.165: the Director's burn left 299 x 64 km): raise it at apoapsis first.
+                    _raiseTo = air + 15000;
+                    _phase = Phases.RaisePlan;
+                    Status = "Periapsis in the air; raising it first.";
                     return;
                 }
                 _phase = Phases.PlanePlan;
@@ -142,6 +157,29 @@ namespace KSA.KSP.Flight
             double now = ctx.Now;
             switch (_phase)
             {
+                case Phases.RaisePlan:
+                    {
+                        double mu = v.mainBody.gravParameter;
+                        double apUt = now + Math.Max(30, v.orbit.timeToAp);
+                        StateVector at = OrbitAdapter.StateAt(v.orbit, apUt);
+                        double ra = at.Position.Length, rp = v.mainBody.Radius + _raiseTo;
+                        double want = Math.Sqrt(mu * (2 / ra - 2 / (ra + rp)));
+                        double have = at.Velocity.Length;
+                        if (want <= have) { _phase = Phases.PlanePlan; Status = "Checking orbital planes."; break; }
+                        Vec3 dv = at.Velocity.Normalized * (want - have);
+                        NodePlanner.ClearNodes(v);
+                        if (NodePlanner.AddFrameDeltaV(v, apUt, dv) == null) { Fail("maneuver nodes unavailable", ctx); break; }
+                        _burn = new NodeExecutor();
+                        _burn.Begin(ctx);
+                        if (_burn.Failed) { Fail(_burn.FailReason, ctx); break; }
+                        _phase = Phases.RaiseBurn;
+                        Status = "Raising periapsis: " + Math.Round(dv.Length) + " m/s at apoapsis.";
+                        line = "Periapsis " + Math.Round(v.orbit.PeA / 1000) + " km is in the air: raising it to " + Math.Round(_raiseTo / 1000) + " km, " + Math.Round(dv.Length) + " m/s at apoapsis.";
+                    }
+                    break;
+                case Phases.RaiseBurn:
+                    line = RunBurn(ctx, Phases.PlanePlan, "Checking orbital planes.");
+                    break;
                 case Phases.PlanePlan:
                     {
                         double relInc = Vec3.AngleBetween(OrbitAdapter.Normal(v.orbit, now), OrbitAdapter.Normal(_target.orbit, now)) * 180.0 / Math.PI;
@@ -171,6 +209,7 @@ namespace KSA.KSP.Flight
                 case Phases.InterceptPlan:
                     {
                         if (AtStation(v)) { _phase = Phases.Check; break; }
+                        if (StationOps.Distance(v, _target) < CloseRange) { _phase = Phases.ClosePlan; break; }
                         double period = v.orbit.period;
                         if (double.IsNaN(period) || period <= 0) { Fail("not in a closed orbit", ctx); break; }
                         double mu = v.mainBody.gravParameter;
@@ -238,6 +277,40 @@ namespace KSA.KSP.Flight
                         if (_phaseEnd - now > 30) c.WarpTo(_phaseEnd); else if (c.IsWarping) c.StopWarp();
                     }
                     break;
+                case Phases.ClosePlan:
+                    {
+                        // The last few km (0.8.165): push straight at the station at a speed that gets there in about
+                        // five minutes, coast, then kill the relative velocity on arrival. 5 km at 1 m/s had been
+                        // "missed" and replanned as a fresh 8-orbit phasing.
+                        if (_closes >= MaxCloses) { Fail("rendezvous missed", ctx); break; }
+                        double nodeUt = now + 60;
+                        StateVector us = OrbitAdapter.StateAt(v.orbit, nodeUt), them = OrbitAdapter.StateAt(_target.orbit, nodeUt);
+                        Vec3 toThem = them.Position - us.Position;
+                        double dist = toThem.Length;
+                        if (dist < 1) { _phase = Phases.Check; break; }
+                        double speed = Math.Max(1.0, Math.Min(20.0, dist / 300.0));
+                        Vec3 dv = toThem.Normalized * speed - (us.Velocity - them.Velocity);
+                        NodePlanner.ClearNodes(v);
+                        if (NodePlanner.AddFrameDeltaV(v, nodeUt, dv) == null) { Fail("maneuver nodes unavailable", ctx); break; }
+                        _arrivalUt = nodeUt + dist / speed;
+                        _closes++;
+                        _burn = new NodeExecutor();
+                        _burn.Begin(ctx);
+                        if (_burn.Failed) { Fail(_burn.FailReason, ctx); break; }
+                        _phase = Phases.CloseBurn;
+                        Status = "Closing burn: " + Math.Round(dv.Length) + " m/s.";
+                        line = "Closing the last " + Math.Round(dist / 100) / 10 + " km at " + Math.Round(speed) + " m/s (" + Math.Round(dv.Length) + " m/s burn, " + Math.Round((_arrivalUt - now) / 60) + " min).";
+                    }
+                    break;
+                case Phases.CloseBurn:
+                    line = RunBurn(ctx, Phases.Coast, "Closing on the station.");
+                    if (_phase == Phases.Coast)
+                    {
+                        double burnTime = c.BurnTime(MatchDeltaV(v).Length);
+                        if (double.IsInfinity(burnTime) || double.IsNaN(burnTime)) burnTime = 60;
+                        _coastEnd = _arrivalUt - Math.Max(30, burnTime + 15);
+                    }
+                    break;
                 case Phases.InterceptBurn:
                     line = RunBurn(ctx, Phases.Coast, "Coasting to the station.");
                     if (_phase == Phases.Coast)
@@ -290,6 +363,12 @@ namespace KSA.KSP.Flight
                             line = "Rendezvous: " + Math.Round(dist) + " m from " + StationOps.NameOf(_target) + ", closing at " + speed.ToString("0.0") + " m/s.";
                             ctx.Say(line, "Rendezvous:" + StationOps.BodyOf(v));
                             State = LegState.Done;
+                        }
+                        else if (dist < CloseRange)
+                        {
+                            _phase = Phases.ClosePlan;
+                            Status = "Short by " + Math.Round(dist / 100) / 10 + " km; closing.";
+                            line = "Short by " + Math.Round(dist / 100) / 10 + " km at " + Math.Round(speed) + " m/s; closing in.";
                         }
                         else if (_intercepts < 2)
                         {
