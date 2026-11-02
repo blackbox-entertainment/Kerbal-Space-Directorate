@@ -310,6 +310,8 @@ namespace KSA.Core
                     aboard.Add(c.Id);
                 }
             if (aboard.Count == 0 && !type.IsUncrewed) { message = "No agency kerbal is aboard."; return null; }
+            // A second pick for the same rocket replaces the first; 0.8.160 left one project per click on a probe.
+            if (aboard.Count == 0) Projects.RemoveAll(o => o.Status == ProjectStatus.InFlight && o.Crew.Count == 0 && o.VesselId == (vesselId ?? string.Empty) && o.Name.StartsWith("Hangar flight: ", StringComparison.Ordinal));
             List<Template> able = TemplatesFor(type);
             int day = CurrentDay;
             string title = string.IsNullOrEmpty(vesselName) ? type.Name : vesselName.Trim();
@@ -334,8 +336,8 @@ namespace KSA.Core
             p.LaunchUT = Clock.UniversalTime;
             p.VesselId = vesselId ?? string.Empty;
             RaiseProjectChanged(p);
-            CrewProfile pilot = Crew.Get(aboard[0]);
-            message = (pilot != null ? pilot.Name : "The crew") + " has the vehicle: " + type.Name + ".";
+            CrewProfile pilot = aboard.Count > 0 ? Crew.Get(aboard[0]) : null;
+            message = (pilot != null ? pilot.Name : aboard.Count > 0 ? "The crew" : "Mission control") + " has the vehicle: " + type.Name + ".";
             return p;
         }
 

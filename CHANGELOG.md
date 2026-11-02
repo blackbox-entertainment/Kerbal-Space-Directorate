@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.161 (2026-11-02), test build
+
+- **Crewless craft can take a mission from the pad.** Picking a mission for a probe or fuel station did nothing: the button threw an error because nobody was aboard, and each click left a stray project. Fixed; picking again replaces the earlier pick.
+
 ## 0.8.160 (2026-11-01), test build
 
 - **Kerbin fuel station.** A one-launch tanker parks in Kerbin orbit. A crew leaving Kerbin with a port and RCS meets it right after the climb and fills every tank; if the stop fails it holds in orbit rather than leaving on empty tanks. The pad offers planet missions to a craft with empty tanks while a station waits. Unflown.

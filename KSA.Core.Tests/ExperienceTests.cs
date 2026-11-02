@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using KSA.Core.Flight;
 using KSA.Core.Missions;
 using KSA.Core.Personnel;
@@ -103,6 +104,22 @@ namespace KSA.Core.Tests
             a.ResolveLive(p.Id, result);
             Assert.That(shown, Is.Not.Null, "the host is told, to show the KSA mission report");
             Assert.That(shown.Rewards, Has.Some.StartsWith("Jeb Kerman: +7 experience"));
+        }
+
+        [Test]
+        public void AProbeWithNobodyAboardFliesFromTheHangar()
+        {
+            var clock = new FakeClock();
+            Agency a = Staffed(clock);
+            string msg;
+            Project first = a.AdoptHangarLaunch("TankerKerbin", "v1", "Fuel Station mk I", new List<string>(), out msg);
+            Assert.That(first, Is.Not.Null, msg);
+            Assert.That(msg, Does.Contain("Mission control"));
+            Project p = a.AdoptHangarLaunch("TankerKerbin", "v1", "Fuel Station mk I", new List<string>(), out msg);
+            Assert.That(a.Projects.Count(x => x.VesselId == "v1"), Is.EqualTo(1), "picking again replaces the first pick");
+            var result = new LiveFlightResult { MaxAltitude = 85000, MaxSpeed = 2300, DaysInSpace = 0.1 };
+            result.Achievements.Add("Satellite:Kerbin");
+            Assert.That(a.ResolveLive(p.Id, result), Is.Not.Null);
         }
 
         [Test]
