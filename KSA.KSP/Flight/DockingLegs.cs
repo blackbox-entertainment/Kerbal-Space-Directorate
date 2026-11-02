@@ -556,7 +556,7 @@ namespace KSA.KSP.Flight
                 }
                 if (bestOurs != null) break;
             }
-            if (bestOurs == null) { bestOurs = ours[0]; bestTheirs = theirs[0]; ctx.Say("No matching port sizes; trying " + bestOurs.part.partInfo.title + " anyway."); }
+            if (bestOurs == null) { Fail("no port on this craft matches a port on " + StationOps.NameOf(_target) + " (" + ours[0].part.partInfo.title + " to " + theirs[0].part.partInfo.title + ")", ctx); return false; }
             _ourPort = bestOurs; _targetPort = bestTheirs;
             ctx.Control.ControlFrom(_ourPort);
             ctx.Say("Docking " + _ourPort.part.partInfo.title + " to " + _targetPort.part.partInfo.title + " on " + StationOps.NameOf(_target) + ".");
@@ -568,8 +568,8 @@ namespace KSA.KSP.Flight
                 {
                     _stationControl = new VesselControl(_target);
                     _stationControl.ControlFrom(_targetPort);
-                    ModuleDockingNode ours = _ourPort, theirs = _targetPort;
-                    _stationControl.PointAlong(() => (Vector3d)ours.nodeTransform.position - (Vector3d)theirs.nodeTransform.position);
+                    ModuleDockingNode ourNode = _ourPort, theirNode = _targetPort;
+                    _stationControl.PointAlong(() => (Vector3d)ourNode.nodeTransform.position - (Vector3d)theirNode.nodeTransform.position);
                     ctx.Say(StationOps.NameOf(_target) + " is turning its port toward us.");
                 }
             }
