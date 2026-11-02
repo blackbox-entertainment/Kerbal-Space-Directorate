@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.172 (2026-11-02), test build
+
+- **First hard dock with the Kerbin fuel station** (2026-11-02, Mk IIe, 31.8 of 160 monopropellant; the station turned its port from 148 to 1 deg off in two minutes). The refuel then failed in the same instant as the dock, before the game had merged the two craft, and the retry could not find the tanker because it was part of the ship.
+- **Refuelling waits for the dock to settle, takes minutes, and leaves the tanker its deorbit fuel.** The leg waits up to a minute for the merge, pumps 15 units a second of each propellant (about three minutes for two X200-32s), empty-launched tanks first and then the top stages, and keeps 5% of the tanker's dry mass (at least 0.3 t) aboard it (T). A tanker stop that begins already docked goes straight to pumping and undocking.
+
 ## 0.8.171 (2026-11-02), test build
 
 - **Thrusters translate only during the dock.** With RCS on, stock SAS fires the thrusters to turn the ship as well, and swinging a 40 t stack onto the port spent 80 monopropellant in three minutes (four Stratus tanks, gone at 39 m). The docking leg now turns off pitch, yaw and roll on every RCS block for the dock and gives them back after; the reaction wheel does the turning. The log shows monopropellant left with every "Station aim:" line and how much the dock used.

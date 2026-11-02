@@ -191,6 +191,17 @@ namespace KSA.KSP.Flight
         {
             State = LegState.Running;
             Vessel v = ctx.Vessel;
+            if (v != null && v.rootPart != null) ctx.OwnLaunchId = v.rootPart.launchID;
+            // Already docked with a tanker (0.8.172: a retry after the hard dock could not find it, it was part of the ship): pump and undock.
+            if (v != null && DepotOps.Docked(ctx) && DepotOps.Tonnes(DepotOps.DepotParts(ctx)) >= MinTonnes)
+            {
+                ctx.Say("Docked with a tanker already: refuelling.");
+                _inner.Add(new RefuelLeg());
+                _inner.Add(new UndockLeg());
+                _index = 0;
+                _inner[0].Begin(ctx);
+                return;
+            }
             Vessel tanker = v != null ? FindTanker(v, v.mainBody) : null;
             if (tanker == null) { Status = "No tanker here."; State = LegState.Done; return; }
             if (!ctx.Control.HasRcs() || ctx.Control.DockingPorts().Count == 0)
@@ -261,36 +272,97 @@ namespace KSA.KSP.Flight
         public void End(FlightContext ctx) { }
     }
 
-    /// <summary>Docked at the depot: fills our tanks that launched empty from the depot's (2026-10-29).</summary>
+    /// <summary>
+    /// Docked at the depot: fills our tanks from the depot's (2026-10-29). Since 0.8.172 it waits for the game to merge the
+    /// two craft (the hard dock and the refuel came in the same instant and found "not docked"), pumps at a steady rate so a
+    /// fill takes minutes rather than a frame (T), empties the tanks that launched empty first and then the top stages, and
+    /// leaves the tanker enough to deorbit itself (T): 5% of its dry mass, at least 0.3 t.
+    /// </summary>
     public sealed class RefuelLeg : IFlightLeg
     {
+        private const double PumpUnitsPerSecond = 15; // of each propellant: 32 t of drop tanks in about three minutes
+        private const double SettleSeconds = 60;
+        private double _started, _lastStep, _before, _reserveLf, _reserveOx;
+        private bool _pumping;
+        private List<List<Part>> _targets;
+
         public string Name { get { return "Refuelling"; } }
         public string Status { get; private set; }
         public LegState State { get; private set; }
 
         public void Begin(FlightContext ctx)
         {
-            if (!DepotOps.Docked(ctx)) { Status = "Not docked with the depot."; ctx.Say("Refuelling failed: not docked with the depot."); State = LegState.Failed; return; }
-            List<Part> tanks = DepotOps.EmptyTanks(ctx);
-            if (tanks.Count == 0) tanks = DepotOps.OwnParts(ctx); // nothing launched empty: top up whatever has room
-            List<Part> depot = DepotOps.DepotParts(ctx);
-            double before = DepotOps.Tonnes(depot);
-            foreach (string res in DepotOps.Propellants) DepotOps.Move(res, depot, tanks, double.MaxValue);
-            // A tanker sent ahead fills everything; a depot's fuel is rationed to the tanks that launched empty.
-            // Top stages first (0.8.167): the lander before the drop tanks before anything lower; a nearly spent booster
-            // still hanging under the ship gets nothing (the Mk IIe core had 48 t of room and would have taken the station dry).
-            if (ctx.ReportDepot == null)
-                foreach (List<Part> group in DepotOps.StageGroups(ctx))
-                    foreach (string res in DepotOps.Propellants) DepotOps.Move(res, depot, group, double.MaxValue);
-            double taken = before - DepotOps.Tonnes(depot);
-            DepotOps.Report(ctx);
-            double room = DepotOps.Tonnes(tanks, true) - DepotOps.Tonnes(tanks);
-            string text = "Took on " + taken.ToString("0.0") + " t of propellant at the depot" + (room > 0.5 ? "; the depot ran dry with " + room.ToString("0.0") + " t of room left in our tanks" : "") + ".";
-            ctx.Say(text, "Refuel:" + (ctx.Vessel != null && ctx.Vessel.mainBody != null ? ctx.Vessel.mainBody.bodyName : "Kerbin"));
-            Status = text;
-            State = LegState.Done;
+            State = LegState.Running;
+            _started = ctx.Now; _lastStep = _started; _pumping = false; _targets = null;
+            ctx.Control.Throttle = 0;
+            ctx.Control.ClearInputs();
+            Status = "Waiting for the docking to settle.";
         }
-        public string Step(FlightContext ctx) { return null; }
+
+        private void Fail(FlightContext ctx, string why) { Status = why; ctx.Say("Refuelling failed: " + why); State = LegState.Failed; }
+
+        public string Step(FlightContext ctx)
+        {
+            if (State != LegState.Running) return null;
+            double now = ctx.Now, dt = Math.Max(0, now - _lastStep);
+            _lastStep = now;
+            if (!DepotOps.Docked(ctx))
+            {
+                if (_pumping) { Fail(ctx, "the ships came apart while pumping."); return null; }
+                if (now - _started > SettleSeconds) { Fail(ctx, "not docked with the depot."); return null; }
+                return null;
+            }
+            List<Part> depot = DepotOps.DepotParts(ctx);
+            if (!_pumping)
+            {
+                _pumping = true;
+                _before = DepotOps.Tonnes(depot);
+                _targets = new List<List<Part>>();
+                List<Part> empty = DepotOps.EmptyTanks(ctx);
+                if (empty.Count > 0) _targets.Add(empty);
+                // A tanker sent ahead fills everything; a depot's fuel is rationed to the tanks that launched empty.
+                if (ctx.ReportDepot == null || empty.Count == 0) foreach (List<Part> g in DepotOps.StageGroups(ctx)) _targets.Add(g);
+                double dry = 0;
+                foreach (Part p in depot) dry += p.mass;
+                double reserve = ctx.ReportDepot == null ? Math.Max(0.3, 0.05 * dry) : 0; // a tanker keeps enough to deorbit itself (T)
+                _reserveLf = reserve * 0.45 / 0.005; _reserveOx = reserve * 0.55 / 0.005;
+                ctx.Say("Docked and pumping: " + _before.ToString("0.0") + " t aboard the depot" + (reserve > 0 ? ", " + reserve.ToString("0.0") + " t stays with it" : "") + ".");
+                return null;
+            }
+            double moved = 0;
+            foreach (List<Part> group in _targets)
+            {
+                double lf = Pump("LiquidFuel", depot, group, PumpUnitsPerSecond * dt, _reserveLf);
+                double ox = Pump("Oxidizer", depot, group, PumpUnitsPerSecond * dt, _reserveOx);
+                moved += lf + ox;
+                if (lf > 0 || ox > 0) break; // one group at a time, top of the ship first
+            }
+            double taken = _before - DepotOps.Tonnes(depot);
+            if (moved <= 1e-6 && dt > 0)
+            {
+                DepotOps.Report(ctx);
+                double room = 0;
+                foreach (List<Part> g in _targets) room += DepotOps.Tonnes(g, true) - DepotOps.Tonnes(g);
+                string text = "Took on " + taken.ToString("0.0") + " t of propellant at the depot" + (room > 0.5 ? "; the depot ran down with " + room.ToString("0.0") + " t of room left in our tanks" : "") + ".";
+                ctx.Say(text, "Refuel:" + (ctx.Vessel != null && ctx.Vessel.mainBody != null ? ctx.Vessel.mainBody.bodyName : "Kerbin"));
+                Status = text;
+                State = LegState.Done;
+                return null;
+            }
+            Status = "Refuelling: " + taken.ToString("0.0") + " t taken on.";
+            return null;
+        }
+
+        /// <summary>Moves up to units of a propellant into the group, never taking the depot below its reserve. Returns what moved.</summary>
+        private static double Pump(string resource, List<Part> depot, List<Part> group, double units, double reserveUnits)
+        {
+            double available = 0;
+            foreach (Part p in depot) { PartResource r = p.Resources.Get(resource); if (r != null) available += r.amount; }
+            double spare = available - reserveUnits;
+            if (spare <= 1e-6) return 0;
+            return DepotOps.Move(resource, depot, group, Math.Min(units, spare));
+        }
+
         public void End(FlightContext ctx) { }
     }
 
