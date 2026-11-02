@@ -184,8 +184,7 @@ namespace KSA.KSP.Flight
         {
             if (v.orbit == null || _target.orbit == null) return false;
             // Never short of the plan: from a high orbit the planned path itself runs past the moon (2026-10-31: 79 of a 91 m/s burn, a miss).
-            if (v.orbit.ApR < _plannedApR * 1.05) return false;
-            return v.orbit.eccentricity >= 1 || v.orbit.ApR > _target.orbit.ApR + _target.sphereOfInfluence;
+            return TransferRules.FarEnough(v.orbit.ApR, v.orbit.eccentricity >= 1, _plannedApR, _target.orbit.ApR, _target.sphereOfInfluence);
         }
 
         public string Name { get { return "Transfer to " + TransferSupport.BodyName(_target); } }

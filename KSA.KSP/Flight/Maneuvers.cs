@@ -219,7 +219,7 @@ namespace KSA.KSP.Flight
             ManeuverNode n = Node(v);
             if (n == null) { Fail("node vanished"); return "Maneuver node lost; burn skipped."; }
             double now = ctx.Now;
-            double ignition = n.UT - _burnTime / 2 + _lateBy;
+            double ignition = KSA.Core.Flight.Sim.BurnRules.Ignition(n.UT, _burnTime, _lateBy);
             Vector3d burn = n.GetBurnVector(v.orbit);
             string line = null;
             switch (_phase)

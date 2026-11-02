@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.148 (2026-11-01), test build
+
+- **Simulator stories.** The five 2026-10-31 failures, long burns, light and heavy reference rockets, Moho and the climb rules now run in the tests. A 10-minute ejection burn on a Terrier loses nearly half its speed, against 3% for a 2.5-minute Poodle burn.
+
 ## 0.8.147 (2026-11-01), test build
 
 - **The whole Duna trip in the simulator.** The climb (AscentRules, AscentSim), long burns (BurnRules), lift-off from Duna (LiftoffSim) and the capsule's reentry now fly in the tests. The crew's pitch program and burn limit run from Core. A round trip adds up to about 4,500 m/s from Kerbin orbit; a 30 km return comes down on the first pass.

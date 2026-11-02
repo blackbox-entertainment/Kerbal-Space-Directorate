@@ -11,6 +11,20 @@ namespace KSA.Core.Flight.Sim
         public const double AirFallFloor = 2000;    // metres above terrain: below it the normal descent speeds
         public const double AirFallShare = 0.7;     // of the speed the engine can just stop from
 
+        public const double LongOrbit = 0.2;       // eccentricity above which the deorbit waits for the high end
+        public const double NearApoapsis = 0.08;   // of a period, either side of apoapsis
+
+        /// <summary>A long orbit is left from its high end: from the low end the same drop costs ten times the fuel (2026-11-01: 25 m/s against 300 from 742 x 70 km).</summary>
+        public static bool TooFarFromApoapsis(double eccentricity, double period, double fromNow, double timeToAp)
+        {
+            if (eccentricity <= LongOrbit) return false;
+            double fromAp = Math.Abs(fromNow - timeToAp) % period;
+            return Math.Min(fromAp, period - fromAp) > period * NearApoapsis;
+        }
+
+        /// <summary>Empty tanks are only read with the throttle open: closed on purpose, no thrust is not an empty tank (2026-10-31: 2,711 m/s aboard, crashed at 278 m/s).</summary>
+        public static bool OutOfFuel(double throttle, bool noThrust, bool noDeltaV) { return (throttle > 0.05 && noThrust) || noDeltaV; }
+
         /// <summary>The descent speed wanted at a height.</summary>
         public static double TargetSpeed(double above, double accel, double g, bool hasAir)
         {

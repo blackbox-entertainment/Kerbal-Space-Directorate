@@ -67,8 +67,6 @@ namespace KSA.KSP.Flight
 
         private const double SiteLead = 0.25;       // the descent comes down about this share of an orbit past the burn
         private const double SlowOrbit = 43200;     // seconds a lap: over two days, one lap is searched
-        private const double LongOrbit = 0.2;       // eccentricity above which the deorbit waits for the high end
-        private const double NearApoapsis = 0.08;   // of a period, either side of apoapsis
         private const int LongOrbitSteps = 240;     // moments looked at over one long orbit, most of them skipped
         private const int SiteSteps = 36;           // moments looked at over one orbit
         private const int SiteOrbits = 8;           // orbits searched: the world turns under the orbit, so each one crosses new ground (one orbit offered only 9%, 2026-10-31)
@@ -415,7 +413,7 @@ namespace KSA.KSP.Flight
                 // abort anything more than 7%"): a lander on its side goes nowhere; a morning rule took a 15% site and it tipped over.
                 double[] slopeLimit = { GoodSlope, FairSlope };
                 // Near apoapsis alone, the usual steps leave three moments an orbit (2026-11-01: "no flat ground", over and over).
-                int steps = o.eccentricity > LongOrbit ? LongOrbitSteps : SiteSteps;
+                int steps = o.eccentricity > DescentRules.LongOrbit ? LongOrbitSteps : SiteSteps;
                 // A slow orbit gets one lap: eight of a 70-day orbit is a 522-day wait (2026-11-01).
                 int orbits = o.period > SlowOrbit ? 1 : SiteOrbits;
                 for (int pass = 0; pass < slopeLimit.Length && double.IsPositiveInfinity(best); pass++)
@@ -448,9 +446,7 @@ namespace KSA.KSP.Flight
         /// <summary>A long orbit is left from its high end: from the low end the same drop costs ten times the fuel (2026-11-01: 25 m/s against 300 from 742 x 70 km).</summary>
         private static bool TooFarFromApoapsis(Orbit o, double ut, double now)
         {
-            if (o.eccentricity <= LongOrbit) return false;
-            double fromAp = Math.Abs(ut - (now + o.timeToAp)) % o.period;
-            return Math.Min(fromAp, o.period - fromAp) > o.period * NearApoapsis;
+            return DescentRules.TooFarFromApoapsis(o.eccentricity, o.period, ut - now, o.timeToAp);
         }
 
         /// <summary>
@@ -705,7 +701,7 @@ namespace KSA.KSP.Flight
 
             // Only with the throttle open: closed on purpose while the fall is slow enough, no thrust is not an empty tank
             // (2026-10-31: 32 km up with 2,711 m/s aboard the crew declared the tanks dry and fell onto the Mun at 278 m/s).
-            if ((c.Throttle > 0.05f && c.NoThrustAvailable()) || c.OutOfDeltaV())
+            if (DescentRules.OutOfFuel(c.Throttle, c.NoThrustAvailable(), c.OutOfDeltaV()))
             {
                 if (!_fuelWarned)
                 {

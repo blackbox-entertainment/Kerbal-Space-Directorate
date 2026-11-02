@@ -99,8 +99,50 @@ namespace KSA.Core.Flight.Sim
     {
         public const double OverBurn = 1.03;
 
+        /// <summary>A burn is centred on its node; a slow pilot starts late.</summary>
+        public static double Ignition(double nodeUt, double burnSeconds, double lateBy) { return nodeUt - burnSeconds / 2 + lateBy; }
+
         /// <summary>A long burn leaves its node behind and the node's vector never empties: stop on what was really burned.</summary>
         public static bool Spent(double burned, double planned) { return burned >= planned * OverBurn + 1; }
+    }
+
+    /// <summary>When a transfer burn has done enough, whatever its node says (KSA-78).</summary>
+    public static class TransferRules
+    {
+        /// <summary>Never short of the plan; past it, an escape or a top beyond the target's sphere ends the burn (2026-10-31: 9 minutes on a 5-minute node).</summary>
+        public static bool FarEnough(double apR, bool escaping, double plannedApR, double targetApR, double targetSoi)
+        {
+            if (!escaping && apR < plannedApR * 1.05) return false;
+            if (escaping && double.IsPositiveInfinity(plannedApR)) return false;
+            return escaping || apR > targetApR + targetSoi;
+        }
+    }
+
+    /// <summary>What a long ejection did.</summary>
+    public struct LongBurnResult { public double Seconds, Excess, ExcessAtOnce; }
+
+    /// <summary>An ejection burn along the path, centred on the point the node is at, against the same delta-v all at once (KSA-78).</summary>
+    public static class LongBurn
+    {
+        private const double Mu = 3.5316e12, G0 = 9.80665, Step = 0.1;
+
+        public static LongBurnResult Fly(double radius, double deltaV, double thrustNewtons, double massKg, double isp)
+        {
+            double circular = Math.Sqrt(Mu / radius), mass = massKg, flow = thrustNewtons / (isp * G0), seconds = 0, spent = 0;
+            double burnSeconds = massKg / flow * (1 - Math.Exp(-deltaV / (isp * G0)));
+            Vec3 r = new Vec3(radius, 0, 0), v = new Vec3(0, circular, 0);
+            r = Kepler.Propagate(new StateVector(r, v), Mu, -burnSeconds / 2).Position;
+            v = Kepler.Propagate(new StateVector(new Vec3(radius, 0, 0), new Vec3(0, circular, 0)), Mu, -burnSeconds / 2).Velocity;
+            while (!BurnRules.Spent(spent, deltaV) && spent < deltaV && seconds < 3600)
+            {
+                double a = thrustNewtons / mass;
+                v += (r * (-Mu / Math.Pow(r.Length, 3)) + v.Normalized * a) * Step;
+                r += v * Step;
+                mass -= flow * Step; spent += a * Step; seconds += Step;
+            }
+            double after = v.LengthSquared / 2 - Mu / r.Length, atOnce = Math.Pow(circular + deltaV, 2) / 2 - Mu / radius;
+            return new LongBurnResult { Seconds = seconds, Excess = Math.Sqrt(Math.Max(0, 2 * after)), ExcessAtOnce = Math.Sqrt(Math.Max(0, 2 * atOnce)) };
+        }
     }
 
     /// <summary>A stage on the way up: engines, what they burn, what goes when it is empty. Boosters burn alongside the core.</summary>
@@ -124,7 +166,7 @@ namespace KSA.Core.Flight.Sim
         private const double Step = 0.1, Mu = 3.5316e12, Radius = 600000, Air = 70000, G0 = 9.80665, PadSpeed = 174.9;
         private const double SeaDensity = 1.225, Scale = 5800, SeaKpa = 101.325;
 
-        public static AscentResult Fly(SimStage[] stages, double payloadKg, double dragArea, double targetAp)
+        public static AscentResult Fly(SimStage[] stages, double payloadKg, double dragArea, double targetAp, bool noHold = false)
         {
             double mass = payloadKg;
             var fuel = new double[stages.Length];
@@ -165,7 +207,7 @@ namespace KSA.Core.Flight.Sim
                 double need = Mu / (dist * dist) - (v.LengthSquared - Math.Pow(Vec3.Dot(v, up), 2)) / dist;
                 double pathPitch = Math.Atan2(upSpeed, eastSpeed) * 180 / Math.PI;
                 double toTop = need > 0 && Vec3.Dot(v, up) > 0 ? Vec3.Dot(v, up) / need : 0;
-                double pitch = AscentRules.Pitch(alt, speed, Air, pe, toTop, Vec3.Dot(v, up), pathPitch, q, AscentRules.HoldPitch(accel, need)) * Math.PI / 180;
+                double pitch = AscentRules.Pitch(alt, speed, Air, pe, toTop, Vec3.Dot(v, up), pathPitch, q, noHold ? 0 : AscentRules.HoldPitch(accel, need)) * Math.PI / 180;
                 Vec3 nose = up * Math.Sin(pitch) + east * Math.Cos(pitch);
                 Vec3 drag = speed > 0 ? rel * (-0.5 * rho * dragArea * speed / mass) : Vec3.Zero;
                 v += (r * (-Mu / (dist * dist * dist)) + nose * accel + drag) * Step;

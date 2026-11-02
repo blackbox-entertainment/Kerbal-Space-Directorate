@@ -116,7 +116,7 @@ namespace KSA.KSP.Flight
                     // reached 75 km of apoapsis at about 28 km up, cut off still steep, and the upper stage could not make
                     // up the sideways speed). The crew throttles back to hold the apoapsis within 10% over target and
                     // keeps following the turn, so the speed it adds goes sideways. Cutoff once level at the end of the turn.
-                    bool holding = _orbit && alt < TurnEnd && v.orbit.ApA >= _targetAp;
+                    bool holding = _orbit && alt < KSA.Core.Flight.Sim.AscentRules.TurnEnd && v.orbit.ApA >= _targetAp;
                     if (holding)
                     {
                         c.Throttle = (float)Math.Max(0, Math.Min(1, (_targetAp * 1.1 - v.orbit.ApA) / (_targetAp * 0.1)));
@@ -200,8 +200,7 @@ namespace KSA.KSP.Flight
                     // nothing (2026-10-31, T: "5km past ap and at like 60km or 65km then we wait to near next ap to round out").
                     // Or the top of the orbit is running away: the last few km of periapsis cost hundreds of apoapsis this low (2026-11-01: 246 x 70 went
                     // to 390 x 75 km for 5 km, up into the radiation belt, and the crew died waiting for the window). The apoapsis burn finishes it for 2 m/s.
-                    bool runningAway = !_roundOut && v.orbit.PeA >= atmo - RoundOutBelowAir && v.orbit.PeA <= atmo + OrbitPeMargin && v.orbit.ApA > _targetAp + ParkingOvershoot;
-                    if (runningAway || (v.orbit.PeA >= atmo - RoundOutBelowAir && v.orbit.PeA <= atmo + OrbitPeMargin && v.verticalSpeed < 0 && alt < v.orbit.ApA - PastApoapsis))
+                    if (KSA.Core.Flight.Sim.ParkingRules.RoundOutNow(v.orbit.ApA, v.orbit.PeA, atmo, alt, v.verticalSpeed, _targetAp, _roundOut))
                     {
                         c.Throttle = 0;
                         _phase = Phases.Coast; _phaseStart = ctx.Now;
@@ -233,7 +232,7 @@ namespace KSA.KSP.Flight
                         // Never fling the apoapsis away chasing the periapsis. A long burn on a weak stage lifts both, so the limit is
                         // generous (2026-10-31: stopped at 235 x 67 km, seconds short of orbit with 4,189 m/s aboard, and flown home).
                         // With the periapsis still in the air the burn goes on far longer: stopping there sends a full ship home.
-                        if (v.orbit.PeA <= atmo + OrbitPeMargin && v.orbit.ApA > _targetAp + (v.orbit.PeA > atmo ? ApoapsisRunaway : ApoapsisRunaway * 4))
+                        if (KSA.Core.Flight.Sim.ParkingRules.GiveUp(v.orbit.ApA, v.orbit.PeA, atmo, _targetAp))
                         {
                             c.Throttle = 0;
                             line = "Burn stopped: the apoapsis ran away to " + Math.Round(v.orbit.ApA / 1000) + " km with the periapsis still at " + Math.Round(v.orbit.PeA / 1000) + " km.";
@@ -341,25 +340,14 @@ namespace KSA.KSP.Flight
         /// <summary>A parking orbit's periapsis clears the air by this much: 75 km at Kerbin (2026-10-31, T).</summary>
         internal const double OrbitPeMargin = 5000;
         /// <summary>The most the nose is raised above the horizon to stop the climb topping out in the air, degrees.</summary>
-        internal const double ClimbFloor = 25;
-        internal const double ClimbFloorMax = 75;
         /// <summary>Past apoapsis by this much, a periapsis within RoundOutBelowAir of the air waits for the next apoapsis.</summary>
-        internal const double PastApoapsis = 5000;
-        internal const double RoundOutBelowAir = 5000;
-        internal const double ParkingOvershoot = 40000;
         /// <summary>An apoapsis under this height above the air burns from LowBurnStart above the air on the way up (T: 85, 90, 92 km).</summary>
         internal const double LowApoapsis = 40000;
         internal const double LowBurnStart = 5000;
         /// <summary>How far past the target the apoapsis may go while the circularisation burn is still lifting the periapsis.</summary>
-        internal const double ApoapsisRunaway = 500000;
         /// <summary>Seconds to the top of the climb: at this or less the nose holds the rocket up, at TopAheadEasy it follows the program.</summary>
-        internal const double TopAheadFull = 45;
-        internal const double TopAheadEasy = 75;
-        internal const double TurnEnd = 60000; // level by 60 km (2026-10-31, T: "wasn't supposed to level out till past 55km"; flat at 46 km a strong rocket flew 2,000 m/s in the air)
         /// <summary>Straight up until this surface speed, then the small kick east.</summary>
-        internal const double KickSpeed = 100;
         /// <summary>Below this speed the kick leans at most 5 degrees off vertical.</summary>
-        internal const double KickDone = 150;
 
         /// <summary>
         /// The ascent pitch, degrees above the horizon: a classic gravity turn (2026-10-29, T: "fine as long as it can
@@ -377,9 +365,7 @@ namespace KSA.KSP.Flight
             double r = v.mainBody.Radius + v.altitude;
             double side = v.obt_speed * v.obt_speed - v.verticalSpeed * v.verticalSpeed;
             double need = v.mainBody.gravParameter / (r * r) - Math.Max(0, side) / r;
-            if (need <= 0) return 0;
-            if (accel <= need) return ClimbFloorMax;
-            return Math.Min(ClimbFloorMax, Math.Max(ClimbFloor, Math.Asin(need / accel) * 180 / Math.PI + 5));
+            return KSA.Core.Flight.Sim.AscentRules.HoldPitch(accel, need);
         }
 
         /// <summary>
@@ -388,9 +374,8 @@ namespace KSA.KSP.Flight
         /// </summary>
         private static Vector3d CircularizeDirection(Vessel v)
         {
-            double top = v.mainBody.atmosphereDepth + OrbitPeMargin + 3000;
-            if (v.altitude >= top || v.verticalSpeed >= 30) return Horizontal(v);
-            double p = Math.Max(10, HoldPitch(v)) * Math.PI / 180;
+            double p = KSA.Core.Flight.Sim.ParkingRules.BurnPitch(v.altitude, v.verticalSpeed, v.mainBody.atmosphereDepth, HoldPitch(v)) * Math.PI / 180;
+            if (p <= 0) return Horizontal(v);
             return ((Vector3d)v.upAxis * Math.Sin(p) + Horizontal(v).normalized * Math.Cos(p)).normalized;
         }
 

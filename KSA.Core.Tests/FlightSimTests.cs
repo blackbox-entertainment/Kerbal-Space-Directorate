@@ -158,6 +158,137 @@ namespace KSA.Core.Tests
             Assert.That(total, Is.GreaterThan(3500).And.LessThan(5000), "the plan for a Duna rocket: this figure, not the map");
         }
 
+        // KSA-80: the failures of 2026-10-31, each with the old behaviour shown failing.
+
+        /// <summary>A weak upper stage laid flat by the program topped out in the air (42 km on fire): near the top the nose holds it up.</summary>
+        [Test]
+        public void AWeakStageIsHeldUp()
+        {
+            double hold = AscentRules.HoldPitch(1.6, 1.0);
+            double held = AscentRules.Pitch(50000, 1700, 70000, -100000, 30, 60, 8, 1, hold);
+            double flat = AscentRules.Pitch(50000, 1700, 70000, -100000, 30, 60, 8, 1, 0);
+            Assert.That(flat, Is.LessThan(12), "the old program, nearly flat");
+            Assert.That(held, Is.GreaterThanOrEqualTo(hold - 1));
+            Assert.That(AscentRules.Pitch(50000, 1700, 70000, 72000, 30, 60, 8, 1, hold), Is.LessThan(12), "already in orbit: no hold");
+        }
+
+        /// <summary>A burn flat along the horizon, past the top at 69 km, cannot lift the low point out of the air; the nose raised, it can.</summary>
+        [Test]
+        public void ALowBurnRaisesTheNoseOldFlatBurnFellBack()
+        {
+            ParkingResult raised = ParkingBurn.Fly(70800, 0, 2100, 70000, 60000, 32000, 345, 85000, false);
+            ParkingResult flat = ParkingBurn.Fly(70800, 0, 2100, 70000, 60000, 32000, 345, 85000, false, true);
+            TestContext.WriteLine("raised " + Math.Round(raised.ApA / 1000) + " x " + Math.Round(raised.PeA / 1000) + " fell " + raised.FellBack + "; flat " + Math.Round(flat.ApA / 1000) + " x " + Math.Round(flat.PeA / 1000) + " fell " + flat.FellBack);
+            Assert.That(raised.FellBack, Is.False);
+            Assert.That(flat.FellBack, Is.True);
+        }
+
+        /// <summary>The apoapsis limit once sent a full ship home at 400 km over the target; it needs the low point clear of the air first.</summary>
+        [Test]
+        public void TheApoapsisLimitDoesNotSendAFullShipHome()
+        {
+            Assert.That(ParkingRules.GiveUp(485000, 60000, 70000, 85000), Is.False, "400 km over with the low point in the air");
+            Assert.That(ParkingRules.GiveUp(1500000, 60000, 70000, 85000), Is.False);
+            Assert.That(ParkingRules.GiveUp(2200000, 60000, 70000, 85000), Is.True);
+            Assert.That(ParkingRules.GiveUp(700000, 72000, 70000, 85000), Is.True);
+            Assert.That(ParkingRules.RoundOutNow(130000, 68000, 70000, 76000, 40, 85000, false), Is.True, "the top is running away");
+            Assert.That(ParkingRules.RoundOutNow(130000, 68000, 70000, 76000, 40, 85000, true), Is.False, "the round-out burn itself must burn: 0.8.130");
+        }
+
+        /// <summary>A transfer burn stops once the path reaches the target, never short of the plan.</summary>
+        [Test]
+        public void ARunawayTransferBurnStops()
+        {
+            const double munR = 12000000, soi = 2430000;
+            Assert.That(TransferRules.FarEnough(12000000, false, 12000000, munR, soi), Is.False, "short of the plan");
+            Assert.That(TransferRules.FarEnough(15000000, false, 12000000, munR, soi), Is.True);
+            Assert.That(TransferRules.FarEnough(40000000, true, 12000000, munR, soi), Is.True, "escaping");
+        }
+
+        /// <summary>A closed throttle is not empty tanks (crashed at 278 m/s with 2,711 m/s aboard).</summary>
+        [Test]
+        public void AClosedThrottleIsNotEmptyTanks()
+        {
+            Assert.That(DescentRules.OutOfFuel(0, true, false), Is.False);
+            Assert.That(DescentRules.OutOfFuel(1, true, false), Is.True);
+            Assert.That(DescentRules.OutOfFuel(0, false, true), Is.True);
+        }
+
+        // KSA-78: a long burn against the same burn all at once.
+
+        [TestCase(250000, 40000, 350, Description = "Poodle")]
+        [TestCase(60000, 40000, 345, Description = "Terrier, over 10 minutes")]
+        public void ALongEjectionStillGetsThere(double thrust, double mass, double isp)
+        {
+            LongBurnResult r = LongBurn.Fly(675000, 1047, thrust, mass, isp);
+            TestContext.WriteLine("Long burn " + Math.Round(r.Seconds) + " s: excess " + Math.Round(r.Excess) + " m/s, all at once " + Math.Round(r.ExcessAtOnce) + " m/s");
+            // A slow burn low over a world wastes much of its speed: 3 minutes costs 3%, 10 minutes nearly half (the warning for KSA-71).
+            Assert.That(r.Excess, Is.GreaterThan(r.ExcessAtOnce * (r.Seconds > 300 ? 0.4 : 0.9)));
+            Assert.That(BurnRules.Ignition(1000, 120, 0), Is.EqualTo(940));
+        }
+
+        // KSA-79: reference rockets, light to heavy, from the pad to a parking orbit under the radiation.
+
+        [TestCase("Engineers' Mun flyby, 27 t", 900000, 1000000, 210, 240, 13000, 5000, 15000, 60000, 85, 345, 4500, 500, 4000, 2.5)]
+        [TestCase("Orbiter, 80 t", 1500000, 1700000, 280, 320, 56000, 8000, 215000, 250000, 90, 350, 12000, 1500, 8000, 6)]
+        public void AReferenceRocketReachesAParkingOrbit(string name, double sea, double vac, double ispS, double ispV, double fuel, double drop, double sea2, double vac2, double isp2S, double isp2V, double fuel2, double drop2, double payload, double area)
+        {
+            var stages = new[]
+            {
+                new SimStage { ThrustSea = sea, ThrustVacuum = vac, IspSea = ispS, IspVacuum = ispV, FuelKg = fuel, DropKg = drop },
+                new SimStage { ThrustSea = sea2, ThrustVacuum = vac2, IspSea = isp2S, IspVacuum = isp2V, FuelKg = fuel2, DropKg = drop2 }
+            };
+            AscentResult r = AscentSim.Fly(stages, payload, area, 85000);
+            ParkingResult p = ParkingBurn.Fly(r.Altitude, r.UpSpeed, r.SideSpeed, 70000, vac2, r.MassKg, isp2V, 85000, false);
+            TestContext.WriteLine(name + ": Ap " + Math.Round(r.ApA / 1000) + " at " + Math.Round(r.Altitude / 1000) + " km; parked " + Math.Round(p.ApA / 1000) + " x " + Math.Round(p.PeA / 1000));
+            Assert.That(r.ReachedSpace, Is.True, name);
+            Assert.That(p.FellBack, Is.False, name);
+            Assert.That(p.PeA, Is.GreaterThanOrEqualTo(75000), name);
+        }
+
+        [Test]
+        public void MkIIReachesAParkingOrbitUnderTheRadiation()
+        {
+            AscentResult r = AscentSim.Fly(MkII(), 14000, 14, 85000);
+            ParkingResult p = ParkingBurn.Fly(r.Altitude, r.UpSpeed, r.SideSpeed, 70000, 250000, r.MassKg, 350, 85000, false);
+            TestContext.WriteLine("Mk II parked " + Math.Round(p.ApA / 1000) + " x " + Math.Round(p.PeA / 1000) + " for " + Math.Round(p.DeltaV) + " m/s");
+            Assert.That(p.FellBack, Is.False);
+            Assert.That(p.ApA, Is.LessThan(150000), "the belt starts at 170 km");
+        }
+
+        // KSA-75: the model's delta-v against the game's figure for a known stage.
+
+        [Test]
+        public void TheModelsDeltaVMatchesTheGame()
+        {
+            // Mk II's Poodle stage as the VAB showed it: 34.7 t full, 10.7 t empty, 350 s, 4,040 m/s in space.
+            double dv = 350 * 9.80665 * Math.Log(34.7 / 10.7);
+            Assert.That(dv, Is.EqualTo(4040).Within(40));
+            DescentResult r = DescentSim.Fly(new SimWorld { Name = "test", Radius = 200000, Mu = 6.5138398e10, AirTop = 0 }, 30000, 5000, 250000, 350, 34700, 34000);
+            Assert.That(r.Landed, Is.True);
+            Assert.That(r.OutOfFuel, Is.True, "fuel runs out when the stage does");
+        }
+
+        // KSA-81: Moho, the hard end of the airless worlds, with the same rules.
+
+        [Test]
+        public void ALanderComesDownOnMoho()
+        {
+            DescentResult r = DescentSim.Fly(Airless("Moho", 250000, 1.6860938e11), 70000, 20000, 250000, 350, 26000, 12000);
+            TestContext.WriteLine("Moho: " + r.Landed + ", " + Math.Round(r.TouchdownSpeed, 1) + " m/s, " + Math.Round(r.DeltaV) + " m/s spent");
+            Assert.That(r.Landed, Is.True);
+            Assert.That(r.OutOfFuel, Is.False);
+            Assert.That(r.TouchdownSpeed, Is.LessThan(5));
+        }
+
+        [Test]
+        public void ADeorbitOnALongOrbitWaitsForTheTop()
+        {
+            Assert.That(DescentRules.TooFarFromApoapsis(0.8, 7200, 100, 150), Is.False, "at the top");
+            Assert.That(DescentRules.TooFarFromApoapsis(0.8, 7200, 3700, 100), Is.True, "at the bottom");
+            Assert.That(DescentRules.TooFarFromApoapsis(0.05, 7200, 3700, 100), Is.False, "a round orbit goes anywhere");
+        }
+
         private static string Arrive(double ap, double pe, double air, double wanted, out bool safe)
         {
             safe = false;
