@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.166 (2026-11-02), test build
+
+- **RCS only for the last few hundred metres** (T). The rendezvous now pushes on the main engine to a point 200 m short of the station, within 300 m and 2 m/s, before the docking leg takes over on thrusters; the approach on RCS is capped at 2 m/s. It had handed over at 2.5 km and 10 m/s, and 40 monopropellant did not cover it.
+
 ## 0.8.165 (2026-11-02), test build
 
 - **Rendezvous closes the last few km.** Inside 25 km the crew push straight at the station (about five minutes, up to 20 m/s) and kill the relative speed on arrival, up to four times; 5 km at 1 m/s had been called a miss and replanned as a fresh 8-orbit phasing, twice, until the leg gave up.

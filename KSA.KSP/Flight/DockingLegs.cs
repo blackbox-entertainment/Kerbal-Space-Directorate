@@ -59,9 +59,12 @@ namespace KSA.KSP.Flight
         private const int MaxPhasingOrbits = 8;
         /// <summary>Inside this range the crew closes with a straight push, never a new intercept or phasing orbit (0.8.165).</summary>
         private const double CloseRange = 25000;
-        private const int MaxCloses = 4;
-        private const double DoneDistance = 2500;
-        private const double DoneSpeed = 10;
+        private const int MaxCloses = 6;
+        // The main engine brings the ship to a couple of hundred metres (0.8.166, T: "rcs should be the final 100m or 200m");
+        // the thrusters only do the last stretch. It had stopped at 2.5 km and 10 m/s and the RCS ran dry on the approach.
+        private const double DoneDistance = 300;
+        private const double DoneSpeed = 2;
+        private const double CloseStandoff = 200;
 
         private Phases _phase;
         private Vessel _target;
@@ -286,10 +289,13 @@ namespace KSA.KSP.Flight
                         double nodeUt = now + 60;
                         StateVector us = OrbitAdapter.StateAt(v.orbit, nodeUt), them = OrbitAdapter.StateAt(_target.orbit, nodeUt);
                         Vec3 toThem = them.Position - us.Position;
-                        double dist = toThem.Length;
-                        if (dist < 1) { _phase = Phases.Check; break; }
-                        double speed = Math.Max(1.0, Math.Min(20.0, dist / 300.0));
-                        Vec3 dv = toThem.Normalized * speed - (us.Velocity - them.Velocity);
+                        if (toThem.Length < 1) { _phase = Phases.Check; break; }
+                        // Aim short of the station, never at it: the engine must not fly the ship into the port.
+                        Vec3 toAim = toThem - toThem.Normalized * CloseStandoff;
+                        double dist = toAim.Length;
+                        if (dist < 50 || Vec3.Dot(toAim, toThem) <= 0) { _phase = Phases.Check; break; }
+                        double speed = Math.Max(0.5, Math.Min(20.0, dist / 300.0));
+                        Vec3 dv = toAim.Normalized * speed - (us.Velocity - them.Velocity);
                         NodePlanner.ClearNodes(v);
                         if (NodePlanner.AddFrameDeltaV(v, nodeUt, dv) == null) { Fail("maneuver nodes unavailable", ctx); break; }
                         _arrivalUt = nodeUt + dist / speed;
@@ -623,7 +629,7 @@ namespace KSA.KSP.Flight
                 Vector3d toAim = aim - from;
                 double dist = toAim.magnitude;
                 HoldSas(ctx, false);
-                double speed = Clamp(vesselDist / 40.0, 0.5, 5.0) * (ctx.Crew != null ? ctx.Crew.ApproachFactor : 1.0);
+                double speed = Clamp(vesselDist / 60.0, 0.3, 2.0) * (ctx.Crew != null ? ctx.Crew.ApproachFactor : 1.0);
                 desired = dist > 1e-3 ? toAim / dist * speed : Vector3d.zero;
                 Status = "Approach: " + Math.Round(vesselDist) + " m, " + relVel.magnitude.ToString("0.0") + " m/s.";
                 if (havePorts && vesselDist < ApproachRange)
