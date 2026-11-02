@@ -53,7 +53,8 @@ namespace KSA.Core.Missions
 
         public static double CrewScore(SimulationInput input)
         {
-            if (input.Crew.Count == 0) return 0.2;
+            // A probe has no crew to panic or err: its flight goes by the design (2026-10-30).
+            if (input.Crew.Count == 0) return input.Type != null && input.Type.IsUncrewed ? 0.7 : 0.2;
             double sum = 0;
             double best = 0;
             foreach (CrewProfile p in input.Crew)
@@ -112,7 +113,7 @@ namespace KSA.Core.Missions
             else if (roll < o.Success + o.Partial) outcome = MissionOutcome.PartialSuccess;
             else if (roll < o.Success + o.Partial + o.Abort) outcome = MissionOutcome.Abort;
             else if (roll < o.Success + o.Partial + o.Abort + o.LossOfVehicle) outcome = MissionOutcome.LossOfVehicle;
-            else outcome = MissionOutcome.LossOfCrew;
+            else outcome = input.Type != null && input.Type.IsUncrewed ? MissionOutcome.LossOfVehicle : MissionOutcome.LossOfCrew; // nobody aboard to lose
 
             var r = new MissionReport
             {

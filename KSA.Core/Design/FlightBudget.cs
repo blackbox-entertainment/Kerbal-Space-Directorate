@@ -151,7 +151,7 @@ namespace KSA.Core.Design
             }
             BodyData b = kerbin ? null : map.Get(type.Body);
             string role = string.IsNullOrEmpty(moduleRole) ? type.ModuleRole ?? string.Empty : moduleRole;
-            bool oneWay = type.Profile == MissionProfile.Base && !string.Equals(role, "return", StringComparison.OrdinalIgnoreCase);
+            bool oneWay = type.IsUncrewed || (type.Profile == MissionProfile.Base && !string.Equals(role, "return", StringComparison.OrdinalIgnoreCase));
 
             if (kerbin || b == null)
             {
@@ -178,7 +178,7 @@ namespace KSA.Core.Design
             if (type.Profile == MissionProfile.Flyby)
             {
                 // Kerbin's moons give a free return; the planets need a burn to come back.
-                legs.Add(new FlightLeg { Name = "course corrections and the trip home", DeltaV = b.KerbinMoon ? 150 : Math.Max(300, b.Intercept - 950), MinTwr = 0.1 });
+                legs.Add(new FlightLeg { Name = "course corrections and the trip home", DeltaV = b.KerbinMoon || type.IsUncrewed ? 150 : Math.Max(300, b.Intercept - 950), MinTwr = 0.1 });
                 return legs;
             }
             legs.Add(new FlightLeg { Name = "capture into " + b.Name + " orbit", DeltaV = b.Capture, MinTwr = 0.25 });
@@ -202,7 +202,7 @@ namespace KSA.Core.Design
                 if (oneWay) return legs;
                 legs.Add(new FlightLeg { Name = "take-off from " + b.Name, DeltaV = b.SurfaceToOrbit, MinTwr = 1.3, Body = b.Name, Gravity = b.Gravity, Atmospheric = b.Atmosphere });
             }
-            legs.Add(new FlightLeg { Name = "the trip home from " + b.Name, DeltaV = b.Return, MinTwr = 0.2 });
+            if (!oneWay) legs.Add(new FlightLeg { Name = "the trip home from " + b.Name, DeltaV = b.Return, MinTwr = 0.2 });
             return legs;
         }
 

@@ -687,6 +687,8 @@ namespace KSA.KSP.Flight
         public bool DropEmptyTanks(ref string line)
         {
             if (_v == null || _v.packed || IsWarping || _v.currentStage <= 1 || Now - _lastStage < 1.5) return false;
+            // Empty side tanks are the room for a tanker's fuel: they stay on until it has been met (2026-11-01).
+            if (TankerStopLeg.TankerAhead(_v)) return false;
             int next = _v.currentStage - 1, tanks = 0;
             foreach (Part p in _v.parts)
             {

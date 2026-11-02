@@ -37,6 +37,19 @@ namespace KSA.Core.Tests
                 }
         }
 
+        /// <summary>A probe does not come home: its budget stops where its job does, and the crewed mission to the same world costs more.</summary>
+        [TestCase("ProbeFlybyDuna", "DunaFlyby")]
+        [TestCase("ProbeOrbitDuna", "DunaOrbit")]
+        [TestCase("ProbeLandDuna", "DunaLanding")]
+        public void AProbeGoesOneWay(string probe, string crewed)
+        {
+            KSA.Core.Missions.MissionCatalog catalog = ShippedConfigs.Missions(new System.Collections.Generic.List<string>());
+            var map = new KSA.Core.Design.DeltaVMap();
+            KSA.Core.Missions.MissionType p = catalog.Get(probe), c = catalog.Get(crewed);
+            Assert.That(p.IsUncrewed, Is.True);
+            Assert.That(KSA.Core.Design.FlightBudget.Total(KSA.Core.Design.FlightBudget.For(p, null, map)), Is.LessThan(KSA.Core.Design.FlightBudget.Total(KSA.Core.Design.FlightBudget.For(c, null, map))));
+        }
+
         [Test]
         public void ACrewFallingLowInTheAirLandsInsteadOfClimbing()
         {

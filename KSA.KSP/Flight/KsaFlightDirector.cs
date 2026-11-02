@@ -314,7 +314,7 @@ namespace KSA.KSP.Flight
                 {
                     // KSA-62: not a project craft, but agency kerbals are aboard: offer to let them fly it.
                     if (nearPad) KSA.KSP.Testing.FlightTestBench.ClearLeftovers(agency);
-                    if (nearPad && !Declined.Contains(v.persistentId) && HangarPilot(agency, v) != null)
+                    if (nearPad && !Declined.Contains(v.persistentId) && (HangarPilot(agency, v) != null || IsProbeCraft(v)))
                     {
                         _offering = true;
                         _offerVessel = v;
@@ -459,14 +459,23 @@ namespace KSA.KSP.Flight
         /// world. Planes get the aircraft missions and Kerbin hops and orbits; rockets everything else. All of them, hardest first
         /// (a limit of ten dropped everything easier, 2026-10-31, T: "can it not do minmus landing?").
         /// </summary>
+        /// <summary>Nobody aboard and a probe core flying it (2026-11-01).</summary>
+        private static bool IsProbeCraft(Vessel v)
+        {
+            if (v == null || v.GetCrewCount() > 0) return false;
+            foreach (Part p in v.parts) if (p.CrewCapacity == 0 && p.FindModuleImplementing<ModuleCommand>() != null) return true;
+            return false;
+        }
+
         private static List<MissionType> HangarMissions(Agency agency, Vessel v, double dv, bool plane)
         {
             var list = new List<MissionType>();
+            bool probe = IsProbeCraft(v);
             int seats = Math.Max(1, v.GetCrewCapacity());
             foreach (MissionType t in agency.Catalogs.Missions.Types)
             {
                 if (t.ModuleRole.Length > 0 || t.IsRescue || t.IsCustom || t.Floating) continue;
-                if (t.Seats > seats) continue;
+                if (t.Seats > seats || t.IsUncrewed != probe) continue;
                 if (agency.EvaBlocker(t) != null) continue; // no spacewalk missions before the Astronaut Complex allows them (2026-10-30)
                 bool kerbinRocket = string.Equals(t.Body, "Kerbin", StringComparison.OrdinalIgnoreCase) && (t.Profile == MissionProfile.Suborbital || t.Profile == MissionProfile.Orbit);
                 if (plane ? !(t.IsAircraft || kerbinRocket) : t.IsAircraft) continue;
@@ -492,7 +501,8 @@ namespace KSA.KSP.Flight
             Agency agency = KsaCore.Agency;
             Vessel v = _offerVessel;
             CrewProfile pilot = agency != null && v != null ? HangarPilot(agency, v) : null;
-            if (pilot == null) { _offering = false; return; }
+            bool probeCraft = IsProbeCraft(v);
+            if (pilot == null && !probeCraft) { _offering = false; return; }
             double dv = VacuumDeltaV(v);
             bool plane = IsPlaneVessel(v);
             // A mission to another planet ahead of its window: the Director's call, with the wait spelled out (2026-11-01, T).
@@ -507,7 +517,7 @@ namespace KSA.KSP.Flight
                 GUI.DragWindow();
                 return;
             }
-            GUILayout.Label("<b>" + pilot.Name + "</b> is aboard " + v.vesselName + ". What should the crew fly?");
+            GUILayout.Label(probeCraft ? "<b>" + v.vesselName + "</b> has a probe core and nobody aboard. What should it fly?" : "<b>" + pilot.Name + "</b> is aboard " + v.vesselName + ". What should the crew fly?");
             GUILayout.Label((plane ? "A plane on the runway. " : string.Empty) + "Vacuum delta-v " + Math.Round(dv) + " m/s.");
             // Every mission this craft can fly (2026-10-30, T: "what if I build a rocket and launch, can I attach it to a mission?").
             List<MissionType> options = HangarMissions(agency, v, dv, plane);

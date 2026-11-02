@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.159 (2026-11-01), test build
+
+- **Probe missions are back, for every world.** Stock probe cores, no crew, one way: flyby, orbiter and lander for each world, and the three Kerbin probes. Launch any craft with a probe core and nobody aboard and the pad offers them. Unflown beyond Kerbin.
+- **Duna fuel tanker.** An uncrewed tanker with a docking port goes ahead to Duna orbit. A crew arriving with a port and RCS meets it after aerobraking, fills up and lands; with no tanker, or if the stop fails, the flight carries on. Empty side tanks stay on until the tanker is met. Unflown.
+
 ## 0.8.158 (2026-11-01), test build
 
 - **What can this fly? no longer counts fuel no engine can reach.** Side tanks with no fuel line count as weight only, and the window warns about them.

@@ -54,7 +54,7 @@ namespace KSA.Core
             RescueRules rules = Rescue;
             if (!rules.Enabled || type == null || r == null) return;
             if (r.Outcome != MissionOutcome.Abort && r.Outcome != MissionOutcome.LossOfVehicle) return;
-            if (type.Profile == MissionProfile.Suborbital || type.IsAircraft) return;
+            if (type.Profile == MissionProfile.Suborbital || type.IsAircraft || type.IsUncrewed) return;
             bool home = string.Equals(type.Body, "Kerbin", StringComparison.OrdinalIgnoreCase);
             double chance = home ? rules.StrandChanceKerbinOrbit : rules.StrandChanceAway;
             if (Rng.NextDouble() >= chance) return;

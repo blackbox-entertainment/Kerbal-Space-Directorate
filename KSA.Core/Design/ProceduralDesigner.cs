@@ -19,7 +19,7 @@ namespace KSA.Core.Design
         /// Raise this whenever the rules the engineers design by change (fins, engines, parachutes, margins): designs drawn
         /// up by an older revision that have not flown yet are drawn again on load (2026-10-30). 1 = 0.6.9.
         /// </summary>
-        public const int Revision = 11; // 11: long legs low on the lander; 10: no upper fins over side boosters; 9: tanks with oxidizer only; 8: pods with a reaction wheel; 7: heat shield, panels and antennas; 6: shorter stacks; 5: landers seat three when they can; 4: the earliest parts that do the job; 3: return capsules, at most four side boosters unless nothing else flies; 2: upper stages that light in the air carry fins; real capsules; decouplers that fit
+        public const int Revision = 12; // 12: probes back, one way with a stability-assist core; 11: long legs low on the lander; 10: no upper fins over side boosters; 9: tanks with oxidizer only; 8: pods with a reaction wheel; 7: heat shield, panels and antennas; 6: shorter stacks; 5: landers seat three when they can; 4: the earliest parts that do the job; 3: return capsules, at most four side boosters unless nothing else flies; 2: upper stages that light in the air carry fins; real capsules; decouplers that fit
 
         private static bool IsPlaneCockpit(PartInfo p) { return PartFilter.IsPlaneCockpit(p); }
 
@@ -118,15 +118,29 @@ namespace KSA.Core.Design
 
             // Payload: the lightest pod that seats the crew, then one of each thing the brief must carry.
             PartInfo pod = null;
-            foreach (bool cockpits in new[] { false, true }) // a plane's cockpit only when nothing else seats the crew (2026-10-30)
+            if (crew == 0)
             {
-                if (pod != null) break;
+                // A probe flight (2026-10-30): the lightest probe core, else the lightest pod flying empty.
                 foreach (PartInfo p in allowed)
-                    if (p.Kind == PartKind.Command && p.CrewCapacity >= Math.Max(1, crew) && (cockpits || !IsPlaneCockpit(p)) && (pod == null || (pod.RequiresDlc && !p.RequiresDlc) || (pod.RequiresDlc == p.RequiresDlc && Earlier(p, pod)))) pod = p; // stock before DLC pods
+                {
+                    if (p.Kind != PartKind.Command) continue;
+                    bool probe = p.CrewCapacity == 0, podProbe = pod != null && pod.CrewCapacity == 0;
+                    if (pod == null || (probe && !podProbe) || (probe == podProbe && ((pod.RequiresDlc && !p.RequiresDlc) || (pod.RequiresDlc == p.RequiresDlc && p.Mass < pod.Mass)))) pod = p;
+                }
+                if (pod == null) { why = "no probe core or pod researched"; return null; }
+            }
+            else
+            {
+                foreach (bool cockpits in new[] { false, true }) // a plane's cockpit only when nothing else seats the crew (2026-10-30)
+                {
+                    if (pod != null) break;
+                    foreach (PartInfo p in allowed)
+                        if (p.Kind == PartKind.Command && p.CrewCapacity >= Math.Max(1, crew) && (cockpits || !IsPlaneCockpit(p)) && (pod == null || (pod.RequiresDlc && !p.RequiresDlc) || (pod.RequiresDlc == p.RequiresDlc && Earlier(p, pod)))) pod = p; // stock before DLC pods
+                }
             }
             // No pod seats everyone (a rescue brings the stranded home): the roomiest pod plus crew cabins (2026-10-28).
             var cabins = new List<PartInfo>();
-            if (pod == null)
+            if (pod == null && crew > 0)
             {
                 foreach (PartInfo p in allowed)
                     if (p.Kind == PartKind.Command && p.CrewCapacity > 0 && !IsPlaneCockpit(p) && (pod == null || p.CrewCapacity > pod.CrewCapacity || (p.CrewCapacity == pod.CrewCapacity && p.Mass < pod.Mass))) pod = p;
@@ -186,7 +200,7 @@ namespace KSA.Core.Design
                 plan.Payload.TanksEmpty = true; // it goes up empty; tankers fill it
             }
             // Enough parachute for the capsule that comes down, not one small chute whatever it weighs (2026-10-29).
-            Parachutes.Fit(plan, allowed, catalog, false, req.ChuteFactor);
+            Parachutes.Fit(plan, allowed, catalog, crew == 0, req.ChuteFactor); // a probe takes radial chutes only (2026-10-30)
             double payload = pod.Mass + pod.FuelMass;
             foreach (string e in plan.Payload.Extras) { PartInfo x = catalog.Get(e); if (x != null) payload += x.Mass + (plan.Payload.TanksEmpty && x.Kind == PartKind.Tank ? 0 : x.FuelMass); }
 

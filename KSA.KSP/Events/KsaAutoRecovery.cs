@@ -66,7 +66,8 @@ namespace KSA.KSP.Events
             if (v.mainBody == null || !v.mainBody.isHomeWorld) return false;
             if (!(v.Landed || v.Splashed)) return false;
             if (v.situation == Vessel.Situations.PRELAUNCH) return false;
-            if (v.GetCrewCount() == 0) return false;
+            // A live probe flight comes home with nobody aboard (2026-10-30); other empty craft are left alone.
+            if (v.GetCrewCount() == 0 && !Flight.KsaFlightDirector.IsLiveVessel(v.persistentId)) return false;
             if (v.srfSpeed > MaxSpeed) return false;
             return true;
         }

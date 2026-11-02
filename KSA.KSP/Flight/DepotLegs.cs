@@ -91,6 +91,101 @@ namespace KSA.KSP.Flight
         }
     }
 
+    /// <summary>
+    /// A stop at a tanker sent ahead (2026-11-01, T: "give me a tanker ... that I can send before the mk II"): if an empty-crewed craft with a docking port and
+    /// fuel waits in orbit here, meet it, dock, fill up and go on. Nothing to meet, or a failure on the way, and the flight simply carries on: the tanker is a bonus, never a halt.
+    /// </summary>
+    public sealed class TankerStopLeg : IFlightLeg
+    {
+        private const double MinTonnes = 1;
+        private readonly List<IFlightLeg> _inner = new List<IFlightLeg>();
+        private int _index;
+
+        public string Name { get { return "Meeting the tanker"; } }
+        public string Status { get; private set; }
+        public LegState State { get; private set; }
+
+        /// <summary>A crewless craft in orbit of the world with a docking port and fuel.</summary>
+        public static Vessel FindTanker(Vessel us, CelestialBody body)
+        {
+            if (FlightGlobals.Vessels == null || body == null) return null;
+            foreach (Vessel v in FlightGlobals.Vessels)
+            {
+                if (v == null || v == us || v.mainBody != body || v.situation != Vessel.Situations.ORBITING || v.vesselType == VesselType.Debris) continue;
+                if (v.GetCrewCount() > 0 || v.protoVessel == null) continue;
+                bool port = false;
+                double tonnes = 0;
+                foreach (ProtoPartSnapshot p in v.protoVessel.protoPartSnapshots)
+                {
+                    foreach (ProtoPartModuleSnapshot m in p.modules) if (m.moduleName == "ModuleDockingNode") port = true;
+                    foreach (ProtoPartResourceSnapshot r in p.resources)
+                        if (Array.IndexOf(DepotOps.Propellants, r.resourceName) >= 0 && r.definition != null) tonnes += r.amount * r.definition.density;
+                }
+                if (port && tonnes >= MinTonnes) return v;
+            }
+            return null;
+        }
+
+        /// <summary>A flight with a tanker still to meet: a crewless craft with a port and fuel already waiting round the world it is bound for.</summary>
+        public static bool TankerAhead(Vessel us)
+        {
+            if (KsaFlightDirector.Live == null || FlightGlobals.Vessels == null || KsaFlightDirector.Live.Logged.Contains("Refuel:" + KsaFlightDirector.Live.TargetBody)) return false;
+            CelestialBody target = MissionPlanner.Body(KsaFlightDirector.Live.TargetBody);
+            return target != null && target != FlightGlobals.GetHomeBody() && FindTanker(us, target) != null;
+        }
+
+        public void Begin(FlightContext ctx)
+        {
+            State = LegState.Running;
+            Vessel v = ctx.Vessel;
+            Vessel tanker = v != null ? FindTanker(v, v.mainBody) : null;
+            if (tanker == null) { Status = "No tanker here."; State = LegState.Done; return; }
+            if (!ctx.Control.HasRcs() || ctx.Control.DockingPorts().Count == 0)
+            {
+                ctx.Say(tanker.vesselName + " waits in orbit, but this craft has no docking port and RCS to meet it.");
+                State = LegState.Done;
+                return;
+            }
+            if (v.rootPart != null) ctx.OwnLaunchId = v.rootPart.launchID;
+            ctx.DepotTargetId = tanker.persistentId;
+            ctx.DockTargetId = tanker.persistentId;
+            ctx.DockTarget = null;
+            ctx.Say("Tanker " + tanker.vesselName + " found in orbit: going to meet it.");
+            _inner.Add(new RendezvousLeg());
+            _inner.Add(new DockingLeg());
+            _inner.Add(new RefuelLeg());
+            _inner.Add(new UndockLeg());
+            _index = 0;
+            _inner[0].Begin(ctx);
+        }
+
+        public string Step(FlightContext ctx)
+        {
+            if (State != LegState.Running) return null;
+            IFlightLeg l = _inner[_index];
+            string line = l.State == LegState.Running ? l.Step(ctx) : null;
+            Status = l.Status;
+            if (l.State == LegState.Failed)
+            {
+                // Docked with the tanker and failed after: the undock is still owed.
+                ctx.Say(l.Name + " did not work: " + l.Status + " Going on without the tanker.");
+                l.End(ctx);
+                if (DepotOps.Docked(ctx) && !(l is UndockLeg)) { _index = _inner.Count - 1; _inner[_index].Begin(ctx); return line; }
+                State = LegState.Done;
+                return line;
+            }
+            if (l.State == LegState.Done)
+            {
+                l.End(ctx);
+                if (++_index >= _inner.Count) { State = LegState.Done; return line; }
+                _inner[_index].Begin(ctx);
+            }
+            return line;
+        }
+
+        public void End(FlightContext ctx) { if (_index < _inner.Count && _inner.Count > 0) _inner[_index].End(ctx); }
+    }
+
     /// <summary>Points the rendezvous and docking legs at the depot and remembers our own parts (2026-10-29).</summary>
     public sealed class TargetDepotLeg : IFlightLeg
     {
@@ -131,7 +226,7 @@ namespace KSA.KSP.Flight
             DepotOps.Report(ctx);
             double room = DepotOps.Tonnes(tanks, true) - DepotOps.Tonnes(tanks);
             string text = "Took on " + taken.ToString("0.0") + " t of propellant at the depot" + (room > 0.5 ? "; the depot ran dry with " + room.ToString("0.0") + " t of room left in our tanks" : "") + ".";
-            ctx.Say(text, "Refuel:Kerbin");
+            ctx.Say(text, "Refuel:" + (ctx.Vessel != null && ctx.Vessel.mainBody != null ? ctx.Vessel.mainBody.bodyName : "Kerbin"));
             Status = text;
             State = LegState.Done;
         }

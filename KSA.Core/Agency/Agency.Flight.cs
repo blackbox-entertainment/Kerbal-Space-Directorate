@@ -104,7 +104,7 @@ namespace KSA.Core
 
         public string LifeSupportBlocker(Project p, MissionType type)
         {
-            if (!LifeSupportOn || p == null || type == null || SkipSupplyPlanning) return null;
+            if (!LifeSupportOn || p == null || type == null || SkipSupplyPlanning || type.IsUncrewed) return null; // a probe eats nothing
             Func<Project, ModuleHardware> check = ModuleHardwareCheck;
             ModuleHardware h = null;
             try { h = check != null ? check(p) : null; }
@@ -309,7 +309,7 @@ namespace KSA.Core
                     foreach (Project old in Projects) if (old.Status == ProjectStatus.InFlight) old.Crew.Remove(c.Id);
                     aboard.Add(c.Id);
                 }
-            if (aboard.Count == 0) { message = "No agency kerbal is aboard."; return null; }
+            if (aboard.Count == 0 && !type.IsUncrewed) { message = "No agency kerbal is aboard."; return null; }
             List<Template> able = TemplatesFor(type);
             int day = CurrentDay;
             string title = string.IsNullOrEmpty(vesselName) ? type.Name : vesselName.Trim();

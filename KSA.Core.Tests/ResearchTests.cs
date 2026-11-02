@@ -27,7 +27,7 @@ namespace KSA.Core.Tests
         private static PartCatalog StartingParts()
         {
             var c = new PartCatalog();
-            c.Add(new PartInfo { Name = "mk1pod_v2", Title = "Mk1 Command Pod", Kind = PartKind.Command, Mass = 0.84 });
+            c.Add(new PartInfo { Name = "mk1pod_v2", Title = "Mk1 Command Pod", Kind = PartKind.Command, Mass = 0.84, CrewCapacity = 1 });
             c.Add(new PartInfo { Name = "solidBooster_sm_v2", Title = "RT-5 Flea", Kind = PartKind.Booster, Mass = 0.45, FuelMass = 1.1 });
             c.Add(new PartInfo { Name = "parachuteSingle", Title = "Mk16 Parachute", Kind = PartKind.Parachute, Mass = 0.1 });
             return c;

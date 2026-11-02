@@ -15,7 +15,7 @@ namespace KSA.Core
         /// <summary>Days out, waiting and back, by the sums, or NaN for worlds with no window. Set by the host.</summary>
         public Func<string, double> RoundTripDays { get; set; }
 
-        private const double AfterBoostersMin = 0.8, LandingTwr = 1.2, ShadowCharge = 1000, SlowBurnSeconds = 300, RadiationDays = 500;
+        private const double AfterBoostersMin = 0.8, LandingTwr = 1.2, ShadowCharge = 1000, SlowBurnSeconds = 300, RadiationDays = 500, ProbeCharge = 150;
 
         /// <summary>The length of a mission: what the catalogue says, or the real trip when that is longer (a Duna landing is not 120 days).</summary>
         public int TripDays(MissionType t)
@@ -60,6 +60,7 @@ namespace KSA.Core
                 double seconds = d.LanderMass * 1000 * 1050 / d.LanderThrust;
                 if (seconds > SlowBurnSeconds) list.Add("A " + Math.Round(seconds / 60) + " minute departure burn wastes much of its speed. Use a stronger engine.");
             }
+            if (t.IsUncrewed && leavesKerbin && d.Charge < ProbeCharge) list.Add("Batteries hold " + Math.Round(d.Charge) + " charge: a probe with no power cannot steer or call home.");
             if (d.StrandedTanks > 0) list.Add(d.StrandedTanks + " side tank" + (d.StrandedTanks == 1 ? "" : "s") + " with no fuel line: no engine can reach that fuel. Add a line from each tank to the core.");
             if (d.PadDecoupler) list.Add("The KV pod's decoupler is in the staging: the crew switches it off, but check it is not the next stage.");
             return list;

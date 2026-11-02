@@ -19,7 +19,7 @@ namespace KSA.KSP.Flight
             ctx.Delivered = true;
             Status = _what + " delivered.";
             string body = ctx.Vessel != null && ctx.Vessel.mainBody != null ? ctx.Vessel.mainBody.bodyName : "Kerbin";
-            ctx.Say(_what + " delivered; the crew stays aboard.", "Deliver:" + body);
+            ctx.Say(_what + (ctx.Vessel != null && ctx.Vessel.GetCrewCount() > 0 ? " delivered; the crew stays aboard." : " on station."), "Deliver:" + body);
             State = LegState.Done;
         }
         public string Step(FlightContext ctx) { State = LegState.Done; return null; }
@@ -103,6 +103,32 @@ namespace KSA.KSP.Flight
                 return prog;
             }
 
+            // A probe does not come home (2026-11-01, T: probe missions to every world): it goes, does its work and stays.
+            if (type != null && type.IsUncrewed && profile != MissionProfile.Suborbital)
+            {
+                if (profile == MissionProfile.Orbit) prog.Add(new AscentLeg(ctx.ParkingAltitude, true)).Add(new HoldOrbitLeg(Math.Max(1, type.Orbits)));
+                else
+                {
+                    Up(prog, ctx);
+                    bool airbrakes = profile == MissionProfile.Land && Aerobrakes(target, home);
+                    double air = KSA.Core.Flight.Sim.AirbrakeRules.PassShare * target.atmosphereDepth;
+                    if (profile == MissionProfile.Flyby) Outbound(prog, ctx, target, interplanetary, Math.Max(20000, floor), Math.Max(200000, floor + 150000));
+                    else if (airbrakes) Outbound(prog, ctx, target, interplanetary, air - 3000, air + 3000);
+                    else Outbound(prog, ctx, target, interplanetary, Math.Max(15000, floor), Math.Max(60000, floor + 40000));
+                    if (profile == MissionProfile.Flyby) prog.Add(new PassPeriapsisLeg());
+                    else if (profile == MissionProfile.Land)
+                    {
+                        if (airbrakes) prog.Add(new CaptureLeg(target, orbitAlt, LooseCapture * target.sphereOfInfluence)).Add(new AirbrakeLeg(target, orbitAlt));
+                        else prog.Add(new CaptureLeg(target, orbitAlt));
+                        prog.Add(new LandingLeg(ctx.MaxSiteSlope));
+                    }
+                    else prog.Add(new CaptureLeg(target, orbitAlt)).Add(new HoldOrbitLeg(Math.Max(1, type.Orbits)));
+                }
+                if (type.IsScience && profile != MissionProfile.Flyby) prog.Add(new ScienceSweepLeg(1800));
+                prog.Add(new DeliverLeg(profile == MissionProfile.Land ? "Lander" : "Probe"));
+                return prog;
+            }
+
             switch (profile)
             {
                 case MissionProfile.Suborbital:
@@ -144,12 +170,14 @@ namespace KSA.KSP.Flight
                     {
                         double airPe = KSA.Core.Flight.Sim.AirbrakeRules.PassShare * target.atmosphereDepth;
                         Outbound(prog, ctx, target, interplanetary, airPe - 3000, airPe + 3000);
-                        prog.Add(new CaptureLeg(target, orbitAlt, LooseCapture * target.sphereOfInfluence)).Add(new AirbrakeLeg(target, orbitAlt)).Add(new LandingLeg(ctx.MaxSiteSlope));
+                        prog.Add(new CaptureLeg(target, orbitAlt, LooseCapture * target.sphereOfInfluence)).Add(new AirbrakeLeg(target, orbitAlt)).Add(new TankerStopLeg()).Add(new LandingLeg(ctx.MaxSiteSlope));
                     }
                     else
                     {
                         Outbound(prog, ctx, target, interplanetary, Math.Max(15000, floor), Math.Max(60000, floor + 40000));
-                        prog.Add(new CaptureLeg(target, orbitAlt)).Add(new LandingLeg(ctx.MaxSiteSlope));
+                        prog.Add(new CaptureLeg(target, orbitAlt));
+                        if (interplanetary) prog.Add(new TankerStopLeg());
+                        prog.Add(new LandingLeg(ctx.MaxSiteSlope));
                     }
                     if (profile == MissionProfile.Base && type != null && string.Equals(type.ModuleRole, "resupply", StringComparison.OrdinalIgnoreCase))
                     {
@@ -278,6 +306,7 @@ namespace KSA.KSP.Flight
             if (orbitingTarget)
             {
                 if (logged("EVA:" + tb) || logged("Land:" + tb)) prog.SkipTo(l => l is ReturnLeg);
+                else if (logged("Refuel:" + tb)) prog.SkipTo(l => l is LandingLeg || l is HoldOrbitLeg);
                 else prog.SkipTo(l => l is AirbrakeLeg || l is LandingLeg || l is HoldOrbitLeg || l is ReturnLeg);
                 return;
             }
