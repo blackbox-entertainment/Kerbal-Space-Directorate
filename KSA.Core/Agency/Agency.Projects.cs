@@ -457,7 +457,7 @@ namespace KSA.Core
                         case ProjectStatus.Ready:
                             {
                                 // A depot stop waits until the depot holds the fuel (2026-10-29).
-                                string fuelWait = DepotBlocker(p);
+                                string fuelWait = DepotBlocker(p) ?? WindowBlocker(p);
                                 if (fuelWait != null)
                                 {
                                     if (!p.Notes.Exists(n => n.StartsWith("Waiting for fuel")))
@@ -565,7 +565,7 @@ namespace KSA.Core
             if (p.Status != ProjectStatus.Ready) { message = p.Name + " is not ready to launch."; return false; }
             MissionType type = Catalogs.Missions.Get(p.MissionTypeId);
             if (type == null) { message = "Unknown mission type."; return false; }
-            string fuelWait = DepotBlocker(p);
+            string fuelWait = DepotBlocker(p) ?? WindowBlocker(p);
             if (fuelWait != null) { message = p.Name + " is " + fuelWait + "."; return false; }
             if (p.Mode == MissionMode.WatchLive)
             {

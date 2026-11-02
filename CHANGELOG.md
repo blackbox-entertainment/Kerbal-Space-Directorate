@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.133 (2026-11-01), test build
+
+- **Missions to other planets wait for their window.** A flight to a planet or one of its moons launches only when the window is 10 days away or less (agency.cfg windowWaitDays), for the Director, the engineers and the AI Director alike. On the pad the mission list greys such a mission and shows the days left. Rescues do not wait.
+
 ## 0.8.132 (2026-11-01), test build
 
 - **The crew comes down out of the radiation.** With Kerbalism, an orbit reaching over 130 km with a window more than two days off is lowered to 110 km before the wait. A wait at 197 x 75 km killed all three by day 198. Unflown.

@@ -143,7 +143,7 @@ namespace KSA.Core
             Project p = GetProject(projectId);
             if (p == null) { message = "No such project."; return false; }
             if (p.Status != ProjectStatus.Ready) { message = p.Name + " is not ready to launch."; return false; }
-            string fuelWait = DepotBlocker(p);
+            string fuelWait = DepotBlocker(p) ?? WindowBlocker(p);
             if (fuelWait != null) { message = p.Name + " is " + fuelWait + "."; return false; }
             string site = ProjectSiteBlocker(p);
             if (site != null) { message = p.Name + " cannot launch: " + site + "."; return false; }

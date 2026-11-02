@@ -36,6 +36,8 @@ namespace KSA.Core
         public bool AutoRecover { get; set; } = true;
         /// <summary>Opt-in: the Director may take the controls during a live flight (decision 2026-10-26).</summary>
         public bool ManualOverride { get; set; } = true;
+        /// <summary>Most days a crew bound for another planet may wait in orbit for its window; 0 turns the wait off (windowWaitDays).</summary>
+        public double WindowWaitDays { get; set; } = 10;
         /// <summary>Target orbit for live Kerbin flights, metres.</summary>
         public double LiveOrbitAltitude { get; set; } = 85000;
         /// <summary>Orbit altitude above other bodies for capture and ascent, metres (liveTargetOrbitAltitude).</summary>
@@ -157,6 +159,7 @@ namespace KSA.Core
             s.AutoRecover = node.GetBool("autoRecover", s.AutoRecover);
             s.AgencyName = node.GetValue("agencyName", s.AgencyName);
             s.ManualOverride = node.GetBool("manualOverride", s.ManualOverride);
+            s.WindowWaitDays = node.GetDouble("windowWaitDays", s.WindowWaitDays);
             s.LiveOrbitAltitude = node.GetDouble("liveOrbitAltitude", s.LiveOrbitAltitude);
             s.LiveTargetOrbitAltitude = node.GetDouble("liveTargetOrbitAltitude", s.LiveTargetOrbitAltitude);
             s.LiveReentryPeriapsis = node.GetDouble("liveReentryPeriapsis", s.LiveReentryPeriapsis);

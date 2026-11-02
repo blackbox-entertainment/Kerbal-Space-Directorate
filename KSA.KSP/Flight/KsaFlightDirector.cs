@@ -495,7 +495,10 @@ namespace KSA.KSP.Flight
             {
                 MissionType t = options[i];
                 double need = t.IsAircraft ? 0 : agency.Requirements.For(t).DeltaV;
-                if (GUILayout.Button(t.Name + (need > 0 ? " (" + Math.Round(need) + " m/s)" : string.Empty) + (agency.MissionsCompleted(t.Id) > 0 ? ", done before" : string.Empty), GUILayout.Height(26f))) StartHangarFlight(t.Id);
+                string wait = agency.WindowBlocker(t);
+                GUI.enabled = wait == null;
+                if (GUILayout.Button(t.Name + (need > 0 ? " (" + Math.Round(need) + " m/s)" : string.Empty) + (agency.MissionsCompleted(t.Id) > 0 ? ", done before" : string.Empty) + (wait != null ? ": " + wait : string.Empty), GUILayout.Height(26f))) StartHangarFlight(t.Id);
+                GUI.enabled = true;
             }
             GUILayout.EndScrollView();
             if (GUILayout.Button("Let me fly", GUILayout.Height(30f))) DeclineHangarFlight();

@@ -81,6 +81,7 @@ namespace KSA.KSP
             Log.Info("Life support: " + (a.LifeSupportMod.Length > 0 ? a.LifeSupportMod + (a.LifeSupportOn ? " (colonies need greenhouses; live flights need supplies)" : " installed but switched off in agency.cfg LIFE_SUPPORT") : "none (stock rules)"));
             a.LiveFlightAvailable = true; // M5: built-in flight director for Kerbin missions
             a.LiveFlightCheck = Flight.LiveFlightLauncher.Check;
+            a.DaysToWindow = Flight.TransferWindows.Days;
             a.TemplateCheck = Parts.KspTemplateCheck.Blocker; // career: a template needs every part researched and bought
             a.ModuleHardwareCheck = Parts.KspHardwareCheck.For; // KSA-64: drills, converters, power and seats in delivered craft
             a.ResearchHost = new Parts.KspResearchHost();       // KSA-68: the AI Director can spend Science in R&D

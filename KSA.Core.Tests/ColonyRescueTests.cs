@@ -307,6 +307,20 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void AMissionToAnotherPlanetWaitsForItsWindow()
+        {
+            var clock = new FakeClock();
+            Agency a = Staffed(clock);
+            KSA.Core.Missions.MissionType duna = a.Catalogs.Missions.Get("DunaLanding");
+            Assert.That(a.WindowBlocker(duna), Is.Null, "no host, no wait");
+            a.DaysToWindow = body => body == "Duna" ? 226 : double.NaN;
+            Assert.That(a.WindowBlocker(duna), Does.Contain("Duna window, 226 days"));
+            Assert.That(a.WindowBlocker(a.Catalogs.Missions.Get("MunLanding")), Is.Null, "the Mun needs no window");
+            a.DaysToWindow = body => 10;
+            Assert.That(a.WindowBlocker(duna), Is.Null, "ten days in orbit is allowed");
+        }
+
+        [Test]
         public void NoRescueIsApprovedThatWouldArriveTooLate()
         {
             var clock = new FakeClock();
