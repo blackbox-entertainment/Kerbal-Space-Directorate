@@ -324,7 +324,15 @@ namespace KSA.KSP.Flight
                     {
                         // Say why no mission is offered (2026-10-31: the crew sat on a leftover project and nothing appeared).
                         Declined.Add(v.persistentId);
-                        ScreenMessages.PostScreenMessage("[KSA] No missions offered: the crew aboard are assigned to a project, or are not agency kerbals.", 10f, ScreenMessageStyle.UPPER_CENTER);
+                        var dead = new List<string>();
+                        foreach (ProtoCrewMember pcm in v.GetVesselCrew())
+                        {
+                            CrewProfile c = agency.Crew.Get(pcm.name);
+                            if (c != null && c.Status == CrewStatus.Dead) dead.Add(pcm.name);
+                        }
+                        string why = dead.Count > 0 ? string.Join(", ", dead.ToArray()) + " died on an earlier flight. Go back to the VAB and seat living crew." : "the crew aboard are assigned to a project, or are not agency kerbals.";
+                        ScreenMessages.PostScreenMessage("[KSA] No missions offered: " + why, 20f, ScreenMessageStyle.UPPER_CENTER);
+                        KsaCore.Log.Warn("No missions offered for " + v.vesselName + ": " + why);
                     }
                     // Not ours yet: a craft placed on the pad settles for a second or two, so look again a few times.
                     if (nearPad && _adoptTries++ < 12) { _adopted = false; _nextAdoptTry = UnityEngine.Time.unscaledTime + 0.5f; }

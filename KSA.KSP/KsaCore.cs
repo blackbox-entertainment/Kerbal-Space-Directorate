@@ -155,10 +155,29 @@ namespace KSA.KSP
             if (fromEvent) _lastEventSync = UnityEngine.Time.realtimeSinceStartup;
             _syncPending = false;
             _lastSyncFrame = UnityEngine.Time.frameCount;
+            BuryTheDead();
             List<CrewSnapshot> snapshots = new KspRosterSource().GetSnapshots();
             var result = Agency.SyncRoster(snapshots);
             if (!fromEvent || result.Hired.Count > 0 || result.Departed.Count > 0)
                 Log.Info("Roster sync (" + reason + "): " + snapshots.Count + " crew, " + result.Hired.Count + " hired, " + result.Departed.Count + " departed");
+        }
+
+        /// <summary>
+        /// The game respawns the dead; the agency does not. A kerbal dead on our books goes off the game's list too, so the VAB cannot seat them
+        /// (2026-11-01, T: "a player might terminate and take the losses": the game seated three dead kerbals, and the Director would not fly them).
+        /// </summary>
+        private static void BuryTheDead()
+        {
+            KerbalRoster roster = HighLogic.CurrentGame != null ? HighLogic.CurrentGame.CrewRoster : null;
+            if (roster == null) return;
+            foreach (CrewProfile c in Agency.Crew.All)
+            {
+                if (c.Status != CrewStatus.Dead || !roster.Exists(c.Id)) continue;
+                ProtoCrewMember pcm = roster[c.Id];
+                if (pcm == null || pcm.rosterStatus != ProtoCrewMember.RosterStatus.Available) continue;
+                pcm.rosterStatus = ProtoCrewMember.RosterStatus.Dead;
+                Log.Info(c.Name + " is dead on the agency's books: off the game's crew list.");
+            }
         }
 
         /// <summary>Advances agency time (fiscal years, quarterly applicants). Notices go to the screen and the log.</summary>

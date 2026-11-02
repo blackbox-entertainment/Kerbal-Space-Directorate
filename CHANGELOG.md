@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.140 (2026-11-01), test build
+
+- **Dead crew stay dead, and the game carries on.** A kerbal lost on a flight, including one you terminate, goes off the game's crew list too, so the VAB cannot seat them. A rocket that still has them aboard is told why no mission is offered, by name, instead of the Flight Director staying silent.
+
 ## 0.8.139 (2026-11-01), test build
 
 - **A window just closing is still a window.** After reaching orbit the crew takes a transfer in the next 10 days if it costs up to 30% more excess speed, instead of the cheapest date, which could be two years off.
