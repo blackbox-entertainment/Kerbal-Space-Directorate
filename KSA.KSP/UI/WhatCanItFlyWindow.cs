@@ -65,8 +65,8 @@ namespace KSA.KSP.UI
                 foreach (Agency.MissionFit f in can)
                 {
                     List<string> warnings = _agency.PreflightWarnings(d, f.Mission);
-                    foreach (string w in warnings) Line(items, Color("      warning: " + w, Amber), textWidth);
                     Line(items, "   " + Color(f.Mission.Name, Green) + (f.Locked != null ? Color("  (mission locked: " + f.Locked + ")", Amber) : string.Empty), textWidth);
+                    foreach (string w in warnings) Line(items, Color("      warning: " + w, Amber), textWidth);
                 }
 
                 if (close.Count > 0)
