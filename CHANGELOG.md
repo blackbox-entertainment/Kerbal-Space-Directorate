@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.138 (2026-11-01), test build
+
+- **The window days count down.** The days on the mission buttons update as time passes, with the Projects window open.
+
 ## 0.8.137 (2026-11-01), test build
 
 - **Windows in the Projects window.** Missions to other planets show the days to their window on the button, green within 10 days and yellow beyond, and a chosen mission that must wait says so.
