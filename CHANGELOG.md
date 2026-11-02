@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.171 (2026-11-02), test build
+
+- **Thrusters translate only during the dock.** With RCS on, stock SAS fires the thrusters to turn the ship as well, and swinging a 40 t stack onto the port spent 80 monopropellant in three minutes (four Stratus tanks, gone at 39 m). The docking leg now turns off pitch, yaw and roll on every RCS block for the dock and gives them back after; the reaction wheel does the turning. The log shows monopropellant left with every "Station aim:" line and how much the dock used.
+
 ## 0.8.170 (2026-11-02), test build
 
 - **Rendezvous accepts any orbit clear of the air.** A retry at 85 x 75 km was refused as "not in a stable orbit" by a check wanting the apoapsis 20 km above the atmosphere; 5 km is enough. First flown dock approach 2026-11-02: the station turned its port from 95 to 1 deg off in two minutes and the ship lined up at 39 m, 0.8 m off axis, then ran out of monopropellant.

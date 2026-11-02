@@ -482,6 +482,8 @@ namespace KSA.KSP.Flight
         private double _lastSasRefresh;
         private VesselControl _stationControl;
         private double _stationNoted = -1e9;
+        private readonly List<ModuleRCS> _rotationOff = new List<ModuleRCS>();
+        private double _monoAtStart;
 
         public string Name { get { return "Docking"; } }
         public string Status { get; private set; }
@@ -491,7 +493,15 @@ namespace KSA.KSP.Flight
         {
             State = LegState.Failed;
             Status = "Docking failed: " + why + ".";
+            RestoreRcs();
             if (ctx != null) ctx.Say("Docking failed: " + why + ".");
+        }
+
+        /// <summary>Gives the thrusters their rotation back once the dock is over, however it ended.</summary>
+        private void RestoreRcs()
+        {
+            foreach (ModuleRCS r in _rotationOff) if (r != null) r.enablePitch = r.enableYaw = r.enableRoll = true;
+            _rotationOff.Clear();
         }
 
         public void Begin(FlightContext ctx)
@@ -509,6 +519,16 @@ namespace KSA.KSP.Flight
                 if (_target == null) { Fail("station not found in orbit", ctx); return; }
                 if (!ctx.Control.HasRcs()) { Fail("no RCS on this craft; docking needs RCS", ctx); return; }
                 if (Mono(v) < 0.5) { Fail("no monopropellant aboard; docking needs RCS", ctx); return; }
+                _monoAtStart = Mono(v);
+                // Translation only (0.8.171): with RCS on, stock SAS fires the thrusters to turn the ship too, and swinging a
+                // 40 t stack onto the port spent 80 monopropellant in three minutes. The reaction wheel does the turning.
+                _rotationOff.Clear();
+                foreach (ModuleRCS r in v.FindPartModulesImplementing<ModuleRCS>())
+                {
+                    if (!(r.enablePitch || r.enableYaw || r.enableRoll)) continue;
+                    r.enablePitch = r.enableYaw = r.enableRoll = false;
+                    _rotationOff.Add(r);
+                }
                 _started = ctx.Now;
                 ctx.Control.Throttle = 0;
                 ctx.Control.ClearInputs();
@@ -600,6 +620,8 @@ namespace KSA.KSP.Flight
         {
             ctx.Control.ClearInputs();
             ctx.Control.Rcs(false);
+            RestoreRcs();
+            KsaCore.Log.Info("Docking used " + Math.Round(_monoAtStart - Mono(ctx.Vessel), 1) + " monopropellant of " + Math.Round(_monoAtStart, 1));
             ctx.Delivered = true;
             _phase = Phases.Docked;
             Status = "Docked with " + StationOps.NameOf(_target) + ".";
@@ -648,7 +670,7 @@ namespace KSA.KSP.Flight
                 {
                     _stationNoted = now;
                     double off = Vector3d.Angle(_targetPort.nodeTransform.forward, (Vector3d)_ourPort.nodeTransform.position - (Vector3d)_targetPort.nodeTransform.position);
-                    KsaCore.Log.Info("Station aim: port " + Math.Round(off) + " deg off us, station turning " + VesselControl.TurnRate(_target).ToString("0.0") + " deg/s");
+                    KsaCore.Log.Info("Station aim: port " + Math.Round(off) + " deg off us, station turning " + VesselControl.TurnRate(_target).ToString("0.0") + " deg/s; " + Status + " RCS " + Math.Round(Mono(v), 1) + " of " + Math.Round(_monoAtStart, 1) + " left");
                 }
             }
 
@@ -782,6 +804,7 @@ namespace KSA.KSP.Flight
 
         public void End(FlightContext ctx)
         {
+            RestoreRcs();
             ctx.Control.Throttle = 0;
             ctx.Control.ClearInputs();
             ctx.Control.StopWarp();
