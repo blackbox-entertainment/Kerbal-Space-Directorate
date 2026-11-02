@@ -402,7 +402,7 @@ namespace KSA.KSP.Flight
     /// </summary>
     public sealed class InterplanetaryTransferLeg : IFlightLeg
     {
-        private enum Phases { Plan, Burn, Finished }
+        private enum Phases { Plan, Lower, Burn, Finished }
         private readonly CelestialBody _target;
         private Phases _phase;
         private NodeExecutor _exec;
@@ -448,7 +448,8 @@ namespace KSA.KSP.Flight
         }
 
         private const double StartedWithin = 120; // seconds before a node: its burn may already be running
-        private const double MaxParkingApoapsis = 200000;
+        private const double MaxParkingApoapsis = 130000;
+        private const double LowParkingApoapsis = 110000;
 
         /// <summary>
         /// Closest the path after a burn comes to the target, metres; 0 when it passes inside the target's sphere. All by the two-body sums:
@@ -542,6 +543,14 @@ namespace KSA.KSP.Flight
                     }
                     else Status = "Ejection " + TransferSupport.Date(_burnUt) + " (" + Math.Round(_windowDv) + " m/s): " + _exec.Status;
                     break;
+                case Phases.Lower:
+                    if (TransferSupport.PumpExecutor(_exec, ctx, ref line))
+                    {
+                        if (_exec.Failed) { Fail(_exec.FailReason ?? "lowering burn failed"); break; }
+                        _phase = Phases.Plan;
+                    }
+                    else Status = "Lowering the orbit: " + _exec.Status;
+                    break;
                 case Phases.Finished:
                     State = Escaped(v) ? LegState.Done : State;
                     break;
@@ -602,12 +611,20 @@ namespace KSA.KSP.Flight
             }
             if (bestAngle > 1.0 * Math.PI / 180) KsaCore.Log.Warn("Ejection point only matched to " + Math.Round(bestAngle * 180 / Math.PI, 2) + " degrees.");
 
-            // A long wait high up is a dose of radiation with Kerbalism: hold for the Director rather than warp through it (2026-11-01: 390 x 75 km, all three dead in 17 days).
+            // A long wait high up is a dose of radiation with Kerbalism: come down first (2026-11-01: 390 x 75 km, all three dead in 17 days;
+            // 197 x 75 km, all three dead by day 198). A low wait is safe: 111 x 75 km for 128 days.
             if (KsaCore.Agency != null && KsaCore.Agency.LifeSupportOn && v.orbit.ApA > MaxParkingApoapsis && bestUt - now > 2 * day)
             {
+                double rPe = v.orbit.PeR, rWanted = _origin.Radius + LowParkingApoapsis, utPe = now + v.orbit.timeToPe;
+                double dvLower = Math.Sqrt(planetMu * (2 / rPe - 1 / v.orbit.semiMajorAxis)) - Math.Sqrt(planetMu * (2 / rPe - 2 / (rPe + rWanted)));
                 NodePlanner.ClearNodes(v);
-                Fail("the orbit reaches " + TransferSupport.Km(v.orbit.ApA) + ", into the radiation belt, with " + TransferSupport.Countdown(bestUt - now) + " to wait");
-                return "Holding: apoapsis " + TransferSupport.Km(v.orbit.ApA) + " is in the radiation belt and the window is " + TransferSupport.Countdown(bestUt - now) + " away. Director, lower it to about 150 km.";
+                if (NodePlanner.Add(v, utPe, new Vector3d(0, 0, -dvLower)) == null) { Fail("could not place the lowering burn"); return null; }
+                _exec = new NodeExecutor();
+                _exec.Begin(ctx);
+                if (_exec.Failed) { Fail(_exec.FailReason); return null; }
+                _phase = Phases.Lower;
+                Status = "Lowering the orbit out of the radiation: " + Math.Round(dvLower) + " m/s.";
+                return "Apoapsis " + TransferSupport.Km(v.orbit.ApA) + " is in the radiation and the window is " + TransferSupport.Countdown(bestUt - now) + " away: lowering it to " + TransferSupport.Km(LowParkingApoapsis) + " with " + Math.Round(dvLower) + " m/s.";
             }
             double dv = Ejection.DeltaV(planetMu, r, vInfMag);
             NodePlanner.ClearNodes(v);

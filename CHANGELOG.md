@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.132 (2026-11-01), test build
+
+- **The crew comes down out of the radiation.** With Kerbalism, an orbit reaching over 130 km with a window more than two days off is lowered to 110 km before the wait. A wait at 197 x 75 km killed all three by day 198. Unflown.
+
 ## 0.8.131 (2026-11-01), test build
 
 - **The round-out burn burns.** The runaway rule from 0.8.130 cancelled the small burn at apoapsis as soon as it started, so the crew coasted on through the top of the air.
