@@ -799,8 +799,9 @@ namespace KSA.KSP.Flight
         }
 
         /// <summary>
-        /// The crew's pre-launch checklist (2026-10-28): SAS on in Stability Assist, and RCS on when the craft has thrusters,
-        /// before the go, so nothing starts to wander on the pad or at liftoff.
+        /// The crew's pre-launch checklist (2026-10-28): SAS on in Stability Assist before the go, so nothing starts to wander
+        /// on the pad or at liftoff. RCS stays off (0.8.162): thrusters firing through the climb drained the monopropellant
+        /// the crew needs to dock; VesselControl turns them on in space when steering needs them, and the docking leg does.
         /// </summary>
         private void PreflightChecks(Vessel v)
         {
@@ -811,12 +812,12 @@ namespace KSA.KSP.Flight
                 if (v.Autopilot != null) v.Autopilot.SetMode(VesselAutopilot.AutopilotMode.StabilityAssist);
                 bool rcs = false;
                 foreach (ModuleRCS r in v.FindPartModulesImplementing<ModuleRCS>()) if (r.rcsEnabled) { rcs = true; break; }
-                if (rcs) v.ActionGroups.SetGroup(KSPActionGroup.RCS, true);
+                v.ActionGroups.SetGroup(KSPActionGroup.RCS, false);
                 // A KV pod has a decoupler in its base (2026-10-31): staged, it threw off the stabilizer and heat shield fitted under it.
                 foreach (Part p in v.parts)
                     if (p.CrewCapacity > 0)
                         foreach (ModuleAnchoredDecoupler d in p.FindModulesImplementing<ModuleAnchoredDecoupler>()) d.stagingEnabled = false;
-                Log("Pre-launch checks: SAS on" + (rcs ? ", RCS on." : "; no RCS thrusters aboard."), null);
+                Log("Pre-launch checks: SAS on" + (rcs ? ", RCS off until space." : "; no RCS thrusters aboard."), null);
             }
             catch (Exception e) { KsaCore.Log.Warn("Pre-launch checks: " + e.Message); }
         }

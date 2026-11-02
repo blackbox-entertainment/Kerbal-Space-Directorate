@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.162 (2026-11-02), test build
+
+- **RCS stays off through the climb.** The pre-launch check had switched it on at the pad, so the thrusters fired at every steering move in the air and drained the monopropellant the crew needs to dock (T saw them firing at liftoff). It now comes on in space only when steering or docking needs it.
+
 ## 0.8.161 (2026-11-02), test build
 
 - **Crewless craft can take a mission from the pad.** Picking a mission for a probe or fuel station did nothing: the button threw an error because nobody was aboard, and each click left a stray project. Fixed; picking again replaces the earlier pick.
