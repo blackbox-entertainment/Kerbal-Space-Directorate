@@ -126,7 +126,7 @@ namespace KSA.Core.Tests
             clock.AdvanceDays(10); a.Tick();
             Assert.That(duna.Status, Is.EqualTo(ProjectStatus.Ready), "no fuel at the depot yet");
             Assert.That(a.DepotBlocker(duna), Does.Contain("send a tanker"));
-            Assert.That(duna.Notes.Exists(n => n.StartsWith("Waiting for fuel")), Is.True);
+            Assert.That(duna.Notes.Exists(n => n.StartsWith("Waiting: ")), Is.True);
 
             // Tankers until it holds enough.
             int tankers = 0;

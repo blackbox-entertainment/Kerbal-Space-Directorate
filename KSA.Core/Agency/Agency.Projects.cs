@@ -460,9 +460,9 @@ namespace KSA.Core
                                 string fuelWait = DepotBlocker(p) ?? WindowBlocker(p);
                                 if (fuelWait != null)
                                 {
-                                    if (!p.Notes.Exists(n => n.StartsWith("Waiting for fuel")))
+                                    if (!p.Notes.Exists(n => n.StartsWith("Waiting: ")))
                                     {
-                                        p.Notes.Add("Waiting for fuel: " + fuelWait + ".");
+                                        p.Notes.Add("Waiting: " + fuelWait + ".");
                                         Push(notices, p.Name + ": " + fuelWait);
                                     }
                                     break;

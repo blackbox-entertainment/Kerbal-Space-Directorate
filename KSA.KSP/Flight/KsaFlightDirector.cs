@@ -469,6 +469,7 @@ namespace KSA.KSP.Flight
         }
 
         private Vector2 _offerScroll;
+        private MissionType _windowWarning;
 
         private void DeclineHangarFlight()
         {
@@ -485,6 +486,18 @@ namespace KSA.KSP.Flight
             if (pilot == null) { _offering = false; return; }
             double dv = VacuumDeltaV(v);
             bool plane = IsPlaneVessel(v);
+            // A mission to another planet ahead of its window: the Director's call, with the wait spelled out (2026-11-01, T).
+            if (_windowWarning != null)
+            {
+                double days = agency.DaysToWindow != null ? agency.DaysToWindow(_windowWarning.Body) : 0;
+                GUILayout.Label("<b>" + _windowWarning.Name + "</b>");
+                GUILayout.Label("The crew will wait in orbit until " + TransferSupport.Date(Planetarium.GetUniversalTime() + days * TransferSupport.Day) + " to leave for " + _windowWarning.Body + ": about " + Math.Ceiling(days) + " days of food, water and radiation before the trip begins.");
+                GUILayout.Label("Better: Let me fly, recover, warp at the Space Center and launch within " + agency.Settings.WindowWaitDays + " days of the window.");
+                if (GUILayout.Button("Launch anyway", GUILayout.Height(30f))) { MissionType go = _windowWarning; _windowWarning = null; StartHangarFlight(go.Id); }
+                if (GUILayout.Button("Back to the list", GUILayout.Height(30f))) _windowWarning = null;
+                GUI.DragWindow();
+                return;
+            }
             GUILayout.Label("<b>" + pilot.Name + "</b> is aboard " + v.vesselName + ". What should the crew fly?");
             GUILayout.Label((plane ? "A plane on the runway. " : string.Empty) + "Vacuum delta-v " + Math.Round(dv) + " m/s.");
             // Every mission this craft can fly (2026-10-30, T: "what if I build a rocket and launch, can I attach it to a mission?").
@@ -496,9 +509,18 @@ namespace KSA.KSP.Flight
                 MissionType t = options[i];
                 double need = t.IsAircraft ? 0 : agency.Requirements.For(t).DeltaV;
                 string wait = agency.WindowBlocker(t);
-                GUI.enabled = wait == null;
-                if (GUILayout.Button(t.Name + (need > 0 ? " (" + Math.Round(need) + " m/s)" : string.Empty) + (agency.MissionsCompleted(t.Id) > 0 ? ", done before" : string.Empty) + (wait != null ? ": " + wait : string.Empty), GUILayout.Height(26f))) StartHangarFlight(t.Id);
-                GUI.enabled = true;
+                // Green: go now. Yellow: the crew would wait for the window (2026-11-01, T). Nothing for worlds that need no window.
+                double days = agency.DaysToWindow != null && !t.IsRescue ? agency.DaysToWindow(t.Body) : double.NaN;
+                string chip = double.IsNaN(days) ? string.Empty : wait != null ? ": wait " + Math.Ceiling(days) + " days" : ": good window, " + Math.Ceiling(days) + " days";
+                Color before = GUI.contentColor;
+                if (chip.Length > 0) GUI.contentColor = wait != null ? Color.yellow : Color.green;
+                bool picked = GUILayout.Button(t.Name + (need > 0 ? " (" + Math.Round(need) + " m/s)" : string.Empty) + (agency.MissionsCompleted(t.Id) > 0 ? ", done before" : string.Empty) + chip, GUILayout.Height(26f));
+                GUI.contentColor = before;
+                if (picked)
+                {
+                    if (wait != null) _windowWarning = t;
+                    else StartHangarFlight(t.Id);
+                }
             }
             GUILayout.EndScrollView();
             if (GUILayout.Button("Let me fly", GUILayout.Height(30f))) DeclineHangarFlight();
