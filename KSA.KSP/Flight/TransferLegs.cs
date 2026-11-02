@@ -780,7 +780,8 @@ namespace KSA.KSP.Flight
                             break;
                         }
                         double now = ctx.Now;
-                        if (double.IsNaN(current) && AimFromDeepSpace(ctx, ref line)) break;
+                        // No encounter, or one that passes far out: small nudges do not reach (2026-11-01: 25,334 km over Duna, then 1,455 m/s to stop there).
+                        if ((double.IsNaN(current) || current > _peHi + FarOff) && AimFromDeepSpace(ctx, ref line)) break;
                         _ut = now + 60;
                         if (TransferSupport.EndsInTransition(v.orbit) && v.orbit.EndUT > now) _ut = Math.Max(now + 60, now + 0.1 * (v.orbit.EndUT - now));
                         NodePlanner.ClearNodes(v);
@@ -874,6 +875,8 @@ namespace KSA.KSP.Flight
             line = "Deep-space correction planned: " + Math.Round(plan.DeltaVMagnitude) + " m/s" + (double.IsNaN(pe) ? "; the game's preview does not show the encounter yet." : ", predicted " + _target.bodyName + " periapsis " + TransferSupport.Km(pe) + ".");
             return true;
         }
+
+        private const double FarOff = 200000; // metres past the band: a fresh transfer, not a nudge
 
         private double Score(ManeuverNode n) { return NodePlanner.PeriapsisAt(n, _target); }
 
@@ -1091,6 +1094,7 @@ namespace KSA.KSP.Flight
         public CaptureLeg(CelestialBody target, double orbitAltitude, double looseApoapsis) : this(target, orbitAltitude) { _loose = looseApoapsis; }
 
         private readonly double _loose;
+        private const double MaxCapturePe = 1000000;
         private const double BurnAboveAir = 80000; // metres: the burn is over, and the craft turned round, before the air
 
         /// <summary>The burn runs through the air on a loose capture, where the game calls the craft flying, not orbiting.</summary>
@@ -1143,6 +1147,13 @@ namespace KSA.KSP.Flight
                     if (ctx.Control.IsWarping) { ctx.Control.StopWarp(); break; }
                     if (v.mainBody != _target) { Fail("left " + _target.bodyName + "'s sphere of influence"); break; }
                     if (!NodePlanner.Available(v)) { Fail("no patched-conic solver on this vessel"); break; }
+                    if (_loose > 0 && v.orbit.eccentricity >= 1 && v.orbit.PeA > MaxCapturePe)
+                    {
+                        // Far too high to aerobrake: a capture there costs more than the whole way down. Stop for the Director with the fuel intact.
+                        Fail("periapsis " + TransferSupport.Km(v.orbit.PeA) + " is too high to capture");
+                        line = "Holding: the path passes " + TransferSupport.Km(v.orbit.PeA) + " over " + _target.bodyName + ", no correction reaches the air, and a capture there would cost most of the fuel. Director, your call.";
+                        break;
+                    }
                     if (v.orbit.PeA < 5000)
                     {
                         Fail("trajectory impacts " + _target.bodyName);

@@ -65,6 +65,7 @@ namespace KSA.KSP.Flight
         private enum Phases { Deorbit, DeorbitBurn, Coast, Braking, Landed, WaveOff }
 
         private const double SiteLead = 0.25;       // the descent comes down about this share of an orbit past the burn
+        private const double SlowOrbit = 43200;     // seconds a lap: over two days, one lap is searched
         private const double LongOrbit = 0.2;       // eccentricity above which the deorbit waits for the high end
         private const double NearApoapsis = 0.08;   // of a period, either side of apoapsis
         private const int LongOrbitSteps = 240;     // moments looked at over one long orbit, most of them skipped
@@ -418,8 +419,10 @@ namespace KSA.KSP.Flight
                 double[] slopeLimit = { GoodSlope, FairSlope };
                 // Near apoapsis alone, the usual steps leave three moments an orbit (2026-11-01: "no flat ground", over and over).
                 int steps = o.eccentricity > LongOrbit ? LongOrbitSteps : SiteSteps;
+                // A slow orbit gets one lap: eight of a 70-day orbit is a 522-day wait (2026-11-01).
+                int orbits = o.period > SlowOrbit ? 1 : SiteOrbits;
                 for (int pass = 0; pass < slopeLimit.Length && double.IsPositiveInfinity(best); pass++)
-                    for (int i = 0; i < steps * SiteOrbits; i++)
+                    for (int i = 0; i < steps * orbits; i++)
                     {
                         double ut = ctx.Now + 60 + o.period * i / steps;
                         if (TooFarFromApoapsis(o, ut, ctx.Now)) continue;
@@ -437,7 +440,7 @@ namespace KSA.KSP.Flight
                 if (double.IsPositiveInfinity(best))
                 {
                     _burnAt = -1;
-                    _searchAgainAt = ctx.Now + o.period * SiteOrbits;
+                    _searchAgainAt = ctx.Now + o.period * orbits;
                     if (_searches < MaxSearches) ctx.Say("No ground of " + LandingHelpers.Pct(FairSlope) + " or flatter in the light yet; staying in orbit and looking again.");
                 }
                 else ctx.Say("Landing site chosen: sun " + Math.Round(bestSun) + " deg up, ground slope about " + LandingHelpers.Pct(best) + ", deorbit in " + TransferSupport.Countdown(_burnAt - ctx.Now) + ".");
@@ -463,7 +466,8 @@ namespace KSA.KSP.Flight
             Orbit o = v.orbit;
             double accel = ctx.Control.MaxAcceleration(), g = b.gravParameter / (b.Radius * b.Radius);
             double bestMiss = double.PositiveInfinity, bestUt = ctx.Now + 60;
-            for (double ut = ctx.Now + 60; ut < ctx.Now + 60 + o.period * 20; ut += 5)
+            double lookAhead = o.period > SlowOrbit ? o.period : o.period * 20, stepBy = Math.Max(5, lookAhead / 20000);
+            for (double ut = ctx.Now + 60; ut < ctx.Now + 60 + lookAhead; ut += stepBy)
             {
                 if (TooFarFromApoapsis(o, ut, ctx.Now)) continue;
                 double lead; Vector3d down = PredictDown(o, ut, b, accel, g, out lead);
