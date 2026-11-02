@@ -167,6 +167,7 @@ namespace KSA.KSP.UI
                 new DialogGUIButton("Gov. Review", OpenReview, 100f, 30f, false),
                 new DialogGUIButton("Hall of Fame", OpenHallOfFame, 100f, 30f, false),
                 new DialogGUIButton("Records", OpenRecords, 80f, 30f, false),
+                new DialogGUIButton("Fuel stations", OpenFuelStations, 110f, 30f, false),
                 new DialogGUIFlexibleSpace(),
                 new DialogGUIButton("Close", OnCloseClicked, 90f, 30f, true));
             var buttons2 = new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
@@ -283,6 +284,14 @@ namespace KSA.KSP.UI
             _aiDirector.Open();
         }
 
+        private FuelStationsWindow _fuelStations;
+        private void OpenFuelStations()
+        {
+            if (_fuelStations != null && _fuelStations.IsOpen) return;
+            _fuelStations = new FuelStationsWindow(() => { _fuelStations = null; });
+            _fuelStations.Open();
+        }
+
         private RecordsWindow _records;
         private void OpenRecords()
         {
@@ -320,6 +329,7 @@ namespace KSA.KSP.UI
         {
             if (_analytics != null) { AnalyticsWindow w = _analytics; _analytics = null; w.Close(); }
             if (_records != null) { RecordsWindow w = _records; _records = null; w.Close(); }
+            if (_fuelStations != null) { FuelStationsWindow w = _fuelStations; _fuelStations = null; w.Close(); }
             if (_departments != null) { DepartmentsWindow w = _departments; _departments = null; w.Close(); }
             if (_aiDirector != null) { AiDirectorWindow w = _aiDirector; _aiDirector = null; w.Close(); }
             if (_campaign != null) { CampaignWindow w = _campaign; _campaign = null; w.Close(); }

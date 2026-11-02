@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.160 (2026-11-01), test build
+
+- **Kerbin fuel station.** A one-launch tanker parks in Kerbin orbit. A crew leaving Kerbin with a port and RCS meets it right after the climb and fills every tank; if the stop fails it holds in orbit rather than leaving on empty tanks. The pad offers planet missions to a craft with empty tanks while a station waits. Unflown.
+- **Fuel stations window** in the Office lists every station, at Kerbin or Duna, with a Deorbit button.
+
 ## 0.8.159 (2026-11-01), test build
 
 - **Probe missions are back, for every world.** Stock probe cores, no crew, one way: flyby, orbiter and lander for each world, and the three Kerbin probes. Launch any craft with a probe core and nobody aboard and the pad offers them. Unflown beyond Kerbin.

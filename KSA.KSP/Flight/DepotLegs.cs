@@ -100,6 +100,7 @@ namespace KSA.KSP.Flight
         private const double MinTonnes = 1;
         private readonly List<IFlightLeg> _inner = new List<IFlightLeg>();
         private int _index;
+        private bool _failed;
 
         public string Name { get { return "Meeting the tanker"; } }
         public string Status { get; private set; }
@@ -111,27 +112,56 @@ namespace KSA.KSP.Flight
             if (FlightGlobals.Vessels == null || body == null) return null;
             foreach (Vessel v in FlightGlobals.Vessels)
             {
-                if (v == null || v == us || v.mainBody != body || v.situation != Vessel.Situations.ORBITING || v.vesselType == VesselType.Debris) continue;
-                if (v.GetCrewCount() > 0 || v.protoVessel == null) continue;
-                bool port = false;
-                double tonnes = 0;
-                foreach (ProtoPartSnapshot p in v.protoVessel.protoPartSnapshots)
-                {
-                    foreach (ProtoPartModuleSnapshot m in p.modules) if (m.moduleName == "ModuleDockingNode") port = true;
-                    foreach (ProtoPartResourceSnapshot r in p.resources)
-                        if (Array.IndexOf(DepotOps.Propellants, r.resourceName) >= 0 && r.definition != null) tonnes += r.amount * r.definition.density;
-                }
-                if (port && tonnes >= MinTonnes) return v;
+                if (v != null && v != us && v.mainBody == body && IsTanker(v)) return v;
             }
             return null;
         }
 
-        /// <summary>A flight with a tanker still to meet: a crewless craft with a port and fuel already waiting round the world it is bound for.</summary>
+        /// <summary>A flight with a tanker still to meet: a crewless craft with a port and fuel waiting above home, or round the world it is bound for.</summary>
         public static bool TankerAhead(Vessel us)
         {
-            if (KsaFlightDirector.Live == null || FlightGlobals.Vessels == null || KsaFlightDirector.Live.Logged.Contains("Refuel:" + KsaFlightDirector.Live.TargetBody)) return false;
-            CelestialBody target = MissionPlanner.Body(KsaFlightDirector.Live.TargetBody);
-            return target != null && target != FlightGlobals.GetHomeBody() && FindTanker(us, target) != null;
+            if (KsaFlightDirector.Live == null || FlightGlobals.Vessels == null) return false;
+            CelestialBody target = MissionPlanner.Body(KsaFlightDirector.Live.TargetBody), home = FlightGlobals.GetHomeBody();
+            if (target == null || target == home) return false;
+            if (!KsaFlightDirector.Live.Logged.Contains("Refuel:" + home.bodyName) && FindTanker(us, home) != null) return true;
+            return !KsaFlightDirector.Live.Logged.Contains("Refuel:" + target.bodyName) && FindTanker(us, target) != null;
+        }
+
+        /// <summary>Every fuel station in orbit of anything.</summary>
+        public static List<Vessel> AllTankers()
+        {
+            var list = new List<Vessel>();
+            if (FlightGlobals.Vessels == null) return list;
+            foreach (Vessel v in FlightGlobals.Vessels) if (IsTanker(v)) list.Add(v);
+            return list;
+        }
+
+        /// <summary>Propellant aboard, tonnes.</summary>
+        public static double Tonnes(Vessel v)
+        {
+            double t = 0;
+            if (v != null && v.protoVessel != null)
+                foreach (ProtoPartSnapshot p in v.protoVessel.protoPartSnapshots)
+                    foreach (ProtoPartResourceSnapshot r in p.resources)
+                        if (Array.IndexOf(DepotOps.Propellants, r.resourceName) >= 0 && r.definition != null) t += r.amount * r.definition.density;
+            return t;
+        }
+
+        /// <summary>The order to come down: gone at once, with its fuel (T: "the option to deorbit them").</summary>
+        public static void Deorbit(Vessel v)
+        {
+            if (v == null) return;
+            if (HighLogic.CurrentGame.flightState != null && v.protoVessel != null) HighLogic.CurrentGame.flightState.protoVessels.Remove(v.protoVessel);
+            v.Die();
+        }
+
+        private static bool IsTanker(Vessel v)
+        {
+            if (v == null || v.situation != Vessel.Situations.ORBITING || v.vesselType == VesselType.Debris || v.GetCrewCount() > 0 || v.protoVessel == null) return false;
+            bool port = false;
+            foreach (ProtoPartSnapshot p in v.protoVessel.protoPartSnapshots)
+                foreach (ProtoPartModuleSnapshot m in p.modules) if (m.moduleName == "ModuleDockingNode") port = true;
+            return port && Tonnes(v) >= MinTonnes;
         }
 
         public void Begin(FlightContext ctx)
@@ -168,16 +198,17 @@ namespace KSA.KSP.Flight
             if (l.State == LegState.Failed)
             {
                 // Docked with the tanker and failed after: the undock is still owed.
-                ctx.Say(l.Name + " did not work: " + l.Status + " Going on without the tanker.");
+                bool home = ctx.Vessel != null && ctx.Vessel.mainBody == ctx.Home;
+                ctx.Say(l.Name + " did not work: " + l.Status + (home ? " Holding in Kerbin orbit: no leaving on empty tanks." : " Going on without the tanker."));
                 l.End(ctx);
-                if (DepotOps.Docked(ctx) && !(l is UndockLeg)) { _index = _inner.Count - 1; _inner[_index].Begin(ctx); return line; }
-                State = LegState.Done;
+                if (DepotOps.Docked(ctx) && !(l is UndockLeg)) { _index = _inner.Count - 1; _failed = home; _inner[_index].Begin(ctx); return line; }
+                State = home ? LegState.Failed : LegState.Done;
                 return line;
             }
             if (l.State == LegState.Done)
             {
                 l.End(ctx);
-                if (++_index >= _inner.Count) { State = LegState.Done; return line; }
+                if (++_index >= _inner.Count) { State = _failed ? LegState.Failed : LegState.Done; return line; }
                 _inner[_index].Begin(ctx);
             }
             return line;
@@ -222,6 +253,8 @@ namespace KSA.KSP.Flight
             List<Part> depot = DepotOps.DepotParts(ctx);
             double before = DepotOps.Tonnes(depot);
             foreach (string res in DepotOps.Propellants) DepotOps.Move(res, depot, tanks, double.MaxValue);
+            // A tanker sent ahead fills everything; a depot's fuel is rationed to the tanks that launched empty.
+            if (ctx.ReportDepot == null) foreach (string res in DepotOps.Propellants) DepotOps.Move(res, depot, DepotOps.OwnParts(ctx), double.MaxValue);
             double taken = before - DepotOps.Tonnes(depot);
             DepotOps.Report(ctx);
             double room = DepotOps.Tonnes(tanks, true) - DepotOps.Tonnes(tanks);

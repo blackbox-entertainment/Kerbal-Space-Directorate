@@ -479,7 +479,9 @@ namespace KSA.KSP.Flight
                 if (agency.EvaBlocker(t) != null) continue; // no spacewalk missions before the Astronaut Complex allows them (2026-10-30)
                 bool kerbinRocket = string.Equals(t.Body, "Kerbin", StringComparison.OrdinalIgnoreCase) && (t.Profile == MissionProfile.Suborbital || t.Profile == MissionProfile.Orbit);
                 if (plane ? !(t.IsAircraft || kerbinRocket) : t.IsAircraft) continue;
-                if (!t.IsAircraft && agency.Requirements.For(t).DeltaV > dv * 1.1) continue;
+                // Empty tanks and a fuel station waiting above home: the delta-v comes from the station (2026-11-01, T).
+                bool fillsUp = !probe && !t.IsAircraft && !string.Equals(t.Body, "Kerbin", StringComparison.OrdinalIgnoreCase) && TankerStopLeg.FindTanker(v, FlightGlobals.GetHomeBody()) != null;
+                if (!t.IsAircraft && !fillsUp && agency.Requirements.For(t).DeltaV > dv * 1.1) continue;
                 list.Add(t);
             }
             list.Sort((a, b) => (b.IsAircraft ? 0 : agency.Requirements.For(b).DeltaV).CompareTo(a.IsAircraft ? 0 : agency.Requirements.For(a).DeltaV));
