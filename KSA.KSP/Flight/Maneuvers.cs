@@ -178,6 +178,12 @@ namespace KSA.KSP.Flight
         private double _lateBy;
         private double _burned, _lastStep;
         private double _stagedAt = -1e9;
+        // The node's burn vector is read off the orbit it was placed on; once the patch changes under it (an ejection crossing to
+        // escape) that vector drifts and flips, and the burn ended short (0.8.177: 661 of 884 m/s, 223 short, no Duna encounter;
+        // the earlier flight 1,044 of 1,063). From then on the direction is frozen and the burn runs on the delta-v counted.
+        private CelestialBody _bodyAtStart;
+        private bool _hyperbolicAtStart, _frozen;
+        private Vector3d _frozenDir;
 
         public bool Done { get { return _phase == Phases.Done; } }
         public bool Failed { get { return _phase == Phases.Failed; } }
@@ -203,6 +209,9 @@ namespace KSA.KSP.Flight
             if (double.IsInfinity(_burnTime)) _burnTime = 60;
             _phase = Phases.Align;
             _sunHold = false;
+            _frozen = false;
+            _bodyAtStart = ctx.Vessel != null ? ctx.Vessel.mainBody : null;
+            _hyperbolicAtStart = ctx.Vessel != null && ctx.Vessel.orbit != null && ctx.Vessel.orbit.eccentricity >= 1;
             _tolerance = ctx.Crew != null ? Math.Max(0.1, ctx.Crew.BurnTolerance) : 0.3;
             _lateBy = 0;
             if (ctx.Crew != null && ctx.Crew.RollMistake(ctx.Rng)) { _lateBy = ctx.Crew.LateIgnition(ctx.Rng); ctx.Say(ctx.Crew.PilotName + " is slow on the ignition call: burn will start " + Math.Round(_lateBy) + " s late."); }
@@ -274,12 +283,21 @@ namespace KSA.KSP.Flight
                     if (!justStaged && c.Throttle > 0) _burned += v.geeForce * 9.80665 * Math.Max(0, now - _lastStep);
                     _lastStep = now;
                     if (!_burnTimed && c.MaxAcceleration() > 0) { double bt = c.BurnTime(burn.magnitude); if (!double.IsInfinity(bt)) { _burnTime = bt; _burnTimed = true; } }
+                    bool patchChanged = v.mainBody != _bodyAtStart || (v.orbit != null && (v.orbit.eccentricity >= 1) != _hyperbolicAtStart);
+                    if (patchChanged && !_frozen && _lastBurnVector.magnitude > 1e-3)
+                    {
+                        _frozen = true;
+                        _frozenDir = _lastBurnVector.normalized;
+                        c.PointAlong(() => _frozenDir);
+                        line = line ?? ("The path crossed to " + (v.orbit != null && v.orbit.eccentricity >= 1 ? "escape" : "a new orbit") + " mid-burn; finishing the burn by the count, " + Math.Round(Math.Max(0, _startDv - _burned)) + " m/s to go.");
+                    }
+                    if (_frozen) burn = _frozenDir * Math.Max(0, _startDv - _burned);
                     double remaining = burn.magnitude;
                     // Taper: last few m/s at low throttle so we do not overshoot; cutoff when the vector flips.
                     // A long burn leaves the node behind and the vector never empties: stop on what was really burned
                     // (2026-11-01: a 1,047 m/s ejection under warp burned 1,567 m/s and went past Duna).
                     bool spent = KSA.Core.Flight.Sim.BurnRules.Spent(_burned, _startDv);
-                    bool flipped = !justStaged && Vector3d.Dot(burn, _lastBurnVector) < 0;
+                    bool flipped = !justStaged && !_frozen && Vector3d.Dot(burn, _lastBurnVector) < 0;
                     bool overran = !justStaged && remaining < 2 && now - _started > _burnTime + 10;
                     if (spent || remaining < _tolerance || flipped || overran || (CutOff != null && CutOff(v)))
                     {

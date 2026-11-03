@@ -533,6 +533,7 @@ namespace KSA.KSP.Flight
                         _phase = Phases.Finished;
                         if (Escaped(v))
                         {
+                            NodePlanner.ClearNodes(v); // nothing of the ejection stays in the plan for the next leg to find (0.8.177)
                             Status = "Escaping " + _origin.bodyName + ".";
                             ctx.Say("Ejection burn complete; escaping " + _origin.bodyName + " toward " + _target.bodyName + ".", "Escape:" + _origin.bodyName);
                             State = LegState.Done;
@@ -772,10 +773,22 @@ namespace KSA.KSP.Flight
             }
             if (NodePlanner.Available(v) && v.patchedConicSolver.maneuverNodes.Count > 0)
             {
-                _exec = new NodeExecutor();
-                _exec.Begin(ctx);
-                _phase = Phases.Burn;
-                Status = "Resuming the correction burn.";
+                // Only a node this leg could have made, about now (0.8.177): the ejection's spent node, left in the plan, was
+                // "resumed" here and 883 m/s went into nothing.
+                ManeuverNode found = v.patchedConicSolver.maneuverNodes[0];
+                double size = found.DeltaV.magnitude;
+                if (size <= Budget(ctx) && found.UT > ctx.Now - 600 && found.UT < ctx.Now + 3600)
+                {
+                    _exec = new NodeExecutor();
+                    _exec.Begin(ctx);
+                    _phase = Phases.Burn;
+                    Status = "Resuming the correction burn.";
+                }
+                else
+                {
+                    NodePlanner.ClearNodes(v);
+                    ctx.Say("Cleared a stale maneuver node of " + Math.Round(size) + " m/s before the correction.");
+                }
             }
         }
 

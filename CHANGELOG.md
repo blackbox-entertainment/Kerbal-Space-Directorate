@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.177 (2026-11-02), test build
+
+- **An ejection burn finishes by the count once the path crosses to escape.** The node's burn vector is read off the orbit the node was placed on; when the ejection crosses to escape that vector drifts and flips, and the executor called the burn complete 223 m/s short (661 of 884; the earlier flight 1,044 of 1,063). From the patch change on, the direction is frozen and the burn runs on the delta-v counted.
+- **A spent node is never "resumed".** The ejection's node was left in the plan, the first course correction took it for its own interrupted burn and flew 883 m/s into nothing; the crew then had no Duna encounter and turned for home on 1,708 m/s. A correction now resumes only a node of its own size and time; anything else is cleared and logged. The ejection leg clears its node when it finishes.
+
 ## 0.8.176 (2026-11-02), test build
 
 - **Three dead of CO2 poisoning 23 days short of Duna** (2026-11-02, Mk IIe, Kerbalism): the trims worked (0.2, 0.1 and 2.1 m/s to a 37 km periapsis), but the ship then cruised 300 days nose-on to the sun, as the last trim had left it. Its 48 side-mounted panels: 29 at 0% exposure, the rest at 0.1 to 3%. The 1,340 EC battery covered the scrubbers for 320 days and then did not.
