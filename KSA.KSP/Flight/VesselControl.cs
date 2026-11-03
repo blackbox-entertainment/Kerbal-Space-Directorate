@@ -290,7 +290,22 @@ namespace KSA.KSP.Flight
             if (from == Vector3d.zero) { FaceSunBroadside(); return; }
             _panelSun = from;
             _panelAttitudeAt = -1;
+            _aimedSun = (Planetarium.fetch.Sun.position - _v.GetWorldPos3D()).normalized;
             PointAlong(() => { PanelAttitude(); return _panelNose; }, () => { PanelAttitude(); return _panelForward; });
+        }
+
+        private Vector3d _aimedSun = Vector3d.zero;
+
+        /// <summary>
+        /// Degrees the sun has moved, as seen from the craft, since the panels were last aimed at it (0.8.186). On rails the attitude
+        /// is fixed in space while the craft goes round the sun: a 300-day cruise sweeps about 130 degrees, so panels aimed at the
+        /// start were edge-on by the middle and facing away by the end (three dead, 0.02 EC/s from 48 panels). Zero before any aim.
+        /// </summary>
+        public double SunDrift()
+        {
+            if (_v == null || _aimedSun == Vector3d.zero) return 0;
+            Vector3d sun = (Planetarium.fetch.Sun.position - _v.GetWorldPos3D()).normalized;
+            return Vector3d.Angle(_aimedSun, sun);
         }
 
         private Vector3d _panelSun, _panelNose, _panelForward;

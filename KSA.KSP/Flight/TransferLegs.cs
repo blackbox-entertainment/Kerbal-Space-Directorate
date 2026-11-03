@@ -1013,6 +1013,7 @@ namespace KSA.KSP.Flight
         private double _turnStarted;
         private bool _panelsChecked;
         private const double SettleLimit = 120; // seconds allowed for the turn before the coast goes on regardless
+        private const double ReaimDegrees = 10; // the sun moves this far round the sky: stop, turn the panels back to it, warp on (0.8.186)
 
         /// <summary>
         /// No warp until the turn to the sun is done (0.8.178): the coast had warped in the same second it ordered the turn, the
@@ -1101,6 +1102,14 @@ namespace KSA.KSP.Flight
                 Status = "Never reached " + _body.bodyName + ".";
                 return "No " + _body.bodyName + " encounter after " + Math.Round(_maxDays, 1) + " days; coast abandoned.";
             }
+            if (!v.packed && ctx.Control.SunDrift() > ReaimDegrees)
+            {
+                ctx.Control.StopWarp();
+                ctx.Control.FacePanelsAtSun();
+                _turnStarted = now; _panelsChecked = false;
+                return "The sun has moved " + Math.Round(ctx.Control.SunDrift()) + " deg round the sky: turning the panels back to it.";
+            }
+            if (v.packed && ctx.Control.SunDrift() > ReaimDegrees) { ctx.Control.StopWarp(); Status = "Stopping to turn the panels to the sun."; return null; }
             string turning = null;
             if (Turning(ctx, ref turning)) return null;
             if (turning != null) return turning;

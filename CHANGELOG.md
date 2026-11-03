@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.186 (2026-11-03), test build
+
+- **Three dead of CO2 poisoning 24 days short of Duna, the third crew lost to power** (2026-11-03, mk IIIe). The panels were turned to the sun and measured at 4.02 EC/s before the cruise; 226 days later the ledger showed 0.02. On rails the attitude is fixed in space while the ship goes round the sun, and a 300-day cruise sweeps about 130 degrees: panels aimed at the start are edge-on by the middle and facing away by the end.
+- **The crew turn the panels back to the sun every 10 degrees.** Coasts and long waits for a burn now stop the warp whenever the sun has moved 10 degrees round the sky since the last aim, turn, settle, log the panel output, and warp on; about a dozen stops over a Duna cruise.
+
 ## 0.8.185 (2026-11-03), test build
 
 - **First crew landed on Duna after a tanker stop** (2026-11-03, Mk IIe: 2.7 m/s, 0.2 m/s sideways, upright, 4% ground 447 m from the Director's pick), then over on its side: the leg contact spun it 19 deg/s, it leaned to 18 degrees and went. A tall lander on four LT-1 struts, with two empty X200-32 side tanks still bolted on.

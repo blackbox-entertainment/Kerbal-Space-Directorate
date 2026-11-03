@@ -247,6 +247,7 @@ namespace KSA.KSP.Flight
                     if (ignition - now > LongWait)
                     {
                         if (!_sunHold) { c.FacePanelsAtSun(); _sunHold = true; _sunHoldAt = now; }
+                        else if (c.SunDrift() > 10) { c.StopWarp(); if (!v.packed) { c.FacePanelsAtSun(); _sunHoldAt = now; line = "The sun has moved round the sky: turning the panels back to it."; } break; }
                         bool settled = (c.HoldSettled() && now - _sunHoldAt > 5) || now - _sunHoldAt > 120;
                         Status = "Burn in " + TransferSupport.Countdown(ignition - now) + (settled ? "; panels to the sun." : "; turning the panels to the sun.");
                         if (settled && !c.IsWarping && now - _lastWarpAsk > 2) { _lastWarpAsk = now; c.WarpTo(ignition - LongWait + 60); }
