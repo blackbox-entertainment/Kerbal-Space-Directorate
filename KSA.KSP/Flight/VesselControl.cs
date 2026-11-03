@@ -278,6 +278,127 @@ namespace KSA.KSP.Flight
         /// it. A Duna crew cruised 300 days nose-on to the sun after a 0.2 m/s trim, 29 of their 48 panels at 0% exposure, and
         /// died of CO2 poisoning when the battery ran flat 23 days short of Duna.
         /// </summary>
+        /// <summary>
+        /// The side with the panels toward the sun (0.8.178, T: "keep the side of the ship facing the sun"). The panels' normals in
+        /// the craft's frame give the one direction the sun should come from, roll included; a nose square to the sun with the roll
+        /// left where it was lit nothing (0.01 EC/s from 48 panels). Falls back to broadside when no panel can be read.
+        /// </summary>
+        public void FacePanelsAtSun()
+        {
+            if (_v == null) return;
+            Vector3d from = PanelSunDirection();
+            if (from == Vector3d.zero) { FaceSunBroadside(); return; }
+            _panelSun = from;
+            _panelAttitudeAt = -1;
+            PointAlong(() => { PanelAttitude(); return _panelNose; }, () => { PanelAttitude(); return _panelForward; });
+        }
+
+        private Vector3d _panelSun, _panelNose, _panelForward;
+        private double _panelAttitudeAt = -1;
+
+        /// <summary>The nose and forward axis, in world space, that put the panels' direction on the sun: the least turn from where the craft is now.</summary>
+        private void PanelAttitude()
+        {
+            if (_panelAttitudeAt == Now) return;
+            _panelAttitudeAt = Now;
+            Transform rt = _v.ReferenceTransform;
+            if (rt == null) return;
+            Vector3d sun = (Planetarium.fetch.Sun.position - _v.GetWorldPos3D()).normalized;
+            Vector3d fromNow = rt.TransformDirection((Vector3)_panelSun);
+            Quaternion q = Quaternion.FromToRotation((Vector3)fromNow, (Vector3)sun);
+            _panelNose = q * rt.up;
+            _panelForward = q * rt.forward;
+        }
+
+        /// <summary>
+        /// Where the sun should come from in the craft's frame for the most panel output: the normals (Kerbalism's reading of them
+        /// when it is there, else the panel's own sun transform), weighted by charge rate, searched over the sphere. Zero with no panels.
+        /// </summary>
+        private Vector3d PanelSunDirection()
+        {
+            Transform rt = _v.ReferenceTransform;
+            if (rt == null) return Vector3d.zero;
+            var normals = new List<Vector3d>();
+            var weights = new List<double>();
+            foreach (ModuleDeployableSolarPanel p in _v.FindPartModulesImplementing<ModuleDeployableSolarPanel>())
+            {
+                try
+                {
+                    if (p.deployState != ModuleDeployablePart.DeployState.EXTENDED) continue;
+                    Vector3d n = Vector3d.zero;
+                    PartModule fixer = p.part.Modules.Contains("SolarPanelFixer") ? p.part.Modules["SolarPanelFixer"] : null;
+                    if (fixer != null)
+                    {
+                        Type t = fixer.GetType();
+                        System.Reflection.FieldInfo has = t.GetField("hasPanelOrientation"), fx = t.GetField("panelNormalPartLocalX"), fy = t.GetField("panelNormalPartLocalY"), fz = t.GetField("panelNormalPartLocalZ");
+                        if (has != null && fx != null && fy != null && fz != null && (bool)has.GetValue(fixer))
+                            n = p.part.transform.TransformDirection(new Vector3((float)(double)fx.GetValue(fixer), (float)(double)fy.GetValue(fixer), (float)(double)fz.GetValue(fixer)));
+                    }
+                    if (n == Vector3d.zero) n = p.trackingDotTransform != null ? (Vector3d)p.trackingDotTransform.forward : (Vector3d)p.part.transform.forward;
+                    if (n.magnitude < 1e-6) continue;
+                    normals.Add(((Vector3d)rt.InverseTransformDirection((Vector3)n)).normalized);
+                    weights.Add(Math.Max(0.01, p.chargeRate));
+                }
+                catch { }
+            }
+            if (normals.Count == 0) return Vector3d.zero;
+            Func<Vector3d, double> score = d => { double s = 0; for (int i = 0; i < normals.Count; i++) s += weights[i] * Math.Max(0, Vector3d.Dot(normals[i], d)); return s; };
+            var candidates = new List<Vector3d>(normals);
+            for (int x = -1; x <= 1; x++) for (int y = -1; y <= 1; y++) for (int z = -1; z <= 1; z++) if (x != 0 || y != 0 || z != 0) candidates.Add(new Vector3d(x, y, z).normalized);
+            Vector3d best = candidates[0]; double bestScore = -1;
+            foreach (Vector3d c in candidates) { double s = score(c); if (s > bestScore) { bestScore = s; best = c; } }
+            // Climb from the best candidate in shrinking steps.
+            foreach (double step in new[] { 0.3, 0.1, 0.03 })
+            {
+                bool moved = true;
+                for (int guard = 0; moved && guard < 20; guard++)
+                {
+                    moved = false;
+                    foreach (Vector3d axis in new[] { Vector3d.right, Vector3d.up, Vector3d.forward })
+                        foreach (double sign in new[] { 1.0, -1.0 })
+                        {
+                            Vector3d c = (best + axis * (step * sign)).normalized;
+                            double s = score(c);
+                            if (s > bestScore + 1e-6) { bestScore = s; best = c; moved = true; }
+                        }
+                }
+            }
+            double total = 0; foreach (double w in weights) total += w;
+            _panelNominal = bestScore; _panelTotal = total;
+            return best;
+        }
+
+        private double _panelNominal, _panelTotal;
+
+        /// <summary>What the panel attitude should give against every panel full on, nominal rates at Kerbin's distance.</summary>
+        public string PanelPlan { get { return _panelTotal > 0 ? "best side gives " + _panelNominal.ToString("0.0") + " of " + _panelTotal.ToString("0.0") + " EC/s nominal" : null; } }
+
+        /// <summary>What the panels are making now, EC/s: Kerbalism's figure when it is there, else the stock flow.</summary>
+        public double PanelOutput()
+        {
+            double total = 0;
+            if (_v == null) return 0;
+            foreach (ModuleDeployableSolarPanel p in _v.FindPartModulesImplementing<ModuleDeployableSolarPanel>())
+            {
+                try
+                {
+                    PartModule fixer = p.part.Modules.Contains("SolarPanelFixer") ? p.part.Modules["SolarPanelFixer"] : null;
+                    System.Reflection.FieldInfo f = fixer != null ? fixer.GetType().GetField("currentOutput") : null;
+                    total += f != null ? Convert.ToDouble(f.GetValue(fixer)) : p.flowRate;
+                }
+                catch { }
+            }
+            return total;
+        }
+
+        /// <summary>The held attitude is reached and the craft has stopped turning: safe to go on rails (0.8.178: warp froze a turn half done).</summary>
+        public bool HoldSettled(double maxDegrees = 5)
+        {
+            if (_v == null || _v.ReferenceTransform == null) return true;
+            if (!_manualHold || _lockAt < 0) return true;
+            return Quaternion.Angle(_v.ReferenceTransform.rotation, _lastLock) < maxDegrees && TurnRate(_v) < 0.5;
+        }
+
         public void FaceSunBroadside()
         {
             if (_v == null) return;

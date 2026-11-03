@@ -224,6 +224,7 @@ namespace KSA.KSP.Flight
         /// <summary>A wait longer than this before the burn is spent broadside to the sun, panels lit; the turn comes after (0.8.176).</summary>
         private const double LongWait = 600;
         private bool _sunHold;
+        private double _sunHoldAt;
         private double _lastWarpAsk = -1e9;
 
         /// <summary>One physics step. Returns a log line or null.</summary>
@@ -244,9 +245,10 @@ namespace KSA.KSP.Flight
                     RefreshBurnTime(c);
                     if (ignition - now > LongWait)
                     {
-                        if (!_sunHold) { c.FaceSunBroadside(); _sunHold = true; }
-                        Status = "Burn in " + TransferSupport.Countdown(ignition - now) + "; broadside to the sun.";
-                        if (!c.IsWarping && now - _lastWarpAsk > 2) { _lastWarpAsk = now; c.WarpTo(ignition - LongWait + 60); }
+                        if (!_sunHold) { c.FacePanelsAtSun(); _sunHold = true; _sunHoldAt = now; }
+                        bool settled = (c.HoldSettled() && now - _sunHoldAt > 5) || now - _sunHoldAt > 120;
+                        Status = "Burn in " + TransferSupport.Countdown(ignition - now) + (settled ? "; panels to the sun." : "; turning the panels to the sun.");
+                        if (settled && !c.IsWarping && now - _lastWarpAsk > 2) { _lastWarpAsk = now; c.WarpTo(ignition - LongWait + 60); }
                         break;
                     }
                     if (_sunHold) { c.StopWarp(); _sunHold = false; }

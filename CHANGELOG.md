@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.178 (2026-11-02), test build
+
+- **Three dead again, 26 days short of Duna, power** (2026-11-02, Mk IIe from the "duan insert" save; the ejection by the count, the trims and the mid-course check all worked, 38 km periapsis). The coast had ordered the broadside turn and started the warp in the same second; the attitude froze half way round and Kerbalism took it for the whole 222-day cruise: 0.01 EC/s from 48 panels.
+- **The panels' side faces the sun, roll included, and the warp waits for the turn.** The crew read every panel's normal (Kerbalism's own reading when it is there), work out the one direction the sun should come from in the craft's frame, turn to it on the reaction wheel, wait until the turn has settled (up to two minutes), log "Panels making x EC/s", and only then warp. Same before any long wait for a burn. Broadside with the roll left as it was is the fallback for a craft with no panels.
+
 ## 0.8.177 (2026-11-02), test build
 
 - **An ejection burn finishes by the count once the path crosses to escape.** The node's burn vector is read off the orbit the node was placed on; when the ejection crosses to escape that vector drifts and flips, and the executor called the burn complete 223 m/s short (661 of 884; the earlier flight 1,044 of 1,063). From the patch change on, the direction is frozen and the burn runs on the delta-v counted.

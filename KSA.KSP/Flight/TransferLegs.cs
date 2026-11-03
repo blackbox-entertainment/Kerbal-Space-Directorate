@@ -1010,6 +1010,30 @@ namespace KSA.KSP.Flight
         private readonly double _stopBefore; // seconds short of the body's space to stop for a mid-course check (0.8.173); 0 = all the way in
         private double _deadline;
         private double _lastWarpRequest;
+        private double _turnStarted;
+        private bool _panelsChecked;
+        private const double SettleLimit = 120; // seconds allowed for the turn before the coast goes on regardless
+
+        /// <summary>
+        /// No warp until the turn to the sun is done (0.8.178): the coast had warped in the same second it ordered the turn, the
+        /// attitude froze half way round, and Kerbalism took that for the whole cruise (0.01 EC/s from 48 panels, three dead).
+        /// Logs what the panels make once settled. True while still turning.
+        /// </summary>
+        private bool Turning(FlightContext ctx, ref string line)
+        {
+            Vessel v = ctx.Vessel;
+            if (v == null || v.packed) return false;
+            double now = ctx.Now;
+            bool settled = ctx.Control.HoldSettled() && now - _turnStarted > 5;
+            if (!settled && now - _turnStarted < SettleLimit) { Status = "Turning the panels to the sun."; if (ctx.Control.IsWarping) ctx.Control.StopWarp(); return true; }
+            if (!_panelsChecked)
+            {
+                _panelsChecked = true;
+                double made = ctx.Control.PanelOutput();
+                line = "Panels making " + made.ToString("0.00") + " EC/s" + (settled ? "" : " (turn not settled after " + Math.Round(now - _turnStarted) + " s)") + ".";
+            }
+            return false;
+        }
 
         public WaitForSoiLeg(CelestialBody body, double maxDays)
         {
@@ -1034,7 +1058,10 @@ namespace KSA.KSP.Flight
             Vessel v = ctx.Vessel;
             if (v == null || _body == null) { State = LegState.Failed; Status = "No vessel or body."; return; }
             if (v.mainBody == _body) { State = LegState.Done; Status = "In " + _body.bodyName + "'s sphere of influence."; return; }
-            ctx.Control.FaceSunBroadside(); // panels to the sun for the long coast (0.8.176)
+            ctx.Control.FacePanelsAtSun(); // the panels' side to the sun for the long coast (0.8.176, 0.8.178)
+            _turnStarted = ctx.Now; _panelsChecked = false;
+            string plan = ctx.Control.PanelPlan;
+            if (plan != null) ctx.Say("Turning the panels to the sun: " + plan + ".");
             string power = Parts.KspLifeSupport.PowerReport(v);
             if (power != null) ctx.Say(power);
             // A moon that the path misses: never warp on while the supplies run out (2026-10-31: five days of warp to the edge of
@@ -1074,6 +1101,9 @@ namespace KSA.KSP.Flight
                 Status = "Never reached " + _body.bodyName + ".";
                 return "No " + _body.bodyName + " encounter after " + Math.Round(_maxDays, 1) + " days; coast abandoned.";
             }
+            string turning = null;
+            if (Turning(ctx, ref turning)) return null;
+            if (turning != null) return turning;
             if (_stopBefore > 0)
             {
                 Orbit around = TransferSupport.VesselPatchAround(v, _body);
