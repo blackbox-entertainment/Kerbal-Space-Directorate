@@ -1564,7 +1564,13 @@ namespace KSA.KSP.Flight
                     {
                         if (_exec.Failed) { Fail(_exec.FailReason); break; }
                         _moonsChecked = false;
-                        if (_finishing && v.orbit.PeA > air) { _phase = Phases.Finished; State = LegState.Done; ctx.Say("Aerobraking done after " + _passes + " passes: " + TransferSupport.Km(v.orbit.ApA) + " x " + TransferSupport.Km(v.orbit.PeA) + " orbit of " + _target.bodyName + "."); }
+                        if (_finishing && v.orbit.PeA > air)
+                        {
+                            // Clear of the air: round it out (0.8.184, T: "it should just round the orbit out"), one retrograde burn at periapsis.
+                            if (!_rounded && v.orbit.ApA > _altitude * 1.3 + 5000 && PlanRound(ctx, ref line)) { _rounded = true; break; }
+                            _phase = Phases.Finished; State = LegState.Done;
+                            ctx.Say("Aerobraking done after " + _passes + " passes: " + TransferSupport.Km(v.orbit.ApA) + " x " + TransferSupport.Km(v.orbit.PeA) + " orbit of " + _target.bodyName + ".");
+                        }
                         else { _finishing = false; _phase = Phases.Passes; }
                     }
                     else Status = "Lifting the orbit: " + _exec.Status;
@@ -1628,6 +1634,29 @@ namespace KSA.KSP.Flight
             c.Throttle = 0;
             Status = "Passing " + TransferSupport.BodyName(v.mainBody) + ": low point " + TransferSupport.Km(o.PeA) + ".";
             if (!c.IsWarping && o.patchEndTransition == Orbit.PatchTransitionType.ESCAPE && o.EndUT > ctx.Now + 120) c.WarpTo(o.EndUT - 60);
+        }
+
+        private bool _rounded;
+
+        /// <summary>A retrograde burn at periapsis that brings the high point down to the wanted orbit height (0.8.184).</summary>
+        private bool PlanRound(FlightContext ctx, ref string line)
+        {
+            Vessel v = ctx.Vessel;
+            double mu = _target.gravParameter, rPe = v.orbit.PeR, rAp = _target.Radius + _altitude;
+            if (rAp < rPe) rAp = rPe;
+            double sincePe = v.orbit.period - v.orbit.timeToPe;
+            bool justPastPe = sincePe < Math.Min(JustPastTop, 0.25 * v.orbit.period);
+            double utPe = ctx.Now + (justPastPe ? TurnSeconds : v.orbit.timeToPe);
+            double vPe = Math.Sqrt(Math.Max(0, mu * (2 / rPe - 1 / v.orbit.semiMajorAxis)));
+            double dv = Math.Sqrt(mu * (2 / rPe - 2 / (rPe + rAp))) - vPe;
+            if (Math.Abs(dv) < MinTrim) return false;
+            NodePlanner.ClearNodes(v);
+            if (NodePlanner.Add(v, utPe, new Vector3d(0, 0, dv)) == null) return false;
+            _exec = new NodeExecutor();
+            _exec.Begin(ctx);
+            if (_exec.Failed) return false;
+            line = "Rounding the orbit: " + Math.Round(Math.Abs(dv)) + " m/s at periapsis to " + TransferSupport.Km(_altitude) + ".";
+            return true;
         }
 
         /// <summary>A prograde burn at apoapsis that puts the low point at the given radius from the centre.</summary>

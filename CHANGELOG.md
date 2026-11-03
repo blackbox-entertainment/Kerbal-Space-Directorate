@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.184 (2026-11-03), test build
+
+- **Aerobraking ends in a round orbit** (T). Once the low point is lifted clear of the air, a retrograde burn at periapsis brings the high point down to the same height; the leg had left the orbit as the last pass made it (239 x 70 km).
+
 ## 0.8.183 (2026-11-03), test build
 
 - **The lift out of the air burns at apoapsis.** After six passes at Duna (14,746 down to 161 x 28 km) the lift clear of the air was planned "now, just past the top", because "within an hour of apoapsis" is true everywhere on a 51-minute orbit; it burned near the periapsis, raised the apoapsis instead, and would have repeated every lap. The shortcut now also requires being within a quarter of the orbit past the top.
