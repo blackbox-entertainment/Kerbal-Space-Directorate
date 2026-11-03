@@ -2,6 +2,12 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.185 (2026-11-03), test build
+
+- **First crew landed on Duna after a tanker stop** (2026-11-03, Mk IIe: 2.7 m/s, 0.2 m/s sideways, upright, 4% ground 447 m from the Director's pick), then over on its side: the leg contact spun it 19 deg/s, it leaned to 18 degrees and went. A tall lander on four LT-1 struts, with two empty X200-32 side tanks still bolted on.
+- **Empty drop tanks go whatever stage they sit in.** The rule only looked at the next staging group, and that was the chute stage, so the side tanks rode down to the surface. Each radial decoupler holding an empty branch is now fired itself.
+- **Tanks that carry landing legs are the undercarriage** (T: four radial tanks as a wide base). They stay on through the descent, the landing and the surface stay, and are dropped once the ship has lifted off and is climbing away.
+
 ## 0.8.184 (2026-11-03), test build
 
 - **Aerobraking ends in a round orbit** (T). Once the low point is lifted clear of the air, a retrograde burn at periapsis brings the high point down to the same height; the leg had left the orbit as the last pass made it (239 x 70 km).

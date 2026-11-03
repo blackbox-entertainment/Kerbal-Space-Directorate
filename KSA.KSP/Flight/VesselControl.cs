@@ -809,40 +809,48 @@ namespace KSA.KSP.Flight
         /// </summary>
         public bool DropEmptyTanks(ref string line)
         {
-            if (_v == null || _v.packed || IsWarping || _v.currentStage <= 1 || Now - _lastStage < 1.5) return false;
+            if (_v == null || _v.packed || IsWarping || Now - _lastStage < 1.5 || !PartsSafe()) return false;
             // Empty side tanks are the room for a tanker's fuel: they stay on until it has been met (2026-11-01).
             if (TankerStopLeg.TankerAhead(_v)) return false;
-            int next = _v.currentStage - 1, tanks = 0;
+            // Each radial decoupler holding an empty branch is fired itself, whatever stage it sits in (0.8.185: two empty X200-32s rode
+            // down to Duna's surface because their decouplers sat behind the chute stage, and the rule only looked at the next stage).
+            // A branch carrying a landing leg is the undercarriage (T: "4 tanks would act as a wide base"): it stays until the ship
+            // has landed here and is climbing away.
+            bool landedHere = KsaFlightDirector.Live != null && _v.mainBody != null && KsaFlightDirector.Live.Logged.Contains("Land:" + _v.mainBody.bodyName);
+            bool climbingAway = landedHere && _v.situation != Vessel.Situations.LANDED && _v.situation != Vessel.Situations.PRELAUNCH && _v.verticalSpeed > 5 && _v.heightFromTerrain > 200;
+            var fire = new List<ModuleAnchoredDecoupler>();
+            int tanks = 0;
             foreach (Part p in _v.parts)
             {
-                if (p.inverseStage != next) continue;
-                // The tanks carry the same stage number as their decouplers (2026-11-01: empty on Duna arrival, and they stayed on).
-                if (p.FindModuleImplementing<ModuleAnchoredDecoupler>() == null)
-                {
-                    if (p.CrewCapacity > 0 || p.FindModuleImplementing<ModuleEngines>() != null || p.FindModuleImplementing<ModuleParachute>() != null || p.FindModuleImplementing<ModuleDecouple>() != null) return false;
-                    continue;
-                }
-                foreach (Part held in p.children)
-                {
-                    if (!EmptyBranch(held, ref tanks)) return false;
-                }
+                ModuleAnchoredDecoupler d = p.FindModuleImplementing<ModuleAnchoredDecoupler>();
+                if (d == null || d.isDecoupled || p.inverseStage >= _v.currentStage) continue;
+                int held = 0;
+                bool legs = false, empty = true;
+                foreach (Part child in p.children) if (!EmptyBranch(child, ref held, ref legs)) { empty = false; break; }
+                if (!empty || held == 0) continue;
+                if (legs && !climbingAway) continue;
+                fire.Add(d);
+                tanks += held;
             }
-            if (tanks == 0 || !Stage()) return false;
-            line = tanks + " empty drop tanks jettisoned.";
+            if (fire.Count == 0) return false;
+            foreach (ModuleAnchoredDecoupler d in fire) { try { d.Decouple(); } catch (Exception e) { KsaCore.Log.Warn("Drop tank: " + e.Message); } }
+            _lastStage = Now;
+            line = tanks + " empty drop tank" + (tanks == 1 ? string.Empty : "s") + " jettisoned.";
             return true;
         }
 
-        /// <summary>True when a branch of parts holds no fuel, crew or engine. Counts the tanks in it.</summary>
-        private static bool EmptyBranch(Part p, ref int tanks)
+        /// <summary>True when a branch of parts holds no fuel, crew or engine. Counts the tanks in it and notes a landing leg.</summary>
+        private static bool EmptyBranch(Part p, ref int tanks, ref bool legs)
         {
             if (p.CrewCapacity > 0 || p.FindModuleImplementing<ModuleEngines>() != null) return false;
+            try { ModuleWheelBase w = p.FindModuleImplementing<ModuleWheelBase>(); if (w != null && w.wheelType == WheelType.LEG) legs = true; } catch { }
             foreach (PartResource r in p.Resources)
             {
                 if (r.resourceName != "LiquidFuel" && r.resourceName != "Oxidizer") continue;
                 if (r.amount > EmptyTank) return false;
                 tanks++;
             }
-            foreach (Part child in p.children) if (!EmptyBranch(child, ref tanks)) return false;
+            foreach (Part child in p.children) if (!EmptyBranch(child, ref tanks, ref legs)) return false;
             return true;
         }
 
