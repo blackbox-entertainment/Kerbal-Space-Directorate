@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.181 (2026-11-03), test build
+
+- **A loose capture stays under the innermost moon** (T: a round orbit would have needed no Ike dodge). The capture burn at a world with moons now aims an apoapsis below the moon's periapsis less its sphere of influence: 1,735 km at Duna instead of 14,376, about 64 m/s more than before and out of Ike's reach for good. The air still rounds it; the dodge stays as a backstop.
+
 ## 0.8.180 (2026-11-03), test build
 
 - **A burn is never called complete in its first second.** The 9 m/s Ike dodge at Duna "completed" at 0 of 9 one second after it lit (the vector-flip test ran on the orbit as it came off rails) and had to be planned again. The flip test now waits a second after ignition, as it already did after a stage drop.

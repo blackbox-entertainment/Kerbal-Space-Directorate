@@ -118,7 +118,7 @@ namespace KSA.KSP.Flight
                     if (profile == MissionProfile.Flyby) prog.Add(new PassPeriapsisLeg());
                     else if (profile == MissionProfile.Land)
                     {
-                        if (airbrakes) prog.Add(new CaptureLeg(target, orbitAlt, LooseCapture * target.sphereOfInfluence)).Add(new AirbrakeLeg(target, orbitAlt));
+                        if (airbrakes) prog.Add(new CaptureLeg(target, orbitAlt, LooseApoapsis(target))).Add(new AirbrakeLeg(target, orbitAlt));
                         else prog.Add(new CaptureLeg(target, orbitAlt));
                         prog.Add(new LandingLeg(ctx.MaxSiteSlope));
                     }
@@ -170,7 +170,7 @@ namespace KSA.KSP.Flight
                     {
                         double airPe = KSA.Core.Flight.Sim.AirbrakeRules.PassShare * target.atmosphereDepth;
                         Outbound(prog, ctx, target, interplanetary, airPe - 3000, airPe + 3000);
-                        prog.Add(new CaptureLeg(target, orbitAlt, LooseCapture * target.sphereOfInfluence)).Add(new AirbrakeLeg(target, orbitAlt)).Add(new TankerStopLeg()).Add(new LandingLeg(ctx.MaxSiteSlope));
+                        prog.Add(new CaptureLeg(target, orbitAlt, LooseApoapsis(target))).Add(new AirbrakeLeg(target, orbitAlt)).Add(new TankerStopLeg()).Add(new LandingLeg(ctx.MaxSiteSlope));
                     }
                     else
                     {
@@ -254,6 +254,20 @@ namespace KSA.KSP.Flight
 
         private const double ReturnAirShare = 0.43; // 30 km on Kerbin
         private const double LooseCapture = 0.3;    // of the sphere of influence: the apoapsis of a capture the air will finish
+
+        /// <summary>
+        /// The apoapsis (altitude) of a loose capture: 0.3 of the sphere, or under the innermost moon's reach where there is one
+        /// (0.8.181, T: a capture at 14,746 km over Duna crossed Ike's path and needed two dodges; 1,735 km costs about 64 m/s more
+        /// and Ike can never reach it). Never under five times the air, so the air still has an orbit to round.
+        /// </summary>
+        private static double LooseApoapsis(CelestialBody target)
+        {
+            double alt = LooseCapture * target.sphereOfInfluence;
+            if (target.orbitingBodies != null)
+                foreach (CelestialBody moon in target.orbitingBodies)
+                    if (moon != null && moon.orbit != null) alt = Math.Min(alt, moon.orbit.PeR - moon.sphereOfInfluence - target.Radius);
+            return Math.Max(alt, 5 * Math.Max(target.atmosphereDepth, 50000));
+        }
         private const double ThinAir = 20;          // kPa at the surface: thin enough to pass through for days (Duna 6.8; Laythe and Eve are not)
 
         /// <summary>A world whose air can finish a capture without a crew being crushed or burned on a low pass.</summary>
