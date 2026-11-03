@@ -274,6 +274,23 @@ namespace KSA.KSP.Flight
         private Func<Vector3d> _customForward;
 
         /// <summary>
+        /// Nose square to the sun for a long coast or a long wait before a burn (0.8.176): panels on the sides of the stack see
+        /// it. A Duna crew cruised 300 days nose-on to the sun after a 0.2 m/s trim, 29 of their 48 panels at 0% exposure, and
+        /// died of CO2 poisoning when the battery ran flat 23 days short of Duna.
+        /// </summary>
+        public void FaceSunBroadside()
+        {
+            if (_v == null) return;
+            PointAlong(() =>
+            {
+                Vector3d sun = (Planetarium.fetch.Sun.position - _v.GetWorldPos3D()).normalized;
+                Vector3d nose = Vector3d.Cross(sun, Vector3d.up);
+                if (nose.magnitude < 0.1) nose = Vector3d.Cross(sun, Vector3d.right);
+                return nose.normalized;
+            });
+        }
+
+        /// <summary>
         /// Holds a whole attitude (2026-10-30, aircraft): the nose along <paramref name="nose"/> and the control point's
         /// forward axis (belly or back, whichever the craft has) along <paramref name="forwardAxis"/>.
         /// </summary>

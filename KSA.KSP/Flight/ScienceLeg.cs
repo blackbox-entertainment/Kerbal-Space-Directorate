@@ -86,8 +86,8 @@ namespace KSA.KSP.Flight
                 // Power for steering comes first (2026-10-30): Kerbalism experiments drained a battery-less Mk1 pod and the
                 // reaction wheel went dead, so the capsule came in nose first. Below 40% charge they pause; above 60% they run.
                 double charge = VesselControl.ChargeFraction(v);
-                if (charge >= 0 && charge < LowCharge) StopKerbalismExperiments(subject, charge);
-                else if (charge < 0 || charge > ResumeCharge) { _pausedForPower = false; StartKerbalismExperiments(subject); } // a full battery first, or a dark side empties it (2026-11-01: 0 of 740 with 21 running)
+                if (charge >= 0 && charge < LowCharge) { StopKerbalismExperiments(subject, charge); ShedPower(v, charge); }
+                else if (charge < 0 || charge > ResumeCharge) { _pausedForPower = false; RestorePower(v); StartKerbalismExperiments(subject); } // a full battery first, or a dark side empties it (2026-11-01: 0 of 740 with 21 running)
             }
             List<ModuleScienceExperiment> exps = subject.FindPartModulesImplementing<ModuleScienceExperiment>();
             if (exps == null) return;
@@ -139,6 +139,24 @@ namespace KSA.KSP.Flight
 
         private const double LowCharge = 0.5, ResumeCharge = 0.9;
         private bool _pausedForPower;
+        private bool _transmitOff;
+
+        /// <summary>Low battery (0.8.176): science transmission off too, and what is drawing the power goes in the log, so the next loss is not a guess.</summary>
+        private void ShedPower(Vessel v, double charge)
+        {
+            if (v == null || _transmitOff) return;
+            _transmitOff = true;
+            bool changed = Parts.KspLifeSupport.SetTransmit(v, false);
+            string report = Parts.KspLifeSupport.PowerReport(v);
+            KsaCore.Log.Info("ScienceRunner: charge at " + Math.Round(charge * 100) + "%" + (changed ? ": science transmission off" : string.Empty) + (report != null ? "; " + report : "."));
+        }
+
+        private void RestorePower(Vessel v)
+        {
+            if (!_transmitOff) return;
+            _transmitOff = false;
+            if (Parts.KspLifeSupport.SetTransmit(v, true)) KsaCore.Log.Info("ScienceRunner: charge back up; science transmission on.");
+        }
 
         /// <summary>Switches every running Kerbalism experiment off to save electric charge for steering (2026-10-30).</summary>
         private void StopKerbalismExperiments(Vessel subject, double charge)

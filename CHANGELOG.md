@@ -2,6 +2,12 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.176 (2026-11-02), test build
+
+- **Three dead of CO2 poisoning 23 days short of Duna** (2026-11-02, Mk IIe, Kerbalism): the trims worked (0.2, 0.1 and 2.1 m/s to a 37 km periapsis), but the ship then cruised 300 days nose-on to the sun, as the last trim had left it. Its 48 side-mounted panels: 29 at 0% exposure, the rest at 0.1 to 3%. The 1,340 EC battery covered the scrubbers for 320 days and then did not.
+- **Long coasts and long waits are flown broadside to the sun.** The coast legs and any wait of more than ten minutes before a burn hold the nose square to the sun so panels on the sides of the stack see it; the turn to the burn comes in the last ten minutes.
+- **Low battery sheds the antenna too, and says what is drawing the power.** Below 50% charge the crew now switch off Kerbalism science transmission as well as the experiments, and log Kerbalism's own power ledger ("Power: net -0.12 EC/s: scrubber -0.08, ..."); the same line opens every coast.
+
 ## 0.8.175 (2026-11-02), test build
 
 - **Course corrections search small burns first.** Eight days out, the 69 m/s deep-space burn left Duna 4,971 km off and the trim found nothing: it bisected against the whole 400 m/s allowance, at whose far end the encounter 340 days ahead vanishes, so the band was never bracketed. The nudge needed was a fraction of a metre per second. Searches now try caps of 1, 5, 25 and 100 m/s before the full allowance.

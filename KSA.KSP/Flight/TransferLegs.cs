@@ -1021,7 +1021,9 @@ namespace KSA.KSP.Flight
             Vessel v = ctx.Vessel;
             if (v == null || _body == null) { State = LegState.Failed; Status = "No vessel or body."; return; }
             if (v.mainBody == _body) { State = LegState.Done; Status = "In " + _body.bodyName + "'s sphere of influence."; return; }
-            if (ctx.Control.CanSas(VesselAutopilot.AutopilotMode.StabilityAssist)) ctx.Control.Sas(VesselAutopilot.AutopilotMode.StabilityAssist, false);
+            ctx.Control.FaceSunBroadside(); // panels to the sun for the long coast (0.8.176)
+            string power = Parts.KspLifeSupport.PowerReport(v);
+            if (power != null) ctx.Say(power);
             // A moon that the path misses: never warp on while the supplies run out (2026-10-31: five days of warp to the edge of
             // Kerbin's space, 3,381 m/s still aboard, and the crew out of oxygen). Stop here so the Director can fly it home.
             if (_stopBefore > 0 && TransferSupport.VesselPatchAround(v, _body) == null)

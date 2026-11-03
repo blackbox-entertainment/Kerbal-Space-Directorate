@@ -42,6 +42,73 @@ namespace KSA.KSP.Parts
             }
         }
 
+        private static System.Reflection.Assembly _kerbalism;
+        private static bool _kerbalismLooked;
+
+        /// <summary>The assembly that defines KERBALISM.API (the loader's Kerbalism.dll is a bootstrap for it), or null.</summary>
+        private static System.Reflection.Assembly KerbalismAssembly
+        {
+            get
+            {
+                if (_kerbalismLooked) return _kerbalism;
+                _kerbalismLooked = true;
+                try { foreach (System.Reflection.Assembly a in AppDomain.CurrentDomain.GetAssemblies()) if (a.GetType("KERBALISM.API") != null) { _kerbalism = a; break; } }
+                catch (Exception e) { KsaCore.Log.Warn("Kerbalism lookup: " + e.Message); }
+                return _kerbalism;
+            }
+        }
+
+        /// <summary>
+        /// Kerbalism's science transmission for the vessel on or off (its "Transmit" device): off saves the antenna's power when the
+        /// battery is low (0.8.176). True when the setting changed; false without Kerbalism or when it was already so.
+        /// </summary>
+        public static bool SetTransmit(Vessel v, bool on)
+        {
+            try
+            {
+                System.Reflection.Assembly asm = KerbalismAssembly;
+                if (asm == null || v == null) return false;
+                Type db = asm.GetType("KERBALISM.DB");
+                System.Reflection.MethodInfo get = db != null ? db.GetMethod("KerbalismData", new[] { typeof(Vessel) }) : null;
+                object vd = get != null ? get.Invoke(null, new object[] { v }) : null;
+                System.Reflection.FieldInfo field = vd != null ? vd.GetType().GetField("deviceTransmit") : null;
+                if (field == null || (bool)field.GetValue(vd) == on) return false;
+                field.SetValue(vd, on);
+                return true;
+            }
+            catch (Exception e) { KsaCore.Log.Warn("Kerbalism transmit: " + e.Message); return false; }
+        }
+
+        /// <summary>What Kerbalism says is making and using power aboard, EC/s, biggest first (0.8.176); null without Kerbalism.</summary>
+        public static string PowerReport(Vessel v)
+        {
+            try
+            {
+                System.Reflection.Assembly asm = KerbalismAssembly;
+                if (asm == null || v == null) return null;
+                Type api = asm.GetType("KERBALISM.API");
+                System.Reflection.MethodInfo m = api != null ? api.GetMethod("ResourceBrokers", new[] { typeof(Vessel), typeof(string) }) : null;
+                System.Collections.IEnumerable list = m != null ? m.Invoke(null, new object[] { v, "ElectricCharge" }) as System.Collections.IEnumerable : null;
+                if (list == null) return null;
+                var items = new List<KeyValuePair<string, double>>();
+                double net = 0;
+                foreach (object o in list)
+                {
+                    string[] key = o.GetType().GetProperty("Key").GetValue(o, null) as string[];
+                    double rate = Convert.ToDouble(o.GetType().GetProperty("Value").GetValue(o, null));
+                    string name = key != null && key.Length > 0 ? key[key.Length - 1] : "?";
+                    items.Add(new KeyValuePair<string, double>(name, rate));
+                    net += rate;
+                }
+                items.Sort((a, b) => Math.Abs(b.Value).CompareTo(Math.Abs(a.Value)));
+                var sb = new System.Text.StringBuilder("Power: net " + net.ToString("+0.00;-0.00") + " EC/s");
+                int n = 0;
+                foreach (KeyValuePair<string, double> kv in items) { if (n >= 6) break; sb.Append(n == 0 ? ": " : ", ").Append(kv.Key).Append(' ').Append(kv.Value.ToString("+0.00;-0.00")); n++; }
+                return sb.Append('.').ToString();
+            }
+            catch (Exception e) { KsaCore.Log.Warn("Kerbalism power report: " + e.Message); return null; }
+        }
+
         /// <summary>"Kerbalism" when it is installed, else empty: what the Agency's LifeSupportMod is set to.</summary>
         public static string ModName { get { return KerbalismInstalled ? Kerbalism : string.Empty; } }
 

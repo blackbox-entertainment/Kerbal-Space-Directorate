@@ -202,6 +202,7 @@ namespace KSA.KSP.Flight
             _burnTime = ctx.Control.BurnTime(_startDv);
             if (double.IsInfinity(_burnTime)) _burnTime = 60;
             _phase = Phases.Align;
+            _sunHold = false;
             _tolerance = ctx.Crew != null ? Math.Max(0.1, ctx.Crew.BurnTolerance) : 0.3;
             _lateBy = 0;
             if (ctx.Crew != null && ctx.Crew.RollMistake(ctx.Rng)) { _lateBy = ctx.Crew.LateIgnition(ctx.Rng); ctx.Say(ctx.Crew.PilotName + " is slow on the ignition call: burn will start " + Math.Round(_lateBy) + " s late."); }
@@ -210,6 +211,11 @@ namespace KSA.KSP.Flight
         }
 
         private void Fail(string why) { _phase = Phases.Failed; FailReason = why; Status = "Burn failed: " + why; }
+
+        /// <summary>A wait longer than this before the burn is spent broadside to the sun, panels lit; the turn comes after (0.8.176).</summary>
+        private const double LongWait = 600;
+        private bool _sunHold;
+        private double _lastWarpAsk = -1e9;
 
         /// <summary>One physics step. Returns a log line or null.</summary>
         public string Step(FlightContext ctx)
@@ -227,6 +233,14 @@ namespace KSA.KSP.Flight
             {
                 case Phases.Align:
                     RefreshBurnTime(c);
+                    if (ignition - now > LongWait)
+                    {
+                        if (!_sunHold) { c.FaceSunBroadside(); _sunHold = true; }
+                        Status = "Burn in " + TransferSupport.Countdown(ignition - now) + "; broadside to the sun.";
+                        if (!c.IsWarping && now - _lastWarpAsk > 2) { _lastWarpAsk = now; c.WarpTo(ignition - LongWait + 60); }
+                        break;
+                    }
+                    if (_sunHold) { c.StopWarp(); _sunHold = false; }
                     c.Sas(VesselAutopilot.AutopilotMode.Maneuver, false);
                     if (c.AttitudeError(burn) < 5 || now > ignition - 5) { _phase = Phases.Warp; }
                     break;
