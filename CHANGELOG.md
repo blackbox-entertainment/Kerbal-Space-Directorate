@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.183 (2026-11-03), test build
+
+- **The lift out of the air burns at apoapsis.** After six passes at Duna (14,746 down to 161 x 28 km) the lift clear of the air was planned "now, just past the top", because "within an hour of apoapsis" is true everywhere on a 51-minute orbit; it burned near the periapsis, raised the apoapsis instead, and would have repeated every lap. The shortcut now also requires being within a quarter of the orbit past the top.
+
 ## 0.8.182 (2026-11-03), test build
 
 - **Aerobraking passes run at 4x physics warp** (T: "slow and boring"). Once the nose is steady on the velocity the crew set 4x through the air, as the landing already does on a steady descent, and drop it if the craft starts to swing. Never rails warp in the air: the game does not simulate drag on rails and can delete a low vessel outright, which is also why the flight must stay on screen through the passes.

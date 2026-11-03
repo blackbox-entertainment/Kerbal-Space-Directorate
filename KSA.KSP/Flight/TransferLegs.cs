@@ -1635,8 +1635,12 @@ namespace KSA.KSP.Flight
         {
             Vessel v = ctx.Vessel;
             double mu = _target.gravParameter, rAp = v.orbit.ApR;
-            // Just past the top after another burn: now, not a whole lap on through the air.
-            double utAp = ctx.Now + (v.orbit.period - v.orbit.timeToAp < JustPastTop ? TurnSeconds : v.orbit.timeToAp);
+            // Just past the top after another burn: now, not a whole lap on through the air. Within an hour of the top, but never
+            // more than a quarter of the orbit past it (0.8.183: a 51-minute orbit is always "within an hour", so the lift clear
+            // of the air was burned near the periapsis, raising the apoapsis instead, 24 m/s a lap).
+            double sinceAp = v.orbit.period - v.orbit.timeToAp;
+            bool justPastTop = sinceAp < Math.Min(JustPastTop, 0.25 * v.orbit.period);
+            double utAp = ctx.Now + (justPastTop ? TurnSeconds : v.orbit.timeToAp);
             double vAp = Math.Sqrt(Math.Max(0, mu * (2 / rAp - 1 / v.orbit.semiMajorAxis)));
             double dv = Math.Sqrt(mu * (2 / rAp - 2 / (rAp + rLow))) - vAp;
             if (!_finishing && Math.Abs(dv) < MinTrim) { _trimDone = true; return false; }
