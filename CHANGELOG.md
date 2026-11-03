@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.179 (2026-11-03), test build
+
+- **A crew reached Duna orbit alive** (2026-11-03, Mk IIe from the "duan insert" save: ejection by the count, trims, panels to the sun, mid-course check, 343 m/s capture into 14,746 x 139 km). At the edge of Duna's space seven 1 m/s trims fired before the ship had finished turning to the node, each the wrong way, and walked the periapsis from 36 km to 139 km, out of the air; the aerobraking leg lowers it again at apoapsis.
+- **No burn until the ship points at the node.** The executor had lit at the planned second whatever the attitude. It now holds until within 5 degrees, for up to two minutes or the burn's own length, then goes as it is and says so. The wait before a burn spent broadside to the sun ends twenty minutes out instead of ten, time enough for a heavy stack to come round.
+
 ## 0.8.178 (2026-11-02), test build
 
 - **Three dead again, 26 days short of Duna, power** (2026-11-02, Mk IIe from the "duan insert" save; the ejection by the count, the trims and the mid-course check all worked, 38 km periapsis). The coast had ordered the broadside turn and started the warp in the same second; the attitude froze half way round and Kerbalism took it for the whole 222-day cruise: 0.01 EC/s from 48 panels.

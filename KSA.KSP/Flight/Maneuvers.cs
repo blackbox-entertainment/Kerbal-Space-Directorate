@@ -222,7 +222,8 @@ namespace KSA.KSP.Flight
         private void Fail(string why) { _phase = Phases.Failed; FailReason = why; Status = "Burn failed: " + why; }
 
         /// <summary>A wait longer than this before the burn is spent broadside to the sun, panels lit; the turn comes after (0.8.176).</summary>
-        private const double LongWait = 600;
+        private const double LongWait = 1200; // 600 until 0.8.179: a 40 t stack on a small wheel needs more than ten minutes to come round
+        private const double AlignLimit = 5;
         private bool _sunHold;
         private double _sunHoldAt;
         private double _lastWarpAsk = -1e9;
@@ -263,6 +264,12 @@ namespace KSA.KSP.Flight
                         c.StopWarp();
                         // A burn lit on rails gives no thrust (0.8.174: 43 m/s "started" under warp, 32 counted, the station missed by 48 km).
                         if (v.packed || c.IsWarping) { Status = "Waiting for warp to end."; break; }
+                        // Never light pointing the wrong way (0.8.179): seven 1 m/s trims at the edge of Duna's space fired before the
+                        // turn was done and walked the periapsis from 36 km to 139 km, out of the air. A late burn costs little; a
+                        // wrong one costs the pass. Two minutes, or the burn's own length, of grace, then it goes as it is.
+                        double off = c.AttitudeError(burn);
+                        if (off > AlignLimit && now < ignition + Math.Max(120, _burnTime)) { Status = "Holding the burn: " + Math.Round(off) + " deg off the node."; break; }
+                        if (off > AlignLimit) line = "Burning " + Math.Round(off) + " deg off the node; the turn never settled.";
                         c.EnsureEngine(ref line);
                         c.Throttle = 1f;
                         _phase = Phases.Burn; _started = now;
