@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.180 (2026-11-03), test build
+
+- **A burn is never called complete in its first second.** The 9 m/s Ike dodge at Duna "completed" at 0 of 9 one second after it lit (the vector-flip test ran on the orbit as it came off rails) and had to be planned again. The flip test now waits a second after ignition, as it already did after a stage drop.
+
 ## 0.8.179 (2026-11-03), test build
 
 - **A crew reached Duna orbit alive** (2026-11-03, Mk IIe from the "duan insert" save: ejection by the count, trims, panels to the sun, mid-course check, 343 m/s capture into 14,746 x 139 km). At the edge of Duna's space seven 1 m/s trims fired before the ship had finished turning to the node, each the wrong way, and walked the periapsis from 36 km to 139 km, out of the air; the aerobraking leg lowers it again at apoapsis.

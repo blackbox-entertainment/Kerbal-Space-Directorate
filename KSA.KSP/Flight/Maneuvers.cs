@@ -306,7 +306,10 @@ namespace KSA.KSP.Flight
                     // A long burn leaves the node behind and the vector never empties: stop on what was really burned
                     // (2026-11-01: a 1,047 m/s ejection under warp burned 1,567 m/s and went past Duna).
                     bool spent = KSA.Core.Flight.Sim.BurnRules.Spent(_burned, _startDv);
-                    bool flipped = !justStaged && !_frozen && Vector3d.Dot(burn, _lastBurnVector) < 0;
+                    // The first second after ignition is also the first second off rails, and the orbit the node's vector is read from
+                    // can be mid-reinitialisation (0.8.180: a 9 m/s Ike dodge "completed" at 0 of 9 a second after it lit, and was redone).
+                    bool justLit = now - _started < 1.0;
+                    bool flipped = !justStaged && !justLit && !_frozen && Vector3d.Dot(burn, _lastBurnVector) < 0;
                     bool overran = !justStaged && remaining < 2 && now - _started > _burnTime + 10;
                     if (spent || remaining < _tolerance || flipped || overran || (CutOff != null && CutOff(v)))
                     {
