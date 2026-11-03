@@ -1427,7 +1427,7 @@ namespace KSA.KSP.Flight
         private readonly double _altitude;
         private Phases _phase;
         private NodeExecutor _exec;
-        private bool _inAir, _climbing, _caughtSaid, _moonsChecked, _trimDone, _finishing;
+        private bool _inAir, _climbing, _caughtSaid, _moonsChecked, _trimDone, _finishing, _passWarped;
         private int _passes, _dodges;
         private double _energyBefore, _lastDrop;
 
@@ -1519,9 +1519,20 @@ namespace KSA.KSP.Flight
                     double mu = _target.gravParameter;
                     if (inAir)
                     {
-                        if (!_inAir) { _inAir = true; _passes++; }
+                        if (!_inAir) { _inAir = true; _passes++; _passWarped = false; }
+                        // 4x physics warp through the air once the nose is steady (0.8.182, T: "slow and boring"): a pass is seven minutes at 1x.
+                        // Rails warp never in the air; the warp is dropped if the craft starts to swing.
+                        bool physicsWarp = c.IsWarping && TimeWarp.WarpMode == TimeWarp.Modes.LOW;
+                        if (physicsWarp && VesselControl.TurnRate(v) > 3) { c.StopWarp(); _passWarped = true; }
+                        else if (!c.IsWarping && !_passWarped && VesselControl.TurnRate(v) < 0.5 && c.AttitudeError(v.obt_velocity) < 10)
+                        {
+                            _passWarped = true;
+                            TimeWarp.fetch.Mode = TimeWarp.Modes.LOW;
+                            TimeWarp.SetRate(3, false); // 4x
+                        }
                         break;
                     }
+                    if (c.IsWarping && TimeWarp.WarpMode == TimeWarp.Modes.LOW) c.StopWarp(); // out of the air: back to 1x before the rails warp to the next pass
                     double energy = -mu / (2 * v.orbit.semiMajorAxis);
                     if (_inAir)
                     {

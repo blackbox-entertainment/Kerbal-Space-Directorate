@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.182 (2026-11-03), test build
+
+- **Aerobraking passes run at 4x physics warp** (T: "slow and boring"). Once the nose is steady on the velocity the crew set 4x through the air, as the landing already does on a steady descent, and drop it if the craft starts to swing. Never rails warp in the air: the game does not simulate drag on rails and can delete a low vessel outright, which is also why the flight must stay on screen through the passes.
+
 ## 0.8.181 (2026-11-03), test build
 
 - **A loose capture stays under the innermost moon** (T: a round orbit would have needed no Ike dodge). The capture burn at a world with moons now aims an apoapsis below the moon's periapsis less its sphere of influence: 1,735 km at Duna instead of 14,376, about 64 m/s more than before and out of Ike's reach for good. The air still rounds it; the dodge stays as a backstop.
