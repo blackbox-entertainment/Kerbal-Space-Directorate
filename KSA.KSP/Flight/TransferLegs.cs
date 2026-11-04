@@ -465,6 +465,46 @@ namespace KSA.KSP.Flight
             }
         }
 
+        /// <summary>
+        /// The cheapest window from origin to target in the next cycle, with the near-window rule: the cheapest date in a whole cycle can be
+        /// the next window when this one is only hours off or just gone, and a little more burn now beats two more years in orbit
+        /// (2026-11-01, T: launched on a good window, reached orbit and was told 913 days). Null when nothing is found.
+        /// </summary>
+        public static TransferPlan Window(CelestialBody origin, CelestialBody target, double now, double synodic, double hohmannTime)
+        {
+            CelestialBody sun = origin.referenceBody;
+            double sunMu = sun.gravParameter, day = TransferSupport.Day;
+            TransferPlan plan = null;
+            try
+            {
+                plan = TransferPlanner.Plan(OrbitAdapter.Sampler(origin.orbit), OrbitAdapter.Sampler(target.orbit), sunMu,
+                    now + day, now + 1.1 * synodic, 0.5 * hohmannTime, 1.6 * hohmannTime, 60, 30, 0.5);
+            }
+            catch (Exception e) { KsaCore.Log.Error("InterplanetaryTransferLeg planner threw: " + e); plan = null; }
+            if (plan == null) return null;
+            if (plan.DepartureUt - now > NearWindowDays * day)
+            {
+                TransferPlan near = null;
+                try { near = TransferPlanner.Plan(OrbitAdapter.Sampler(origin.orbit), OrbitAdapter.Sampler(target.orbit), sunMu, now + 600, now + NearWindowDays * day, 0.5 * hohmannTime, 1.6 * hohmannTime, 40, 30, 0.5); }
+                catch (Exception e) { KsaCore.Log.Error("InterplanetaryTransferLeg near search threw: " + e); }
+                if (near != null && near.DeltaVMagnitude <= plan.DeltaVMagnitude * NearWindowPrice) plan = near;
+            }
+            return plan;
+        }
+
+        /// <summary>The window home from a planet, for the ascent to climb into its plane (0.8.209). Null for a moon of home, or when nothing is found.</summary>
+        public static TransferPlan HomeWindow(CelestialBody origin, CelestialBody home, double now)
+        {
+            if (origin == null || home == null || origin.orbit == null || home.orbit == null || origin.referenceBody == null || origin.referenceBody != home.referenceBody) return null;
+            double t1 = origin.orbit.period, t2 = home.orbit.period;
+            double synodic = (t1 > 0 && t2 > 0 && Math.Abs(1 / t1 - 1 / t2) > 1e-12) ? 1 / Math.Abs(1 / t1 - 1 / t2) : Math.Max(t1, t2);
+            if (synodic <= 0 || double.IsNaN(synodic)) synodic = 400 * TransferSupport.Day;
+            double hohmannTime;
+            Ejection.Hohmann(origin.referenceBody.gravParameter, origin.orbit.semiMajorAxis, home.orbit.semiMajorAxis, out hohmannTime);
+            if (double.IsNaN(hohmannTime) || hohmannTime <= 0) hohmannTime = synodic / 2;
+            return Window(origin, home, now, synodic, hohmannTime);
+        }
+
         private const double StartedWithin = 120; // seconds before a node: its burn may already be running
         private const double NearWindowDays = 30;
         private const double NearWindowPrice = 1.3; // of the best excess speed in the cycle
@@ -601,23 +641,8 @@ namespace KSA.KSP.Flight
             Ejection.Hohmann(sunMu, r1, r2, out hohmannTime);
             if (double.IsNaN(hohmannTime) || hohmannTime <= 0) hohmannTime = synodic / 2;
 
-            TransferPlan plan = null;
-            try
-            {
-                plan = TransferPlanner.Plan(OrbitAdapter.Sampler(_origin.orbit), OrbitAdapter.Sampler(_target.orbit), sunMu,
-                    now + day, now + 1.1 * synodic, 0.5 * hohmannTime, 1.6 * hohmannTime, 60, 30, 0.5);
-            }
-            catch (Exception e) { KsaCore.Log.Error("InterplanetaryTransferLeg planner threw: " + e); plan = null; }
+            TransferPlan plan = Window(_origin, _target, now, synodic, hohmannTime);
             if (plan == null) { Fail("no transfer window to " + _target.bodyName + " found"); return "Transfer planning failed: no window found."; }
-            // The cheapest date in a whole cycle can be the next window when this one is only hours off or just gone: a little more burn now beats
-            // two more years in orbit (2026-11-01, T: launched on a good window, reached orbit and was told 913 days).
-            if (plan.DepartureUt - now > NearWindowDays * day)
-            {
-                TransferPlan near = null;
-                try { near = TransferPlanner.Plan(OrbitAdapter.Sampler(_origin.orbit), OrbitAdapter.Sampler(_target.orbit), sunMu, now + 600, now + NearWindowDays * day, 0.5 * hohmannTime, 1.6 * hohmannTime, 40, 30, 0.5); }
-                catch (Exception e) { KsaCore.Log.Error("InterplanetaryTransferLeg near search threw: " + e); }
-                if (near != null && near.DeltaVMagnitude <= plan.DeltaVMagnitude * NearWindowPrice) plan = near;
-            }
 
             // The supplies aboard set the latest arrival (0.8.202, 2026-11-04: the mk IIIe's oxygen runs out 1,080 days after launch and the
             // cheapest return lands 1,150 days after it; the crew before died the same way at T+1,081 d, "of thirst" by the report). A dearer,

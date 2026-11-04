@@ -1403,6 +1403,41 @@ namespace KSA.KSP.Flight
 
         public AirlessAscentLeg(double targetAltitude) { _target = Math.Max(5000, targetAltitude); }
 
+        /// <summary>
+        /// Compass heading of the climb (0.8.209): east unless the flight goes home from here, when it is the heading that puts the orbit
+        /// in the plane of the way home, so the ejection needs no plane change (2026-11-04: a climb east from a 40 degree site left an
+        /// orbit tilted 40 degrees from the way to Kerbin, and the ejection cost 820 m/s against 803 aboard). A world's spin is nothing
+        /// off Duna or the Mun, so any heading costs the same climb.
+        /// </summary>
+        private double _headingDeg = 90;
+
+        private void ChooseHeading(FlightContext ctx, Vessel v)
+        {
+            _headingDeg = 90;
+            try
+            {
+                if (ctx.Profile != KSA.Core.Missions.MissionProfile.Land || ctx.Home == null || v.mainBody == ctx.Home) return;
+                KSA.Core.Flight.Orbital.TransferPlan plan = InterplanetaryTransferLeg.HomeWindow(v.mainBody, ctx.Home, ctx.Now);
+                if (plan == null || plan.DeltaV.Length < 1) return;
+                // The orbit frame and the world frame differ by a swap of y and z; check it on the craft's own position before trusting it.
+                Vector3d here = ((Vector3d)v.GetWorldPos3D() - v.mainBody.position).normalized;
+                Vector3d fromOrbit = v.orbit != null ? v.orbit.getRelativePositionAtUT(ctx.Now).xzy.normalized : Vector3d.zero;
+                if (fromOrbit == Vector3d.zero || Vector3d.Angle(here, fromOrbit) > 5) { KsaCore.Log.Warn("Ascent heading: frame check failed (" + (fromOrbit == Vector3d.zero ? "no orbit" : Math.Round(Vector3d.Angle(here, fromOrbit), 1) + " deg") + "); climbing east."); return; }
+                Vector3d u = OrbitAdapter.ToVector(plan.DeltaV).xzy.normalized;
+                Vector3d up = v.upAxis;
+                Vector3d n = Vector3d.Cross(up, u);
+                if (n.magnitude < 0.05) return; // the way home is straight up: any heading does
+                Vector3d t = Vector3d.Cross(n.normalized, up).normalized;
+                if (Vector3d.Dot(t, v.east) < 0) t = -t;
+                double heading = Math.Atan2(Vector3d.Dot(t, v.east), Vector3d.Dot(t, v.north)) * 180 / Math.PI;
+                if (heading < 0) heading += 360;
+                _headingDeg = heading;
+                double elevation = 90 - Vector3d.Angle(up, u);
+                ctx.Say("Climbing on heading " + Math.Round(heading) + ", into the plane of the way home (it leaves " + Math.Round(elevation) + " deg above this horizon), so the ejection needs no plane change.");
+            }
+            catch (Exception e) { KsaCore.Log.Warn("Ascent heading: " + e.Message); _headingDeg = 90; }
+        }
+
         public string Name { get { return "Ascent to orbit"; } }
         public string Status { get; private set; }
         public LegState State { get; private set; }
@@ -1425,6 +1460,7 @@ namespace KSA.KSP.Flight
                     case Vessel.Situations.PRELAUNCH:
                     case Vessel.Situations.SPLASHED:
                         _phase = Phases.Liftoff;
+                        ChooseHeading(ctx, v);
                         break;
                     case Vessel.Situations.ORBITING:
                         if (v.orbit.PeA >= _target * 0.85) { State = LegState.Done; Status = "Already in orbit."; return; }
@@ -1504,7 +1540,7 @@ namespace KSA.KSP.Flight
                         {
                             // East by the compass, not by a yaw input: yaw follows however the lander happened to roll, and a kick that way
                             // put it in an orbit tilted 113 degrees, which no fuel aboard could bring home (2026-10-31).
-                            c.PointAlong(() => ClimbDirection(v, KickPitch));
+                            c.PointAlong(() => ClimbDirection(v, KickPitch, _headingDeg));
                             _phase = Phases.Kick; _phaseStart = ctx.Now;
                             Status = "Pitching east.";
                         }
@@ -1516,7 +1552,7 @@ namespace KSA.KSP.Flight
                         if (ctx.Now - _phaseStart > 2.5)
                         {
                             if (v.mainBody.atmosphere) c.Sas(VesselAutopilot.AutopilotMode.Prograde, true);
-                            else c.PointAlong(() => ClimbDirection(v, AirlessPitch(v)));
+                            else c.PointAlong(() => ClimbDirection(v, AirlessPitch(v), _headingDeg));
                             _phase = Phases.Ascent; _phaseStart = ctx.Now;
                             Status = "Holding prograde.";
                             ctx.Say("Pitch program started; following prograde.");
@@ -1609,10 +1645,11 @@ namespace KSA.KSP.Flight
 
         /// <summary>Positive yaw tilts the nose toward the control frame's right; pick the sign that points it east.</summary>
         /// <summary>East, raised by the given pitch above the horizon.</summary>
-        private static Vector3d ClimbDirection(Vessel v, double pitch)
+        private static Vector3d ClimbDirection(Vessel v, double pitch, double headingDeg)
         {
-            double p = pitch * Math.PI / 180;
-            return ((Vector3d)v.upAxis * Math.Sin(p) + (Vector3d)v.east * Math.Cos(p)).normalized;
+            double p = pitch * Math.PI / 180, h = headingDeg * Math.PI / 180;
+            Vector3d along = ((Vector3d)v.north * Math.Cos(h) + (Vector3d)v.east * Math.Sin(h)).normalized;
+            return ((Vector3d)v.upAxis * Math.Sin(p) + along * Math.Cos(p)).normalized;
         }
 
         /// <summary>

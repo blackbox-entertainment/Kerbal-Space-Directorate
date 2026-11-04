@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.209 (2026-11-04), test build
+
+- **The climb off another world goes into the plane of the way home.** A climb east from a 40 degree landing site left the mk IIIe in an orbit tilted 40 degrees from the way to Kerbin, and the ejection from it cost 820 m/s against 803 aboard (T: "if it is not ground vs orbit it should not matter if I start from the ground"; it did not, until now). Before lifting off for home, the crew find the next window to Kerbin, work out the heading that puts the orbit in the plane of that departure, and climb on it, so the ejection is the plain prograde burn again. A world's spin is nothing off Duna or the Mun, so any heading costs the same climb. The log says the heading and why. A return from a moon of Kerbin, or a flight that is not going home from here, climbs east as before.
+
 ## 0.8.208 (2026-11-04), test build
 
 - **The ejection counts the thrusters and tries a cheaper window before holding.** The mk IIIe held in Duna orbit with 803 m/s in the tanks against an 820 m/s ejection, 168 monopropellant unspent. The affordability check now adds what the thrusters could give (monopropellant at the thrusters' Isp against the craft's mass), the reserve for corrections is 60 m/s (a planned ejection's corrections ran 54 + 4 on the way out), and when the gentlest window still does not fit the crew try the window with the cheapest departure, since a reentry at home does not pay for a faster arrival. The log says which window they took and what rides on the thrusters.
