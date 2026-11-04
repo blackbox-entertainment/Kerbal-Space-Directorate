@@ -1061,10 +1061,65 @@ namespace KSA.KSP.Flight
                     ctx.Say("Not on the ground; surface operations skipped.");
                     State = LegState.Done; return;
                 }
+                // Someone is already outside (0.8.204, 2026-11-04: a restart on Duna with Verdin on EVA resumed at the ascent and the lander
+                // left without him; T: "it really should wait for me to board before returning"). They are brought aboard first.
+                Vessel outside = EvaNear(v, OutsideRange);
+                if (outside != null && Adopt(v, outside))
+                {
+                    _phase = Phases.Boarding;
+                    _evaStart = ctx.Now;
+                    _nextBoardTry = ctx.Now;
+                    _boardTries = 0;
+                    Status = _crew.name + " is outside: bringing them aboard.";
+                    ctx.Say(_crew.name + " is outside the lander: bringing them aboard before anything else.");
+                    EnsureWatcher();
+                    return;
+                }
                 _phase = Phases.Spawn;
                 _evaStart = ctx.Now;
             }
             catch (Exception e) { KsaCore.Log.Error("SurfaceOpsLeg.Begin: " + e); State = LegState.Done; }
+        }
+
+        /// <summary>How far from the lander a kerbal on foot still counts as its crew outside, metres.</summary>
+        internal const double OutsideRange = 1000;
+
+        /// <summary>The nearest kerbal on EVA within range of the vessel, or null.</summary>
+        internal static Vessel EvaNear(Vessel v, double range)
+        {
+            Vessel best = null;
+            double bestGap = range;
+            try
+            {
+                if (v == null) return null;
+                Vector3d here = v.GetWorldPos3D();
+                foreach (Vessel other in FlightGlobals.Vessels)
+                {
+                    if (other == null || other == v || !other.isEVA || other.state == Vessel.State.DEAD) continue;
+                    double gap = (other.GetWorldPos3D() - here).magnitude;
+                    if (gap < bestGap) { bestGap = gap; best = other; }
+                }
+            }
+            catch (Exception e) { KsaCore.Log.Warn("EvaNear: " + e.Message); }
+            return best;
+        }
+
+        /// <summary>Takes a kerbal already outside as this leg's walker, with a seat aboard the lander to board. False when nothing fits.</summary>
+        private bool Adopt(Vessel v, Vessel outside)
+        {
+            try
+            {
+                List<ProtoCrewMember> crew = outside.GetVesselCrew();
+                if (crew == null || crew.Count == 0 || outside.evaController == null) return false;
+                _crew = crew[0];
+                _eva = outside.evaController;
+                _part = null;
+                foreach (Part p in v.parts)
+                    if (p != null && p.CrewCapacity > 0 && p.protoModuleCrew != null && p.protoModuleCrew.Count < p.CrewCapacity && (_part == null || (p.airlock != null && _part.airlock == null))) _part = p;
+                if (_part == null) { _ctx.Say("No free seat aboard for " + _crew.name + "."); return false; }
+                return true;
+            }
+            catch (Exception e) { KsaCore.Log.Warn("SurfaceOpsLeg.Adopt: " + e.Message); return false; }
         }
 
         public string Step(FlightContext ctx)
@@ -1345,6 +1400,8 @@ namespace KSA.KSP.Flight
         public string Status { get; private set; }
         public LegState State { get; private set; }
 
+        private double _outsideSaid = -1e9;
+
         public void Begin(FlightContext ctx)
         {
             State = LegState.Running;
@@ -1397,6 +1454,18 @@ namespace KSA.KSP.Flight
                 {
                     case Phases.Liftoff:
                         if (warping) { c.StopWarp(); break; }
+                        // Nobody is left behind (0.8.204, T): no liftoff while one of ours is on foot within a kilometre.
+                        {
+                            Vessel outside = SurfaceOpsLeg.EvaNear(v, SurfaceOpsLeg.OutsideRange);
+                            if (outside != null)
+                            {
+                                c.Throttle = 0;
+                                string who = outside.vesselName;
+                                Status = who + " is outside; holding until they board.";
+                                if (ctx.Now - _outsideSaid > 60) { _outsideSaid = ctx.Now; ctx.Say(who + " is still outside the lander: holding the liftoff until they board. Director, the Board button brings them in."); }
+                                break;
+                            }
+                        }
                         // Never light up lying down: the engine only drives the craft along the ground (2026-10-31: tipped over on a slope,
                         // the crew followed the plan, and the lander killed all three).
                         if (LandingHelpers.IsDown(v) && c.AttitudeError(v.upAxis) > MaxLiftoffLean)

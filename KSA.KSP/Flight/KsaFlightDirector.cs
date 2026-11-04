@@ -1319,7 +1319,8 @@ namespace KSA.KSP.Flight
             return best;
         }
 
-        private const double BoardRange = 5;
+        /// <summary>15 since 0.8.204 (T: "I need to be able to board when on the ground so maybe 10-15m from the seat"); 5 before.</summary>
+        private const double BoardRange = 15;
 
         /// <summary>The stranded button shows when the crew cannot be flying home on their own: away from Kerbin's surface, not on the pad.</summary>
         private bool CanDeclareStranded()

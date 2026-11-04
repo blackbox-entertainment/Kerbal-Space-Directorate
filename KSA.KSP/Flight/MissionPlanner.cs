@@ -352,7 +352,8 @@ namespace KSA.KSP.Flight
             bool down = v.situation == Vessel.Situations.LANDED || v.situation == Vessel.Situations.SPLASHED || v.situation == Vessel.Situations.PRELAUNCH;
             bool descending = v.situation == Vessel.Situations.SUB_ORBITAL || v.situation == Vessel.Situations.FLYING;
 
-            if (landedOnTarget) { if (logged("EVA:" + tb)) prog.SkipTo(l => l is AirlessAscentLeg || l is DeliverLeg); else prog.SkipTo(l => l is SurfaceOpsLeg || l is DeliverLeg); return; }
+            // A kerbal still outside goes back to the surface leg, which boards them, never straight to the ascent (0.8.204: Verdin left on Duna after a restart).
+            if (landedOnTarget) { if (logged("EVA:" + tb) && SurfaceOpsLeg.EvaNear(v, SurfaceOpsLeg.OutsideRange) == null) prog.SkipTo(l => l is AirlessAscentLeg || l is DeliverLeg); else prog.SkipTo(l => l is SurfaceOpsLeg || l is DeliverLeg); return; }
             if (orbitingTarget)
             {
                 if (logged("EVA:" + tb) || logged("Land:" + tb)) prog.SkipTo(l => l is ReturnLeg);

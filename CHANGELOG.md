@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.204 (2026-11-04), test build
+
+- **Nobody is left behind.** A restart on Duna with Verdin on EVA resumed the flight at the ascent and the lander lifted off without him (T: "it really should wait for me to board before returning"). Three locks: on a restart a kerbal on foot within a kilometre sends the flight back to the surface leg, not the ascent; the surface leg takes a kerbal already outside as its own and boards them first; and the ascent never lights while one of ours is on foot within a kilometre, saying so every minute and pointing the Director at the Board button.
+- **The Board button reaches 15 m** (T), from 5: a kerbal standing by the lander on the ground boards at a click.
+
 ## 0.8.203 (2026-11-04), test build
 
 - Test build of 0.8.202: the warnings test now expects the oxygen line for the mk IIIe's own figures. No code change.
