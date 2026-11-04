@@ -67,6 +67,15 @@ namespace KSA.KSP.Flight
         private const double DoneDistance = 300;
         private const double DoneSpeed = 2;
         private const double CloseStandoff = 200;
+        /// <summary>
+        /// Inside this range the push takes about two minutes, never five (0.8.198): at 85 km the orbit turns 0.2 deg/s, so a
+        /// 2 m/s push over five minutes bent a kilometre off its straight line, and a 0.6 s main-engine burn cannot hold 2 m/s
+        /// to the tenth; four pushes of 2 to 5 m/s each ended "1 km, not a meeting" (2026-11-04). A 5 m/s push with a 5 m/s
+        /// match is short, straight and sharp, and the crew turned round for a 2 m/s burn in 60 s on the same flight.
+        /// </summary>
+        private const double ShortRange = 3000;
+        private const double ShortTransit = 120;
+        private bool _shortClose;
 
         private Phases _phase;
         private Vessel _target;
@@ -297,7 +306,8 @@ namespace KSA.KSP.Flight
                         Vec3 toAim = toThem - toThem.Normalized * CloseStandoff;
                         double dist = toAim.Length;
                         if (dist < 50 || Vec3.Dot(toAim, toThem) <= 0) { _phase = Phases.Check; break; }
-                        double speed = Math.Max(0.5, Math.Min(20.0, dist / 300.0));
+                        _shortClose = dist < ShortRange;
+                        double speed = _shortClose ? Math.Max(2.0, Math.Min(10.0, dist / ShortTransit)) : Math.Max(0.5, Math.Min(20.0, dist / 300.0));
                         Vec3 dv = toAim.Normalized * speed - (us.Velocity - them.Velocity);
                         NodePlanner.ClearNodes(v);
                         if (NodePlanner.AddFrameDeltaV(v, nodeUt, dv) == null) { Fail("maneuver nodes unavailable", ctx); break; }
@@ -317,7 +327,8 @@ namespace KSA.KSP.Flight
                     {
                         double burnTime = c.BurnTime(MatchDeltaV(v).Length);
                         if (double.IsInfinity(burnTime) || double.IsNaN(burnTime)) burnTime = 60;
-                        _coastEnd = _arrivalUt - Math.Max(30, burnTime + 15);
+                        // A short push leaves a minute to turn round for the match (0.8.198).
+                        _coastEnd = _arrivalUt - Math.Max(_shortClose ? 60 : 30, burnTime + 15);
                     }
                     break;
                 case Phases.InterceptBurn:

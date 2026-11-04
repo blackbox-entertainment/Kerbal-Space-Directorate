@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.198 (2026-11-04), test build
+
+- **The last kilometre to the tanker is a two-minute push, not five.** Four pushes of 2 to 5 m/s each ended "Closest approach is 1 km, not a meeting" (T: "it never used this much fuel before"): at 85 km the orbit turns 0.2 degrees a second, so a 2 m/s push over five minutes bent a kilometre off its straight line, and a 0.6 s main-engine burn cannot hold 2 m/s to the tenth. Inside 3 km the crew now pushes at 2 to 10 m/s to arrive in about two minutes, and leaves a minute to turn round for the match. The ascent itself was the same as the last mk IIIe flight (cutoff at 85 km); the meeting cost 204 m/s instead of 42 because of where the station happened to be.
+
 ## 0.8.197 (2026-11-04), test build
 
 - **What can this fly? counts the crew seated in the editor.** It had counted the mission's crew (2 for a Duna orbit or atmosphere study) and passed a rocket with 3 aboard that the pad then flagged red for supplies. The supplies line now counts the larger of the mission's crew and the kerbals seated in the VAB, and says how many it counted.
