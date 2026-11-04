@@ -2,6 +2,12 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.189 (2026-11-03), test build
+
+- **The panel cruise worked** (2026-11-03, mk IIIe): re-aims every two weeks, panels making 4.0 EC/s near Kerbin down to 2.4 near Duna, battery full at T+337 d.
+- **No burn under 0.3 m/s.** The mid-course trims came out at 0.1-0.2 m/s, below what the Poodle can burn cleanly; pointing SAS at a node of no length set the ship spinning on its direction noise. A node that small is removed unburned, a correction that small counts as on course, and the next correction nearer the target takes what is left.
+- **The panel attitude is fixed in space once chosen.** It was recomputed from the ship's attitude of the moment every frame, so with the ship spinning the target spun too and SAS chased it for hours, re-aiming every two minutes. It is now refreshed from the target itself as the sun moves, never from the ship.
+
 ## 0.8.188 (2026-11-03), test build
 
 - **The panel re-aim waits for the last turn to settle.** Right after a turn is ordered the panels are still 60-70 degrees off the sun, and 0.8.187 read that as "the sun has moved" every frame: it re-ordered the turn, reset the settle clock and held the warp at 1x on the coast out of Kerbin. The drift check now runs only once the panels have settled on the sun.

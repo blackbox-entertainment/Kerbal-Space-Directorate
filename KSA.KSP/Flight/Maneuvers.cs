@@ -205,6 +205,15 @@ namespace KSA.KSP.Flight
             string line = null;
             ctx.Control.EnsureEngine(ref line);
             _startDv = n.DeltaV.magnitude;
+            // A node too small to burn (0.8.189): pointing SAS at a node of no length set the craft spinning on its direction noise,
+            // three times running at the mid-course check. The next correction, nearer the target, takes what is left.
+            if (_startDv < MinBurn)
+            {
+                n.RemoveSelf();
+                _phase = Phases.Done;
+                Status = "Nothing to burn.";
+                return;
+            }
             _burnTime = ctx.Control.BurnTime(_startDv);
             if (double.IsInfinity(_burnTime)) _burnTime = 60;
             _phase = Phases.Align;
@@ -222,6 +231,7 @@ namespace KSA.KSP.Flight
         private void Fail(string why) { _phase = Phases.Failed; FailReason = why; Status = "Burn failed: " + why; }
 
         /// <summary>A wait longer than this before the burn is spent broadside to the sun, panels lit; the turn comes after (0.8.176).</summary>
+        private const double MinBurn = 0.3;
         private const double LongWait = 1200; // 600 until 0.8.179: a 40 t stack on a small wheel needs more than ten minutes to come round
         private const double AlignLimit = 5;
         private bool _sunHold, _sunSettled;

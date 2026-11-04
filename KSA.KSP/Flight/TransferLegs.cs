@@ -846,6 +846,15 @@ namespace KSA.KSP.Flight
                                 + (double.IsNaN(cur) ? "; no " + _target.bodyName + " encounter on the current path." : "; continuing with periapsis " + TransferSupport.Km(cur) + ".");
                             break;
                         }
+                        if (_bestDv < MinCorrection)
+                        {
+                            // Below what the engine can burn cleanly (0.8.189): fly on; the correction nearer the target has a shorter lever and a real burn.
+                            State = LegState.Done;
+                            double cur = TransferSupport.VesselPeriapsisAt(v, _target);
+                            Status = "On course within the finest burn.";
+                            line = "A correction of " + _bestDv.ToString("0.00") + " m/s is below what the engine can burn; flying on with " + _target.bodyName + " periapsis " + TransferSupport.Km(cur) + ".";
+                            break;
+                        }
                         ManeuverNode n = NodePlanner.Add(v, _ut, _bestComponents);
                         if (n == null) { State = LegState.Done; Status = "Could not place the node."; line = "Correction node could not be placed; flying on."; break; }
                         double predicted = NodePlanner.PeriapsisAt(n, _target);
@@ -928,6 +937,7 @@ namespace KSA.KSP.Flight
         }
 
         private const double FarOff = 200000; // metres past the band: a fresh transfer, not a nudge
+        private const double MinCorrection = 0.3; // m/s: the finest burn worth making
 
         private double Score(ManeuverNode n) { return NodePlanner.PeriapsisAt(n, _target); }
 

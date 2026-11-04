@@ -290,6 +290,7 @@ namespace KSA.KSP.Flight
             if (from == Vector3d.zero) { FaceSunBroadside(); return; }
             _panelSun = from;
             _panelAttitudeAt = -1;
+            _panelTargetSet = false;
             _aimedSun = (Planetarium.fetch.Sun.position - _v.GetWorldPos3D()).normalized;
             PointAlong(() => { PanelAttitude(); return _panelNose; }, () => { PanelAttitude(); return _panelForward; });
         }
@@ -315,19 +316,34 @@ namespace KSA.KSP.Flight
 
         private Vector3d _panelSun, _panelNose, _panelForward;
         private double _panelAttitudeAt = -1;
+        private Quaternion _panelTarget;
+        private bool _panelTargetSet;
 
-        /// <summary>The nose and forward axis, in world space, that put the panels' direction on the sun: the least turn from where the craft is now.</summary>
+        /// <summary>
+        /// The attitude that puts the panels' direction on the sun, fixed in space once chosen (0.8.189): working it out afresh from
+        /// the craft's attitude of the moment made the target turn with a spinning craft, and SAS chased it for hours. It is refreshed
+        /// from the target itself, never from the craft, when the sun has moved more than a degree.
+        /// </summary>
         private void PanelAttitude()
         {
             if (_panelAttitudeAt == Now) return;
             _panelAttitudeAt = Now;
             Transform rt = _v.ReferenceTransform;
             if (rt == null) return;
-            Vector3d sun = (Planetarium.fetch.Sun.position - _v.GetWorldPos3D()).normalized;
-            Vector3d fromNow = rt.TransformDirection((Vector3)_panelSun);
-            Quaternion q = Quaternion.FromToRotation((Vector3)fromNow, (Vector3)sun);
-            _panelNose = q * rt.up;
-            _panelForward = q * rt.forward;
+            Vector3 sun = (Vector3)(Planetarium.fetch.Sun.position - _v.GetWorldPos3D()).normalized;
+            if (!_panelTargetSet)
+            {
+                Vector3 fromNow = rt.TransformDirection((Vector3)_panelSun);
+                _panelTarget = Quaternion.FromToRotation(fromNow, sun) * rt.rotation;
+                _panelTargetSet = true;
+            }
+            else
+            {
+                Vector3 aimed = _panelTarget * (Vector3)_panelSun;
+                if (Vector3.Angle(aimed, sun) > 1f) _panelTarget = Quaternion.FromToRotation(aimed, sun) * _panelTarget;
+            }
+            _panelNose = _panelTarget * Vector3.up;
+            _panelForward = _panelTarget * Vector3.forward;
         }
 
         /// <summary>
