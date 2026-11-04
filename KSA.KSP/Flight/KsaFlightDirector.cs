@@ -547,7 +547,7 @@ namespace KSA.KSP.Flight
                 if (agency.LifeSupportOn && !t.IsUncrewed && !t.IsAircraft)
                 {
                     int trip = agency.TripDays(t), crewAboard = Math.Max(1, v.GetCrewCount());
-                    double supply = agency.LifeSupport.SupplyDays(Aboard(v, "Food"), Aboard(v, "Water"), crewAboard);
+                    double supply = agency.LifeSupport.SupplyDays(Aboard(v, "Food"), Aboard(v, "Water"), crewAboard, Aboard(v, "_WaterRecycler"));
                     if (supply < trip + Math.Max(0, agency.LifeSupport.MarginDays)) { short_ = true; chip += " SUPPLIES " + Math.Floor(supply) + " of " + trip + " days"; }
                 }
                 Color before = GUI.contentColor;

@@ -172,6 +172,7 @@ namespace KSA.KSP.Parts
                     double amount;
                     if (!double.TryParse(r.GetValue("amount"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out amount)) continue;
                     if (rn == "Food") d.Food += amount; else if (rn == "Water") d.Water += amount; else if (rn == "Oxygen") d.Oxygen += amount; else if (rn == "ElectricCharge") d.Charge += amount;
+                    else if (rn == "_WaterRecycler") { double cap; if (double.TryParse(r.GetValue("maxAmount") ?? r.GetValue("amount"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out cap)) d.WaterRecyclers += cap; } // Kerbalism's chosen setup rides in the craft as a pseudo-resource
                     PartResourceDefinition def = PartResourceLibrary.Instance != null ? PartResourceLibrary.Instance.GetDefinition(rn) : null;
                     if (def == null || def.density <= 0) continue;
                     p.Fuel[rn] = (p.Fuel.ContainsKey(rn) ? p.Fuel[rn] : 0) + amount * def.density;

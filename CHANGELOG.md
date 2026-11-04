@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.194 (2026-11-03), test build
+
+- **The supplies check credits a water recycler.** Kerbalism's chosen life-support setups ride in the craft file as pseudo-resources; the check read the part prefab, which is always Scrubber and Pressure control, so a Hitchhiker set to Water Recycler counted for nothing and the new red SUPPLIES line would have cried wolf on the right ship. Each recycler covers one crew member's water at 85% recovery (agency.cfg waterRecyclerRecovery); "What can this fly?" says "(water recycled)" and names the 1.5 x rate it counts at.
+
 ## 0.8.193 (2026-11-03), test build
 
 - **Three dead of thirst 73 days short of Kerbin** (2026-11-03, mk IIIe): the first crew to land on Duna and stand, climb out, wait 452 days for the window and burn for home. The supplies check had counted the wait at Duna as a quarter of a synodic period (228 days; the real wait is about 450) and consumption at Kerbalism's nominal rate (the ship drank at twice that on the way home), so a 1,150-day trip passed with 880 days of water.

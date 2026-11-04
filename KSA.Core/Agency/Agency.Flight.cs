@@ -111,7 +111,7 @@ namespace KSA.Core
             catch (Exception e) { Log.Warn("Supply check failed for " + p.Name + ": " + e.Message); }
             if (h == null) return null;
             int crew = Math.Max(1, p.Crew.Count > 0 ? p.Crew.Count : type.CrewSize);
-            double days = LifeSupport.SupplyDays(h.Food, h.Water, crew);
+            double days = LifeSupport.SupplyDays(h.Food, h.Water, crew, h.WaterRecyclers);
             int need = TripDays(type) + Math.Max(0, LifeSupport.MarginDays);
             if (days >= need) return null;
             return "Life support (" + LifeSupportMod + "): the craft carries food and water for " + Math.Floor(days).ToString("0") + " days for " + crew + " crew, and "

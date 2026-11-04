@@ -48,8 +48,8 @@ namespace KSA.Core
             if (LifeSupportOn && t.CrewSize > 0)
             {
                 int crew = Math.Max(1, t.CrewSize), days = TripDays(t);
-                double supply = LifeSupport.SupplyDays(d.Food, d.Water, crew);
-                if (supply < days + Math.Max(0, LifeSupport.MarginDays)) list.Add("Food and water for " + Math.Floor(supply) + " days, and the trip takes about " + days + ".");
+                double supply = LifeSupport.SupplyDays(d.Food, d.Water, crew, d.WaterRecyclers);
+                if (supply < days + Math.Max(0, LifeSupport.MarginDays)) list.Add("Food and water for " + Math.Floor(supply) + " days" + (d.WaterRecyclers > 0 ? " (water recycled)" : string.Empty) + ", and the trip takes about " + days + ". Counted at " + LifeSupport.SafetyFactor.ToString("0.0") + " x the nominal rate.");
                 double air = d.Oxygen / (crew * OxygenPerKerbalDay);
                 if (air < days) list.Add("Oxygen for " + Math.Floor(air) + " days, and the trip takes about " + days + ".");
                 if (windowed && days > RadiationDays) list.Add("About " + days + " days beyond Kerbin's field: check Radiation in Kerbalism's Planner.");

@@ -60,6 +60,8 @@ namespace KSA.Core.Design
         /// <summary>For the warnings before launch (KSA-70): supplies, power and the last engine against what stays with it, tonnes and newtons.</summary>
         public double Food { get; set; }
         public double Water { get; set; }
+        /// <summary>Crew whose water the craft's Kerbalism recyclers recover (the craft's chosen life-support setups, 0.8.194).</summary>
+        public double WaterRecyclers { get; set; }
         public double Oxygen { get; set; }
         public double Charge { get; set; }
         public double LanderMass { get; set; }

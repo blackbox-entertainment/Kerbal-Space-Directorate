@@ -30,6 +30,8 @@ namespace KSA.Core.Projects
         /// Kerbalism's nominal rate on the way home from Duna and died 73 days short of Kerbin with the sums satisfied.
         /// </summary>
         public double SafetyFactor { get; set; } = 1.5;
+        /// <summary>Share of the water a Kerbalism water recycler gives back (its profile: 0.127 of 0.149 an hour).</summary>
+        public double WaterRecyclerRecovery { get; set; } = 0.85;
         /// <summary>Days a stranded crew lasts on what their craft carries (Kerbalism kills on its own clock; this is the simulated equivalent).</summary>
         public int StrandedLostAfterDays { get; set; } = 20;
         /// <summary>While a program is supplied (not overdue), keep the food, water and air of its live vessels topped up: KSA's resupply flights stand in for the cargo.</summary>
@@ -38,12 +40,17 @@ namespace KSA.Core.Projects
         public int ColonyGreenhouseEveryYears { get; set; } = 2;
 
         /// <summary>Days of food and water for a crew, the smaller of the two. Infinite with no crew.</summary>
-        public double SupplyDays(double food, double water, int crew)
+        public double SupplyDays(double food, double water, int crew) { return SupplyDays(food, water, crew, 0); }
+
+        /// <summary>As above, with water recyclers aboard: each covers one crew member's water at the recovery share (0.8.194).</summary>
+        public double SupplyDays(double food, double water, int crew, double waterRecyclers)
         {
             if (crew <= 0) return double.PositiveInfinity;
             double factor = SafetyFactor > 0 ? SafetyFactor : 1;
+            double cover = Math.Max(0, Math.Min(1, waterRecyclers / crew));
+            double waterRate = WaterPerKerbalDay * (1 - Math.Max(0, Math.Min(0.99, WaterRecyclerRecovery)) * cover);
             double f = FoodPerKerbalDay > 0 ? food / (FoodPerKerbalDay * crew * factor) : double.PositiveInfinity;
-            double w = WaterPerKerbalDay > 0 ? water / (WaterPerKerbalDay * crew * factor) : double.PositiveInfinity;
+            double w = waterRate > 0 ? water / (waterRate * crew * factor) : double.PositiveInfinity;
             return Math.Min(f, w);
         }
 
@@ -58,6 +65,7 @@ namespace KSA.Core.Projects
             r.WaterPerKerbalDay = node.GetDouble("waterPerKerbalDay", r.WaterPerKerbalDay);
             r.MarginDays = node.GetInt("marginDays", r.MarginDays);
             r.SafetyFactor = node.GetDouble("supplySafetyFactor", r.SafetyFactor);
+            r.WaterRecyclerRecovery = node.GetDouble("waterRecyclerRecovery", r.WaterRecyclerRecovery);
             r.StrandedLostAfterDays = node.GetInt("strandedLostAfterDays", r.StrandedLostAfterDays);
             r.TopUpSuppliedVessels = node.GetBool("topUpSuppliedVessels", r.TopUpSuppliedVessels);
             r.ColonyGreenhouseEveryYears = node.GetInt("colonyGreenhouseEveryYears", r.ColonyGreenhouseEveryYears);

@@ -40,6 +40,19 @@ namespace KSA.KSP.Parts
                 if (ap.partPrefab.Resources != null)
                     foreach (PartResource r in ap.partPrefab.Resources)
                         if ((r.resourceName == "LiquidFuel" || r.resourceName == "Oxidizer") && r.info != null) h.FuelTonnes += r.maxAmount * r.info.density;
+                // Kerbalism's chosen life-support setups ride in the craft as pseudo-resources (0.8.194): a Hitchhiker set to Water Recycler
+                // in the editor is still Scrubber + Pressure control in the prefab, which is all the module loop below can see.
+                bool chosen = false;
+                foreach (ConfigNode r in part.GetNodes("RESOURCE"))
+                {
+                    string rn = r.GetValue("name") ?? string.Empty;
+                    if (!rn.StartsWith("_", StringComparison.Ordinal)) continue;
+                    double cap;
+                    if (!double.TryParse(r.GetValue("maxAmount") ?? r.GetValue("amount"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out cap)) continue;
+                    chosen = true;
+                    if (rn == "_WaterRecycler") h.WaterRecyclers += (int)Math.Round(cap);
+                    else if (rn == "_Scrubber") h.Scrubbers += (int)Math.Round(cap);
+                }
                 bool industry = false, power = false;
                 foreach (PartModule m in ap.partPrefab.Modules)
                 {
@@ -54,8 +67,8 @@ namespace KSA.KSP.Parts
                         {
                             if (KspLifeSupport.IsIndustryProcess(process)) industry = true;
                             else if (KspLifeSupport.IsPowerProcess(process)) power = true;
-                            else if (string.Equals(process, "_Scrubber", StringComparison.OrdinalIgnoreCase)) h.Scrubbers += (int)Math.Round(KspLifeSupport.CapacityOf(m));
-                            else if (string.Equals(process, "_WaterRecycler", StringComparison.OrdinalIgnoreCase)) h.WaterRecyclers += (int)Math.Round(KspLifeSupport.CapacityOf(m));
+                            else if (!chosen && string.Equals(process, "_Scrubber", StringComparison.OrdinalIgnoreCase)) h.Scrubbers += (int)Math.Round(KspLifeSupport.CapacityOf(m));
+                            else if (!chosen && string.Equals(process, "_WaterRecycler", StringComparison.OrdinalIgnoreCase)) h.WaterRecyclers += (int)Math.Round(KspLifeSupport.CapacityOf(m));
                             continue;
                         }
                     }
