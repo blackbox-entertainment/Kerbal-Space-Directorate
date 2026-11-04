@@ -224,7 +224,7 @@ namespace KSA.KSP.Flight
         /// <summary>A wait longer than this before the burn is spent broadside to the sun, panels lit; the turn comes after (0.8.176).</summary>
         private const double LongWait = 1200; // 600 until 0.8.179: a 40 t stack on a small wheel needs more than ten minutes to come round
         private const double AlignLimit = 5;
-        private bool _sunHold;
+        private bool _sunHold, _sunSettled;
         private double _sunHoldAt;
         private double _lastWarpAsk = -1e9;
 
@@ -246,9 +246,10 @@ namespace KSA.KSP.Flight
                     RefreshBurnTime(c);
                     if (ignition - now > LongWait)
                     {
-                        if (!_sunHold) { c.FacePanelsAtSun(); _sunHold = true; _sunHoldAt = now; }
-                        else if (c.SunDrift() > 10) { c.StopWarp(); if (!v.packed) { c.FacePanelsAtSun(); _sunHoldAt = now; line = "The sun has moved round the sky: turning the panels back to it."; } break; }
+                        if (!_sunHold) { c.FacePanelsAtSun(); _sunHold = true; _sunHoldAt = now; _sunSettled = false; }
+                        else if (_sunSettled && c.SunDrift() > 10) { c.StopWarp(); if (!v.packed) { c.FacePanelsAtSun(); _sunHoldAt = now; _sunSettled = false; line = "The sun has moved round the sky: turning the panels back to it."; } break; }
                         bool settled = (c.HoldSettled() && now - _sunHoldAt > 5) || now - _sunHoldAt > 120;
+                        if (settled) _sunSettled = true;
                         Status = "Burn in " + TransferSupport.Countdown(ignition - now) + (settled ? "; panels to the sun." : "; turning the panels to the sun.");
                         if (settled && !c.IsWarping && now - _lastWarpAsk > 2) { _lastWarpAsk = now; c.WarpTo(ignition - LongWait + 60); }
                         break;

@@ -1102,14 +1102,17 @@ namespace KSA.KSP.Flight
                 Status = "Never reached " + _body.bodyName + ".";
                 return "No " + _body.bodyName + " encounter after " + Math.Round(_maxDays, 1) + " days; coast abandoned.";
             }
-            if (!v.packed && ctx.Control.SunDrift() > ReaimDegrees)
+            // Only once the last turn has settled (0.8.188): the pointing error is large while the turn is still under way, and
+            // checking it then re-ordered the turn every frame, reset the settle clock and stopped the warp for good.
+            if (_panelsChecked && ctx.Control.SunDrift() > ReaimDegrees)
             {
                 ctx.Control.StopWarp();
+                if (v.packed) { Status = "Stopping to turn the panels to the sun."; return null; }
+                double moved = ctx.Control.SunDrift();
                 ctx.Control.FacePanelsAtSun();
                 _turnStarted = now; _panelsChecked = false;
-                return "The sun has moved " + Math.Round(ctx.Control.SunDrift()) + " deg round the sky: turning the panels back to it.";
+                return "The sun has moved " + Math.Round(moved) + " deg round the sky: turning the panels back to it.";
             }
-            if (v.packed && ctx.Control.SunDrift() > ReaimDegrees) { ctx.Control.StopWarp(); Status = "Stopping to turn the panels to the sun."; return null; }
             string turning = null;
             if (Turning(ctx, ref turning)) return null;
             if (turning != null) return turning;

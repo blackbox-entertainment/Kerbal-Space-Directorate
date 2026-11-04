@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.188 (2026-11-03), test build
+
+- **The panel re-aim waits for the last turn to settle.** Right after a turn is ordered the panels are still 60-70 degrees off the sun, and 0.8.187 read that as "the sun has moved" every frame: it re-ordered the turn, reset the settle clock and held the warp at 1x on the coast out of Kerbin. The drift check now runs only once the panels have settled on the sun.
+
 ## 0.8.187 (2026-11-03), test build
 
 - **The panel re-aim no longer stalls a wait in low orbit.** Below about 100 km the game turns the world with the planet and a craft on rails turns with it, a degree a minute, so the 10-degree rule fired every ten game-minutes and a three-day wait for the ejection crawled at 1x. The re-aim now measures the panels' real pointing error and is off while the game is in that rotating frame; night every half hour and the battery cover low orbit, as on every earlier wait.
