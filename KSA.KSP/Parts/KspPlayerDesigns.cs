@@ -83,6 +83,10 @@ namespace KSA.KSP.Parts
             PlayerDesign d = Analyze(path);
             if (d == null) return null;
             if (!string.IsNullOrEmpty(ship.shipName)) d.Name = ship.shipName;
+            // Who is seated (0.8.197): the craft file lists each seated kerbal as a "crew" value on the part.
+            int seated = 0;
+            foreach (ConfigNode part in node.GetNodes("PART")) seated += part.GetValues("crew").Length;
+            d.SeatedCrew = seated;
             d.ResearchBlocker = ResearchBlocker(path);
             d.HeatShieldResearched = CrewShieldResearched();
             return d;

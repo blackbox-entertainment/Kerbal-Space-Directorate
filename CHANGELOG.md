@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.197 (2026-11-04), test build
+
+- **What can this fly? counts the crew seated in the editor.** It had counted the mission's crew (2 for a Duna orbit or atmosphere study) and passed a rocket with 3 aboard that the pad then flagged red for supplies. The supplies line now counts the larger of the mission's crew and the kerbals seated in the VAB, and says how many it counted.
+
 ## 0.8.196 (2026-11-04), test build
 
 - **A rocket on the pad gets its mission offer while another flight is on record.** The Director visited the fuel station in orbit, whose hangar flight the director resumed, then launched a new rocket from the VAB and saw no offer: the director was still holding the station's flight (T: "tried to launch from the vab and see no director to select a mission"). A craft with no project standing on the home world now gets its offer; the other flight resumes from its project when next visited, as after a restart.

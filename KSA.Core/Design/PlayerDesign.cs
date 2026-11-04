@@ -62,6 +62,8 @@ namespace KSA.Core.Design
         public double Water { get; set; }
         /// <summary>Crew whose water the craft's Kerbalism recyclers recover (the craft's chosen life-support setups, 0.8.194).</summary>
         public double WaterRecyclers { get; set; }
+        /// <summary>Kerbals seated in the craft in the editor (0.8.197): the supplies are counted for them when there are more than the mission asks, as the pad does.</summary>
+        public int SeatedCrew { get; set; }
         public double Oxygen { get; set; }
         public double Charge { get; set; }
         public double LanderMass { get; set; }

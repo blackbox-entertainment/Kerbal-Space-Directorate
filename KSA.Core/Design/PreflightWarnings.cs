@@ -47,9 +47,11 @@ namespace KSA.Core
             if (leavesKerbin && t.CrewSize > 0 && !d.HasHeatShield) list.Add("No heat shield for the return from " + t.Body + ": a pod's own ablator does not last.");
             if (LifeSupportOn && t.CrewSize > 0)
             {
-                int crew = Math.Max(1, t.CrewSize), days = TripDays(t);
+                // The crew that will eat: the mission's, or everyone seated when the Director seated more (0.8.197: the window passed a
+                // 2-crew mission while 3 sat aboard, and the pad flagged the same rocket red).
+                int crew = Math.Max(1, Math.Max(t.CrewSize, d.SeatedCrew)), days = TripDays(t);
                 double supply = LifeSupport.SupplyDays(d.Food, d.Water, crew, d.WaterRecyclers);
-                if (supply < days + Math.Max(0, LifeSupport.MarginDays)) list.Add("Food and water for " + Math.Floor(supply) + " days" + (d.WaterRecyclers > 0 ? " (water recycled)" : string.Empty) + ", and the trip takes about " + days + ". Counted at " + LifeSupport.SafetyFactor.ToString("0.0") + " x the nominal rate.");
+                if (supply < days + Math.Max(0, LifeSupport.MarginDays)) list.Add("Food and water for " + Math.Floor(supply) + " days with " + crew + " aboard" + (d.WaterRecyclers > 0 ? " (water recycled)" : string.Empty) + ", and the trip takes about " + days + ". Counted at " + LifeSupport.SafetyFactor.ToString("0.0") + " x the nominal rate.");
                 double air = d.Oxygen / (crew * OxygenPerKerbalDay);
                 if (air < days) list.Add("Oxygen for " + Math.Floor(air) + " days, and the trip takes about " + days + ".");
                 if (windowed && days > RadiationDays) list.Add("About " + days + " days beyond Kerbin's field: check Radiation in Kerbalism's Planner.");
