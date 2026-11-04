@@ -8,6 +8,7 @@ namespace KSA.KSP.Flight
     internal static class TransferWindows
     {
         private const double NearDays = 30, NearPrice = 1.3;
+        private const double ArrivalDays = 12; // capture, aerobraking passes and the landing at the far end
         private static readonly Dictionary<string, KeyValuePair<double, double>> Cache = new Dictionary<string, KeyValuePair<double, double>>();
 
         /// <summary>Days out, a wait for the way home and back, by the sums, or NaN for the home planet's own system.</summary>
@@ -19,9 +20,16 @@ namespace KSA.KSP.Flight
             CelestialBody sun = home.referenceBody;
             while (planet.referenceBody != null && planet.referenceBody != sun && planet.referenceBody != planet) planet = planet.referenceBody;
             if (planet == home || planet == sun || planet.referenceBody != sun) return double.NaN;
-            double flight, synodic = 1 / Math.Abs(1 / home.orbit.period - 1 / planet.orbit.period);
+            double flight;
             Ejection.Hohmann(sun.gravParameter, home.orbit.semiMajorAxis, planet.orbit.semiMajorAxis, out flight);
-            return (2 * flight + 0.25 * synodic) / TransferSupport.Day;
+            // The stay for the window home (0.8.193): on arrival home sits n_h x flight - pi ahead of the planet; the Hohmann back
+            // needs pi - n_h x flight, and the two drift apart at n_h - n_t. A quarter of a synodic period (228 days at Duna) had
+            // stood in for it; the real wait there is about 450, and a crew left with 340 days of water on a 1,150-day trip.
+            double nh = 2 * Math.PI / home.orbit.period, nt = 2 * Math.PI / planet.orbit.period, drift = nh - nt;
+            double needed = 2 * Math.PI - 2 * nh * flight;
+            if (drift < 0) { needed = -needed; drift = -drift; }
+            double wait = ((needed % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI) / drift;
+            return (2 * flight + wait) / TransferSupport.Day + ArrivalDays;
         }
 
         /// <summary>Days to the window for a world, or NaN for the home planet's own system or anything unknown.</summary>

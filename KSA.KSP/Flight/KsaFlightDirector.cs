@@ -467,6 +467,15 @@ namespace KSA.KSP.Flight
             return false;
         }
 
+        /// <summary>Units of a resource aboard the vessel.</summary>
+        private static double Aboard(Vessel v, string resource)
+        {
+            double total = 0;
+            if (v == null) return 0;
+            foreach (Part p in v.parts) { PartResource r = p.Resources != null ? p.Resources.Get(resource) : null; if (r != null) total += r.amount; }
+            return total;
+        }
+
         private static List<MissionType> HangarMissions(Agency agency, Vessel v, double dv, bool plane)
         {
             var list = new List<MissionType>();
@@ -533,8 +542,17 @@ namespace KSA.KSP.Flight
                 // Green: go now. Yellow: the crew would wait for the window (2026-11-01, T). Nothing for worlds that need no window.
                 double days = agency.DaysToWindow != null && !t.IsRescue ? agency.DaysToWindow(t.Body) : double.NaN;
                 string chip = double.IsNaN(days) ? string.Empty : wait != null ? ": wait " + Math.Ceiling(days) + " days" : ": good window, " + Math.Ceiling(days) + " days";
+                // Supplies against the whole trip, out, wait and back (0.8.193): a crew left for Duna with water for the way out and died coming home.
+                bool short_ = false;
+                if (agency.LifeSupportOn && !t.IsUncrewed && !t.IsAircraft)
+                {
+                    int trip = agency.TripDays(t), crewAboard = Math.Max(1, v.GetCrewCount());
+                    double supply = agency.LifeSupport.SupplyDays(Aboard(v, "Food"), Aboard(v, "Water"), crewAboard);
+                    if (supply < trip + Math.Max(0, agency.LifeSupport.MarginDays)) { short_ = true; chip += " SUPPLIES " + Math.Floor(supply) + " of " + trip + " days"; }
+                }
                 Color before = GUI.contentColor;
-                if (chip.Length > 0) GUI.contentColor = wait != null ? Color.yellow : Color.green;
+                if (short_) GUI.contentColor = Color.red;
+                else if (chip.Length > 0) GUI.contentColor = wait != null ? Color.yellow : Color.green;
                 bool picked = GUILayout.Button(t.Name + (need > 0 ? " (" + Math.Round(need) + " m/s)" : string.Empty) + (agency.MissionsCompleted(t.Id) > 0 ? ", done before" : string.Empty) + chip, GUILayout.Height(26f));
                 GUI.contentColor = before;
                 if (picked)

@@ -25,6 +25,11 @@ namespace KSA.Core.Projects
         public double WaterPerKerbalDay { get; set; } = 0.1344;
         /// <summary>Extra days of supplies a live flight must carry beyond its planned length.</summary>
         public int MarginDays { get; set; } = 2;
+        /// <summary>
+        /// Consumption is taken as this many times the nominal rate when counting supply days (0.8.193): a crew drank water at twice
+        /// Kerbalism's nominal rate on the way home from Duna and died 73 days short of Kerbin with the sums satisfied.
+        /// </summary>
+        public double SafetyFactor { get; set; } = 1.5;
         /// <summary>Days a stranded crew lasts on what their craft carries (Kerbalism kills on its own clock; this is the simulated equivalent).</summary>
         public int StrandedLostAfterDays { get; set; } = 20;
         /// <summary>While a program is supplied (not overdue), keep the food, water and air of its live vessels topped up: KSA's resupply flights stand in for the cargo.</summary>
@@ -36,8 +41,9 @@ namespace KSA.Core.Projects
         public double SupplyDays(double food, double water, int crew)
         {
             if (crew <= 0) return double.PositiveInfinity;
-            double f = FoodPerKerbalDay > 0 ? food / (FoodPerKerbalDay * crew) : double.PositiveInfinity;
-            double w = WaterPerKerbalDay > 0 ? water / (WaterPerKerbalDay * crew) : double.PositiveInfinity;
+            double factor = SafetyFactor > 0 ? SafetyFactor : 1;
+            double f = FoodPerKerbalDay > 0 ? food / (FoodPerKerbalDay * crew * factor) : double.PositiveInfinity;
+            double w = WaterPerKerbalDay > 0 ? water / (WaterPerKerbalDay * crew * factor) : double.PositiveInfinity;
             return Math.Min(f, w);
         }
 
@@ -51,6 +57,7 @@ namespace KSA.Core.Projects
             r.FoodPerKerbalDay = node.GetDouble("foodPerKerbalDay", r.FoodPerKerbalDay);
             r.WaterPerKerbalDay = node.GetDouble("waterPerKerbalDay", r.WaterPerKerbalDay);
             r.MarginDays = node.GetInt("marginDays", r.MarginDays);
+            r.SafetyFactor = node.GetDouble("supplySafetyFactor", r.SafetyFactor);
             r.StrandedLostAfterDays = node.GetInt("strandedLostAfterDays", r.StrandedLostAfterDays);
             r.TopUpSuppliedVessels = node.GetBool("topUpSuppliedVessels", r.TopUpSuppliedVessels);
             r.ColonyGreenhouseEveryYears = node.GetInt("colonyGreenhouseEveryYears", r.ColonyGreenhouseEveryYears);

@@ -62,7 +62,7 @@ namespace KSA.Core.Tests
             Assert.That(ls.ResidentsPerGreenhouse, Is.EqualTo(8));
             Assert.That(ls.RequireRecyclers, Is.True);
             Assert.That(ls.StrandedLostAfterDays, Is.EqualTo(20));
-            Assert.That(ls.SupplyDays(1.35, 0.7, 1), Is.EqualTo(5).Within(0.3), "a pod's Kerbalism supplies last about five days");
+            Assert.That(ls.SupplyDays(1.35, 0.7, 1) * ls.SafetyFactor, Is.EqualTo(5).Within(0.3), "a pod's Kerbalism supplies last about five days at the nominal rate; the check counts 1.5 x that (0.8.193)");
         }
 
         [Test]
@@ -253,10 +253,10 @@ namespace KSA.Core.Tests
             Project p = a.AdoptHangarLaunch("MunLanding", "v-1", "Hungry Bird", new List<string> { "Jeb Kerman" }, out msg);
             Assert.That(p, Is.Not.Null, msg);
             MissionType type = a.Catalogs.Missions.Get("MunLanding");
-            double need = type.DurationDays + a.LifeSupport.MarginDays;
+            double need = (type.DurationDays + a.LifeSupport.MarginDays) * a.LifeSupport.SafetyFactor; // supplies are counted at 1.5 x the nominal rate (0.8.193)
             a.ModuleHardwareCheck = x => new ModuleHardware { Food = a.LifeSupport.FoodPerKerbalDay * (need - 1), Water = a.LifeSupport.WaterPerKerbalDay * need };
             Assert.That(a.LifeSupportBlocker(p, type), Does.Contain("simulated"));
-            a.ModuleHardwareCheck = x => new ModuleHardware { Food = a.LifeSupport.FoodPerKerbalDay * need, Water = a.LifeSupport.WaterPerKerbalDay * need };
+            a.ModuleHardwareCheck = x => new ModuleHardware { Food = a.LifeSupport.FoodPerKerbalDay * (need + 1), Water = a.LifeSupport.WaterPerKerbalDay * (need + 1) };
             Assert.That(a.LifeSupportBlocker(p, type), Is.Null);
             a.LifeSupportMod = string.Empty;
             a.ModuleHardwareCheck = x => new ModuleHardware();

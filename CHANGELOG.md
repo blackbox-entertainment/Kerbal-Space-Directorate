@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.193 (2026-11-03), test build
+
+- **Three dead of thirst 73 days short of Kerbin** (2026-11-03, mk IIIe): the first crew to land on Duna and stand, climb out, wait 452 days for the window and burn for home. The supplies check had counted the wait at Duna as a quarter of a synodic period (228 days; the real wait is about 450) and consumption at Kerbalism's nominal rate (the ship drank at twice that on the way home), so a 1,150-day trip passed with 880 days of water.
+- **The trip length counts the real wait for the window home**, from the return phasing (out 324, wait about 434, back 324, plus 12 for the arrival at Duna), and **supplies are counted at 1.5 x the nominal rate** (agency.cfg supplySafetyFactor). The pad offer shows "SUPPLIES x of y days" in red when a craft is short; the flight still goes if the Director says so.
+
 ## 0.8.192 (2026-11-03), test build
 
 - **Rival agencies keep a believable pace** (T: "how are we getting beaten to Laythe or Jool?"). They flew two to six missions a year straight up the milestone ladder on a dice roll, untouched by windows, trip length or research, and reached Laythe while the Directorate fought real flights. Now a rival climbs no more than one tier past the Directorate's own best first, and a trip to another planet costs it a window: nothing else beyond the moons for two years, succeed or fail. Existing saves keep the firsts already claimed.
