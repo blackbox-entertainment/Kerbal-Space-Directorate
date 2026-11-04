@@ -50,10 +50,9 @@ namespace KSA.Core
                 // The crew that will eat: the mission's, or everyone seated when the Director seated more (0.8.197: the window passed a
                 // 2-crew mission while 3 sat aboard, and the pad flagged the same rocket red).
                 int crew = Math.Max(1, Math.Max(t.CrewSize, d.SeatedCrew)), days = TripDays(t);
-                double supply = LifeSupport.SupplyDays(d.Food, d.Water, crew, d.WaterRecyclers);
-                if (supply < days + Math.Max(0, LifeSupport.MarginDays)) list.Add("Food and water for " + Math.Floor(supply) + " days with " + crew + " aboard" + (d.WaterRecyclers > 0 ? " (water recycled)" : string.Empty) + ", and the trip takes about " + days + ". Counted at " + LifeSupport.SafetyFactor.ToString("0.0") + " x the nominal rate.");
-                double air = d.Oxygen / (crew * OxygenPerKerbalDay);
-                if (air < days) list.Add("Oxygen for " + Math.Floor(air) + " days, and the trip takes about " + days + ".");
+                // Oxygen counts with the food and water (0.8.202): the mk IIIe's 120,561 units were 1,080 days for three against a 1,150-day trip.
+                double supply = LifeSupport.SupplyDays(d.Food, d.Water, d.Oxygen, crew, d.WaterRecyclers);
+                if (supply < days + Math.Max(0, LifeSupport.MarginDays)) list.Add("Food, water and oxygen for " + Math.Floor(supply) + " days with " + crew + " aboard (" + LifeSupport.ShortestSupply(d.Food, d.Water, d.Oxygen, crew, d.WaterRecyclers) + " runs out first" + (d.WaterRecyclers > 0 ? ", water recycled" : string.Empty) + "), and the trip takes about " + days + ". Counted at " + LifeSupport.SafetyFactor.ToString("0.0") + " x the nominal rate.");
                 if (windowed && days > RadiationDays) list.Add("About " + days + " days beyond Kerbin's field: check Radiation in Kerbalism's Planner.");
             }
             if (leavesKerbin && d.Charge < ShadowCharge && t.CrewSize > 0) list.Add("Batteries hold " + Math.Round(d.Charge) + " charge: too little for the dark side of an orbit, or for experiments running. Add batteries.");
@@ -68,6 +67,5 @@ namespace KSA.Core
             return list;
         }
 
-        private const double OxygenPerKerbalDay = 37.3;
     }
 }

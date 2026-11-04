@@ -69,6 +69,11 @@ namespace KSA.KSP.Flight
         /// <summary>After undocking our ship is a vessel of its own again: the director follows it; the depot keeps the rest.</summary>
         public Action<Vessel, Vessel> Undocked;
 
+        /// <summary>When the supplies aboard run out at the nominal rate, UT (0.8.202): 0 unknown, infinite when nothing runs out. The return planner arrives before it.</summary>
+        public double SuppliesRunOutUt;
+        /// <summary>Which supply runs out first: "food", "water" or "oxygen".</summary>
+        public string ShortestSupply;
+
         /// <summary>The flying crew's numbers (decision 21): precision, margins, mistake chance. Never null.</summary>
         public KSA.Core.Flight.CrewFlightProfile Crew = KSA.Core.Flight.CrewFlightProfile.Neutral();
         /// <summary>Seeded per flight; used for pilot mistakes and the trait rule.</summary>

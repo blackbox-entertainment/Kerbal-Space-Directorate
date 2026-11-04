@@ -23,6 +23,8 @@ namespace KSA.Core.Projects
         /// <summary>Food and water a kerbal uses per day (Kerbalism default profile: 2 meals, 4 drinks).</summary>
         public double FoodPerKerbalDay { get; set; } = 0.2624;
         public double WaterPerKerbalDay { get; set; } = 0.1344;
+        /// <summary>Kerbalism's default oxygen rule: 0.00172379825 units a second per kerbal (0.8.202: the mk IIIe's 120,561 units were 1,080 days for three, and the trip 1,150).</summary>
+        public double OxygenPerKerbalDay { get; set; } = 37.3;
         /// <summary>Extra days of supplies a live flight must carry beyond its planned length.</summary>
         public int MarginDays { get; set; } = 2;
         /// <summary>
@@ -42,16 +44,37 @@ namespace KSA.Core.Projects
         /// <summary>Days of food and water for a crew, the smaller of the two. Infinite with no crew.</summary>
         public double SupplyDays(double food, double water, int crew) { return SupplyDays(food, water, crew, 0); }
 
-        /// <summary>As above, with water recyclers aboard: each covers one crew member's water at the recovery share (0.8.194).</summary>
-        public double SupplyDays(double food, double water, int crew, double waterRecyclers)
+        /// <summary>As above, with water recyclers aboard: each covers one crew member's water at the recovery share (0.8.194). Oxygen not counted.</summary>
+        public double SupplyDays(double food, double water, int crew, double waterRecyclers) { return SupplyDays(food, water, double.PositiveInfinity, crew, waterRecyclers); }
+
+        /// <summary>Days of food, water and oxygen for a crew, the smallest of the three, at SafetyFactor times the nominal rate (0.8.202). Infinite with no crew.</summary>
+        public double SupplyDays(double food, double water, double oxygen, int crew, double waterRecyclers)
+        {
+            return Days(food, water, oxygen, crew, waterRecyclers, SafetyFactor > 0 ? SafetyFactor : 1);
+        }
+
+        /// <summary>Days the supplies aboard really last at the nominal rate (0.8.202): what a crew in flight has left.</summary>
+        public double DaysLeft(double food, double water, double oxygen, int crew, double waterRecyclers) { return Days(food, water, oxygen, crew, waterRecyclers, 1); }
+
+        /// <summary>Which of "food", "water" and "oxygen" runs out first.</summary>
+        public string ShortestSupply(double food, double water, double oxygen, int crew, double waterRecyclers)
+        {
+            double f = Days(food, double.PositiveInfinity, double.PositiveInfinity, crew, waterRecyclers, 1);
+            double w = Days(double.PositiveInfinity, water, double.PositiveInfinity, crew, waterRecyclers, 1);
+            double o = Days(double.PositiveInfinity, double.PositiveInfinity, oxygen, crew, waterRecyclers, 1);
+            if (o <= f && o <= w) return "oxygen";
+            return w < f ? "water" : "food";
+        }
+
+        private double Days(double food, double water, double oxygen, int crew, double waterRecyclers, double factor)
         {
             if (crew <= 0) return double.PositiveInfinity;
-            double factor = SafetyFactor > 0 ? SafetyFactor : 1;
             double cover = Math.Max(0, Math.Min(1, waterRecyclers / crew));
             double waterRate = WaterPerKerbalDay * (1 - Math.Max(0, Math.Min(0.99, WaterRecyclerRecovery)) * cover);
             double f = FoodPerKerbalDay > 0 ? food / (FoodPerKerbalDay * crew * factor) : double.PositiveInfinity;
             double w = waterRate > 0 ? water / (waterRate * crew * factor) : double.PositiveInfinity;
-            return Math.Min(f, w);
+            double o = OxygenPerKerbalDay > 0 ? oxygen / (OxygenPerKerbalDay * crew * factor) : double.PositiveInfinity;
+            return Math.Min(f, Math.Min(w, o));
         }
 
         public static LifeSupportRules Parse(DataNode node)
@@ -63,6 +86,7 @@ namespace KSA.Core.Projects
             r.RequireRecyclers = node.GetBool("requireRecyclers", r.RequireRecyclers);
             r.FoodPerKerbalDay = node.GetDouble("foodPerKerbalDay", r.FoodPerKerbalDay);
             r.WaterPerKerbalDay = node.GetDouble("waterPerKerbalDay", r.WaterPerKerbalDay);
+            r.OxygenPerKerbalDay = node.GetDouble("oxygenPerKerbalDay", r.OxygenPerKerbalDay);
             r.MarginDays = node.GetInt("marginDays", r.MarginDays);
             r.SafetyFactor = node.GetDouble("supplySafetyFactor", r.SafetyFactor);
             r.WaterRecyclerRecovery = node.GetDouble("waterRecyclerRecovery", r.WaterRecyclerRecovery);

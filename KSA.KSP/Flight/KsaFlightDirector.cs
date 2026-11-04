@@ -158,6 +158,7 @@ namespace KSA.KSP.Flight
         private MissionProgram _program;
         private ScienceRunner _science;
         private FlightContext _ctx;
+        private int _supplyTick;
         // Top right, clear of the stock app toolbar down the right edge. Where the Director drags it is remembered
         // for the rest of the session, so every flight opens it in the same place.
         private static Vector2? _hudPlace;
@@ -560,8 +561,8 @@ namespace KSA.KSP.Flight
                 if (agency.LifeSupportOn && !t.IsUncrewed && !t.IsAircraft)
                 {
                     int trip = agency.TripDays(t), crewAboard = Math.Max(1, v.GetCrewCount());
-                    double supply = agency.LifeSupport.SupplyDays(Aboard(v, "Food"), Aboard(v, "Water"), crewAboard, Aboard(v, "_WaterRecycler"));
-                    if (supply < trip + Math.Max(0, agency.LifeSupport.MarginDays)) { short_ = true; chip += " SUPPLIES " + Math.Floor(supply) + " of " + trip + " days"; }
+                    double supply = agency.LifeSupport.SupplyDays(Aboard(v, "Food"), Aboard(v, "Water"), Aboard(v, "Oxygen"), crewAboard, Aboard(v, "_WaterRecycler"));
+                    if (supply < trip + Math.Max(0, agency.LifeSupport.MarginDays)) { short_ = true; chip += " SUPPLIES " + Math.Floor(supply) + " of " + trip + " days (" + agency.LifeSupport.ShortestSupply(Aboard(v, "Food"), Aboard(v, "Water"), Aboard(v, "Oxygen"), crewAboard, Aboard(v, "_WaterRecycler")) + ")"; }
                 }
                 Color before = GUI.contentColor;
                 if (short_) GUI.contentColor = Color.red;
@@ -944,6 +945,20 @@ namespace KSA.KSP.Flight
                     _ctx.Control.TendDeployables(outside);
                     string dropped = null;
                     if (_ctx.Control.DropEmptyTanks(ref dropped)) Log(dropped, null);
+                }
+                // What the supplies aboard really leave the crew (0.8.202): the return planner takes a faster path home when the cheapest
+                // window lands after they run out. Every 120 frames; the sums walk every part.
+                if (KsaCore.Agency != null && KsaCore.Agency.LifeSupportOn && (_ctx.SuppliesRunOutUt == 0 || ++_supplyTick % 120 == 0))
+                {
+                    int crewAboard = _vessel.GetCrewCount();
+                    if (crewAboard > 0)
+                    {
+                        double food = Aboard(_vessel, "Food"), water = Aboard(_vessel, "Water"), oxygen = Aboard(_vessel, "Oxygen"), recyclers = Aboard(_vessel, "_WaterRecycler");
+                        double left = KsaCore.Agency.LifeSupport.DaysLeft(food, water, oxygen, crewAboard, recyclers);
+                        _ctx.SuppliesRunOutUt = double.IsInfinity(left) ? double.PositiveInfinity : Planetarium.GetUniversalTime() + left * TransferSupport.Day;
+                        _ctx.ShortestSupply = KsaCore.Agency.LifeSupport.ShortestSupply(food, water, oxygen, crewAboard, recyclers);
+                    }
+                    else _ctx.SuppliesRunOutUt = double.PositiveInfinity;
                 }
                 string line = _program.Step();
                 if (line != null) Log(line, null);

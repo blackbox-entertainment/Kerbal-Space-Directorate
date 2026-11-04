@@ -376,6 +376,17 @@ namespace KSA.Core.Flight.Orbital
         public static TransferPlan Plan(Func<double, StateVector> origin, Func<double, StateVector> target, double mu,
             double earliestUt, double latestUt, double minTof, double maxTof, int departureSamples, int tofSamples, double arrivalWeight, double minRadius)
         {
+            return Plan(origin, target, mu, earliestUt, latestUt, minTof, maxTof, departureSamples, tofSamples, arrivalWeight, minRadius, double.PositiveInfinity, 0);
+        }
+
+        /// <summary>
+        /// As above, with a latest arrival time and a cap on the arrival excess speed (0 = none) (0.8.202): a crew whose supplies run out
+        /// before the cheapest window lands takes the cheapest path that arrives in time.
+        /// </summary>
+        public static TransferPlan Plan(Func<double, StateVector> origin, Func<double, StateVector> target, double mu,
+            double earliestUt, double latestUt, double minTof, double maxTof, int departureSamples, int tofSamples, double arrivalWeight, double minRadius,
+            double latestArrivalUt, double maxArrivalSpeed)
+        {
             if (origin == null || target == null) return null;
             if (departureSamples < 1) departureSamples = 1;
             if (tofSamples < 1) tofSamples = 1;
@@ -394,7 +405,7 @@ namespace KSA.Core.Flight.Orbital
                 for (int j = 0; j < tofSamples; j++)
                 {
                     double tof = minTof + j * tofStep;
-                    Consider(origin, target, mu, dep, tof, arrivalWeight, minRadius, ref best, ref bestScore);
+                    Consider(origin, target, mu, dep, tof, arrivalWeight, minRadius, latestArrivalUt, maxArrivalSpeed, ref best, ref bestScore);
                 }
             }
             if (best == null) return null;
@@ -414,7 +425,7 @@ namespace KSA.Core.Flight.Orbital
                         if (di == 0 && tj == 0) continue;
                         double dep = Clamp(cd + di * dStep, earliestUt, latestUt);
                         double tof = Clamp(ct + tj * tStep, minTof, maxTof);
-                        Consider(origin, target, mu, dep, tof, arrivalWeight, minRadius, ref best, ref bestScore);
+                        Consider(origin, target, mu, dep, tof, arrivalWeight, minRadius, latestArrivalUt, maxArrivalSpeed, ref best, ref bestScore);
                     }
                 }
             }
@@ -440,8 +451,9 @@ namespace KSA.Core.Flight.Orbital
         }
 
         private static void Consider(Func<double, StateVector> origin, Func<double, StateVector> target, double mu,
-            double dep, double tof, double arrivalWeight, double minRadius, ref TransferPlan best, ref double bestScore)
+            double dep, double tof, double arrivalWeight, double minRadius, double latestArrivalUt, double maxArrivalSpeed, ref TransferPlan best, ref double bestScore)
         {
+            if (dep + tof > latestArrivalUt) return;
             StateVector o = origin(dep);
             StateVector t = target(dep + tof);
             Vec3 normal = Vec3.Cross(o.Position, o.Velocity);
@@ -450,6 +462,7 @@ namespace KSA.Core.Flight.Orbital
             if (minRadius > 0 && Periapsis(o.Position, v1, mu) < minRadius) return;
             Vec3 dv = v1 - o.Velocity;
             Vec3 arr = v2 - t.Velocity;
+            if (maxArrivalSpeed > 0 && arr.Length > maxArrivalSpeed) return;
             double score = dv.Length + arrivalWeight * arr.Length;
             if (double.IsNaN(score) || score >= bestScore) return;
             bestScore = score;

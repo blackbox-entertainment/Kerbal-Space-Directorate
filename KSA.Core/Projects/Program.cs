@@ -33,6 +33,8 @@ namespace KSA.Core.Projects
         /// <summary>Food and water the craft carries when full (Kerbalism units), for the live-flight supply check.</summary>
         public double Food { get; set; }
         public double Water { get; set; }
+        /// <summary>Oxygen aboard when full (0.8.202): it ran out on a Duna round trip 70 days short of home while food and water passed.</summary>
+        public double Oxygen { get; set; }
         /// <summary>Liquid fuel and oxidizer the craft's tanks hold when full, tonnes (a fuel depot core's capacity, 2026-10-29).</summary>
         public double FuelTonnes { get; set; }
 

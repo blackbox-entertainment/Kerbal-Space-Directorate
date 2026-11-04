@@ -95,6 +95,7 @@ namespace KSA.KSP.Parts
                 if (r == null) continue;
                 if (r.resourceName == "Food") h.Food += r.amount;
                 else if (r.resourceName == "Water") h.Water += r.amount;
+                else if (r.resourceName == "Oxygen") h.Oxygen += r.amount;
             }
         }
 

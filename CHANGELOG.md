@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.202 (2026-11-04), test build
+
+- **Oxygen counts in every supplies check.** The pad offer, the VAB "What can this fly?" line and the live-flight supply check counted food and water only. The mk IIIe carries 120,561 units of oxygen: 1,080 days for three at Kerbalism's rate, against a 1,150-day Duna round trip. The crew before (T+1,081 days, "thirst" by the report) ran out of air. All three checks now take the smallest of food, water and oxygen and name which runs out first (agency.cfg LIFE_SUPPORT oxygenPerKerbalDay 37.3).
+- **The return home arrives before the supplies run out.** The flight director keeps a running figure for when the food, water and oxygen aboard run out at the nominal rate. When the cheapest window home would land after that, the crew plan the cheapest path that lands ten days before it instead, within the fuel aboard less 150 m/s and never arriving faster than 2,000 m/s excess, and the log says what it costs. When no such path fits the fuel they fly the window and tell the Director plainly that the crew will not make it without a resupply.
+
 ## 0.8.201 (2026-11-04), test build
 
 - **The meeting with the tanker counts the matching burn.** The rule that sends the crew round a phasing orbit weighed the intercept burn alone against its 120 m/s limit: 99 m/s passed, then the 100 m/s velocity match on arrival burnt out the second stage and ate into the lander, twice today, for a station on nearly the same orbit (T: \"it used to be able to dock with the tanker and still have fuel in the 2nd stage\"). The limit now covers intercept plus match, so a station at a bad phase angle gets a cheap phasing orbit first; the log says what a direct meeting would have cost.

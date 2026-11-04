@@ -470,6 +470,9 @@ namespace KSA.KSP.Flight
         private const double NearWindowPrice = 1.3; // of the best excess speed in the cycle
         private const double MaxParkingApoapsis = 130000;
         private const double LowParkingApoapsis = 110000;
+        // Supplies set the latest arrival (0.8.202): land this many days before they run out, keep this much fuel for the trims and the
+        // reentry, and never arrive faster than this (the shield's limit, well past a Duna return's 900 m/s).
+        private const double SupplyMarginDays = 10, ReturnReserve = 150, MaxArrivalExcess = 2000;
 
         /// <summary>
         /// Closest the path after a burn comes to the target, metres; 0 when it passes inside the target's sphere. All by the two-body sums:
@@ -614,6 +617,34 @@ namespace KSA.KSP.Flight
                 if (near != null && near.DeltaVMagnitude <= plan.DeltaVMagnitude * NearWindowPrice) plan = near;
             }
 
+            // The supplies aboard set the latest arrival (0.8.202, 2026-11-04: the mk IIIe's oxygen runs out 1,080 days after launch and the
+            // cheapest return lands 1,150 days after it; the crew before died the same way at T+1,081 d, "of thirst" by the report). A dearer,
+            // faster path home that lands while the air lasts beats the cheapest window; the fuel aboard less a reserve is the budget.
+            string deadlineLine = null;
+            if (ctx.SuppliesRunOutUt > 0 && !double.IsInfinity(ctx.SuppliesRunOutUt) && plan.ArrivalUt > ctx.SuppliesRunOutUt - SupplyMarginDays * day)
+            {
+                double latest = ctx.SuppliesRunOutUt - SupplyMarginDays * day;
+                double rPark = v.orbit.semiMajorAxis > 0 ? v.orbit.semiMajorAxis : v.orbit.PeR;
+                double aboard = ctx.Control.DeltaVAvailable(), budget = aboard - ReturnReserve;
+                string what = ctx.ShortestSupply ?? "supplies";
+                string shortBy = Math.Max(1, Math.Round((plan.ArrivalUt - ctx.SuppliesRunOutUt) / day)) + " days";
+                TransferPlan fast = null;
+                foreach (double weight in new[] { 0.5, 0.0 })
+                {
+                    TransferPlan f = null;
+                    try { f = TransferPlanner.Plan(OrbitAdapter.Sampler(_origin.orbit), OrbitAdapter.Sampler(_target.orbit), sunMu, now + 600, Math.Max(now + 1200, latest - 0.2 * hohmannTime), 0.2 * hohmannTime, 1.6 * hohmannTime, 80, 40, weight, 0, latest, MaxArrivalExcess); }
+                    catch (Exception e) { KsaCore.Log.Error("InterplanetaryTransferLeg deadline search threw: " + e); }
+                    if (f != null && Ejection.DeltaV(_origin.gravParameter, rPark, f.DeltaV.Length) <= budget) { fast = f; break; }
+                }
+                if (fast != null)
+                {
+                    deadlineLine = "The " + what + " aboard runs out " + TransferSupport.Date(ctx.SuppliesRunOutUt) + ", " + shortBy + " before the cheapest window lands: taking a faster path home, "
+                        + Math.Round(Ejection.DeltaV(_origin.gravParameter, rPark, fast.DeltaV.Length)) + " of the " + Math.Round(aboard) + " m/s aboard, landing " + TransferSupport.Date(fast.ArrivalUt) + " at " + Math.Round(fast.ArrivalSpeed) + " m/s excess.";
+                    plan = fast;
+                }
+                else deadlineLine = "The " + what + " aboard runs out " + TransferSupport.Date(ctx.SuppliesRunOutUt) + ", " + shortBy + " before the cheapest window lands, and no faster path fits the " + Math.Round(aboard) + " m/s aboard. Flying the window. Director: without a resupply the crew will not make it.";
+            }
+
             // Hyperbolic excess relative to the planet, in the same frame as the parking orbit.
             Vec3 vInf = plan.DeltaV;
             double vInfMag = vInf.Length;
@@ -673,7 +704,7 @@ namespace KSA.KSP.Flight
             _phase = Phases.Burn;
             Status = "Ejection " + TransferSupport.Date(bestUt) + " (" + Math.Round(dv) + " m/s): waiting for the window.";
             bool escape = n.nextPatch != null && n.nextPatch.patchEndTransition == Orbit.PatchTransitionType.ESCAPE;
-            return "Window to " + _target.bodyName + ": depart " + TransferSupport.Date(plan.DepartureUt) + ", arrive " + TransferSupport.Date(plan.ArrivalUt)
+            return (deadlineLine != null ? deadlineLine + " " : string.Empty) + "Window to " + _target.bodyName + ": depart " + TransferSupport.Date(plan.DepartureUt) + ", arrive " + TransferSupport.Date(plan.ArrivalUt)
                 + " (" + TransferSupport.Countdown(plan.TimeOfFlight) + " flight, " + Math.Round(vInfMag) + " m/s excess). Ejection burn "
                 + Math.Round(dv) + " m/s at " + TransferSupport.Date(bestUt) + (escape ? "." : "; node prediction shows no escape yet.");
         }

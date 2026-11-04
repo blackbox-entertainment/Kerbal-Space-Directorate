@@ -319,15 +319,15 @@ namespace KSA.Core.Tests
             var mkI = new KSA.Core.Design.PlayerDesign { Seats = 3, LanderMass = 30, LanderThrust = 60000, HasLegs = true, Food = 65, Water = 26, Oxygen = 8500, Charge = 240 };
             string all = string.Join(" | ", a.PreflightWarnings(mkI, duna).ToArray());
             Assert.That(all, Does.Contain("Weak for Duna"));
-            Assert.That(all, Does.Contain("Food and water"));
-            Assert.That(all, Does.Contain("Oxygen"));
+            Assert.That(all, Does.Contain("Food, water and oxygen"));
+            Assert.That(all, Does.Contain("water runs out first"), "the line names the supply that goes first (0.8.202)");
             Assert.That(all, Does.Contain("Batteries"));
             Assert.That(all, Does.Contain("departure burn"));
             Assert.That(all, Does.Contain("heat shield"));
             var mkII = new KSA.Core.Design.PlayerDesign { Seats = 3, LanderMass = 45, LanderThrust = 250000, HasLegs = true, HasHeatShield = true, AfterBoostersTwr = 1.2, Food = 1000, Water = 700, Oxygen = 112561, Charge = 1340 };
             string better = string.Join(" | ", a.PreflightWarnings(mkII, duna).ToArray());
             Assert.That(better, Does.Not.Contain("Weak"));
-            Assert.That(better, Does.Not.Contain("Food and water"));
+            Assert.That(better, Does.Not.Contain("Food, water and oxygen"));
             Assert.That(better, Does.Not.Contain("heat shield"));
             Assert.That(better, Does.Contain("Radiation"));
             // Three seated on a 2-crew mission eat for three (0.8.197): the window agrees with the pad.
@@ -335,9 +335,9 @@ namespace KSA.Core.Tests
             Assert.That(orbit.CrewSize, Is.EqualTo(2));
             var mkIII = new KSA.Core.Design.PlayerDesign { Seats = 7, LanderMass = 45, LanderThrust = 250000, HasLegs = true, HasHeatShield = true, AfterBoostersTwr = 1.2, Food = 650, Water = 700, Oxygen = 112561, Charge = 1340, SeatedCrew = 3 };
             string two = string.Join(" | ", a.PreflightWarnings(new KSA.Core.Design.PlayerDesign { Seats = 7, LanderMass = 45, LanderThrust = 250000, HasLegs = true, HasHeatShield = true, AfterBoostersTwr = 1.2, Food = 650, Water = 700, Oxygen = 112561, Charge = 1340 }, orbit).ToArray());
-            Assert.That(two, Does.Not.Contain("Food and water"), "650 food feeds two for 765 days at 1.5x");
+            Assert.That(two, Does.Not.Contain("Food, water and oxygen"), "650 food feeds two for 765 days at 1.5x");
             string three = string.Join(" | ", a.PreflightWarnings(mkIII, orbit).ToArray());
-            Assert.That(three, Does.Contain("Food and water for 550 days with 3 aboard"));
+            Assert.That(three, Does.Contain("Food, water and oxygen for 550 days with 3 aboard"));
         }
 
         [Test]

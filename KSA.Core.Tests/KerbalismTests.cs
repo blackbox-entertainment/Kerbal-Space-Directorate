@@ -63,6 +63,13 @@ namespace KSA.Core.Tests
             Assert.That(ls.RequireRecyclers, Is.True);
             Assert.That(ls.StrandedLostAfterDays, Is.EqualTo(20));
             Assert.That(ls.SupplyDays(1.35, 0.7, 1) * ls.SafetyFactor, Is.EqualTo(5).Within(0.3), "a pod's Kerbalism supplies last about five days at the nominal rate; the check counts 1.5 x that (0.8.193)");
+            // Oxygen counts (0.8.202): the mk IIIe's 120,561 units for three were 1,080 days at the nominal rate, 718 at 1.5 x, against a 1,150-day trip.
+            Assert.That(ls.OxygenPerKerbalDay, Is.EqualTo(37.3));
+            Assert.That(ls.DaysLeft(1482, 309, 120561, 3, 7), Is.EqualTo(1077).Within(2));
+            Assert.That(ls.SupplyDays(1482, 309, 120561, 3, 7), Is.EqualTo(718).Within(2));
+            Assert.That(ls.ShortestSupply(1482, 309, 120561, 3, 7), Is.EqualTo("oxygen"));
+            Assert.That(ls.ShortestSupply(100, 309, 120561, 3, 7), Is.EqualTo("food"));
+            Assert.That(ls.SupplyDays(1482, 309, 3, 7), Is.EqualTo(1255).Within(2), "the old overload counts no oxygen");
         }
 
         [Test]
@@ -257,6 +264,8 @@ namespace KSA.Core.Tests
             a.ModuleHardwareCheck = x => new ModuleHardware { Food = a.LifeSupport.FoodPerKerbalDay * (need - 1), Water = a.LifeSupport.WaterPerKerbalDay * need };
             Assert.That(a.LifeSupportBlocker(p, type), Does.Contain("simulated"));
             a.ModuleHardwareCheck = x => new ModuleHardware { Food = a.LifeSupport.FoodPerKerbalDay * (need + 1), Water = a.LifeSupport.WaterPerKerbalDay * (need + 1) };
+            Assert.That(a.LifeSupportBlocker(p, type), Does.Contain("oxygen runs out first"), "no oxygen aboard (0.8.202)");
+            a.ModuleHardwareCheck = x => new ModuleHardware { Food = a.LifeSupport.FoodPerKerbalDay * (need + 1), Water = a.LifeSupport.WaterPerKerbalDay * (need + 1), Oxygen = a.LifeSupport.OxygenPerKerbalDay * (need + 1) };
             Assert.That(a.LifeSupportBlocker(p, type), Is.Null);
             a.LifeSupportMod = string.Empty;
             a.ModuleHardwareCheck = x => new ModuleHardware();
