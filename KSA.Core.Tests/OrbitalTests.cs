@@ -228,6 +228,33 @@ namespace KSA.Core.Tests
                 Is.EqualTo((Math.Sqrt(2) - 1) * Kepler.CircularSpeed(KerbinMu, ParkingRadius)).Within(1e-6));
         }
 
+        /// <summary>0.8.207: the ejection from a tilted parking orbit leaves along the wanted direction, plane change and all.</summary>
+        [Test]
+        public void Ejection_PlanFromOrbit_LeavesAlongTheWantedDirectionFromATiltedOrbit()
+        {
+            double mu = 3.0136321e11, radius = 320000 + 70000, soi = 47921949;
+            double n = Math.Sqrt(mu / (radius * radius * radius)), period = 2 * Math.PI / n;
+            Vec3 vInf = new Vec3(0, 887, 0);
+            foreach (double tiltDeg in new[] { 0.0, 25.0, 45.0 })
+            {
+                double tilt = tiltDeg * Math.PI / 180;
+                Vec3 normal = new Vec3(0, -Math.Sin(tilt), Math.Cos(tilt));
+                Func<double, StateVector> parking = t => Kepler.Circular(mu, radius, n * t, normal);
+                double burnUt; Vec3 dv;
+                Assert.That(Ejection.PlanFromOrbit(parking, mu, vInf, 100, period, out burnUt, out dv), Is.True, "tilt " + tiltDeg);
+                StateVector s = parking(burnUt);
+                var after = new StateVector(s.Position, s.Velocity + dv);
+                double seconds;
+                StateVector exit = Ejection.ExitState(after, mu, soi, out seconds);
+                Assert.That(seconds, Is.Not.NaN, "escapes, tilt " + tiltDeg);
+                Assert.That(Vec3.AngleBetween(exit.Velocity, vInf) * 180 / Math.PI, Is.LessThan(2.5), "leaves along the wanted direction, tilt " + tiltDeg);
+                Assert.That(exit.Velocity.Length, Is.EqualTo(vInf.Length).Within(vInf.Length * 0.03), "at the wanted speed, tilt " + tiltDeg);
+                double prograde = Ejection.DeltaV(mu, radius, vInf.Length);
+                if (tiltDeg == 0) Assert.That(dv.Length, Is.EqualTo(prograde).Within(2), "in the plane it is the prograde burn");
+                else Assert.That(dv.Length, Is.GreaterThan(prograde).And.LessThan(prograde + 2 * Kepler.CircularSpeed(mu, radius) * Math.Sin(tilt / 2) + 5), "the plane change rides in the burn, tilt " + tiltDeg);
+            }
+        }
+
         [Test]
         public void Ejection_BurnPointDirection_GeometryHolds()
         {

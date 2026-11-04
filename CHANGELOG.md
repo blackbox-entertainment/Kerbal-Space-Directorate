@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.207 (2026-11-04), test build
+
+- **The ejection burn is planned on the orbit as it is, tilted or not.** An ascent from a landing site leaves a parking orbit tilted by the site's latitude. The ejection sums aimed in that plane and threw the out-of-plane part away: the mk IIIe's Duna ejection missed Kerbin by 447,000 km, the 334 m/s deep-space correction ran the tanks dry and then the thrusters, and the crew were 123 m/s short of home. The planner now finds the point on the lap where one burn at periapsis leaves along the wanted direction, plane change and all, and says how much of the burn is the plane change. Tested from level, 25 and 45 degree orbits.
+- **No ejection the tanks cannot pay for.** If the ejection plus 100 m/s for the corrections is more than the craft has, the crew hold in orbit and say what is short and what would fix it, instead of leaving on a path they cannot finish.
+
 ## 0.8.206 (2026-11-04), test build
 
 - **The crew move between the pod and the habitat as the flight goes** (T). At the start of every coast (cruises, corrections, waits for a window, orbit holds, captures) everyone but the pilot moves into the roomiest habitat aboard, by Kerbalism's living space when it says, else by seats; the pilot stays in the pod so the ship is never without a hand on the controls, and moves too when a probe core is aboard. Before anything that sheds parts, enters air, lands, docks or steps outside (aerobraking, reentry, landing, ascent, docking, surface work) everyone is back in the pod, and the survival net puts them there before it drops a thing. A Kerbalism habitat switched off is never used. The log names who moved where.

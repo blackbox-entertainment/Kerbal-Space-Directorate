@@ -529,6 +529,62 @@ namespace KSA.Core.Flight.Orbital
             return (d * Math.Cos(nuInf) - Vec3.Cross(n, d) * Math.Sin(nuInf)).Normalized;
         }
 
+        /// <summary>
+        /// The one burn on a parking orbit, round or not and in any plane, that leaves with hyperbolic excess vInf, a vector (0.8.207,
+        /// 2026-11-04: a Duna ejection planned in the parking plane, from the tilted orbit an ascent from a landing site gives, missed
+        /// Kerbin by 447,000 km; the 334 m/s deep-space correction ran the tanks and the thrusters dry). The hyperbola's periapsis is the
+        /// burn point, so the point must be where the radius makes the asymptote angle with the leaving direction: two such points a lap,
+        /// the cheaper taken. The burn carries the plane change. Searches one period from fromUt. False when no point on the lap works
+        /// (the leaving direction is too far out of the plane).
+        /// </summary>
+        public static bool PlanFromOrbit(Func<double, StateVector> parking, double mu, Vec3 vInf, double fromUt, double period, out double burnUt, out Vec3 deltaV)
+        {
+            burnUt = fromUt; deltaV = Vec3.Zero;
+            double v2 = vInf.LengthSquared;
+            if (parking == null || v2 < 1 || period <= 0 || mu <= 0) return false;
+            Vec3 u = vInf.Normalized;
+            const int samples = 720;
+            double best = double.PositiveInfinity, prevF = double.NaN, prevT = fromUt;
+            for (int i = 0; i <= samples; i++)
+            {
+                double t = fromUt + period * i / samples;
+                double f = AsymptoteGap(parking(t), mu, u, v2);
+                if (i > 0 && !double.IsNaN(prevF) && !double.IsNaN(f) && Math.Sign(f) != Math.Sign(prevF))
+                {
+                    double lo = prevT, hi = t, flo = prevF;
+                    for (int k = 0; k < 40; k++)
+                    {
+                        double mid = (lo + hi) / 2, fm = AsymptoteGap(parking(mid), mu, u, v2);
+                        if (Math.Sign(fm) == Math.Sign(flo)) { lo = mid; flo = fm; } else hi = mid;
+                    }
+                    double tc = (lo + hi) / 2;
+                    Vec3 dv = BurnAt(parking(tc), mu, u, v2);
+                    if (dv.Length < best) { best = dv.Length; burnUt = tc; deltaV = dv; }
+                }
+                prevF = f; prevT = t;
+            }
+            return best < double.PositiveInfinity;
+        }
+
+        /// <summary>The angle from the radius to the leaving direction less the asymptote angle: zero where a periapsis burn sends the ship along u.</summary>
+        private static double AsymptoteGap(StateVector s, double mu, Vec3 u, double vInf2)
+        {
+            double r = s.Position.Length;
+            if (r <= 0) return double.NaN;
+            double e = 1 + r * vInf2 / mu;
+            return Vec3.AngleBetween(s.Position, u) - Math.Acos(-1 / e);
+        }
+
+        /// <summary>The burn at a point: periapsis speed for vInf, square to the radius, in the plane of the radius and the leaving direction, on its side.</summary>
+        private static Vec3 BurnAt(StateVector s, double mu, Vec3 u, double vInf2)
+        {
+            double r = s.Position.Length;
+            Vec3 rHat = s.Position / r;
+            Vec3 dir = u - rHat * Vec3.Dot(u, rHat);
+            if (dir.LengthSquared < 1e-12) return new Vec3(1e9, 0, 0);
+            return dir.Normalized * Math.Sqrt(vInf2 + 2 * mu / r) - s.Velocity;
+        }
+
         /// <summary>Delta-v of the first burn of a Hohmann transfer from circular r1 to r2, and the half-period transfer time.</summary>
         public static double Hohmann(double mu, double r1, double r2, out double transferTime)
         {

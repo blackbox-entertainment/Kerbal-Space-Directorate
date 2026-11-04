@@ -473,6 +473,8 @@ namespace KSA.KSP.Flight
         // Supplies set the latest arrival (0.8.202): land this many days before they run out, keep this much fuel for the trims and the
         // reentry, and never arrive faster than this (the shield's limit, well past a Duna return's 900 m/s).
         private const double SupplyMarginDays = 10, ReturnReserve = 150, MaxArrivalExcess = 2000;
+        /// <summary>Kept aboard after the ejection for the deep-space and arrival corrections (0.8.207).</summary>
+        private const double EjectionReserve = 100;
 
         /// <summary>
         /// Closest the path after a burn comes to the target, metres; 0 when it passes inside the target's sphere. All by the two-body sums:
@@ -652,25 +654,17 @@ namespace KSA.KSP.Flight
             double planetMu = _origin.gravParameter;
             double period = v.orbit.period;
             double r = v.orbit.semiMajorAxis > 0 ? v.orbit.semiMajorAxis : v.orbit.PeR;
-            Vec3 normal = OrbitAdapter.Normal(v.orbit, now);
-            Vec3 burnDir = Ejection.BurnPointDirection(vInf.Normalized, normal, planetMu, r, vInfMag);
-            if (burnDir.LengthSquared == 0) { Fail("could not find the ejection point"); return null; }
 
-            // First time after (window - half a period) where the vessel passes the ejection point.
+            // The burn point and vector on the orbit as it is, tilted or not (0.8.207): the old in-plane sums from a parking orbit tilted by
+            // the landing site's latitude missed Kerbin by 447,000 km, and the 334 m/s correction ran the tanks and the thrusters dry.
             double start = Math.Max(now + 60, plan.DepartureUt - 0.5 * period);
-            double bestUt = start, bestAngle = double.PositiveInfinity;
-            for (double ut = start; ut <= start + period + 10; ut += 10)
+            double bestUt; Vec3 burn3;
+            if (!Ejection.PlanFromOrbit(OrbitAdapter.Sampler(v.orbit), planetMu, vInf, start, period, out bestUt, out burn3))
             {
-                double a = Vec3.AngleBetween(OrbitAdapter.StateAt(v.orbit, ut).Position, burnDir);
-                if (a < bestAngle) { bestAngle = a; bestUt = ut; }
+                Fail("the leaving direction is too far out of the parking orbit's plane");
+                return "Transfer planning failed: the way to " + _target.bodyName + " leaves too far out of this orbit's plane for one burn. Director, your call.";
             }
-            for (double ut = bestUt - 10; ut <= bestUt + 10; ut += 0.25)
-            {
-                if (ut < now + 60) continue;
-                double a = Vec3.AngleBetween(OrbitAdapter.StateAt(v.orbit, ut).Position, burnDir);
-                if (a < bestAngle) { bestAngle = a; bestUt = ut; }
-            }
-            if (bestAngle > 1.0 * Math.PI / 180) KsaCore.Log.Warn("Ejection point only matched to " + Math.Round(bestAngle * 180 / Math.PI, 2) + " degrees.");
+            double planeCost = burn3.Length - Ejection.DeltaV(planetMu, r, vInfMag);
 
             // A long wait high up is a dose of radiation with Kerbalism: come down first (2026-11-01: 390 x 75 km, all three dead in 17 days;
             // 197 x 75 km, all three dead by day 198). A low wait is safe: 111 x 75 km for 128 days.
@@ -687,11 +681,18 @@ namespace KSA.KSP.Flight
                 Status = "Lowering the orbit out of the radiation: " + Math.Round(dvLower) + " m/s.";
                 return "Apoapsis " + TransferSupport.Km(v.orbit.ApA) + " is in the radiation and the window is " + TransferSupport.Countdown(bestUt - now) + " away: lowering it to " + TransferSupport.Km(LowParkingApoapsis) + " with " + Math.Round(dvLower) + " m/s.";
             }
-            double dv = Ejection.DeltaV(planetMu, r, vInfMag);
+            double dv = burn3.Length;
+            // Never leave on a burn the tanks cannot pay for with a correction to spare (0.8.207): the crew wait for the Director instead.
+            double aboardNow = ctx.Control.DeltaVAvailable();
+            if (aboardNow > 0 && dv + EjectionReserve > aboardNow)
+            {
+                Fail("the ejection needs " + Math.Round(dv) + " m/s plus " + EjectionReserve + " for corrections, and " + Math.Round(aboardNow) + " is aboard");
+                return "Holding in orbit: the ejection to " + _target.bodyName + " needs " + Math.Round(dv) + " m/s" + (planeCost > 5 ? " (" + Math.Round(planeCost) + " of it the plane change)" : string.Empty) + " plus " + EjectionReserve + " for the corrections, and the tanks hold " + Math.Round(aboardNow) + ". Director: a tanker, or a resupply.";
+            }
             NodePlanner.ClearNodes(v);
-            // The sums aim in the parking orbit's plane and ignore the days to the edge of the sphere: trim against the game's own path
+            // The sums ignore the days to the edge of the sphere: trim against the game's own path
             // (2026-11-01: a perfect 1,047 m/s burn missed Duna, and no correction out in the sun's space could find it).
-            Vec3 burn = Refine(v.orbit, bestUt, OrbitAdapter.StateAt(v.orbit, bestUt).Velocity.Normalized * dv, plan.ArrivalUt);
+            Vec3 burn = Refine(v.orbit, bestUt, burn3, plan.ArrivalUt);
             ManeuverNode n = NodePlanner.AddFrameDeltaV(v, bestUt, burn);
             if (n == null) { Fail("could not place the ejection node"); return null; }
             double pass = Miss(v.orbit, bestUt, burn, plan.ArrivalUt);
@@ -706,7 +707,7 @@ namespace KSA.KSP.Flight
             bool escape = n.nextPatch != null && n.nextPatch.patchEndTransition == Orbit.PatchTransitionType.ESCAPE;
             return (deadlineLine != null ? deadlineLine + " " : string.Empty) + "Window to " + _target.bodyName + ": depart " + TransferSupport.Date(plan.DepartureUt) + ", arrive " + TransferSupport.Date(plan.ArrivalUt)
                 + " (" + TransferSupport.Countdown(plan.TimeOfFlight) + " flight, " + Math.Round(vInfMag) + " m/s excess). Ejection burn "
-                + Math.Round(dv) + " m/s at " + TransferSupport.Date(bestUt) + (escape ? "." : "; node prediction shows no escape yet.");
+                + Math.Round(dv) + " m/s" + (planeCost > 5 ? " (" + Math.Round(planeCost) + " of it the plane change)" : string.Empty) + " at " + TransferSupport.Date(bestUt) + (escape ? "." : "; node prediction shows no escape yet.");
         }
 
         public void End(FlightContext ctx)
