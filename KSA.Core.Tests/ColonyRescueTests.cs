@@ -324,7 +324,10 @@ namespace KSA.Core.Tests
             Assert.That(all, Does.Contain("Batteries"));
             Assert.That(all, Does.Contain("departure burn"));
             Assert.That(all, Does.Contain("heat shield"));
-            var mkII = new KSA.Core.Design.PlayerDesign { Seats = 3, LanderMass = 45, LanderThrust = 250000, HasLegs = true, HasHeatShield = true, AfterBoostersTwr = 1.2, Food = 1000, Water = 700, Oxygen = 112561, Charge = 1340 };
+            // The mk IIIe's own oxygen (0.8.202): 112,561 units for three is 670 days at 1.5 x, short of a 765-day trip, and the line says so.
+            var mkIIAir = new KSA.Core.Design.PlayerDesign { Seats = 3, LanderMass = 45, LanderThrust = 250000, HasLegs = true, HasHeatShield = true, AfterBoostersTwr = 1.2, Food = 1000, Water = 700, Oxygen = 112561, Charge = 1340 };
+            Assert.That(string.Join(" | ", a.PreflightWarnings(mkIIAir, duna).ToArray()), Does.Contain("oxygen runs out first"));
+            var mkII = new KSA.Core.Design.PlayerDesign { Seats = 3, LanderMass = 45, LanderThrust = 250000, HasLegs = true, HasHeatShield = true, AfterBoostersTwr = 1.2, Food = 1000, Water = 700, Oxygen = 140000, Charge = 1340 };
             string better = string.Join(" | ", a.PreflightWarnings(mkII, duna).ToArray());
             Assert.That(better, Does.Not.Contain("Weak"));
             Assert.That(better, Does.Not.Contain("Food, water and oxygen"));

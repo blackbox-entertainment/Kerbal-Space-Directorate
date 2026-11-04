@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.203 (2026-11-04), test build
+
+- Test build of 0.8.202: the warnings test now expects the oxygen line for the mk IIIe's own figures. No code change.
+
 ## 0.8.202 (2026-11-04), test build
 
 - **Oxygen counts in every supplies check.** The pad offer, the VAB "What can this fly?" line and the live-flight supply check counted food and water only. The mk IIIe carries 120,561 units of oxygen: 1,080 days for three at Kerbalism's rate, against a 1,150-day Duna round trip. The crew before (T+1,081 days, "thirst" by the report) ran out of air. All three checks now take the smallest of food, water and oxygen and name which runs out first (agency.cfg LIFE_SUPPORT oxygenPerKerbalDay 37.3).
