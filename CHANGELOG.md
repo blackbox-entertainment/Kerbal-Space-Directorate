@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.200 (2026-11-04), test build
+
+- **The approach tilt is the fallback moon dodge** (T). When no timing shift under 100 m/s clears a moon across the approach, the crew tilt the approach plane about the vertical instead (same speed and height, so the same periapsis), and only ride through when neither works.
+
 ## 0.8.199 (2026-11-04), test build
 
 - **A moon across the approach no longer kills the crew.** The mk IIIe's Duna capture was planned two days out with a 46 km periapsis; on the way in the path ran through Ike's sphere, the pass bent it into the ground, the burn kept its planned time, and the crew warped to it and hit the surface at 632 m/s (Verdin, Franuki and Billy-Bobmore Kerman). Three fixes:

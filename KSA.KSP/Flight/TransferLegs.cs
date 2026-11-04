@@ -1515,10 +1515,17 @@ namespace KSA.KSP.Flight
             }
             Vec3 dv;
             double rp = o.PeR, band = Math.Max(5000, 0.1 * Math.Max(0, o.PeA));
-            if (!MoonDodge.Approach(OrbitAdapter.StateAt(o, burn), mu, burn, until, at, reach, rp - band, rp + band, DodgeMaxCost, out dv))
+            string how = "shifting the arrival past it";
+            StateVector atBurn = OrbitAdapter.StateAt(o, burn);
+            if (!MoonDodge.Approach(atBurn, mu, burn, until, at, reach, rp - band, rp + band, DodgeMaxCost, out dv))
             {
-                line = which + " lies across the approach in " + when + " and no burn under " + DodgeMaxCost + " m/s clears it; riding through and planning the insertion on the far side.";
-                return false;
+                // Fallback (0.8.200, T): tilt the approach plane about the vertical, same speed and height, so the same periapsis.
+                how = "tilting the approach past it";
+                if (!MoonDodge.Tilt(atBurn, mu, burn, until, at, reach, DodgeMaxCost, out dv))
+                {
+                    line = which + " lies across the approach in " + when + " and neither a timing shift nor a tilt under " + DodgeMaxCost + " m/s clears it; riding through and planning the insertion on the far side.";
+                    return false;
+                }
             }
             NodePlanner.ClearNodes(v);
             if (NodePlanner.AddFrameDeltaV(v, burn, dv) == null) return false;
@@ -1528,7 +1535,7 @@ namespace KSA.KSP.Flight
             if (_exec.Failed) { Fail(_exec.FailReason); return false; }
             _phase = Phases.Dodge;
             Status = "Clearing " + which + ": " + Math.Round(dv.Length, 1) + " m/s.";
-            line = which + " lies across the approach in " + when + ": shifting the arrival past it with " + Math.Round(dv.Length, 1) + " m/s, same periapsis.";
+            line = which + " lies across the approach in " + when + ": " + how + " with " + Math.Round(dv.Length, 1) + " m/s, same periapsis.";
             return true;
         }
 
