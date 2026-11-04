@@ -1540,7 +1540,7 @@ namespace KSA.KSP.Flight
                         {
                             // East by the compass, not by a yaw input: yaw follows however the lander happened to roll, and a kick that way
                             // put it in an orbit tilted 113 degrees, which no fuel aboard could bring home (2026-10-31).
-                            c.PointAlong(() => ClimbDirection(v, KickPitch, _headingDeg));
+                            c.PointAlong(() => KickDirection(v));
                             _phase = Phases.Kick; _phaseStart = ctx.Now;
                             Status = "Pitching east.";
                         }
@@ -1550,19 +1550,25 @@ namespace KSA.KSP.Flight
                         if (warping) { c.StopWarp(); break; }
                         c.AutoStage(ref line);
                         {
-                            // The kick sets the plane (0.8.210, 2026-11-04: off Duna, 2.5 s of kick on a lander that cannot turn in 2.5 s, then
-                            // "following prograde", went wherever the lift-off happened to lean: an orbit tilted 99.8 degrees, nearly polar,
-                            // and an ejection home 286 m/s dearer than the tanks held). With air the kick lasts until the speed along the
-                            // heading is real, or 15 s; and thin air (Duna's 6.7 kPa) is steered through like no air at all.
-                            double along = Vector3d.Dot(v.srf_velocity, HeadingDirection(v, _headingDeg));
-                            bool kicked = v.mainBody.atmosphere ? (along > KickSpeed || ctx.Now - _phaseStart > 15) : ctx.Now - _phaseStart > 2.5;
-                            if (kicked)
+                            // The kick sets the plane, at low speed where the air cannot argue (0.8.211, 2026-11-04). Before 0.8.210 the kick
+                            // was 2.5 s on a lander that cannot turn in 2.5 s, then "following prograde" went wherever the lift-off happened
+                            // to lean (an orbit tilted 99.8 degrees, nearly polar, twice). 0.8.210 steered the aimed heading on through Duna's
+                            // thin air instead, and a tall lander leaned off the airflow at 90 m/s tumbled at 7.8 km: three dead. Now the kick
+                            // leans against any sideways drift until the horizontal speed is along the heading, then the nose follows the air
+                            // as it always did; the plane is set by then and prograde keeps it.
+                            Vector3d headingDir = HeadingDirection(v, _headingDeg);
+                            Vector3d hv = Vector3d.Exclude(v.upAxis, v.srf_velocity);
+                            double along = Vector3d.Dot(hv, headingDir);
+                            double sideways = (hv - headingDir * along).magnitude;
+                            bool straight = along >= KickSpeed && sideways < 0.1 * along;
+                            double limit = v.mainBody.atmosphere ? 25 : 10;
+                            if (straight || ctx.Now - _phaseStart > limit)
                             {
-                                if (ThickAir(v)) c.Sas(VesselAutopilot.AutopilotMode.Prograde, true);
-                                else c.PointAlong(() => GuidedClimb(v));
+                                if (v.mainBody.atmosphere) c.Sas(VesselAutopilot.AutopilotMode.Prograde, true);
+                                else c.PointAlong(() => ClimbDirection(v, AirlessPitch(v), _headingDeg));
                                 _phase = Phases.Ascent; _phaseStart = ctx.Now;
-                                Status = ThickAir(v) ? "Holding prograde." : "Climbing on heading " + Math.Round(_headingDeg) + ".";
-                                ctx.Say(ThickAir(v) ? "Pitch program started; following prograde." : "Pitch program started on heading " + Math.Round(_headingDeg) + " (" + Math.Round(along) + " m/s along it).");
+                                Status = v.mainBody.atmosphere ? "Holding prograde." : "Climbing on heading " + Math.Round(_headingDeg) + ".";
+                                ctx.Say("Pitch program started on heading " + Math.Round(_headingDeg) + ": " + Math.Round(along) + " m/s along it, " + Math.Round(sideways) + " across" + (v.mainBody.atmosphere ? "; following prograde from here." : "."));
                             }
                         }
                         break;
@@ -1571,7 +1577,7 @@ namespace KSA.KSP.Flight
                         if (warping) { c.StopWarp(); break; }
                         c.Throttle = 1f;
                         c.AutoStage(ref line);
-                        if (v.mainBody.atmosphere) { if (ThickAir(v)) c.Sas(VesselAutopilot.AutopilotMode.Prograde, v.altitude < 20000); else c.PointAlong(() => GuidedClimb(v)); }
+                        if (v.mainBody.atmosphere) c.Sas(VesselAutopilot.AutopilotMode.Prograde, v.altitude < 20000);
                         if (v.orbit.ApA >= _target)
                         {
                             c.Throttle = 0;
@@ -1666,27 +1672,22 @@ namespace KSA.KSP.Flight
             return ((Vector3d)v.north * Math.Cos(h) + (Vector3d)v.east * Math.Sin(h)).normalized;
         }
 
-        private const double KickSpeed = 20;        // m/s along the heading before the kick is done with air (0.8.210)
-        private const double ThickAirKPa = 25;      // at or above this the nose follows the air (the Kerbin ascent's rule); free below 5 kPa
-        private const double ThinAirKPa = 5;
-        private const double MaxLeanThick = 8;      // degrees off prograde allowed at ThickAirKPa
-
-        /// <summary>Air thick enough that the nose must follow it (0.8.210): Laythe and Eve, never Duna.</summary>
-        private static bool ThickAir(Vessel v) { return v.mainBody.atmosphere && v.staticPressurekPa >= ThickAirKPa; }
+        private const double KickSpeed = 30;        // m/s along the heading before the kick is done (0.8.211)
 
         /// <summary>
-        /// The climb direction with air (0.8.210): the heading-and-pitch direction, leaning off the air's prograde by no more than the air
-        /// allows, 8 degrees at 25 kPa and anything at all under 5 kPa. Duna's 6.7 kPa at the surface is nearly free.
+        /// The kick's nose direction (0.8.211): KickPitch above the horizon, along the heading, leaning against whatever sideways speed the
+        /// lift-off gave (a lander on a slope leaves the ground leaning), so the horizontal speed ends up along the heading and the orbit
+        /// plane with it.
         /// </summary>
-        private Vector3d GuidedClimb(Vessel v)
+        private Vector3d KickDirection(Vessel v)
         {
-            Vector3d want = ClimbDirection(v, AirlessPitch(v), _headingDeg);
-            double p = v.mainBody.atmosphere ? v.staticPressurekPa : 0;
-            if (p <= ThinAirKPa || v.srfSpeed < 50) return want;
-            Vector3d pro = v.srf_velocity.normalized;
-            double maxLean = p >= ThickAirKPa ? MaxLeanThick : MaxLeanThick + (ThickAirKPa - p) / (ThickAirKPa - ThinAirKPa) * (90 - MaxLeanThick);
-            if (Vector3d.Angle(pro, want) <= maxLean) return want;
-            return (Vector3d)Vector3.RotateTowards((Vector3)pro, (Vector3)want, (float)(maxLean * Math.PI / 180), 0f);
+            Vector3d headingDir = HeadingDirection(v, _headingDeg);
+            Vector3d hv = Vector3d.Exclude(v.upAxis, v.srf_velocity);
+            Vector3d sideways = hv - headingDir * Vector3d.Dot(hv, headingDir);
+            Vector3d aim = (headingDir * KickSpeed - sideways * 2).normalized;
+            if (aim.magnitude < 0.5) aim = headingDir;
+            double p = KickPitch * Math.PI / 180;
+            return ((Vector3d)v.upAxis * Math.Sin(p) + aim * Math.Cos(p)).normalized;
         }
 
         /// <summary>

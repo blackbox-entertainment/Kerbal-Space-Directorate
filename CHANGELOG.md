@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.211 (2026-11-04), test build
+
+- **The climb off Duna: the kick sets the plane, then the nose follows the air.** 0.8.210 steered the aimed heading on through Duna's thin air, and a tall lander leaned off the airflow at 90 m/s tumbled at 7.8 km and killed Verdin, Franuki and Billy-Bobmore Kerman. That steering is gone. The kick now does the aiming at low speed, where the air cannot argue: the nose leans along the heading and against any sideways drift the lift-off gave, until the horizontal speed is 30 m/s along the heading and within a tenth of that across (25 s at most with air, 10 without), and then the nose follows the air as it always did. The plane is set by then and prograde keeps it. The log says what the kick achieved.
+
 ## 0.8.210 (2026-11-04), test build
 
 - **The climb off Duna goes where it is aimed.** The aimed heading of 0.8.209 was never followed: on a world with air the kick lasted 2.5 s on a lander that cannot turn in 2.5 s, then the crew "followed prograde", which was whichever way the lift-off happened to lean. The orbit came out tilted 99.8 degrees, nearly polar, and the ejection home cost 286 m/s more than the tanks held, twice today. Now with air the kick lasts until there is real speed along the heading (20 m/s, or 15 s), thin air (Duna's 6.7 kPa) is steered through like no air at all, and only thick air (25 kPa and up, Laythe and Eve) makes the nose follow the airflow, leaning off it by 8 degrees at most, as the Kerbin climb does. The orbit line now gives the inclination, and the log says how far the way home lies out of the plane when it does.
