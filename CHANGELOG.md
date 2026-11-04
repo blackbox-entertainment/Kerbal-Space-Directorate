@@ -2,6 +2,13 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.195 (2026-11-04), test build
+
+- **The surface hose (KSA-90).** A crewed craft landed within 100 m of other landed craft on the same world draws propellant, monopropellant, charge and (with Kerbalism) food, water and oxygen from them at 15 units a second, as if a hose ran across. Donors keep 5% of each tank and 10% of their batteries (agency.cfg SURFACE_LINK). "Hose:" lines in the flight log say what connected and what moved. Only in the flight scene: a lander waiting out a night keeps its flight on screen. T: "I figured 100m would be about the limit of a hose connection."
+- **Precision landing beside a base (KSA-85 to 89).** A flight to a world with a base aims 90 m from its centre (agency.cfg landingOffset), the flattest of eight bearings on that ring; the braking burn leans up to 12 degrees toward the aim so the miss closes for almost no fuel; at 2 km the crew looks for the flattest 50 m patch within 150 m of the aim, never inside the base's footprint; a slide that would eat the fuel reserve is given up for the ground underneath when it will do. The Director's picked site gets the same lean and fine search. Unflown.
+- **The surface stay is 15 minutes** (agency.cfg surfaceStaySeconds; T, 2026-11-03: no time to plant the flag or run the EVA science), and the HUD has a **Lift off now** button that ends it, or a science sweep, early. The flight test bench keeps its short stay.
+- **Cloud cities dock like stations (KSA-91, foundation, unflown).** With HL Airships Core installed, Eve and Jool cloud modules may fly live: entry to the cloud deck, envelopes inflate and climb to the city altitude (programs.cfg cloudAltitude: Eve 18 km, Jool 100 km as a guess), the core anchors there as the city, later modules fly to it on a gentle rocket push and dock. The envelopes are driven by reflection; without the mod the city stays simulated as before.
+
 ## 0.8.194 (2026-11-03), test build
 
 - **The supplies check credits a water recycler.** Kerbalism's chosen life-support setups ride in the craft file as pseudo-resources; the check read the part prefab, which is always Scrubber and Pressure control, so a Hitchhiker set to Water Recycler counted for nothing and the new red SUPPLIES line would have cried wolf on the right ship. Each recycler covers one crew member's water at 85% recovery (agency.cfg waterRecyclerRecovery); "What can this fly?" says "(water recycled)" and names the 1.5 x rate it counts at.

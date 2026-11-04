@@ -436,6 +436,7 @@ namespace KSA.KSP.Flight
                 if (LandingHelpers.IsDead(v)) { State = LegState.Failed; Status = "Vessel lost."; ctx.Say("Vessel lost during the science sweep."); return null; }
                 double now = ctx.Now;
                 if (now >= _until) { State = LegState.Done; Status = "Science sweep complete."; return null; }
+                if (ctx.LiftOffRequested && v != null && LandingHelpers.IsDown(v)) { ctx.LiftOffRequested = false; State = LegState.Done; Status = "Science sweep cut short: lifting off."; ctx.Say("Science sweep cut short on the Director's order."); return null; }
                 ctx.Control.Throttle = 0;
                 double left = _until - now;
                 Status = "Collecting science, " + Math.Round(left) + " s to go.";

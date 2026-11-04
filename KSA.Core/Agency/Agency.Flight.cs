@@ -61,6 +61,11 @@ namespace KSA.Core
         public event Action<MissionReport> ReportUpdated;
 
         /// <summary>Why the project cannot fly live, or null if it can.</summary>
+        /// <summary>The host can fly airships (HL Airships Core installed): cloud city modules may fly live (KSA-91).</summary>
+        public bool AirshipFlightAvailable { get; set; }
+        /// <summary>The surface hose and base landing offset (agency.cfg SURFACE_LINK). Never null.</summary>
+        public SurfaceLinkRules SurfaceLink { get { return Settings.SurfaceLink ?? new SurfaceLinkRules(); } }
+
         public string LiveBlocker(Project p)
         {
             if (p == null) return "No such project.";
@@ -68,7 +73,7 @@ namespace KSA.Core
             MissionType type = Catalogs.Missions.Get(p.MissionTypeId);
             if (type == null) return "Unknown mission type.";
             if (!ProfileInScope(type)) return "Live flight for " + type.Name + " is outside the scope set in agency.cfg (liveFlightScope = " + Settings.LiveFlightScope + ").";
-            if (type.Floating) return type.Name + " floats in the clouds; the flight director has no airship program, so it is simulated.";
+            if (type.Floating && !AirshipFlightAvailable) return type.Name + " floats in the clouds; HL Airships Core is not installed, so it is simulated.";
             string planning = PlanningBlocker(type);
             if (planning != null) return planning;
             if (type.IsRescue)

@@ -23,7 +23,9 @@ namespace KSA.KSP.Flight
             }
             if (t == null || t == ctx.Vessel) return null;
             if (t.mainBody != ctx.Vessel.mainBody) return null;
-            if (t.situation != Vessel.Situations.ORBITING) return null;
+            // A cloud city floats (KSA-91): anchored it reads as landed, free it reads as flying.
+            bool floating = ctx.CloudAltitude > 0 && (t.situation == Vessel.Situations.FLYING || t.situation == Vessel.Situations.LANDED);
+            if (t.situation != Vessel.Situations.ORBITING && !floating) return null;
             ctx.DockTarget = t;
             return t;
         }

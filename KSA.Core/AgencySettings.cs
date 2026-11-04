@@ -46,6 +46,10 @@ namespace KSA.Core
         public double LiveReentryPeriapsis { get; set; } = 35000;
         /// <summary>Which profiles the built-in flight director may fly live: Kerbin, Moons, All (liveFlightScope).</summary>
         public string LiveFlightScope { get; set; } = "All";
+        /// <summary>Seconds a crew stays on the surface of another world after touchdown (surfaceStaySeconds; 2026-11-03, T: no time to plant the flag).</summary>
+        public double SurfaceStaySeconds { get; set; } = 900;
+        /// <summary>The surface hose between landed craft (KSA-90) and the landing offset beside a base (KSA-89).</summary>
+        public KSA.Core.Projects.SurfaceLinkRules SurfaceLink { get; set; } = new KSA.Core.Projects.SurfaceLinkRules();
         /// <summary>How crew competence shapes live flights (FLIGHT_CREW block).</summary>
         public KSA.Core.Flight.FlightCrewRules FlightCrew { get; set; } = new KSA.Core.Flight.FlightCrewRules();
         /// <summary>How the AI Director runs (AI_DIRECTOR block, KSA-68).</summary>
@@ -128,6 +132,8 @@ namespace KSA.Core
             s.Director = KSA.Core.Ai.DirectorRules.Parse(node.GetChild(KSA.Core.Ai.DirectorRules.NodeName));
             s.Rescue = KSA.Core.Projects.RescueRules.Parse(node.GetChild(KSA.Core.Projects.RescueRules.NodeName));
             s.LifeSupport = KSA.Core.Projects.LifeSupportRules.Parse(node.GetChild(KSA.Core.Projects.LifeSupportRules.NodeName));
+            s.SurfaceLink = KSA.Core.Projects.SurfaceLinkRules.Parse(node.GetChild(KSA.Core.Projects.SurfaceLinkRules.NodeName));
+            s.SurfaceStaySeconds = System.Math.Max(0, node.GetDouble("surfaceStaySeconds", s.SurfaceStaySeconds));
             s.CrewDecisions = node.GetValue("crewDecisions", s.CrewDecisions);
             s.Departments = DepartmentRules.Parse(node.GetChild(DepartmentRules.NodeName));
             s.StockContracts = node.GetBool("stockContracts", s.StockContracts);

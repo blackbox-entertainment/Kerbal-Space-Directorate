@@ -130,6 +130,16 @@ namespace KSA.KSP.Flight
         private bool _waveOffUsed;
         private bool _askedCrew;
         private bool _waveOffRequested;
+        // Precision landing (KSA-85..89, 2026-11-03): the aim point (the Director's click, or an offset beside the base), the braking burn
+        // leaning toward it, and the fine look for flat ground round it.
+        private const double MaxSteerLean = 12;     // degrees the braking thrust may lean toward the aim
+        private const double SteerPerHundred = 3;   // degrees of lean per 100 m of predicted miss
+        private const double SteerDeadband = 30;    // metres of miss ignored
+        private const double SteerReach = 10000;    // metres: the lean only works on a miss this size or less
+        private const double FineCell = 25;         // metres between height samples near the aim (a 50 m patch)
+        private const double BaseKeepOut = 35;      // metres from the base's centre no cell may be chosen (KSA-89: never inside its footprint)
+        private bool _haveAim, _steering;
+        private double _aimLat, _aimLon;
 
         public LandingLeg(double maxSlope) { _maxSlope = maxSlope > 0 ? maxSlope : 0.3; }
 
@@ -147,6 +157,10 @@ namespace KSA.KSP.Flight
                 if (v == null || v.mainBody == null) { State = LegState.Failed; Status = "No vessel."; return; }
                 _hasAir = v.mainBody.atmosphere;
                 _phaseStart = ctx.Now;
+                // Resumed on the way down: the aim is still the Director's spot or the ground beside the base.
+                var live0 = KsaFlightDirector.Live;
+                if (live0 != null && live0.HasSite && live0.SiteBody == v.mainBody.bodyName) SetAim(live0.SiteLat, live0.SiteLon);
+                else if (!double.IsNaN(ctx.BaseSiteLat) && !double.IsNaN(ctx.BaseSiteLon) && ctx.Target == v.mainBody && v.situation != Vessel.Situations.ORBITING) ChooseBeside(ctx, v.mainBody);
                 if (LandingHelpers.IsDown(v)) { _phase = Phases.Landed; State = LegState.Done; Status = "Already on the surface."; return; }
 
                 double above = LandingHelpers.AboveTerrain(v);
@@ -403,7 +417,9 @@ namespace KSA.KSP.Flight
                 Orbit o = v.orbit;
                 if (o == null || o.eccentricity >= 1 || b.pqsController == null) { _burnAt = ctx.Now; return; }
                 var live = KsaFlightDirector.Live;
-                if (live != null && live.HasSite && live.SiteBody == b.bodyName) { AimForSite(ctx, v, live.SiteLat, live.SiteLon); return; }
+                if (live != null && live.HasSite && live.SiteBody == b.bodyName) { SetAim(live.SiteLat, live.SiteLon); AimForSite(ctx, v, live.SiteLat, live.SiteLon, "the Director's site"); return; }
+                // A base on this world (KSA-89): land an offset beside it, on the flattest ground round the ring.
+                if (!double.IsNaN(ctx.BaseSiteLat) && !double.IsNaN(ctx.BaseSiteLon) && ctx.Target == b && ChooseBeside(ctx, b)) { AimForSite(ctx, v, _aimLat, _aimLon, "the base"); return; }
                 Vector3d sun = (Planetarium.fetch.Sun.position - b.position).normalized;
                 // A weak lander brakes right after the burn, so it comes down almost under it (2026-10-31, T: "it could have waited
                 // to more in the light": a Terrier's whole descent took 130 s of braking from 46 km, not a quarter of an orbit).
@@ -453,7 +469,7 @@ namespace KSA.KSP.Flight
         /// The Director's own site (2026-10-31, T: right click to pick a spot): the burn whose descent comes down closest to it, searched
         /// every 5 s over 20 orbits. An orbit only crosses its own ground track, so a site far off it is reported, not reached.
         /// </summary>
-        private void AimForSite(FlightContext ctx, Vessel v, double siteLat, double siteLon)
+        private void AimForSite(FlightContext ctx, Vessel v, double siteLat, double siteLon, string what)
         {
             CelestialBody b = v.mainBody;
             Orbit o = v.orbit;
@@ -471,7 +487,7 @@ namespace KSA.KSP.Flight
             }
             _burnAt = bestUt;
             _searches++;
-            ctx.Say("Aiming for the Director's site: this orbit comes down " + Math.Round(bestMiss / 1000, 1) + " km from it, deorbit in " + TransferSupport.Countdown(_burnAt - ctx.Now) + "."
+            ctx.Say("Aiming for " + what + ": this orbit comes down " + Math.Round(bestMiss / 1000, 1) + " km from it, deorbit in " + TransferSupport.Countdown(_burnAt - ctx.Now) + "."
                 + (bestMiss > SiteReach ? " Too far to slide: the orbit does not cross it, and a plane change is not built." : string.Empty));
         }
 
@@ -680,7 +696,13 @@ namespace KSA.KSP.Flight
                 _holdingUp = true;
                 c.PointAlong(() => StandAndSteer(v));
             }
-            else if (!_holdingUp) c.Sas(VesselAutopilot.AutopilotMode.Retrograde, true);
+            // Cross-range steering (KSA-87): with an aim point in reach the braking thrust leans a few degrees toward it, so the
+            // sideways and along-track miss close for almost no extra delta-v. Below the up-hold the slide takes over.
+            else if (!_holdingUp && _haveAim && AimDistance(v) < SteerReach)
+            {
+                if (!_steering) { _steering = true; c.PointAlong(() => BrakeAndSteer(v, c.MaxAcceleration())); }
+            }
+            else if (!_holdingUp) { _steering = false; c.Sas(VesselAutopilot.AutopilotMode.Retrograde, true); }
             // Close to the ground, look at it: anything steeper than the limit, find flat ground nearby and slide over (2026-10-31, T: "abort
             // anything more than 7% and look for something nearby that is flat").
             if (!_sideChecked && above < SideStepAt) { _sideChecked = true; if (_holdingUp) LookForFlat(ctx, v); }
@@ -709,7 +731,7 @@ namespace KSA.KSP.Flight
             if (ctx.Now - _lastAttitudeLog >= 5)
             {
                 _lastAttitudeLog = ctx.Now;
-                KsaCore.Log.Info("Descent: " + Math.Round(above) + " m, down " + Math.Round(descentRate, 1) + " m/s, sideways " + Math.Round(hSpeed, 1) + " m/s, nose " + Math.Round(c.AttitudeError(v.upAxis)) + " deg off up, " + (_holdingUp ? "up hold" : "retrograde"));
+                KsaCore.Log.Info("Descent: " + Math.Round(above) + " m, down " + Math.Round(descentRate, 1) + " m/s, sideways " + Math.Round(hSpeed, 1) + " m/s, nose " + Math.Round(c.AttitudeError(v.upAxis)) + " deg off up, " + (_holdingUp ? "up hold" : _steering ? "steering" : "retrograde") + (_haveAim ? ", aim " + Math.Round(AimDistance(v)) + " m away" : ""));
             }
 
             // Only with the throttle open: closed on purpose while the fall is slow enough, no thrust is not an empty tank
@@ -741,6 +763,73 @@ namespace KSA.KSP.Flight
             if (_holdingUp && c.AttitudeError(v.upAxis) > 45) throttle = 0f;
             c.Throttle = throttle;
             Status = "Descending " + Math.Round(descentRate, 1) + " m/s (target " + Math.Round(target, 1) + "), " + Math.Round(above) + " m.";
+        }
+
+        private void SetAim(double lat, double lon) { _haveAim = true; _aimLat = lat; _aimLon = lon; }
+
+        /// <summary>Along the ground from the craft to the aim point, metres.</summary>
+        private double AimDistance(Vessel v) { return _haveAim ? SurfaceDistance(v.mainBody, v.latitude, v.longitude, _aimLat, _aimLon) : double.PositiveInfinity; }
+
+        /// <summary>
+        /// Retrograde, leaned toward where the burn would otherwise leave us short of the aim (KSA-87): the miss is the aim less the
+        /// ground the braking covers (half the speed over the time to kill it), 3 degrees of lean per 100 m of it, 12 at most.
+        /// </summary>
+        private Vector3d BrakeAndSteer(Vessel v, double accel)
+        {
+            Vector3d vel = v.srf_velocity;
+            Vector3d up = v.upAxis;
+            if (vel.magnitude < 1) return up;
+            Vector3d retro = -vel.normalized;
+            Vector3d hvel = vel - up * Vector3d.Dot(vel, up);
+            double tStop = accel > 0 ? vel.magnitude / accel : 0;
+            Vector3d miss = HorizontalToPoint(v, _aimLat, _aimLon) - hvel * (0.5 * tStop);
+            double m = miss.magnitude;
+            if (m < SteerDeadband) return retro;
+            double lean = Math.Min(MaxSteerLean, m / 100.0 * SteerPerHundred) * Math.PI / 180;
+            return (retro * Math.Cos(lean) + miss.normalized * Math.Sin(lean)).normalized;
+        }
+
+        /// <summary>
+        /// The flattest point on a ring an offset out from the base (KSA-89): eight bearings, a 50 m patch each, never the sea. The
+        /// ring sits inside the hose (100 m) and outside the base's footprint.
+        /// </summary>
+        private bool ChooseBeside(FlightContext ctx, CelestialBody b)
+        {
+            try
+            {
+                double offset = ctx.BaseOffset > 0 ? ctx.BaseOffset : 90;
+                double best = double.PositiveInfinity, bestLat = 0, bestLon = 0; int bestK = -1;
+                double dLat = offset / b.Radius * 180 / Math.PI, dLon = dLat / Math.Max(0.2, Math.Cos(ctx.BaseSiteLat * Math.PI / 180));
+                for (int k = 0; k < 8; k++)
+                {
+                    double ang = k * Math.PI / 4;
+                    double lat = ctx.BaseSiteLat + dLat * Math.Cos(ang), lon = ctx.BaseSiteLon + dLon * Math.Sin(ang);
+                    if (IsSea(b, lat, lon)) continue;
+                    double slope = FineSlope(b, lat, lon);
+                    if (slope < best) { best = slope; bestK = k; bestLat = lat; bestLon = lon; }
+                }
+                if (bestK < 0) return false;
+                SetAim(bestLat, bestLon);
+                string[] compass = { "north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west" };
+                ctx.Say("Landing beside the base: aiming " + Math.Round(offset) + " m " + compass[bestK] + " of it, ground about " + LandingHelpers.Pct(best) + ".");
+                return true;
+            }
+            catch (Exception e) { KsaCore.Log.Warn("Base ring search failed: " + e.Message); return false; }
+        }
+
+        /// <summary>The steepest step across a 50 m patch round a point, at 25 m samples.</summary>
+        private static double FineSlope(CelestialBody b, double lat, double lon)
+        {
+            double step = FineCell / b.Radius * 180 / Math.PI, stepLon = step / Math.Max(0.2, Math.Cos(lat * Math.PI / 180));
+            double slope = 0;
+            for (int i = -1; i <= 1; i++)
+                for (int j = -1; j <= 1; j++)
+                {
+                    double h = b.TerrainAltitude(lat + i * step, lon + j * stepLon);
+                    if (i > -1) slope = Math.Max(slope, Math.Abs(h - b.TerrainAltitude(lat + (i - 1) * step, lon + j * stepLon)));
+                    if (j > -1) slope = Math.Max(slope, Math.Abs(h - b.TerrainAltitude(lat + i * step, lon + (j - 1) * stepLon)));
+                }
+            return slope / FineCell;
         }
 
         /// <summary>Straight up, tipped against the sideways speed it does not want: 2 degrees per m/s, at most 15. A side-step wants speed towards the spot.</summary>
@@ -797,10 +886,12 @@ namespace KSA.KSP.Flight
         }
 
         /// <summary>From the craft to the spot it is sliding to, along the ground.</summary>
-        private Vector3d HorizontalTo(Vessel v)
+        private Vector3d HorizontalTo(Vessel v) { return HorizontalToPoint(v, _stepLat, _stepLon); }
+
+        private static Vector3d HorizontalToPoint(Vessel v, double lat, double lon)
         {
             Vector3d up = v.upAxis;
-            Vector3d to = v.mainBody.GetWorldSurfacePosition(_stepLat, _stepLon, 0) - v.GetWorldPos3D();
+            Vector3d to = v.mainBody.GetWorldSurfacePosition(lat, lon, 0) - v.GetWorldPos3D();
             return to - up * Vector3d.Dot(to, up);
         }
 
@@ -811,19 +902,22 @@ namespace KSA.KSP.Flight
             {
                 CelestialBody b = v.mainBody;
                 if (b.pqsController == null) return;
-                const int half = 8, patch = 2; // 8 cells of 125 m each way; 2 cells each way is a 500 m patch
-                int n = 2 * half + 1;
-                double step = SideStepCell / b.Radius * 180 / Math.PI;
-                double stepLon = step / Math.Max(0.2, Math.Cos(v.latitude * Math.PI / 180));
-                // The flattest ground near the Director's click, when it is in reach; near the craft otherwise.
+                // The flattest ground near the aim (the Director's click or the ring beside the base), when it is in reach; near the craft otherwise.
                 double midLat = v.latitude, midLon = v.longitude;
-                var live = KsaFlightDirector.Live;
-                if (live != null && live.HasSite && live.SiteBody == b.bodyName)
+                if (_haveAim)
                 {
-                    double miss = SurfaceDistance(b, v.latitude, v.longitude, live.SiteLat, live.SiteLon);
-                    if (miss <= SiteReach) { midLat = live.SiteLat; midLon = live.SiteLon; _aimed = true; }
-                    else ctx.Say("The Director's site is " + Math.Round(miss / 1000, 1) + " km away: too far to slide, looking nearby.");
+                    double miss = SurfaceDistance(b, v.latitude, v.longitude, _aimLat, _aimLon);
+                    if (miss <= SiteReach) { midLat = _aimLat; midLon = _aimLon; _aimed = true; }
+                    else ctx.Say("The aim point is " + Math.Round(miss / 1000, 1) + " km away: too far to slide, looking nearby.");
                 }
+                // With an aim the grid is fine (KSA-88): 25 m cells, a 50 m patch, the flattest ground within 150 m of it. Without,
+                // 8 cells of 125 m each way and a 500 m patch.
+                double cellSize = _aimed ? FineCell : SideStepCell;
+                int half = _aimed ? 6 : 8, patch = _aimed ? 1 : 2;
+                int n = 2 * half + 1;
+                double step = cellSize / b.Radius * 180 / Math.PI;
+                double stepLon = step / Math.Max(0.2, Math.Cos(v.latitude * Math.PI / 180));
+                bool keepOut = !double.IsNaN(ctx.BaseSiteLat) && !double.IsNaN(ctx.BaseSiteLon) && ctx.Target == b;
                 var h = new double[n, n];
                 for (int i = 0; i < n; i++)
                     for (int j = 0; j < n; j++)
@@ -840,8 +934,10 @@ namespace KSA.KSP.Flight
                                 if (a > i - patch) slope = Math.Max(slope, Math.Abs(h[a, c2] - h[a - 1, c2]));
                                 if (c2 > j - patch) slope = Math.Max(slope, Math.Abs(h[a, c2] - h[a, c2 - 1]));
                             }
-                        slope /= SideStepCell;
+                        slope /= cellSize;
                         if (i == half && j == half) here = slope;
+                        // Never inside the base's footprint (KSA-89).
+                        if (keepOut && SurfaceDistance(b, midLat + (i - half) * step, midLon + (j - half) * stepLon, ctx.BaseSiteLat, ctx.BaseSiteLon) < BaseKeepOut) continue;
                         // Ties go to the nearer cell: distance adds a little.
                         double score = slope + 0.00001 * ((i - half) * (i - half) + (j - half) * (j - half));
                         // The sunbeam test only for a cell that would win: each one takes forty height samples.
@@ -861,6 +957,16 @@ namespace KSA.KSP.Flight
                     _phase = Phases.WaveOff; _phaseStart = ctx.Now;
                     Status = "Waving off: climbing back to orbit.";
                     ctx.Say("Ground below: " + LandingHelpers.Pct(here) + ", best nearby " + LandingHelpers.Pct(best) + ": over the limit. Waving off, back to orbit.");
+                    return;
+                }
+                // The slide costs fuel (KSA-88): hovering costs local gravity every second. When the fuel left would not cover it
+                // and the ground here will do, land here and say so.
+                double slide = SurfaceDistance(b, v.latitude, v.longitude, midLat + (bestI - half) * step, midLon + (bestJ - half) * stepLon);
+                double gHere = b.gravParameter / ((b.Radius + v.altitude) * (b.Radius + v.altitude));
+                double cost = (slide / SideStepSpeed + 20) * gHere;
+                if (fuel - cost < SideStepReserve && here <= FairSlope)
+                {
+                    ctx.Say("Sliding " + Math.Round(slide) + " m would cost about " + Math.Round(cost) + " m/s of the " + Math.Round(fuel) + " aboard: landing here on " + LandingHelpers.Pct(here) + " ground instead.");
                     return;
                 }
                 _stepLat = midLat + (bestI - half) * step;
@@ -1031,8 +1137,10 @@ namespace KSA.KSP.Flight
                         }
                         double left = _evaStart + _seconds - now;
                         Status = _crew.name + " on the surface, " + Math.Round(Math.Max(0, left)) + " s to go.";
-                        if (left <= 0)
+                        // "Lift off now" on the HUD ends the stay (2026-11-03, T).
+                        if (left <= 0 || _ctx.LiftOffRequested)
                         {
+                            if (_ctx.LiftOffRequested) { _ctx.LiftOffRequested = false; _ctx.Say("Lifting off early on the Director's order."); }
                             _phase = Phases.Boarding;
                             _nextBoardTry = now;
                             _boardTries = 0;

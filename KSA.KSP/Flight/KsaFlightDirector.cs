@@ -679,6 +679,7 @@ namespace KSA.KSP.Flight
             if (!resuming) RescueTransferLeg.Aboard.Clear();
             if (stranding != null) foreach (string cid in stranding.Crew) { KSA.Core.Personnel.CrewProfile sc = agency.Crew.Get(cid); _ctx.RescueNames.Add(sc != null ? sc.Name : cid); }
             WireDepot(agency, project, type, resuming);
+            WireSite(agency, project, type);
             _program = MissionPlanner.Build(_ctx, type);
             Live.ScienceMission = type != null && type.IsScience;
             // Experiments run on every live flight (agency.cfg RESEARCH experimentsOnEveryFlight), not only on science
@@ -689,6 +690,26 @@ namespace KSA.KSP.Flight
             var names = new List<string>();
             foreach (IFlightLeg l in _program.Legs) names.Add(l.Name);
             KsaCore.Log.Info("Flight plan for " + project.Name + ": " + string.Join(" > ", names.ToArray()) + (resuming ? " (resuming at leg " + _program.NextLegNumber + ")" : string.Empty));
+        }
+
+        /// <summary>The base to land beside (KSA-85), the surface stay (T, 2026-11-03) and the cloud city's altitude (KSA-91): what the legs need from the program.</summary>
+        private void WireSite(Agency agency, Project project, MissionType type)
+        {
+            _ctx.SurfaceStaySeconds = Testing.FlightTestBench.Active ? 0 : agency.Settings.SurfaceStaySeconds;
+            _ctx.BaseOffset = agency.SurfaceLink.LandingOffset;
+            Program g = project.ProgramId.Length > 0 ? agency.GetProgram(project.ProgramId) : null;
+            if (g == null) return;
+            if (!double.IsNaN(g.SiteLat) && !double.IsNaN(g.SiteLon) && string.Equals(g.Body, Live.TargetBody, StringComparison.OrdinalIgnoreCase))
+            {
+                _ctx.BaseSiteLat = g.SiteLat; _ctx.BaseSiteLon = g.SiteLon;
+                KsaCore.Log.Info("Base site for " + project.Name + ": " + g.SiteLat.ToString("0.000") + ", " + g.SiteLon.ToString("0.000") + "; aiming " + Math.Round(_ctx.BaseOffset) + " m beside it.");
+            }
+            if (type != null && type.Floating)
+            {
+                ProgramType pt = agency.Catalogs.ProgramTypes.Get(g.ProgramTypeId);
+                CelestialBody tb = MissionPlanner.Body(Live.TargetBody);
+                _ctx.CloudAltitude = pt != null && pt.CloudAltitude > 0 ? pt.CloudAltitude : (tb != null && tb.atmosphere ? 0.2 * tb.atmosphereDepth : 0);
+            }
         }
 
         /// <summary>
@@ -1386,6 +1407,9 @@ namespace KSA.KSP.Flight
                 Live.PickingSite = _pickingSite;
                 if (_pickingSite && !MapView.MapIsEnabled) MapView.EnterMapView();
             }
+            // The Director ends the surface stay early (2026-11-03, T: no time to plant the flag; the stay is now surfaceStaySeconds).
+            if (_program != null && Live.AutopilotOn && _ctx != null && _vessel.LandedOrSplashed && (_program.Current is SurfaceOpsLeg || _program.Current is ScienceSweepLeg) && !_ctx.LiftOffRequested && GUILayout.Button("Lift off now"))
+            { _ctx.LiftOffRequested = true; Log("Director: lift off now.", null); }
             if (_science != null) GUILayout.Label("Science aboard: " + Live.SciencePoints.ToString("0.#") + " (" + (_science != null ? _science.ExperimentsRun : 0) + " experiments run)");
             GUILayout.Label("Alt " + LiveFlightResolver.FormatKm(_vessel.altitude) + "   Ap " + LiveFlightResolver.FormatKm(_vessel.orbit != null ? _vessel.orbit.ApA : 0) + "   Pe " + LiveFlightResolver.FormatKm(_vessel.orbit != null ? _vessel.orbit.PeA : 0));
             GUILayout.Label("Speed " + Math.Round(_vessel.srfSpeed) + " m/s   Stage " + _vessel.currentStage + "   " + (_vessel.mainBody != null ? _vessel.mainBody.bodyName : "") + "   " + Stamp());

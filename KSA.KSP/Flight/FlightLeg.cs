@@ -90,6 +90,17 @@ namespace KSA.KSP.Flight
         /// <summary>Set by the landing leg: where the crew touched down.</summary>
         public string LandingNote = string.Empty;
 
+        /// <summary>A base on the target world (KSA-85): the lander aims an offset from it. NaN when there is none.</summary>
+        public double BaseSiteLat = double.NaN, BaseSiteLon = double.NaN;
+        /// <summary>Metres from the base's centre to land (agency.cfg SURFACE_LINK landingOffset).</summary>
+        public double BaseOffset = 90;
+        /// <summary>Seconds the crew stays on the surface (agency.cfg surfaceStaySeconds); 0 = the leg's own default.</summary>
+        public double SurfaceStaySeconds;
+        /// <summary>The Director pressed "Lift off now": the surface stay ends at once.</summary>
+        public bool LiftOffRequested;
+        /// <summary>Cloud cities (KSA-91): the altitude the city floats at, metres; 0 for every other flight.</summary>
+        public double CloudAltitude;
+
         public double Now { get { return Planetarium.GetUniversalTime(); } }
         public bool IsHomeMission { get { return Target == null || Home == null || Target == Home; } }
 

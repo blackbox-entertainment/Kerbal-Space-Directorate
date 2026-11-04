@@ -79,6 +79,8 @@ namespace KSA.Core.Projects
         public string ReturnVia { get; set; }
         /// <summary>Can grow into a settlement and a colony (bases and cloud cities; stations do not by default).</summary>
         public bool Colonize { get; set; }
+        /// <summary>Cloud cities (KSA-91): the altitude the city floats at, metres (cloudAltitude; 0 = a fifth of the air's depth).</summary>
+        public double CloudAltitude { get; set; }
 
         public ProgramType() { Id = string.Empty; Name = string.Empty; Description = string.Empty; ResupplyMissionType = string.Empty; RequiresProgram = string.Empty; ReturnVia = string.Empty; }
 
@@ -122,6 +124,7 @@ namespace KSA.Core.Projects
                 t.RequiresProgram = node.GetValue("requiresProgram", string.Empty);
                 t.ReturnVia = node.GetValue("returnVia", string.Empty);
                 t.Colonize = node.GetBool("colonize", kind != ProgramKind.OrbitalStation);
+                t.CloudAltitude = Math.Max(0, node.GetDouble("cloudAltitude", 0));
                 t.Bodies.AddRange(node.GetList("bodies"));
                 foreach (DataNode m in node.GetChildren(ModuleNodeName))
                 {

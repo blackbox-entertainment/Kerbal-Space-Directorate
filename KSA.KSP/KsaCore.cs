@@ -80,6 +80,7 @@ namespace KSA.KSP
             a.LifeSupportMod = Parts.KspLifeSupport.ModName; // KSA-67: Kerbalism, when installed
             Log.Info("Life support: " + (a.LifeSupportMod.Length > 0 ? a.LifeSupportMod + (a.LifeSupportOn ? " (colonies need greenhouses; live flights need supplies)" : " installed but switched off in agency.cfg LIFE_SUPPORT") : "none (stock rules)"));
             a.LiveFlightAvailable = true; // M5: built-in flight director for Kerbin missions
+            a.AirshipFlightAvailable = KSA.KSP.Parts.KspAirships.Installed; // KSA-91: cloud city modules fly live with HL Airships Core
             a.LiveFlightCheck = Flight.LiveFlightLauncher.Check;
             a.DaysToWindow = Flight.TransferWindows.Days;
             a.RoundTripDays = Flight.TransferWindows.RoundTrip;
