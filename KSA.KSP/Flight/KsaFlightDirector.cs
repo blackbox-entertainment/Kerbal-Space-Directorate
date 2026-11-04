@@ -159,6 +159,7 @@ namespace KSA.KSP.Flight
         private ScienceRunner _science;
         private FlightContext _ctx;
         private int _supplyTick;
+        private IFlightLeg _quartersLeg;
         // Top right, clear of the stock app toolbar down the right edge. Where the Director drags it is remembered
         // for the rest of the session, so every flight opens it in the same place.
         private static Vector2? _hudPlace;
@@ -959,6 +960,13 @@ namespace KSA.KSP.Flight
                         _ctx.ShortestSupply = KsaCore.Agency.LifeSupport.ShortestSupply(food, water, oxygen, crewAboard, recyclers);
                     }
                     else _ctx.SuppliesRunOutUt = double.PositiveInfinity;
+                }
+                // The crew move between pod and habitat as the legs change (0.8.206, T): into the habitat for a coast, back for the rest.
+                if (_program.Current != _quartersLeg)
+                {
+                    _quartersLeg = _program.Current;
+                    string moved = CrewQuarters.Arrange(_ctx, _quartersLeg);
+                    if (moved != null) Log(moved, null);
                 }
                 string line = _program.Step();
                 if (line != null) Log(line, null);

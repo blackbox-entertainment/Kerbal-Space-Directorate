@@ -601,6 +601,9 @@ namespace KSA.KSP.Flight
         public bool ShedForReentry(ref string line)
         {
             if (_v == null || Now - _lastStage < 1.5) return false;
+            // Nobody rides a part that is about to come off (0.8.206): everyone into the capsule before anything is shed.
+            string back = CrewQuarters.ToPod(_v, "the abort");
+            if (back != null) line = back;
             // The decoupler nearest under the capsule, fired directly: everything below goes at once, whatever stage it
             // was put in (2026-10-29: a Director's rocket had it in the parachute stage, which the crew never fires).
             ModuleDecouple under = DecouplerUnderCapsule();

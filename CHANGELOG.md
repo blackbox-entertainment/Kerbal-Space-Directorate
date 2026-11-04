@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.206 (2026-11-04), test build
+
+- **The crew move between the pod and the habitat as the flight goes** (T). At the start of every coast (cruises, corrections, waits for a window, orbit holds, captures) everyone but the pilot moves into the roomiest habitat aboard, by Kerbalism's living space when it says, else by seats; the pilot stays in the pod so the ship is never without a hand on the controls, and moves too when a probe core is aboard. Before anything that sheds parts, enters air, lands, docks or steps outside (aerobraking, reentry, landing, ascent, docking, surface work) everyone is back in the pod, and the survival net puts them there before it drops a thing. A Kerbalism habitat switched off is never used. The log names who moved where.
+
 ## 0.8.205 (2026-11-04), test build
 
 - **The thrusters finish a burn the engine ran dry on.** The mk IIIe's deep-space correction toward Kerbin ran out of propellant 51 m/s short of an encounter with 168 monopropellant aboard, and the crew gave up. Now when the engine runs dry mid-burn and the craft has RCS with over 5 monopropellant, the crew keep the nose on the node and push on the thrusters until the burn is done or the monopropellant is gone, and the log says so. Restart to get it: the resumed correction leg plans the remaining 52 m/s and the executor burns it this way.
