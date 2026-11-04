@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.210 (2026-11-04), test build
+
+- **The climb off Duna goes where it is aimed.** The aimed heading of 0.8.209 was never followed: on a world with air the kick lasted 2.5 s on a lander that cannot turn in 2.5 s, then the crew "followed prograde", which was whichever way the lift-off happened to lean. The orbit came out tilted 99.8 degrees, nearly polar, and the ejection home cost 286 m/s more than the tanks held, twice today. Now with air the kick lasts until there is real speed along the heading (20 m/s, or 15 s), thin air (Duna's 6.7 kPa) is steered through like no air at all, and only thick air (25 kPa and up, Laythe and Eve) makes the nose follow the airflow, leaning off it by 8 degrees at most, as the Kerbin climb does. The orbit line now gives the inclination, and the log says how far the way home lies out of the plane when it does.
+
 ## 0.8.209 (2026-11-04), test build
 
 - **The climb off another world goes into the plane of the way home.** A climb east from a 40 degree landing site left the mk IIIe in an orbit tilted 40 degrees from the way to Kerbin, and the ejection from it cost 820 m/s against 803 aboard (T: "if it is not ground vs orbit it should not matter if I start from the ground"; it did not, until now). Before lifting off for home, the crew find the next window to Kerbin, work out the heading that puts the orbit in the plane of that departure, and climb on it, so the ejection is the plain prograde burn again. A world's spin is nothing off Duna or the Mun, so any heading costs the same climb. The log says the heading and why. A return from a moon of Kerbin, or a flight that is not going home from here, climbs east as before.

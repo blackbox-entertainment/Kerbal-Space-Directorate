@@ -1549,13 +1549,21 @@ namespace KSA.KSP.Flight
                     case Phases.Kick:
                         if (warping) { c.StopWarp(); break; }
                         c.AutoStage(ref line);
-                        if (ctx.Now - _phaseStart > 2.5)
                         {
-                            if (v.mainBody.atmosphere) c.Sas(VesselAutopilot.AutopilotMode.Prograde, true);
-                            else c.PointAlong(() => ClimbDirection(v, AirlessPitch(v), _headingDeg));
-                            _phase = Phases.Ascent; _phaseStart = ctx.Now;
-                            Status = "Holding prograde.";
-                            ctx.Say("Pitch program started; following prograde.");
+                            // The kick sets the plane (0.8.210, 2026-11-04: off Duna, 2.5 s of kick on a lander that cannot turn in 2.5 s, then
+                            // "following prograde", went wherever the lift-off happened to lean: an orbit tilted 99.8 degrees, nearly polar,
+                            // and an ejection home 286 m/s dearer than the tanks held). With air the kick lasts until the speed along the
+                            // heading is real, or 15 s; and thin air (Duna's 6.7 kPa) is steered through like no air at all.
+                            double along = Vector3d.Dot(v.srf_velocity, HeadingDirection(v, _headingDeg));
+                            bool kicked = v.mainBody.atmosphere ? (along > KickSpeed || ctx.Now - _phaseStart > 15) : ctx.Now - _phaseStart > 2.5;
+                            if (kicked)
+                            {
+                                if (ThickAir(v)) c.Sas(VesselAutopilot.AutopilotMode.Prograde, true);
+                                else c.PointAlong(() => GuidedClimb(v));
+                                _phase = Phases.Ascent; _phaseStart = ctx.Now;
+                                Status = ThickAir(v) ? "Holding prograde." : "Climbing on heading " + Math.Round(_headingDeg) + ".";
+                                ctx.Say(ThickAir(v) ? "Pitch program started; following prograde." : "Pitch program started on heading " + Math.Round(_headingDeg) + " (" + Math.Round(along) + " m/s along it).");
+                            }
                         }
                         break;
 
@@ -1563,7 +1571,7 @@ namespace KSA.KSP.Flight
                         if (warping) { c.StopWarp(); break; }
                         c.Throttle = 1f;
                         c.AutoStage(ref line);
-                        if (v.mainBody.atmosphere) c.Sas(VesselAutopilot.AutopilotMode.Prograde, v.altitude < 20000);
+                        if (v.mainBody.atmosphere) { if (ThickAir(v)) c.Sas(VesselAutopilot.AutopilotMode.Prograde, v.altitude < 20000); else c.PointAlong(() => GuidedClimb(v)); }
                         if (v.orbit.ApA >= _target)
                         {
                             c.Throttle = 0;
@@ -1647,9 +1655,38 @@ namespace KSA.KSP.Flight
         /// <summary>East, raised by the given pitch above the horizon.</summary>
         private static Vector3d ClimbDirection(Vessel v, double pitch, double headingDeg)
         {
-            double p = pitch * Math.PI / 180, h = headingDeg * Math.PI / 180;
-            Vector3d along = ((Vector3d)v.north * Math.Cos(h) + (Vector3d)v.east * Math.Sin(h)).normalized;
-            return ((Vector3d)v.upAxis * Math.Sin(p) + along * Math.Cos(p)).normalized;
+            double p = pitch * Math.PI / 180;
+            return ((Vector3d)v.upAxis * Math.Sin(p) + HeadingDirection(v, headingDeg) * Math.Cos(p)).normalized;
+        }
+
+        /// <summary>The horizontal unit vector on a compass heading at the craft.</summary>
+        private static Vector3d HeadingDirection(Vessel v, double headingDeg)
+        {
+            double h = headingDeg * Math.PI / 180;
+            return ((Vector3d)v.north * Math.Cos(h) + (Vector3d)v.east * Math.Sin(h)).normalized;
+        }
+
+        private const double KickSpeed = 20;        // m/s along the heading before the kick is done with air (0.8.210)
+        private const double ThickAirKPa = 25;      // at or above this the nose follows the air (the Kerbin ascent's rule); free below 5 kPa
+        private const double ThinAirKPa = 5;
+        private const double MaxLeanThick = 8;      // degrees off prograde allowed at ThickAirKPa
+
+        /// <summary>Air thick enough that the nose must follow it (0.8.210): Laythe and Eve, never Duna.</summary>
+        private static bool ThickAir(Vessel v) { return v.mainBody.atmosphere && v.staticPressurekPa >= ThickAirKPa; }
+
+        /// <summary>
+        /// The climb direction with air (0.8.210): the heading-and-pitch direction, leaning off the air's prograde by no more than the air
+        /// allows, 8 degrees at 25 kPa and anything at all under 5 kPa. Duna's 6.7 kPa at the surface is nearly free.
+        /// </summary>
+        private Vector3d GuidedClimb(Vessel v)
+        {
+            Vector3d want = ClimbDirection(v, AirlessPitch(v), _headingDeg);
+            double p = v.mainBody.atmosphere ? v.staticPressurekPa : 0;
+            if (p <= ThinAirKPa || v.srfSpeed < 50) return want;
+            Vector3d pro = v.srf_velocity.normalized;
+            double maxLean = p >= ThickAirKPa ? MaxLeanThick : MaxLeanThick + (ThickAirKPa - p) / (ThickAirKPa - ThinAirKPa) * (90 - MaxLeanThick);
+            if (Vector3d.Angle(pro, want) <= maxLean) return want;
+            return (Vector3d)Vector3.RotateTowards((Vector3)pro, (Vector3)want, (float)(maxLean * Math.PI / 180), 0f);
         }
 
         /// <summary>
@@ -1672,7 +1709,7 @@ namespace KSA.KSP.Flight
         {
             Status = "In orbit.";
             State = LegState.Done;
-            ctx.Say("In orbit " + LandingHelpers.Km(v.orbit.ApA) + " x " + LandingHelpers.Km(v.orbit.PeA) + " km around " + v.mainBody.bodyName + ".");
+            ctx.Say("In orbit " + LandingHelpers.Km(v.orbit.ApA) + " x " + LandingHelpers.Km(v.orbit.PeA) + " km around " + v.mainBody.bodyName + ", inclination " + Math.Round(v.orbit.inclination) + " deg.");
         }
 
         public void End(FlightContext ctx)

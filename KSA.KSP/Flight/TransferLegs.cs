@@ -690,6 +690,8 @@ namespace KSA.KSP.Flight
                 return "Transfer planning failed: the way to " + _target.bodyName + " leaves too far out of this orbit's plane for one burn. Director, your call.";
             }
             double planeCost = burn3.Length - Ejection.DeltaV(planetMu, r, vInfMag);
+            double outOfPlane = Math.Abs(90 - Vec3.AngleBetween(OrbitAdapter.Normal(v.orbit, now), vInf) * 180 / Math.PI);
+            if (outOfPlane > 2) KsaCore.Log.Info("Ejection: the way to " + _target.bodyName + " lies " + Math.Round(outOfPlane, 1) + " deg out of the parking orbit's plane (inclination " + Math.Round(v.orbit.inclination, 1) + " deg); plane change in the burn " + Math.Round(planeCost) + " m/s.");
 
             // A long wait high up is a dose of radiation with Kerbalism: come down first (2026-11-01: 390 x 75 km, all three dead in 17 days;
             // 197 x 75 km, all three dead by day 198). A low wait is safe: 111 x 75 km for 128 days.
