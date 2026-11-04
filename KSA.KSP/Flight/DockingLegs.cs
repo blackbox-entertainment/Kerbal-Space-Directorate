@@ -56,7 +56,11 @@ namespace KSA.KSP.Flight
         private enum Phases { RaisePlan, RaiseBurn, PlanePlan, PlaneBurn, InterceptPlan, PhasePlan, PhaseBurn, PhaseCoast, ClosePlan, CloseBurn, InterceptBurn, Coast, MatchPlan, MatchBurn, Check }
 
         private const double MaxPlaneChangeDv = 1500;
-        /// <summary>A direct intercept dearer than this gets a phasing orbit first (0.8.163).</summary>
+        /// <summary>
+        /// A direct meeting dearer than this, intercept burn plus the velocity match on arrival, gets a phasing orbit first (0.8.163;
+        /// 0.8.201: the match counts too. The rule had weighed the intercept alone: 99 m/s passed, and the 100 m/s match on arrival
+        /// burnt out the second stage and ate into the lander, twice on 2026-11-04, for a station on nearly the same orbit).
+        /// </summary>
         private const double MaxDirectIntercept = 120;
         private const int MaxPhasingOrbits = 8;
         /// <summary>Inside this range the crew closes with a straight push, never a new intercept or phasing orbit (0.8.165).</summary>
@@ -237,10 +241,11 @@ namespace KSA.KSP.Flight
                             if (!_phased) { _phase = Phases.PhasePlan; Status = "No direct intercept; planning a phasing orbit."; break; }
                             Fail("no intercept found", ctx); break;
                         }
-                        if (!_phased && plan.DeltaVMagnitude > MaxDirectIntercept)
+                        if (!_phased && plan.DeltaVMagnitude + plan.ArrivalSpeed > MaxDirectIntercept)
                         {
                             _phase = Phases.PhasePlan;
-                            Status = "Direct intercept costs " + Math.Round(plan.DeltaVMagnitude) + " m/s; planning a phasing orbit.";
+                            Status = "Direct intercept costs " + Math.Round(plan.DeltaVMagnitude) + " + " + Math.Round(plan.ArrivalSpeed) + " m/s; planning a phasing orbit.";
+                            line = "A direct meeting would cost " + Math.Round(plan.DeltaVMagnitude) + " m/s out and " + Math.Round(plan.ArrivalSpeed) + " m/s to match; phasing instead.";
                             break;
                         }
                         NodePlanner.ClearNodes(v);
@@ -252,7 +257,7 @@ namespace KSA.KSP.Flight
                         if (_burn.Failed) { Fail(_burn.FailReason, ctx); break; }
                         _phase = Phases.InterceptBurn;
                         Status = "Intercept burn: " + Math.Round(plan.DeltaVMagnitude) + " m/s.";
-                        line = "Intercept planned: " + Math.Round(plan.DeltaVMagnitude) + " m/s, arriving in " + Math.Round((plan.ArrivalUt - now) / 60) + " min.";
+                        line = "Intercept planned: " + Math.Round(plan.DeltaVMagnitude) + " m/s, arriving in " + Math.Round((plan.ArrivalUt - now) / 60) + " min, " + Math.Round(plan.ArrivalSpeed) + " m/s to match there.";
                     }
                     break;
                 case Phases.PhasePlan:

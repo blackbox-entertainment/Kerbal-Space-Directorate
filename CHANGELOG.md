@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.201 (2026-11-04), test build
+
+- **The meeting with the tanker counts the matching burn.** The rule that sends the crew round a phasing orbit weighed the intercept burn alone against its 120 m/s limit: 99 m/s passed, then the 100 m/s velocity match on arrival burnt out the second stage and ate into the lander, twice today, for a station on nearly the same orbit (T: \"it used to be able to dock with the tanker and still have fuel in the 2nd stage\"). The limit now covers intercept plus match, so a station at a bad phase angle gets a cheap phasing orbit first; the log says what a direct meeting would have cost.
+
 ## 0.8.200 (2026-11-04), test build
 
 - **The approach tilt is the fallback moon dodge** (T). When no timing shift under 100 m/s clears a moon across the approach, the crew tilt the approach plane about the vertical instead (same speed and height, so the same periapsis), and only ride through when neither works.
