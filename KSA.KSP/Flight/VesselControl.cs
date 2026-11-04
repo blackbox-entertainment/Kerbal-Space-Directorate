@@ -971,6 +971,15 @@ namespace KSA.KSP.Flight
             return false;
         }
 
+        /// <summary>Monopropellant aboard, units (0.8.205: the thrusters finish a burn the engine ran dry on).</summary>
+        public double RcsPropellant()
+        {
+            double total = 0;
+            if (_v == null) return 0;
+            foreach (Part p in _v.parts) { PartResource r = p.Resources != null ? p.Resources.Get("MonoPropellant") : null; if (r != null) total += r.amount; }
+            return total;
+        }
+
         // ------------------------------------------------------------------ warp
 
         public bool IsWarping { get { return TimeWarp.CurrentRate > 1.01f; } }

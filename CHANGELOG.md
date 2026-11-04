@@ -2,6 +2,12 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.205 (2026-11-04), test build
+
+- **The thrusters finish a burn the engine ran dry on.** The mk IIIe's deep-space correction toward Kerbin ran out of propellant 51 m/s short of an encounter with 168 monopropellant aboard, and the crew gave up. Now when the engine runs dry mid-burn and the craft has RCS with over 5 monopropellant, the crew keep the nose on the node and push on the thrusters until the burn is done or the monopropellant is gone, and the log says so. Restart to get it: the resumed correction leg plans the remaining 52 m/s and the executor burns it this way.
+- **A self-sufficient base makes its own water and oxygen** (T: "a self sufficient base needs to make fuel oxygen food and water and power"). With Kerbalism a settlement becomes a colony, and a colony stays self-sufficient, only with a drill set to water excavation and a water electrolysis unit (oxygen for the residents, hydrogen for the fuel plant) besides the drill, ore converter, power and greenhouses it already needed. The hardware check reads which drill setup a craft chose and counts electrolysis units; the Programs window names what is missing.
+- **Water in the ground counts.** Each base site's water abundance is read from the game's resource map and shown on its site line; a site under the drill's 1% (agency.cfg LIFE_SUPPORT waterMinAbundance) cannot be self-sufficient and the hint says water must be shipped. A base's first landing now looks for ground with water first, at the usual slope limits, and only then settles for dry ground, so Mun bases head for the polar ice and Duna bases are fine anywhere. The site line in the log says what it found.
+
 ## 0.8.204 (2026-11-04), test build
 
 - **Nobody is left behind.** A restart on Duna with Verdin on EVA resumed the flight at the ascent and the lander lifted off without him (T: "it really should wait for me to board before returning"). Three locks: on a restart a kerbal on foot within a kilometre sends the flight back to the surface leg, not the ascent; the surface leg takes a kerbal already outside as its own and boards them first; and the ascent never lights while one of ours is on foot within a kilometre, saying so every minute and pointing the Director at the Board button.

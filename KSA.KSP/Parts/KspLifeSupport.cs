@@ -196,6 +196,31 @@ namespace KSA.KSP.Parts
         public static bool IsPowerProcess(string process) { return PowerProcesses.Contains(process); }
         public static bool IsGreenhouse(PartModule m) { return m != null && m.moduleName == "Greenhouse"; }
         public static bool IsHarvester(PartModule m) { return m != null && m.moduleName == "Harvester"; }
+        /// <summary>What a Kerbalism Harvester setup digs ("Water", "Ore"), or empty.</summary>
+        public static string HarvesterResource(PartModule m) { return IsHarvester(m) ? Field(m, "resource") as string ?? string.Empty : string.Empty; }
+        /// <summary>Kerbalism harvester type: 0 crustal, 1 oceanic, 2 atmospheric, 3 exospheric, 4 space object. -1 when unknown.</summary>
+        public static int HarvesterType(PartModule m)
+        {
+            object v = IsHarvester(m) ? Field(m, "type") : null;
+            if (v is int) return (int)v;
+            int t; return v != null && int.TryParse(v.ToString(), out t) ? t : -1;
+        }
+
+        /// <summary>
+        /// Water in the ground at a point (0 to 1), from the game's resource map as Kerbalism's drills read it (0.8.205). NaN without
+        /// Kerbalism or when the map has no answer.
+        /// </summary>
+        public static double WaterAt(CelestialBody body, double lat, double lon)
+        {
+            if (!KerbalismInstalled || body == null || ResourceMap.Instance == null) return double.NaN;
+            try
+            {
+                var req = new AbundanceRequest { ResourceType = HarvestTypes.Planetary, ResourceName = "Water", BodyId = body.flightGlobalsIndex, Latitude = lat, Longitude = lon, Altitude = 0, CheckForLock = false };
+                double a = ResourceMap.Instance.GetAbundance(req);
+                return double.IsNaN(a) ? double.NaN : Math.Max(0, Math.Min(1, a));
+            }
+            catch (Exception e) { KsaCore.Log.Warn("WaterAt " + body.bodyName + ": " + e.Message); return double.NaN; }
+        }
 
         private static object Field(PartModule m, string name)
         {

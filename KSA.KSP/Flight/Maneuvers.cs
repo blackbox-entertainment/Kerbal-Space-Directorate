@@ -184,6 +184,11 @@ namespace KSA.KSP.Flight
         private CelestialBody _bodyAtStart;
         private bool _hyperbolicAtStart, _frozen;
         private Vector3d _frozenDir;
+        // The engine ran dry mid-burn and the thrusters finish it (0.8.205, 2026-11-04: 51 m/s short of a Kerbin encounter in deep space
+        // with 168 monopropellant aboard; a crew would push on the RCS, not sit there). Forward thrust is TransZ = -1 (the docking leg's frame).
+        private bool _rcs;
+        private double _rcsFrom;
+        private const double RcsMinPropellant = 5;
 
         public bool Done { get { return _phase == Phases.Done; } }
         public bool Failed { get { return _phase == Phases.Failed; } }
@@ -319,7 +324,7 @@ namespace KSA.KSP.Flight
                     c.AutoStage(ref line);
                     if (line != null) { _stagedAt = now; _lastBurnVector = burn; } // a stage dropped mid-burn (0.8.165): the next engine carries on
                     bool justStaged = now - _stagedAt < 3;
-                    if (!justStaged && c.Throttle > 0) _burned += v.geeForce * 9.80665 * Math.Max(0, now - _lastStep);
+                    if (!justStaged && (c.Throttle > 0 || _rcs)) _burned += v.geeForce * 9.80665 * Math.Max(0, now - _lastStep);
                     _lastStep = now;
                     if (!_burnTimed && c.MaxAcceleration() > 0) { double bt = c.BurnTime(burn.magnitude); if (!double.IsInfinity(bt)) { _burnTime = bt; _burnTimed = true; } }
                     bool patchChanged = v.mainBody != _bodyAtStart || (v.orbit != null && (v.orbit.eccentricity >= 1) != _hyperbolicAtStart);
@@ -344,10 +349,28 @@ namespace KSA.KSP.Flight
                     if (spent || remaining < _tolerance || flipped || overran || (CutOff != null && CutOff(v)))
                     {
                         c.Throttle = 0;
+                        if (_rcs) { c.TransZ = 0; c.Rcs(false); }
                         _phase = Phases.Done;
                         Status = "Burn complete.";
                         n.RemoveSelf();
-                        line = "Burn complete (" + Math.Round(_startDv - remaining) + " of " + Math.Round(_startDv) + " m/s).";
+                        line = "Burn complete (" + Math.Round(_startDv - remaining) + " of " + Math.Round(_startDv) + " m/s" + (_rcs ? ", the last on the thrusters" : string.Empty) + ").";
+                        break;
+                    }
+                    if (_rcs)
+                    {
+                        // On the thrusters: push forward while the nose is on the node, and stop when the monopropellant is gone.
+                        c.Throttle = 0;
+                        c.TransZ = c.AttitudeError(burn) > 30 ? 0f : -1f;
+                        Status = "Burning on the thrusters: " + Math.Round(remaining) + " m/s to go, " + Math.Round(c.RcsPropellant()) + " monopropellant.";
+                        _lastBurnVector = burn;
+                        if (c.RcsPropellant() < 0.5 || now - _rcsFrom > 1800)
+                        {
+                            c.TransZ = 0; c.Rcs(false);
+                            n.RemoveSelf();
+                            Fail("propellant and monopropellant exhausted with " + Math.Round(remaining) + " m/s to go");
+                            line = "The thrusters ran dry too; " + Math.Round(remaining) + " m/s short.";
+                            ctx.Cause(KSA.Core.Flight.FailureCause.OutOfFuel, "Propellant and monopropellant exhausted mid-burn; " + Math.Round(remaining) + " m/s short.");
+                        }
                         break;
                     }
                     double accel = c.MaxAcceleration();
@@ -359,6 +382,13 @@ namespace KSA.KSP.Flight
                     if (c.NoThrustAvailable() && now - _started > 5 && !justStaged)
                     {
                         c.Throttle = 0;
+                        if (c.HasRcs() && c.RcsPropellant() > RcsMinPropellant)
+                        {
+                            _rcs = true; _rcsFrom = now;
+                            c.Rcs(true);
+                            line = "Propellant exhausted with " + Math.Round(remaining) + " m/s to go: finishing the burn on the RCS thrusters (" + Math.Round(c.RcsPropellant()) + " monopropellant aboard).";
+                            break;
+                        }
                         n.RemoveSelf();
                         Fail("propellant exhausted with " + Math.Round(remaining) + " m/s to go");
                         line = "Propellant exhausted mid-burn; " + Math.Round(remaining) + " m/s short.";
@@ -384,6 +414,6 @@ namespace KSA.KSP.Flight
             if (!double.IsInfinity(bt) && bt > 0) { _burnTime = bt; _burnTimed = true; }
         }
 
-        public void End(FlightContext ctx) { ctx.Control.Throttle = 0; ctx.Control.StopWarp(); }
+        public void End(FlightContext ctx) { ctx.Control.Throttle = 0; ctx.Control.StopWarp(); if (_rcs) { ctx.Control.TransZ = 0; ctx.Control.Rcs(false); } }
     }
 }

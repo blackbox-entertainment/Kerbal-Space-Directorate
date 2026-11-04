@@ -29,10 +29,26 @@ namespace KSA.Core
         /// <summary>A life support mod is installed and agency.cfg lets KSA use it.</summary>
         public bool LifeSupportOn { get { return !string.IsNullOrEmpty(LifeSupportMod) && LifeSupport.Enabled; } }
 
-        /// <summary>Drill, converter and power, plus (with life support) food, air and water for everyone living there and <paramref name="extra"/> more.</summary>
+        /// <summary>Drill, converter and power, plus (with life support) food, air and water for everyone living there and <paramref name="extra"/> more, and the means to make water and oxygen (0.8.205).</summary>
         public bool HardwareReady(Program g, int extra = 0)
         {
-            return g != null && g.HardwareSelfSufficient && LifeSupportShort(g, extra).Count == 0;
+            return g != null && g.HardwareSelfSufficient && LifeSupportShort(g, extra).Count == 0 && ProductionShort(g).Count == 0;
+        }
+
+        /// <summary>
+        /// What a place lacks to make its own water and oxygen (0.8.205, T: "a self sufficient base needs to make fuel oxygen food and water
+        /// and power"): with life support, a drill set to water, water electrolysis, and water in the ground at the site. Empty without life support.
+        /// </summary>
+        public List<string> ProductionShort(Program g)
+        {
+            var need = new List<string>();
+            if (!LifeSupportOn || g == null) return need;
+            if (g.WaterDrills <= 0) need.Add("a drill set to water excavation");
+            if (g.Electrolysis <= 0) need.Add("water electrolysis (oxygen, and hydrogen for the fuel plant)");
+            double min = LifeSupport.WaterMinAbundance;
+            if (!double.IsNaN(g.SiteWater) && g.SiteWater < min)
+                need.Add("water in the ground: the site has " + (g.SiteWater * 100).ToString("0.#") + "% and a drill needs " + (min * 100).ToString("0.#") + "%, so water must be shipped");
+            return need;
         }
 
         /// <summary>What a place lacks to feed, air and water its residents (plus <paramref name="extra"/>). Empty without life support.</summary>
@@ -72,7 +88,7 @@ namespace KSA.Core
             if (!LifeSupportOn) return "none (stock rules: a colony needs a drill, an ore converter and power)";
             LifeSupportRules ls = LifeSupport;
             return LifeSupportMod + ": a colony also needs a greenhouse per " + ls.ResidentsPerGreenhouse + " residents" + (ls.RequireRecyclers ? " and scrubber and water recycler capacity for everyone" : string.Empty)
-                + "; live flights must carry food and water for their whole length; stranded crews last " + ls.StrandedLostAfterDays + " days";
+                + ", a drill set to water and water electrolysis at a site with water in the ground; live flights must carry food, water and oxygen for their whole length; stranded crews last " + ls.StrandedLostAfterDays + " days";
         }
 
         public static string StageText(ColonyStage s)
@@ -114,11 +130,13 @@ namespace KSA.Core
                     if (g.Isru <= 0) need.Add("an ore converter (ISRU)");
                     if (g.Power <= 0) need.Add("power (solar, RTG or fuel cell)");
                     need.AddRange(LifeSupportShort(g));
+                    need.AddRange(ProductionShort(g));
                     if (g.ResuppliesDelivered < c.ColonyResupplies) need.Add((c.ColonyResupplies - g.ResuppliesDelivered) + " more resupplies");
                     if (g.Residents < c.ColonyResidents) need.Add((c.ColonyResidents - g.Residents) + " more residents");
                     return need.Count == 0 ? string.Empty : "Colony needs " + string.Join(", ", need.ToArray()) + ".";
                 default:
                     List<string> shortOf = LifeSupportShort(g);
+                    shortOf.AddRange(ProductionShort(g));
                     if (shortOf.Count > 0) return "The colony has outgrown its life support: it needs " + string.Join(", ", shortOf.ToArray()) + ". Until then it needs resupplies.";
                     return "Self-sufficient colony.";
             }
@@ -138,6 +156,8 @@ namespace KSA.Core
             g.Isru += h.Isru;
             g.Power += h.Power;
             g.Greenhouses += Math.Max(0, h.Greenhouses);
+            g.WaterDrills += Math.Max(0, h.WaterDrills);
+            g.Electrolysis += Math.Max(0, h.Electrolysis);
             if (seatsCount)
             {
                 g.Seats += Math.Max(0, h.Seats);
@@ -146,7 +166,7 @@ namespace KSA.Core
                 g.WaterRecyclers += Math.Max(0, h.WaterRecyclers);
             }
             if (string.Equals(p.ModuleRole, "return", StringComparison.OrdinalIgnoreCase)) g.HasRocket = true;
-            if (h.Drills + h.Isru + h.Power + h.Seats + h.Greenhouses > 0)
+            if (h.Drills + h.Isru + h.Power + h.Seats + h.Greenhouses + h.WaterDrills + h.Electrolysis > 0)
                 g.Notes.Add(p.Name + " delivered " + HardwareText(h) + ".");
         }
 
@@ -158,6 +178,8 @@ namespace KSA.Core
             if (h.Isru > 0) parts.Add(h.Isru + " ore converter" + (h.Isru == 1 ? "" : "s"));
             if (h.Power > 0) parts.Add(h.Power + " power source" + (h.Power == 1 ? "" : "s"));
             if (h.Greenhouses > 0) parts.Add(h.Greenhouses + " greenhouse" + (h.Greenhouses == 1 ? "" : "s"));
+            if (h.WaterDrills > 0) parts.Add(h.WaterDrills + " water drill" + (h.WaterDrills == 1 ? "" : "s"));
+            if (h.Electrolysis > 0) parts.Add(h.Electrolysis + " electrolysis unit" + (h.Electrolysis == 1 ? "" : "s"));
             return parts.Count == 0 ? "nothing of note" : string.Join(", ", parts.ToArray());
         }
 

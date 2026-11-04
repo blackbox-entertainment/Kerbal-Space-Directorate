@@ -30,6 +30,10 @@ namespace KSA.Core.Projects
         public int Scrubbers { get; set; }
         /// <summary>Crew whose water the craft's recyclers can recover.</summary>
         public int WaterRecyclers { get; set; }
+        /// <summary>Drills set to dig water from the ground (Kerbalism's Water Excavation setup), 0.8.205: a self-sufficient base makes its own water.</summary>
+        public int WaterDrills { get; set; }
+        /// <summary>Water electrolysis capacity (Kerbalism process): oxygen for the residents and hydrogen for the fuel plant.</summary>
+        public int Electrolysis { get; set; }
         /// <summary>Food and water the craft carries when full (Kerbalism units), for the live-flight supply check.</summary>
         public double Food { get; set; }
         public double Water { get; set; }
@@ -190,6 +194,11 @@ namespace KSA.Core.Projects
         public int Greenhouses { get; set; }
         public int Scrubbers { get; set; }
         public int WaterRecyclers { get; set; }
+        /// <summary>Drills set to water and electrolysis units delivered (0.8.205): with life support a self-sufficient base needs both.</summary>
+        public int WaterDrills { get; set; }
+        public int Electrolysis { get; set; }
+        /// <summary>Water in the ground at the site, as the host reads it (0 to 1; NaN unknown). A drill needs LifeSupportRules.WaterMinAbundance.</summary>
+        public double SiteWater { get; set; } = double.NaN;
         /// <summary>A rocket stays at the base (the "return" module): crews can rotate and evacuate.</summary>
         public bool HasRocket { get; set; }
         /// <summary>Room the base added itself: supply deliveries and, once a colony, its own building.</summary>

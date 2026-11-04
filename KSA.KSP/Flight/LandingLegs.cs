@@ -427,7 +427,11 @@ namespace KSA.KSP.Flight
                 double accel = ctx.Control.MaxAcceleration(), g = b.gravParameter / (b.Radius * b.Radius);
                 // Flat anywhere in the light (2026-10-31, T: "3% anywhere in the light, 7% fall back to anywhere in the light", "it should
                 // abort anything more than 7%"): a lander on its side goes nowhere; a morning rule took a 15% site and it tipped over.
-                double[] slopeLimit = { GoodSlope, FairSlope };
+                // A base's first landing looks for ground with water in it (0.8.205, T: a self-sufficient base makes its own water): the two
+                // slope passes with water first, then the same two without, so a world with water only at its poles still gets its base.
+                bool wantWater = ctx.Profile == KSA.Core.Missions.MissionProfile.Base && KsaCore.Agency != null && KsaCore.Agency.LifeSupportOn && Parts.KspLifeSupport.KerbalismInstalled;
+                double minWater = KsaCore.Agency != null ? KsaCore.Agency.LifeSupport.WaterMinAbundance : 0.01, bestWater = double.NaN;
+                double[] slopeLimit = wantWater ? new[] { GoodSlope, FairSlope, GoodSlope, FairSlope } : new[] { GoodSlope, FairSlope };
                 // Near apoapsis alone, the usual steps leave three moments an orbit (2026-11-01: "no flat ground", over and over).
                 int steps = o.eccentricity > DescentRules.LongOrbit ? LongOrbitSteps : SiteSteps;
                 // A slow orbit gets one lap: eight of a 70-day orbit is a 522-day wait (2026-11-01).
@@ -445,7 +449,10 @@ namespace KSA.KSP.Flight
                         double lon = b.GetLongitude(ground) - 360 * (ut + lead - ctx.Now) / b.rotationPeriod; // the world turns meanwhile
 
                         double rough = Roughness(b, lat, lon);
-                        if (rough < best && rough <= slopeLimit[pass]) { best = rough; bestSun = sunUp; _burnAt = ut; }
+                        if (rough >= best || rough > slopeLimit[pass]) continue;
+                        double water = wantWater ? Parts.KspLifeSupport.WaterAt(b, lat, lon) : double.NaN;
+                        if (wantWater && pass < 2 && !(water >= minWater)) continue;
+                        best = rough; bestSun = sunUp; _burnAt = ut; bestWater = water;
                     }
                 _searches++;
                 if (double.IsPositiveInfinity(best))
@@ -454,7 +461,7 @@ namespace KSA.KSP.Flight
                     _searchAgainAt = ctx.Now + o.period * orbits;
                     if (_searches < MaxSearches) ctx.Say("No ground of " + LandingHelpers.Pct(FairSlope) + " or flatter in the light yet; staying in orbit and looking again.");
                 }
-                else ctx.Say("Landing site chosen: sun " + Math.Round(bestSun) + " deg up, ground slope about " + LandingHelpers.Pct(best) + ", deorbit in " + TransferSupport.Countdown(_burnAt - ctx.Now) + ".");
+                else ctx.Say("Landing site chosen: sun " + Math.Round(bestSun) + " deg up, ground slope about " + LandingHelpers.Pct(best) + (double.IsNaN(bestWater) ? string.Empty : ", water in the ground " + (bestWater * 100).ToString("0.#") + (bestWater >= minWater ? "%" : "% (under the drill's " + (minWater * 100).ToString("0.#") + "%, no better ground on this track)")) + ", deorbit in " + TransferSupport.Countdown(_burnAt - ctx.Now) + ".");
             }
             catch (Exception e) { KsaCore.Log.Warn("Landing site search failed: " + e.Message); _burnAt = ctx.Now; _searches = MaxSearches; }
         }

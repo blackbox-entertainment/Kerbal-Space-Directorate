@@ -337,6 +337,8 @@ namespace KSA.KSP.Build
                 return;
             }
             if (double.IsNaN(g.SiteLat) || double.IsNaN(g.SiteLon)) ChooseSite(g, body);
+            // Water in the ground at the site (0.8.205): the colony rules want a drill to have something to dig.
+            if (double.IsNaN(g.SiteWater) && !double.IsNaN(g.SiteLat)) g.SiteWater = Parts.KspLifeSupport.WaterAt(body, g.SiteLat, g.SiteLon);
             string path = Path.Combine(KSPUtil.ApplicationRootPath, "GameData", "KSA", "PluginData", "Bases", CraftWriter.SafeFileName(g.Id) + ".craft");
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             File.WriteAllText(path, Craft(pieces, g.Name));
@@ -381,6 +383,7 @@ namespace KSA.KSP.Build
                         g.SiteLat = v.latitude;
                         g.SiteLon = v.longitude + 60.0 / (body.Radius * Math.Max(0.1, Math.Cos(v.latitude * Math.PI / 180))) * 180 / Math.PI; // 60 m east
                         g.Site = "beside the landed module, " + Coords(g);
+                        NoteWater(g, body);
                         return;
                     }
             int hash = 17;
@@ -400,6 +403,14 @@ namespace KSA.KSP.Build
                 }
             g.SiteLat = bestLat; g.SiteLon = bestLon;
             g.Site = "flat ground at " + Coords(g) + " (slope " + (Math.Atan(bestSlope) * 180 / Math.PI).ToString("0.0", CultureInfo.InvariantCulture) + " deg)";
+            NoteWater(g, body);
+        }
+
+        /// <summary>Reads the water in the ground at the program's site and says so in its site line (0.8.205).</summary>
+        private static void NoteWater(Program g, CelestialBody body)
+        {
+            g.SiteWater = Parts.KspLifeSupport.WaterAt(body, g.SiteLat, g.SiteLon);
+            if (!double.IsNaN(g.SiteWater)) g.Site += ", water in the ground " + (g.SiteWater * 100).ToString("0.#", CultureInfo.InvariantCulture) + "%";
         }
 
         private static string Coords(Program g) { return g.SiteLat.ToString("0.000", CultureInfo.InvariantCulture) + ", " + g.SiteLon.ToString("0.000", CultureInfo.InvariantCulture); }

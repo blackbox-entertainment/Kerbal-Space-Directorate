@@ -25,6 +25,8 @@ namespace KSA.Core.Projects
         public double WaterPerKerbalDay { get; set; } = 0.1344;
         /// <summary>Kerbalism's default oxygen rule: 0.00172379825 units a second per kerbal (0.8.202: the mk IIIe's 120,561 units were 1,080 days for three, and the trip 1,150).</summary>
         public double OxygenPerKerbalDay { get; set; } = 37.3;
+        /// <summary>Least water in the ground a drill can work (Kerbalism's Water Excavation min_abundance 0.01), 0.8.205.</summary>
+        public double WaterMinAbundance { get; set; } = 0.01;
         /// <summary>Extra days of supplies a live flight must carry beyond its planned length.</summary>
         public int MarginDays { get; set; } = 2;
         /// <summary>
@@ -87,6 +89,7 @@ namespace KSA.Core.Projects
             r.FoodPerKerbalDay = node.GetDouble("foodPerKerbalDay", r.FoodPerKerbalDay);
             r.WaterPerKerbalDay = node.GetDouble("waterPerKerbalDay", r.WaterPerKerbalDay);
             r.OxygenPerKerbalDay = node.GetDouble("oxygenPerKerbalDay", r.OxygenPerKerbalDay);
+            r.WaterMinAbundance = node.GetDouble("waterMinAbundance", r.WaterMinAbundance);
             r.MarginDays = node.GetInt("marginDays", r.MarginDays);
             r.SafetyFactor = node.GetDouble("supplySafetyFactor", r.SafetyFactor);
             r.WaterRecyclerRecovery = node.GetDouble("waterRecyclerRecovery", r.WaterRecyclerRecovery);

@@ -52,7 +52,13 @@ namespace KSA.KSP.Parts
                     chosen = true;
                     if (rn == "_WaterRecycler") h.WaterRecyclers += (int)Math.Round(cap);
                     else if (rn == "_Scrubber") h.Scrubbers += (int)Math.Round(cap);
+                    else if (rn == "_WaterElectrolysis") h.Electrolysis += Math.Max(1, (int)Math.Round(cap));
                 }
+                // Which drill setup the craft chose (0.8.205): the craft file keeps one Harvester MODULE node per setup, in the prefab's order,
+                // and only the chosen one is enabled. A craft file with no such nodes (a plan the engineers wrote) is read at its defaults.
+                var harvesterNodes = new List<ConfigNode>();
+                foreach (ConfigNode m in part.GetNodes("MODULE")) if ((m.GetValue("name") ?? string.Empty) == "Harvester") harvesterNodes.Add(m);
+                int harvesterIndex = 0;
                 bool industry = false, power = false;
                 foreach (PartModule m in ap.partPrefab.Modules)
                 {
@@ -60,7 +66,15 @@ namespace KSA.KSP.Parts
                     if (kerbalism)
                     {
                         // Kerbalism swaps the stock drill, converter and RTG modules for its own (KSA-67).
-                        if (KspLifeSupport.IsHarvester(m)) { h.Drills++; continue; }
+                        if (KspLifeSupport.IsHarvester(m))
+                        {
+                            h.Drills++;
+                            bool water = KspLifeSupport.HarvesterType(m) == 0 && string.Equals(KspLifeSupport.HarvesterResource(m), "Water", StringComparison.OrdinalIgnoreCase);
+                            bool enabled = harvesterIndex < harvesterNodes.Count ? string.Equals(harvesterNodes[harvesterIndex].GetValue("isEnabled"), "True", StringComparison.OrdinalIgnoreCase) : water;
+                            if (water && enabled) h.WaterDrills++;
+                            harvesterIndex++;
+                            continue;
+                        }
                         if (KspLifeSupport.IsGreenhouse(m)) { h.Greenhouses++; continue; }
                         string process = KspLifeSupport.ProcessOf(m);
                         if (process.Length > 0)

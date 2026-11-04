@@ -113,6 +113,9 @@ namespace KSA.Core
                 n.AddValue("greenhouses", g.Greenhouses);
                 n.AddValue("scrubbers", g.Scrubbers);
                 n.AddValue("waterRecyclers", g.WaterRecyclers);
+                n.AddValue("waterDrills", g.WaterDrills);
+                n.AddValue("electrolysis", g.Electrolysis);
+                if (!double.IsNaN(g.SiteWater)) n.AddValue("siteWater", g.SiteWater);
                 n.AddValue("rocket", g.HasRocket);
                 n.AddValue("extraRoom", g.ExtraRoom);
                 if (g.DepotCapacity > 0) { n.AddValue("depotFuel", g.DepotFuel); n.AddValue("depotCapacity", g.DepotCapacity); }
@@ -307,6 +310,9 @@ namespace KSA.Core
                 g.Greenhouses = n.GetInt("greenhouses", 0);
                 g.Scrubbers = n.GetInt("scrubbers", 0);
                 g.WaterRecyclers = n.GetInt("waterRecyclers", 0);
+                g.WaterDrills = n.GetInt("waterDrills", 0);
+                g.Electrolysis = n.GetInt("electrolysis", 0);
+                g.SiteWater = n.GetDouble("siteWater", double.NaN);
                 g.HasRocket = n.GetBool("rocket", false);
                 g.ExtraRoom = n.GetInt("extraRoom", 0);
                 g.DepotFuel = n.GetDouble("depotFuel", 0);

@@ -204,7 +204,17 @@ namespace KSA.Core.Tests
             Assert.That(a.SupplyIntervalFor(g), Is.GreaterThan(0), "a colony that cannot feed itself needs supplies");
             Assert.That(a.NextStageHint(g), Does.Contain("greenhouse").And.Contains("scrubbers"));
             g.Greenhouses = 1; g.Scrubbers = 8; g.WaterRecyclers = 8;
-            Assert.That(a.IsSelfSufficient(g), Is.True, "one greenhouse feeds eight, and air and water are recycled");
+            // Water and oxygen are made, not recycled for ever (0.8.205): a drill set to water and electrolysis, at a site with water.
+            Assert.That(a.IsSelfSufficient(g), Is.False, "no water drill or electrolysis yet");
+            Assert.That(a.NextStageHint(g), Does.Contain("water excavation").And.Contains("electrolysis"));
+            g.WaterDrills = 1; g.Electrolysis = 1;
+            Assert.That(a.IsSelfSufficient(g), Is.True, "one greenhouse feeds eight, air and water are recycled, and water and oxygen are made");
+            g.SiteWater = 0.005;
+            Assert.That(a.IsSelfSufficient(g), Is.False, "half a percent of water in the ground is under the drill's 1%");
+            Assert.That(a.NextStageHint(g), Does.Contain("water in the ground"));
+            g.SiteWater = 0.03;
+            Assert.That(a.IsSelfSufficient(g), Is.True);
+            Assert.That(ShippedConfigs.Settings().LifeSupport.WaterMinAbundance, Is.EqualTo(0.01));
             Assert.That(a.SupplyIntervalFor(g), Is.EqualTo(0));
             Assert.That(a.FoodRoom(g), Is.EqualTo(0), "no room for another mouth");
 
@@ -224,7 +234,7 @@ namespace KSA.Core.Tests
             var clock = new FakeClock();
             Agency a = Staffed(clock, true);
             Program g = Colony(a);
-            g.Greenhouses = 1; g.Scrubbers = 8; g.WaterRecyclers = 8;
+            g.Greenhouses = 1; g.Scrubbers = 8; g.WaterRecyclers = 8; g.WaterDrills = 1; g.Electrolysis = 1;
             a.Settings.LifeSupport.ColonyGreenhouseEveryYears = 1;
             a.Settings.Colony.BirthChancePerPair = 0;
             clock.AdvanceDays(a.Clock.DaysPerYear); a.Tick();
