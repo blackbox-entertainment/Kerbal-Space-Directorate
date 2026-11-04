@@ -2,6 +2,14 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.199 (2026-11-04), test build
+
+- **A moon across the approach no longer kills the crew.** The mk IIIe's Duna capture was planned two days out with a 46 km periapsis; on the way in the path ran through Ike's sphere, the pass bent it into the ground, the burn kept its planned time, and the crew warped to it and hit the surface at 632 m/s (Verdin, Franuki and Billy-Bobmore Kerman). Three fixes:
+  - **The capture leg looks for a moon across the approach** before planning the burn and shifts the arrival past it: a burn along the velocity changes the timing so the moon has moved on at the crossing, with a horizontal part that keeps the periapsis (under 100 m/s; the aerobraking passes' plane-change dodge does almost nothing on a path falling straight in, as the new test shows). A moon too close or too dear to dodge is ridden through under warp, and the insertion is planned again on the far side.
+  - **A path that moved under the planned burn is trimmed back.** After a moon pass, or whenever the periapsis is 20 km or 30% off the planned one, the crew stops the warp and burns radially (out or in, up to 900 m/s) to put it back, then plans the insertion again. A path into the ground on arrival gets the same radial burn instead of a halt.
+  - **The burn executor never warps into the ground.** While waiting for any burn, a periapsis under the surface whose ground comes before the burn would end stops the warp and hands the leg the problem.
+- **A periapsis counts only where it is really flown.** The patched-conic readers (the course correction's "predicted periapsis", every node score) took the first patch around the target; a patch that ends in a moon's sphere while still descending never reaches its low point, so the correction at the edge of Duna's space trimmed to a 46 km periapsis that did not exist. Such a patch is skipped and the one after the moon is read.
+
 ## 0.8.198 (2026-11-04), test build
 
 - **The last kilometre to the tanker is a two-minute push, not five.** Four pushes of 2 to 5 m/s each ended "Closest approach is 1 km, not a meeting" (T: "it never used this much fuel before"): at 85 km the orbit turns 0.2 degrees a second, so a 2 m/s push over five minutes bent a kilometre off its straight line, and a 0.6 s main-engine burn cannot hold 2 m/s to the tenth. Inside 3 km the crew now pushes at 2 to 10 m/s to arrive in about two minutes, and leaves a minute to turn round for the match. The ascent itself was the same as the last mk IIIe flight (cutoff at 85 km); the meeting cost 204 m/s instead of 42 because of where the station happened to be.

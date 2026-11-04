@@ -108,7 +108,7 @@ namespace KSA.KSP.Flight
         /// <summary>First predicted patch around the body, or null when the trajectory never gets there.</summary>
         public static Orbit PatchAround(ManeuverNode n, CelestialBody body)
         {
-            foreach (Orbit o in PatchesAfter(n)) if (o.referenceBody == body) return o;
+            foreach (Orbit o in PatchesAfter(n)) if (o.referenceBody == body && TransferSupport.ReachesPeriapsis(o)) return o;
             return null;
         }
 
@@ -189,6 +189,10 @@ namespace KSA.KSP.Flight
         public bool Failed { get { return _phase == Phases.Failed; } }
         public string Status { get; private set; }
         public string FailReason { get; private set; }
+        /// <summary>The burn never started: the path runs into the ground before it (0.8.199). The leg replans.</summary>
+        public bool GroundAhead { get; private set; }
+        /// <summary>The engine is lit on the node.</summary>
+        public bool Burning { get { return _phase == Phases.Burn; } }
 
         /// <summary>Ends the burn early whatever the node says (a long burn drifts off its node; the transfer stops on its apoapsis).</summary>
         public Func<Vessel, bool> CutOff { get; set; }
@@ -250,6 +254,20 @@ namespace KSA.KSP.Flight
             double ignition = KSA.Core.Flight.Sim.BurnRules.Ignition(n.UT, _burnTime, _lateBy);
             Vector3d burn = n.GetBurnVector(v.orbit);
             string line = null;
+            // The ground before the burn (0.8.199, 2026-11-04: an Ike pass two days before the Duna capture bent the path into the
+            // ground; the node kept its time, the crew warped to it and hit the surface at 632 m/s, three dead). While waiting, a
+            // periapsis under the surface whose ground comes before the burn would end stops the warp and hands the leg the problem.
+            if ((_phase == Phases.Align || _phase == Phases.Warp) && v.orbit.PeA < 0 && v.orbit.timeToPe > 0)
+            {
+                double groundUt = AirbrakeLeg.TimeToAir(v, 0, now);
+                if (groundUt > 0 && groundUt < ignition + Math.Max(60, _burnTime))
+                {
+                    c.StopWarp();
+                    GroundAhead = true;
+                    Fail("the path hits " + TransferSupport.BodyName(v.mainBody) + " before the burn");
+                    return "The path runs into " + TransferSupport.BodyName(v.mainBody) + " in " + TransferSupport.Countdown(groundUt - now) + ", before the burn (periapsis " + TransferSupport.Km(v.orbit.PeA) + "); stopping the warp.";
+                }
+            }
             switch (_phase)
             {
                 case Phases.Align:

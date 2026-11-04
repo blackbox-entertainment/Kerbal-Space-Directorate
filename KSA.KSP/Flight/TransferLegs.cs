@@ -48,7 +48,7 @@ namespace KSA.KSP.Flight
             int guard = 0;
             while (o != null && guard++ < 8)
             {
-                if (o.referenceBody == body) return o;
+                if (o.referenceBody == body && ReachesPeriapsis(o)) return o;
                 if (o.patchEndTransition == Orbit.PatchTransitionType.FINAL || o.patchEndTransition == Orbit.PatchTransitionType.INITIAL) break;
                 o = o.nextPatch;
                 if (o != null && !o.activePatch) break;
@@ -61,6 +61,24 @@ namespace KSA.KSP.Flight
         {
             Orbit o = VesselPatchAround(v, body);
             return o != null ? o.PeA : double.NaN;
+        }
+
+        /// <summary>
+        /// The patch's low point is really flown (0.8.199): a patch that ends in a moon's sphere while still descending never reaches
+        /// its periapsis (2026-11-04: the first Duna patch said 46 km two days out; after the Ike pass the real one was underground,
+        /// and the correction had trimmed to the wrong one). Everything but a moon encounter on the way down counts.
+        /// </summary>
+        public static bool ReachesPeriapsis(Orbit o)
+        {
+            if (o == null) return false;
+            if (o.patchEndTransition != Orbit.PatchTransitionType.ENCOUNTER) return true;
+            try
+            {
+                if (o.eccentricity < 1 && o.EndUT - o.StartUT > o.period) return true;
+                Vector3d r = o.getRelativePositionAtUT(o.EndUT), vel = o.getOrbitalVelocityAtUT(o.EndUT);
+                return Vector3d.Dot(r, vel) >= 0;
+            }
+            catch { return true; }
         }
 
         /// <summary>Scores a trial node (added, scored, removed). NaN when the node cannot be placed or the score throws.</summary>
@@ -1226,15 +1244,23 @@ namespace KSA.KSP.Flight
     /// Orbit insertion at the target: a retrograde burn at periapsis into an ellipse reaching the wanted altitude
     /// (or a circular orbit at periapsis when that is already higher), then a circularisation burn at apoapsis when
     /// the orbit is still eccentric and propellant remains. Fails when the incoming path hits the body.
+    /// Since 0.8.199 a moon across the approach is dodged before the burn is planned, a moon's sphere met anyway is
+    /// ridden through, and a path that moved under the planned burn is trimmed back with a radial burn.
     /// </summary>
     public sealed class CaptureLeg : IFlightLeg
     {
-        private enum Phases { Check, Capture, Circularize, Finished }
+        private enum Phases { Check, Dodge, Capture, Retrim, Circularize, Finished }
         private readonly CelestialBody _target;
         private readonly double _altitude;
         private Phases _phase;
         private NodeExecutor _exec;
         private bool _secondPlanned;
+        // The path under the planned burn (0.8.199): a moon pass on the way in moves it, and the burn is planned again.
+        private double _plannedPe, _lastWarpAsk = -1e9;
+        private bool _moonPassed;
+        private int _dodges, _retrims;
+        private const int MaxDodges = 2, MaxRetrims = 3;
+        private const double DodgeMaxCost = 100, TurnSeconds = 60, MoonSafeHeight = 20000, RetrimMaxDv = 900;
 
         public CaptureLeg(CelestialBody target, double orbitAltitude)
         {
@@ -1261,6 +1287,10 @@ namespace KSA.KSP.Flight
             State = LegState.Running;
             _phase = Phases.Check;
             _secondPlanned = false;
+            _moonPassed = false;
+            _plannedPe = 0;
+            _dodges = 0;
+            _retrims = 0;
             Status = "Preparing orbit insertion.";
             Vessel v = ctx.Vessel;
             if (v == null || v.orbit == null || _target == null) { Fail("no vessel orbit or target"); return; }
@@ -1308,8 +1338,10 @@ namespace KSA.KSP.Flight
                     }
                     if (v.orbit.PeA < 5000)
                     {
+                        // Into the ground (0.8.199): a radial burn now lifts the low point back into its band before anything else.
+                        if (PlanRetrim(ctx, ref line)) break;
                         Fail("trajectory impacts " + _target.bodyName);
-                        line = "Incoming trajectory impacts " + _target.bodyName + " (periapsis " + TransferSupport.Km(v.orbit.PeA) + "); insertion aborted.";
+                        line = line ?? ("Incoming trajectory impacts " + _target.bodyName + " (periapsis " + TransferSupport.Km(v.orbit.PeA) + ") and no radial burn within " + RetrimMaxDv + " m/s lifts it; insertion aborted. Director, your call.");
                         break;
                     }
                     if (Captured(v))
@@ -1323,11 +1355,22 @@ namespace KSA.KSP.Flight
                         Fail("already past periapsis of " + _target.bodyName);
                         break;
                     }
-                    line = PlanCapture(ctx);
+                    if (PlanDodge(ctx, ref line)) break;
+                    line = line ?? PlanCapture(ctx);
                     break;
-                case Phases.Capture:
+                case Phases.Dodge:
                     if (TransferSupport.PumpExecutor(_exec, ctx, ref line))
                     {
+                        if (_exec.Failed && !_exec.GroundAhead) { Fail("moon dodge burn failed: " + _exec.FailReason); break; }
+                        _phase = Phases.Check;
+                    }
+                    else Status = "Clearing the moon: " + _exec.Status;
+                    break;
+                case Phases.Capture:
+                    if (!_exec.Burning && WatchThePath(ctx, ref line)) break;
+                    if (TransferSupport.PumpExecutor(_exec, ctx, ref line))
+                    {
+                        if (_exec.Failed && _exec.GroundAhead) { if (WatchThePath(ctx, ref line)) break; }
                         if (!Bound(v))
                         {
                             Fail(_exec.Failed ? "capture burn incomplete: " + _exec.FailReason : "still not bound to " + _target.bodyName + " after the burn");
@@ -1338,6 +1381,15 @@ namespace KSA.KSP.Flight
                     }
                     else Status = "Insertion: " + _exec.Status;
                     break;
+                case Phases.Retrim:
+                    if (TransferSupport.PumpExecutor(_exec, ctx, ref line))
+                    {
+                        if (_exec.Failed && !_exec.GroundAhead) { Fail("retrim burn failed: " + _exec.FailReason); break; }
+                        _phase = Phases.Check;
+                        if (v.mainBody == _target) line = line ?? ("Approach trimmed: periapsis now " + TransferSupport.Km(v.orbit.PeA) + "; planning the insertion again.");
+                    }
+                    else Status = "Retrimming the approach: " + _exec.Status;
+                    break;
                 case Phases.Circularize:
                     if (TransferSupport.PumpExecutor(_exec, ctx, ref line)) Finish(ctx, ref line);
                     else Status = "Circularising: " + _exec.Status;
@@ -1347,6 +1399,137 @@ namespace KSA.KSP.Flight
                     break;
             }
             return line;
+        }
+
+        /// <summary>
+        /// The path under the planned burn, while the crew waits for it (0.8.199, 2026-11-04: the mk IIIe passed Ike two days before
+        /// its Duna capture, the pass bent the path into the ground, the node kept its time, and the crew warped into the surface at
+        /// 632 m/s; three dead). A moon's sphere on the way in is ridden through under warp; back around the planet the insertion is
+        /// planned again, after a radial burn when the periapsis moved or the executor raised its ground alarm. True when the leg
+        /// took the step over from the executor.
+        /// </summary>
+        private bool WatchThePath(FlightContext ctx, ref string line)
+        {
+            Vessel v = ctx.Vessel;
+            bool alarm = _exec.Failed && _exec.GroundAhead;
+            if (v.mainBody != _target && !alarm)
+            {
+                if (!_moonPassed)
+                {
+                    _moonPassed = true;
+                    line = "Passing through " + TransferSupport.BodyName(v.mainBody) + "'s sphere on the way in (" + TransferSupport.Km(v.orbit.PeA) + " over it); the insertion is planned again on the far side.";
+                }
+                Status = "Passing " + v.mainBody.bodyName + ".";
+                if (!ctx.Control.IsWarping && ctx.Now - _lastWarpAsk > 2 && v.orbit.EndUT > ctx.Now + 30) { _lastWarpAsk = ctx.Now; ctx.Control.WarpTo(v.orbit.EndUT + 10); }
+                return true;
+            }
+            double band = Math.Max(20000, 0.3 * _plannedPe);
+            bool moved = _plannedPe > 0 && Math.Abs(v.orbit.PeA - _plannedPe) > band;
+            if (!alarm && !_moonPassed && !moved) return false;
+            if (ctx.Control.IsWarping) { ctx.Control.StopWarp(); Status = "The path changed under the burn; stopping the warp."; return true; }
+            _moonPassed = false;
+            if (!alarm && !moved)
+            {
+                NodePlanner.ClearNodes(v);
+                _phase = Phases.Check;
+                line = "Clear of the moon with the periapsis still at " + TransferSupport.Km(v.orbit.PeA) + "; planning the insertion again.";
+                return true;
+            }
+            if (PlanRetrim(ctx, ref line)) return true;
+            Fail("the path moved under the burn and no trim brings it back");
+            line = line ?? ("Holding: the path moved under the insertion burn (periapsis now " + TransferSupport.Km(v.orbit.PeA) + " at " + TransferSupport.BodyName(v.mainBody) + ") and no radial burn within " + RetrimMaxDv + " m/s brings it back. Director, your call.");
+            return true;
+        }
+
+        /// <summary>
+        /// A radial burn in a minute that puts the periapsis back in its band (0.8.199): the planned one around the target, a safe
+        /// height over a moon the ship is caught by. False when none within RetrimMaxDv does, or the retrims are used up.
+        /// </summary>
+        private bool PlanRetrim(FlightContext ctx, ref string line)
+        {
+            Vessel v = ctx.Vessel;
+            CelestialBody body = v.mainBody;
+            if (_retrims >= MaxRetrims || !NodePlanner.Available(v) || body == null) return false;
+            double lo, hi;
+            if (body == _target)
+            {
+                lo = _plannedPe > 0 ? _plannedPe : (_loose > 0 && _target.atmosphereDepth > 0 ? 0.7 * _target.atmosphereDepth : _altitude);
+                hi = lo + Math.Max(5000, 0.1 * lo);
+            }
+            else { lo = MoonSafeHeight; hi = lo + 40000; }
+            double now = ctx.Now;
+            double ut = now + (v.orbit.timeToPe > 0 && v.orbit.timeToPe < 2 * TurnSeconds ? 10 : TurnSeconds);
+            double was = v.orbit.PeA;
+            Vector3d dir = was < lo ? new Vector3d(1, 0, 0) : new Vector3d(-1, 0, 0);
+            double dv = NodePlanner.Bisect(v, ut, dir, RetrimMaxDv, n => NodePlanner.PeriapsisAt(n, body), lo, hi);
+            if (double.IsNaN(dv)) return false;
+            NodePlanner.ClearNodes(v);
+            if (NodePlanner.Add(v, ut, dir * dv) == null) return false;
+            _retrims++;
+            _exec = new NodeExecutor();
+            _exec.Begin(ctx);
+            if (_exec.Failed) { Fail(_exec.FailReason); return false; }
+            _phase = Phases.Retrim;
+            Status = "Retrimming the approach: " + Math.Round(dv) + " m/s radial.";
+            line = "The path moved under the insertion burn: periapsis " + TransferSupport.Km(was) + " at " + TransferSupport.BodyName(body) + ". Burning " + Math.Round(dv) + " m/s radial " + (was < lo ? "out" : "in") + " in " + TransferSupport.Countdown(ut - now) + " to bring it to " + TransferSupport.Km(lo) + ".";
+            return true;
+        }
+
+        /// <summary>
+        /// A moon across the approach before periapsis (0.8.199): a burn along the velocity now changes the timing so the moon has
+        /// moved on at the crossing, with a horizontal part that keeps the periapsis (MoonDodge.Approach; a tilt about the vertical,
+        /// the aerobraking passes' dodge, does almost nothing on a path falling straight in). False when there is none, or it is too
+        /// close or too dear to dodge, in which case the ship rides through and the insertion is planned again on the far side.
+        /// </summary>
+        private bool PlanDodge(FlightContext ctx, ref string line)
+        {
+            Vessel v = ctx.Vessel;
+            Orbit o = v.orbit;
+            List<CelestialBody> moons = _target.orbitingBodies;
+            if (moons == null || moons.Count == 0 || _dodges >= MaxDodges || o.timeToPe <= 0) return false;
+            var at = new Func<double, Vec3>[moons.Count];
+            var reach = new double[moons.Count];
+            for (int i = 0; i < moons.Count; i++)
+            {
+                Orbit moon = moons[i].orbit;
+                at[i] = t => OrbitAdapter.StateAt(moon, t).Position;
+                reach[i] = moons[i].sphereOfInfluence * MoonDodge.Reach;
+            }
+            double now = ctx.Now, mu = _target.gravParameter, until = now + o.timeToPe + 600;
+            double hit = MoonDodge.FirstMeeting(OrbitAdapter.StateAt(o, now), mu, now, until, at, reach);
+            if (double.IsPositiveInfinity(hit)) return false;
+            string which = "A moon";
+            double nearest = double.PositiveInfinity;
+            Vec3 there = OrbitAdapter.StateAt(o, hit).Position;
+            for (int i = 0; i < moons.Count; i++)
+            {
+                double gap = (there - at[i](hit)).Length;
+                if (gap < nearest) { nearest = gap; which = TransferSupport.BodyName(moons[i]); }
+            }
+            string when = TransferSupport.Countdown(hit - now);
+            double burn = now + TurnSeconds;
+            if (hit - burn < 600)
+            {
+                line = which + " lies across the approach in " + when + ", too close to dodge; riding through and planning the insertion on the far side.";
+                return false;
+            }
+            Vec3 dv;
+            double rp = o.PeR, band = Math.Max(5000, 0.1 * Math.Max(0, o.PeA));
+            if (!MoonDodge.Approach(OrbitAdapter.StateAt(o, burn), mu, burn, until, at, reach, rp - band, rp + band, DodgeMaxCost, out dv))
+            {
+                line = which + " lies across the approach in " + when + " and no burn under " + DodgeMaxCost + " m/s clears it; riding through and planning the insertion on the far side.";
+                return false;
+            }
+            NodePlanner.ClearNodes(v);
+            if (NodePlanner.AddFrameDeltaV(v, burn, dv) == null) return false;
+            _dodges++;
+            _exec = new NodeExecutor();
+            _exec.Begin(ctx);
+            if (_exec.Failed) { Fail(_exec.FailReason); return false; }
+            _phase = Phases.Dodge;
+            Status = "Clearing " + which + ": " + Math.Round(dv.Length, 1) + " m/s.";
+            line = which + " lies across the approach in " + when + ": shifting the arrival past it with " + Math.Round(dv.Length, 1) + " m/s, same periapsis.";
+            return true;
         }
 
         private string PlanCapture(FlightContext ctx)
@@ -1382,6 +1565,8 @@ namespace KSA.KSP.Flight
             _exec.Begin(ctx);
             if (_exec.Failed) { Fail(_exec.FailReason); return null; }
             _phase = Phases.Capture;
+            _plannedPe = v.orbit.PeA;
+            _moonPassed = false;
             Status = "Insertion burn of " + Math.Round(dv) + " m/s in " + TransferSupport.Countdown(v.orbit.timeToPe) + ".";
             return "Orbit insertion planned: " + Math.Round(dv) + " m/s retrograde at periapsis (" + TransferSupport.Km(v.orbit.PeA) + ") into a "
                 + TransferSupport.Km(rPe - _target.Radius) + " x " + TransferSupport.Km(aNew * 2 - rPe - _target.Radius) + " orbit.";
