@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.190 (2026-11-03), test build
+
+- **The landing-site picker knows where an air landing comes down.** On a world with air the deorbit aims a periapsis inside it and the ship coasts half an orbit round before braking; the picker assumed a strong lander brakes right after the burn, so it checked the sun and the slope 150 degrees short of the real touchdown: "sun 66 deg up" for a landing in the dark on Duna. The predicted point is now the periapsis of the deorbit ellipse.
+
 ## 0.8.189 (2026-11-03), test build
 
 - **The panel cruise worked** (2026-11-03, mk IIIe): re-aims every two weeks, panels making 4.0 EC/s near Kerbin down to 2.4 near Duna, battery full at T+337 d.

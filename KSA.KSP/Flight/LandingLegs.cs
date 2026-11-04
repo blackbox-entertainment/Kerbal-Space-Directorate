@@ -421,7 +421,7 @@ namespace KSA.KSP.Flight
                     {
                         double ut = ctx.Now + 60 + o.period * i / steps;
                         if (TooFarFromApoapsis(o, ut, ctx.Now)) continue;
-                        double lead; Vector3d down = PredictDown(o, ut, b, accel, g, out lead);
+                        double lead; Vector3d down = PredictDown(o, ut, b, accel, g, _hasAir, out lead);
                         double sunUp = 90 - Vector3d.Angle(down, sun);
                         if (sunUp < MinSunUp) continue;
                         Vector3d ground = b.position + down * b.Radius;
@@ -463,7 +463,7 @@ namespace KSA.KSP.Flight
             for (double ut = ctx.Now + 60; ut < ctx.Now + 60 + lookAhead; ut += stepBy)
             {
                 if (TooFarFromApoapsis(o, ut, ctx.Now)) continue;
-                double lead; Vector3d down = PredictDown(o, ut, b, accel, g, out lead);
+                double lead; Vector3d down = PredictDown(o, ut, b, accel, g, _hasAir, out lead);
                 Vector3d ground = b.position + down * b.Radius;
                 double lon = b.GetLongitude(ground) - 360 * (ut + lead - ctx.Now) / b.rotationPeriod; // the world turns meanwhile
                 double miss = SurfaceDistance(b, b.GetLatitude(ground), lon, siteLat, siteLon);
@@ -479,9 +479,18 @@ namespace KSA.KSP.Flight
         /// Where a deorbit burn at ut comes down, and how long after. A weak lander brakes straight away, close under the burn. A strong one
         /// falls most of the way round first, whatever the shape of its orbit (2026-11-01: a quarter-orbit guess was 5.6 km out on Minmus).
         /// </summary>
-        private static Vector3d PredictDown(Orbit o, double ut, CelestialBody b, double accel, double g, out double seconds)
+        private static Vector3d PredictDown(Orbit o, double ut, CelestialBody b, double accel, double g, bool air, out double seconds)
         {
             Vector3d r = o.getPositionAtUT(ut) - b.position;
+            if (air)
+            {
+                // With air the deorbit aims a periapsis inside it (DeorbitPeShare) and the ship coasts half the ellipse round before the
+                // air and the braking burn bring it down near that periapsis (0.8.190: the weak-lander guess below put the site 150 deg
+                // short, "sun 66 deg up" for a landing at night on Duna).
+                double rPe = b.Radius + DescentRules.DeorbitPeShare * b.atmosphereDepth, rAp = r.magnitude, sma = (rAp + rPe) / 2;
+                seconds = Math.PI * Math.Sqrt(sma * sma * sma / b.gravParameter);
+                return (-r).normalized;
+            }
             if (accel > 0 && accel < 3 * g)
             {
                 seconds = Math.Min(o.period * SiteLead, 0.6 * o.getOrbitalVelocityAtUT(ut).magnitude / accel);
