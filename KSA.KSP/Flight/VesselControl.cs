@@ -974,6 +974,23 @@ namespace KSA.KSP.Flight
             return false;
         }
 
+        /// <summary>Delta-v the thrusters alone could give, m/s (0.8.208): the monopropellant aboard at the thrusters' vacuum Isp against the craft's mass.</summary>
+        public double RcsDeltaV()
+        {
+            try
+            {
+                if (_v == null) return 0;
+                double isp = 0;
+                foreach (ModuleRCS r in _v.FindPartModulesImplementing<ModuleRCS>())
+                    if (r.rcsEnabled && r.atmosphereCurve != null) { isp = r.atmosphereCurve.Evaluate(0f); break; }
+                if (isp <= 0) return 0;
+                double propellantKg = RcsPropellant() * 4.0, m = MassKg;
+                if (propellantKg <= 0 || m <= propellantKg) return 0;
+                return isp * 9.80665 * Math.Log(m / (m - propellantKg));
+            }
+            catch { return 0; }
+        }
+
         /// <summary>Monopropellant aboard, units (0.8.205: the thrusters finish a burn the engine ran dry on).</summary>
         public double RcsPropellant()
         {

@@ -474,7 +474,7 @@ namespace KSA.KSP.Flight
         // reentry, and never arrive faster than this (the shield's limit, well past a Duna return's 900 m/s).
         private const double SupplyMarginDays = 10, ReturnReserve = 150, MaxArrivalExcess = 2000;
         /// <summary>Kept aboard after the ejection for the deep-space and arrival corrections (0.8.207).</summary>
-        private const double EjectionReserve = 100;
+        private const double EjectionReserve = 60; // 100 in 0.8.207; a planned ejection's corrections ran 54 + 4 m/s on the way out
 
         /// <summary>
         /// Closest the path after a burn comes to the target, metres; 0 when it passes inside the target's sphere. All by the two-body sums:
@@ -682,13 +682,31 @@ namespace KSA.KSP.Flight
                 return "Apoapsis " + TransferSupport.Km(v.orbit.ApA) + " is in the radiation and the window is " + TransferSupport.Countdown(bestUt - now) + " away: lowering it to " + TransferSupport.Km(LowParkingApoapsis) + " with " + Math.Round(dvLower) + " m/s.";
             }
             double dv = burn3.Length;
-            // Never leave on a burn the tanks cannot pay for with a correction to spare (0.8.207): the crew wait for the Director instead.
-            double aboardNow = ctx.Control.DeltaVAvailable();
-            if (aboardNow > 0 && dv + EjectionReserve > aboardNow)
+            // Never leave on a burn the craft cannot pay for with a correction to spare (0.8.207): the crew wait for the Director instead.
+            // The thrusters count (0.8.208: 803 m/s in the tanks against an 820 m/s ejection, with 168 monopropellant unspent), and a window
+            // picked for the cheapest departure is tried before giving up: the search weighs the arrival speed, which a reentry at home
+            // does not pay for.
+            double aboardNow = ctx.Control.DeltaVAvailable(), onThrusters = ctx.Control.RcsDeltaV();
+            string cheaper = null;
+            if (aboardNow > 0 && dv + EjectionReserve > aboardNow + onThrusters)
             {
-                Fail("the ejection needs " + Math.Round(dv) + " m/s plus " + EjectionReserve + " for corrections, and " + Math.Round(aboardNow) + " is aboard");
-                return "Holding in orbit: the ejection to " + _target.bodyName + " needs " + Math.Round(dv) + " m/s" + (planeCost > 5 ? " (" + Math.Round(planeCost) + " of it the plane change)" : string.Empty) + " plus " + EjectionReserve + " for the corrections, and the tanks hold " + Math.Round(aboardNow) + ". Director: a tanker, or a resupply.";
+                TransferPlan lean = null;
+                try { lean = TransferPlanner.Plan(OrbitAdapter.Sampler(_origin.orbit), OrbitAdapter.Sampler(_target.orbit), sunMu, now + day, now + 1.1 * synodic, 0.5 * hohmannTime, 1.6 * hohmannTime, 60, 30, 0.0, 0, double.PositiveInfinity, MaxArrivalExcess); }
+                catch (Exception e) { KsaCore.Log.Error("InterplanetaryTransferLeg lean search threw: " + e); }
+                double leanUt; Vec3 leanBurn;
+                if (lean != null && lean.DeltaV.Length >= 1 && Ejection.PlanFromOrbit(OrbitAdapter.Sampler(v.orbit), planetMu, lean.DeltaV, Math.Max(now + 60, lean.DepartureUt - 0.5 * period), period, out leanUt, out leanBurn) && leanBurn.Length < dv - 1)
+                {
+                    cheaper = " The gentlest window needed " + Math.Round(dv) + " m/s; this one arrives faster (" + Math.Round(lean.ArrivalSpeed) + " m/s excess) for " + Math.Round(leanBurn.Length) + ".";
+                    plan = lean; vInf = lean.DeltaV; vInfMag = vInf.Length; bestUt = leanUt; burn3 = leanBurn; dv = burn3.Length;
+                    planeCost = dv - Ejection.DeltaV(planetMu, r, vInfMag);
+                }
             }
+            if (aboardNow > 0 && dv + EjectionReserve > aboardNow + onThrusters)
+            {
+                Fail("the ejection needs " + Math.Round(dv) + " m/s plus " + EjectionReserve + " for corrections, and " + Math.Round(aboardNow + onThrusters) + " is aboard");
+                return "Holding in orbit: the ejection to " + _target.bodyName + " needs " + Math.Round(dv) + " m/s" + (planeCost > 5 ? " (" + Math.Round(planeCost) + " of it the plane change)" : string.Empty) + " plus " + EjectionReserve + " for the corrections, and the tanks hold " + Math.Round(aboardNow) + (onThrusters > 0 ? " with " + Math.Round(onThrusters) + " more on the thrusters" : string.Empty) + ". Director: a tanker, or a resupply.";
+            }
+            string thrusterNote = onThrusters > 0 && dv + EjectionReserve > aboardNow ? " The tanks hold " + Math.Round(aboardNow) + "; the rest and the corrections ride on the thrusters (" + Math.Round(onThrusters) + " m/s there)." : string.Empty;
             NodePlanner.ClearNodes(v);
             // The sums ignore the days to the edge of the sphere: trim against the game's own path
             // (2026-11-01: a perfect 1,047 m/s burn missed Duna, and no correction out in the sun's space could find it).
@@ -707,7 +725,7 @@ namespace KSA.KSP.Flight
             bool escape = n.nextPatch != null && n.nextPatch.patchEndTransition == Orbit.PatchTransitionType.ESCAPE;
             return (deadlineLine != null ? deadlineLine + " " : string.Empty) + "Window to " + _target.bodyName + ": depart " + TransferSupport.Date(plan.DepartureUt) + ", arrive " + TransferSupport.Date(plan.ArrivalUt)
                 + " (" + TransferSupport.Countdown(plan.TimeOfFlight) + " flight, " + Math.Round(vInfMag) + " m/s excess). Ejection burn "
-                + Math.Round(dv) + " m/s" + (planeCost > 5 ? " (" + Math.Round(planeCost) + " of it the plane change)" : string.Empty) + " at " + TransferSupport.Date(bestUt) + (escape ? "." : "; node prediction shows no escape yet.");
+                + Math.Round(dv) + " m/s" + (planeCost > 5 ? " (" + Math.Round(planeCost) + " of it the plane change)" : string.Empty) + " at " + TransferSupport.Date(bestUt) + (escape ? "." : "; node prediction shows no escape yet.") + (cheaper ?? string.Empty) + thrusterNote;
         }
 
         public void End(FlightContext ctx)

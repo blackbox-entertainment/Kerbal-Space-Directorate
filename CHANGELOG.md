@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.208 (2026-11-04), test build
+
+- **The ejection counts the thrusters and tries a cheaper window before holding.** The mk IIIe held in Duna orbit with 803 m/s in the tanks against an 820 m/s ejection, 168 monopropellant unspent. The affordability check now adds what the thrusters could give (monopropellant at the thrusters' Isp against the craft's mass), the reserve for corrections is 60 m/s (a planned ejection's corrections ran 54 + 4 on the way out), and when the gentlest window still does not fit the crew try the window with the cheapest departure, since a reentry at home does not pay for a faster arrival. The log says which window they took and what rides on the thrusters.
+
 ## 0.8.207 (2026-11-04), test build
 
 - **The ejection burn is planned on the orbit as it is, tilted or not.** An ascent from a landing site leaves a parking orbit tilted by the site's latitude. The ejection sums aimed in that plane and threw the out-of-plane part away: the mk IIIe's Duna ejection missed Kerbin by 447,000 km, the 334 m/s deep-space correction ran the tanks dry and then the thrusters, and the crew were 123 m/s short of home. The planner now finds the point on the lap where one burn at periapsis leaves along the wanted direction, plane change and all, and says how much of the burn is the plane change. Tested from level, 25 and 45 degree orbits.
