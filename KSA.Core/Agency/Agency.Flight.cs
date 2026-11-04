@@ -295,6 +295,47 @@ namespace KSA.Core
         }
 
         /// <summary>
+        /// Save repair (0.8.196): a crewless hangar flight (a probe, a fuel station) left one project per click before 0.8.160, and the
+        /// extras stayed "in flight" for ever: the flight director resumed one of them whenever the Director visited the station, and a
+        /// rocket on the pad then got no offer (2026-11-04: ten stale projects on Fuel Station mk I). For each vessel: when a project on
+        /// it has already finished with the same mission, every crewless in-flight hangar project on it goes; else the earliest stays
+        /// and the rest go. Returns the names of the projects removed.
+        /// </summary>
+        public List<string> ScrubDuplicateHangarFlights()
+        {
+            var removed = new List<string>();
+            var byVessel = new Dictionary<string, List<Project>>();
+            foreach (Project p in Projects)
+            {
+                if (p.Status != ProjectStatus.InFlight || p.Crew.Count > 0 || string.IsNullOrEmpty(p.VesselId)) continue;
+                if (!p.Name.StartsWith("Hangar flight: ", StringComparison.Ordinal)) continue;
+                List<Project> list;
+                if (!byVessel.TryGetValue(p.VesselId, out list)) byVessel[p.VesselId] = list = new List<Project>();
+                list.Add(p);
+            }
+            foreach (KeyValuePair<string, List<Project>> kv in byVessel)
+            {
+                List<Project> list = kv.Value;
+                bool flown = false;
+                foreach (Project o in Projects)
+                    if (!o.IsActive && o.VesselId == kv.Key && o.MissionTypeId == list[0].MissionTypeId) { flown = true; break; }
+                Project keep = null;
+                if (!flown)
+                {
+                    keep = list[0];
+                    foreach (Project p in list) if (p.LaunchUT < keep.LaunchUT || (p.LaunchUT == keep.LaunchUT && p.CreatedDay < keep.CreatedDay)) keep = p;
+                }
+                foreach (Project p in list)
+                {
+                    if (p == keep) continue;
+                    Projects.Remove(p);
+                    removed.Add(p.Name + " (" + p.Id + ")");
+                }
+            }
+            return removed;
+        }
+
+        /// <summary>
         /// KSA-62: the Director built a rocket in the hangar, seated agency kerbals and launched it. A hangar project
         /// is created on the spot (no design, build or budget) for the chosen mission type and the crew flies it, so
         /// the flight earns records, medals and a post-mortem like any other. Returns the project, or null with a reason.

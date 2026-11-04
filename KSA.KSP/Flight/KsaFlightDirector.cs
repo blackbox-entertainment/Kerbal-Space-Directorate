@@ -279,6 +279,14 @@ namespace KSA.KSP.Flight
                 agency.SimulateInstead(Live.ProjectId, out why);
                 Live = null;
             }
+            // Another flight is on record (a station holding in orbit, visited a moment ago) and a rocket with no project stands on the pad:
+            // the pad gets its offer; the other flight resumes from its project when next visited, as after a restart
+            // (2026-11-04, T: "tried to launch from the vab and see no director to select a mission").
+            if (pending == null && Live != null && Live.VesselId != v.persistentId && StandingAtHome(v) && agency.ProjectForVessel(v.persistentId.ToString()) == null)
+            {
+                KsaCore.Log.Info("Flight " + Live.ProjectId + " stays on record; " + v.vesselName + " on the pad gets its own offer.");
+                Live = null;
+            }
             if (pending != null)
             {
                 LiveFlightLauncher.ClearPending();
@@ -307,8 +315,7 @@ namespace KSA.KSP.Flight
             {
                 // Resuming after a scene change or reload: is this vessel a live project?
                 Project p = agency.ProjectForVessel(v.persistentId.ToString());
-                // Standing still on the ground, however tall (2026-11-01: a 30 m rocket on the pad reads 101 m until the terrain height loads, and no offer came).
-                bool nearPad = v.mainBody == FlightGlobals.GetHomeBody() && v.srfSpeed < 2.0 && (v.situation == Vessel.Situations.PRELAUNCH || v.LandedOrSplashed || v.altitude - v.terrainAltitude < 100);
+                bool nearPad = StandingAtHome(v);
                 if (p == null && nearPad) p = AdoptFromVab(agency, v);
                 if (p == null)
                 {
@@ -381,6 +388,12 @@ namespace KSA.KSP.Flight
         }
 
         // ------------------------------------------------------------------ KSA-62: hangar flights
+
+        /// <summary>Standing still on the home world, however tall (2026-11-01: a 30 m rocket on the pad reads 101 m until the terrain height loads, and no offer came).</summary>
+        private static bool StandingAtHome(Vessel v)
+        {
+            return v.mainBody == FlightGlobals.GetHomeBody() && v.srfSpeed < 2.0 && (v.situation == Vessel.Situations.PRELAUNCH || v.LandedOrSplashed || v.altitude - v.terrainAltitude < 100);
+        }
 
         /// <summary>First agency kerbal aboard who is free to fly, or null.</summary>
         private static CrewProfile HangarPilot(Agency agency, Vessel v)

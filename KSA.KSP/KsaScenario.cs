@@ -38,6 +38,8 @@ namespace KSA.KSP
             Roster.KspCrewFactory.RepairMisnamedHires(KsaCore.Agency); // hires the old rename bug left under random names
             if (KsaCore.Agency != null)
                 foreach (string id in KsaCore.Agency.UndoPhantomStrandings()) KsaCore.Log.Info("Save repair: " + id + " never had a rocket; its stranding was undone");
+            if (KsaCore.Agency != null)
+                foreach (string name in KsaCore.Agency.ScrubDuplicateHangarFlights()) KsaCore.Log.Info("Save repair: stale duplicate hangar flight " + name + " removed");
             KsaCore.SyncRoster("scene start");
             KsaCore.TickAgency("scene start");
             Build.CraftWriter.PublishTemplates();

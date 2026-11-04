@@ -64,6 +64,33 @@ namespace KSA.Core.Tests
         }
 
         [Test]
+        public void StaleDuplicateCrewlessHangarFlightsAreScrubbedOnLoad()
+        {
+            var clock = new FakeClock();
+            Agency a = Staffed(clock);
+            // Fuel Station mk I (2026-11-04): one finished flight and ten crewless duplicates on the same vessel.
+            a.Projects.Add(new Project { Id = "P13", Name = "Hangar flight: Fuel Station mk I", MissionTypeId = "TankerKerbin", Status = ProjectStatus.Complete, VesselId = "26066", LaunchUT = 100 });
+            for (int i = 14; i <= 23; i++)
+                a.Projects.Add(new Project { Id = "P" + i, Name = "Hangar flight: Fuel Station mk I", MissionTypeId = "TankerKerbin", Status = ProjectStatus.InFlight, VesselId = "26066", LaunchUT = 100 + i });
+            // A probe still flying, with two extra clicks: the first stays.
+            a.Projects.Add(new Project { Id = "Q1", Name = "Hangar flight: Probe", MissionTypeId = "ProbeOrbitKerbin", Status = ProjectStatus.InFlight, VesselId = "777", LaunchUT = 500 });
+            a.Projects.Add(new Project { Id = "Q2", Name = "Hangar flight: Probe", MissionTypeId = "ProbeOrbitKerbin", Status = ProjectStatus.InFlight, VesselId = "777", LaunchUT = 503 });
+            // A crewed flight is never touched.
+            string msg;
+            Project crewed = a.AdoptHangarLaunch("SuborbitalHop", "4242", "My Rocket", new List<string> { "Jeb Kerman" }, out msg);
+            Assert.That(crewed, Is.Not.Null, msg);
+
+            List<string> removed = a.ScrubDuplicateHangarFlights();
+            Assert.That(removed.Count, Is.EqualTo(11));
+            Assert.That(a.GetProject("P13"), Is.Not.Null);
+            for (int i = 14; i <= 23; i++) Assert.That(a.GetProject("P" + i), Is.Null, "P" + i);
+            Assert.That(a.GetProject("Q1"), Is.Not.Null);
+            Assert.That(a.GetProject("Q2"), Is.Null);
+            Assert.That(a.GetProject(crewed.Id), Is.Not.Null);
+            Assert.That(a.ScrubDuplicateHangarFlights(), Is.Empty, "a second pass finds nothing");
+        }
+
+        [Test]
         public void HangarFlightResolvesLikeAnyLiveFlight()
         {
             var clock = new FakeClock();

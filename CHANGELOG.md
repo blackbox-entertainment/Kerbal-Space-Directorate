@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.196 (2026-11-04), test build
+
+- **A rocket on the pad gets its mission offer while another flight is on record.** The Director visited the fuel station in orbit, whose hangar flight the director resumed, then launched a new rocket from the VAB and saw no offer: the director was still holding the station's flight (T: "tried to launch from the vab and see no director to select a mission"). A craft with no project standing on the home world now gets its offer; the other flight resumes from its project when next visited, as after a restart.
+- **Save repair: stale duplicate hangar flights.** A crewless hangar launch (probe, fuel station) left one project per click before 0.8.160 and the extras stayed in flight for ever (ten on Fuel Station mk I). On load, crewless in-flight hangar projects on a vessel whose mission already finished are removed, and on any other vessel only the earliest stays. Logged as "Save repair:" lines.
+
 ## 0.8.195 (2026-11-04), test build
 
 - **The surface hose (KSA-90).** A crewed craft landed within 100 m of other landed craft on the same world draws propellant, monopropellant, charge and (with Kerbalism) food, water and oxygen from them at 15 units a second, as if a hose ran across. Donors keep 5% of each tank and 10% of their batteries (agency.cfg SURFACE_LINK). "Hose:" lines in the flight log say what connected and what moved. Only in the flight scene: a lander waiting out a night keeps its flight on screen. T: "I figured 100m would be about the limit of a hose connection."
