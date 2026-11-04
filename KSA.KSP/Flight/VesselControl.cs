@@ -303,9 +303,14 @@ namespace KSA.KSP.Flight
         /// </summary>
         public double SunDrift()
         {
-            if (_v == null || _aimedSun == Vector3d.zero) return 0;
+            if (_v == null || _aimedSun == Vector3d.zero || _v.ReferenceTransform == null) return 0;
+            // Low over a world the game's frame turns with it and a craft on rails turns too, a degree a minute (0.8.187: a three-day
+            // wait in Kerbin orbit re-aimed every ten minutes and never warped). Night comes every half hour there anyway; no re-aim.
+            if (FlightGlobals.RefFrameIsRotating) return 0;
+            // The real pointing error of the panels, not a remembered vector: frame-independent.
             Vector3d sun = (Planetarium.fetch.Sun.position - _v.GetWorldPos3D()).normalized;
-            return Vector3d.Angle(_aimedSun, sun);
+            Vector3d pointing = _v.ReferenceTransform.TransformDirection((Vector3)_panelSun);
+            return Vector3d.Angle(pointing, sun);
         }
 
         private Vector3d _panelSun, _panelNose, _panelForward;

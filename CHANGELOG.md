@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.187 (2026-11-03), test build
+
+- **The panel re-aim no longer stalls a wait in low orbit.** Below about 100 km the game turns the world with the planet and a craft on rails turns with it, a degree a minute, so the 10-degree rule fired every ten game-minutes and a three-day wait for the ejection crawled at 1x. The re-aim now measures the panels' real pointing error and is off while the game is in that rotating frame; night every half hour and the battery cover low orbit, as on every earlier wait.
+
 ## 0.8.186 (2026-11-03), test build
 
 - **Three dead of CO2 poisoning 24 days short of Duna, the third crew lost to power** (2026-11-03, mk IIIe). The panels were turned to the sun and measured at 4.02 EC/s before the cruise; 226 days later the ledger showed 0.02. On rails the attitude is fixed in space while the ship goes round the sun, and a 300-day cruise sweeps about 130 degrees: panels aimed at the start are edge-on by the middle and facing away by the end.
