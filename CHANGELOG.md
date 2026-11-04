@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.192 (2026-11-03), test build
+
+- **Rival agencies keep a believable pace** (T: "how are we getting beaten to Laythe or Jool?"). They flew two to six missions a year straight up the milestone ladder on a dice roll, untouched by windows, trip length or research, and reached Laythe while the Directorate fought real flights. Now a rival climbs no more than one tier past the Directorate's own best first, and a trip to another planet costs it a window: nothing else beyond the moons for two years, succeed or fail. Existing saves keep the firsts already claimed.
+
 ## 0.8.191 (2026-11-03), test build
 
 - **The panel re-aim runs only on the cruise through the sun's space.** In orbit of a world the game nudges the attitude every lap, so the 10-degree rule stopped the warp every orbit or two; a 452-day wait at Duna for the window home would have been thousands of stops. In orbit the crew aim once after a burn and leave it; night every lap and the battery cover it, as they always did at Kerbin.

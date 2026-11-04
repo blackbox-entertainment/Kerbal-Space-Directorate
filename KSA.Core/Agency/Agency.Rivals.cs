@@ -98,6 +98,18 @@ namespace KSA.Core
             FlyRivalMissions(CurrentYear, DayOfYear, notices);
         }
 
+        /// <summary>The highest mission tier the Directorate itself holds a first in (-1 with none); rivals climb no more than a tier past it (0.8.192).</summary>
+        private int PlayerTopTier(List<MilestoneLadder.Rung> ladder)
+        {
+            int top = -1;
+            foreach (FirstClaim f in Firsts)
+            {
+                if (f == null || Rivals.Exists(x => x.Id == f.ClaimedBy)) continue;
+                foreach (MilestoneLadder.Rung r in ladder) if (r.Achievement == f.Achievement && (int)r.Tier > top) top = (int)r.Tier;
+            }
+            return top;
+        }
+
         private void FlyRivalMissions(int year, int dayOfYear, List<string> notices)
         {
             EnsureRivals();
@@ -120,7 +132,7 @@ namespace KSA.Core
                     if (ladder == null) ladder = MilestoneLadder.Build(Catalogs.Missions);
                     var milestones = new List<string>();
                     var headlines = new List<string>();
-                    RivalSimulator.RunMission(def, r, ladder, r.YearRecord(year), RivalRng, milestones, headlines);
+                    RivalSimulator.RunMission(def, r, ladder, r.YearRecord(year), RivalRng, milestones, headlines, year, PlayerTopTier(ladder));
                     r.FlownCount++;
                     foreach (string m in milestones)
                     {

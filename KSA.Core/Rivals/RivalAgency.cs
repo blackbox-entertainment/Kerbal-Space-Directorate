@@ -73,6 +73,8 @@ namespace KSA.Core.Rivals
         /// <summary>Fiscal year the in-year flights below belong to, and how many of that year's flights have flown (2026-10-28).</summary>
         public int FlownYear { get; set; }
         public int FlownCount { get; set; }
+        /// <summary>No flight beyond home's moons before this year: an interplanetary attempt takes a window and a long trip (0.8.192).</summary>
+        public int DeepSpaceFreeYear { get; set; }
 
         public RivalAgency() { Id = string.Empty; }
 
@@ -95,7 +97,7 @@ namespace KSA.Core.Rivals
         {
             var n = new DataNode("RIVAL");
             n.AddValue("id", Id).AddValue("prestige", Prestige).AddValue("missions", Missions).AddValue("successes", Successes).AddValue("deaths", Deaths);
-            n.AddValue("flownYear", FlownYear).AddValue("flownCount", FlownCount);
+            n.AddValue("flownYear", FlownYear).AddValue("flownCount", FlownCount).AddValue("deepSpaceFreeYear", DeepSpaceFreeYear);
             foreach (string m in Milestones) n.AddValue("milestone", m);
             foreach (RivalYear y in Years)
             {
@@ -116,7 +118,8 @@ namespace KSA.Core.Rivals
                 Successes = n.GetInt("successes", 0),
                 Deaths = n.GetInt("deaths", 0),
                 FlownYear = n.GetInt("flownYear", 0),
-                FlownCount = n.GetInt("flownCount", 0)
+                FlownCount = n.GetInt("flownCount", 0),
+                DeepSpaceFreeYear = n.GetInt("deepSpaceFreeYear", 0)
             };
             r.Milestones.AddRange(n.GetValues("milestone"));
             foreach (DataNode yn in n.GetChildren("YEAR"))
@@ -247,9 +250,21 @@ namespace KSA.Core.Rivals
         }
 
         /// <summary>Flies one rival mission up the ladder into the year's record; milestones and headlines are added to the lists.</summary>
-        public static void RunMission(RivalDefinition def, RivalAgency state, List<MilestoneLadder.Rung> ladder, RivalYear record, Random rng, List<string> milestones, List<string> headlines)
+        /// <summary>Kilometres from home beyond which a rung is a trip to another planet: a window every two years, not a flight a month.</summary>
+        private const double DeepSpaceKm = 1000000;
+        /// <summary>Years an interplanetary attempt ties a rival up (out, wait, back).</summary>
+        private const int DeepSpaceYears = 2;
+
+        public static void RunMission(RivalDefinition def, RivalAgency state, List<MilestoneLadder.Rung> ladder, RivalYear record, Random rng, List<string> milestones, List<string> headlines, int year = 0, int playerTopTier = 2)
         {
             MilestoneLadder.Rung next = NextRung(state, ladder);
+            // Paper agencies walked up to Laythe while the Directorate fought real flights (2026-11-03, T: "how are we getting beaten
+            // to Laythe or Jool?"). A rival climbs no more than a tier past the Directorate's own best, and a trip to another planet
+            // costs it a window: nothing else beyond the moons for two years, succeed or fail.
+            if (next != null && (int)next.Tier > playerTopTier + 1) next = null;
+            bool deep = next != null && BodyDistances.FromHomeKm(MilestoneLadder.BodyOf(next.Achievement)) > DeepSpaceKm;
+            if (deep && year > 0 && year < state.DeepSpaceFreeYear) next = null;
+            else if (deep && year > 0) state.DeepSpaceFreeYear = year + DeepSpaceYears;
             double difficulty = next != null ? next.Difficulty : 0.5;
             double p = 0.35 + 0.4 * def.Safety + 0.15 * (state.Prestige / 100.0) - 0.3 * difficulty;
             p = p < 0.08 ? 0.08 : (p > 0.92 ? 0.92 : p);
