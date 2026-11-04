@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.191 (2026-11-03), test build
+
+- **The panel re-aim runs only on the cruise through the sun's space.** In orbit of a world the game nudges the attitude every lap, so the 10-degree rule stopped the warp every orbit or two; a 452-day wait at Duna for the window home would have been thousands of stops. In orbit the crew aim once after a burn and leave it; night every lap and the battery cover it, as they always did at Kerbin.
+
 ## 0.8.190 (2026-11-03), test build
 
 - **The landing-site picker knows where an air landing comes down.** On a world with air the deorbit aims a periapsis inside it and the ship coasts half an orbit round before braking; the picker assumed a strong lander brakes right after the burn, so it checked the sun and the slope 150 degrees short of the real touchdown: "sun 66 deg up" for a landing in the dark on Duna. The predicted point is now the periapsis of the deorbit ellipse.

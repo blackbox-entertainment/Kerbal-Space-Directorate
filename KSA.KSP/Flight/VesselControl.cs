@@ -308,6 +308,10 @@ namespace KSA.KSP.Flight
             // Low over a world the game's frame turns with it and a craft on rails turns too, a degree a minute (0.8.187: a three-day
             // wait in Kerbin orbit re-aimed every ten minutes and never warped). Night comes every half hour there anyway; no re-aim.
             if (FlightGlobals.RefFrameIsRotating) return 0;
+            // Only out in the sun's own space, where the attitude is truly fixed and the sun truly moves round it (0.8.191). In orbit of a
+            // world the game nudges the attitude every lap and the 10-degree rule tripped every orbit: a 452-day wait at Duna would
+            // have been ten thousand stops. Night every lap and the battery cover an orbit, as they always did at Kerbin.
+            if (_v.mainBody == null || _v.mainBody != Planetarium.fetch.Sun) return 0;
             // The real pointing error of the panels, not a remembered vector: frame-independent.
             Vector3d sun = (Planetarium.fetch.Sun.position - _v.GetWorldPos3D()).normalized;
             Vector3d pointing = _v.ReferenceTransform.TransformDirection((Vector3)_panelSun);
