@@ -212,6 +212,48 @@ namespace KSA.KSP.Parts
 
         public static bool IsIndustryProcess(string process) { return IndustryProcesses.Contains(process); }
         public static bool IsPowerProcess(string process) { return PowerProcesses.Contains(process); }
+
+        private static Dictionary<string, bool> _belts;
+        /// <summary>
+        /// Whether Kerbalism gives this world radiation belts (0.8.222): Kerbin, Jool, Moho and Bop do; Eve, Duna and Dres do not, so a long
+        /// wait in a high orbit there is no dose. With no radiation configs to read, every world is taken to have belts, as before.
+        /// </summary>
+        public static bool HasRadiationBelts(CelestialBody body)
+        {
+            if (body == null) return false;
+            if (_belts == null)
+            {
+                var belts = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+                try
+                {
+                    var models = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+                    foreach (ConfigNode m in GameDatabase.Instance.GetConfigNodes("RadiationModel"))
+                    {
+                        string name = m.GetValue("name") ?? string.Empty;
+                        bool inner = string.Equals(m.GetValue("has_inner"), "true", StringComparison.OrdinalIgnoreCase);
+                        bool outer = string.Equals(m.GetValue("has_outer"), "true", StringComparison.OrdinalIgnoreCase);
+                        if (name.Length > 0) models[name] = inner || outer;
+                    }
+                    foreach (ConfigNode b in GameDatabase.Instance.GetConfigNodes("RadiationBody"))
+                    {
+                        string name = b.GetValue("name") ?? string.Empty, model = b.GetValue("radiation_model") ?? string.Empty;
+                        bool has;
+                        if (name.Length > 0) belts[name] = models.TryGetValue(model, out has) && has;
+                    }
+                }
+                catch (Exception e) { KsaCore.Log.Warn("Radiation configs unreadable: " + e.Message); }
+                _belts = belts;
+                KsaCore.Log.Info("Radiation belts: " + (belts.Count == 0 ? "no configs, every world counts as belted" : string.Join(", ", new List<string>(Belted(belts)).ToArray())));
+            }
+            if (_belts.Count == 0) return true;
+            bool known;
+            return _belts.TryGetValue(body.bodyName, out known) && known;
+        }
+
+        private static IEnumerable<string> Belted(Dictionary<string, bool> belts)
+        {
+            foreach (KeyValuePair<string, bool> kv in belts) if (kv.Value) yield return kv.Key;
+        }
         public static bool IsGreenhouse(PartModule m) { return m != null && m.moduleName == "Greenhouse"; }
         public static bool IsHarvester(PartModule m) { return m != null && m.moduleName == "Harvester"; }
         /// <summary>What a Kerbalism Harvester setup digs ("Water", "Ore"), or empty.</summary>

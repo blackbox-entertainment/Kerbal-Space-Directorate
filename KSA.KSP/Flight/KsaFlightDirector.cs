@@ -581,6 +581,17 @@ namespace KSA.KSP.Flight
                     if (nominal < needDays) { short_ = true; chip += " SUPPLIES " + Math.Floor(nominal) + " of " + trip + " days (" + first + ")"; }
                     else if (supply < needDays) { tight = true; chip += " SUPPLIES tight: " + Math.Floor(nominal) + " days for " + trip + " (" + first + "; " + Math.Floor(supply) + " at " + agency.LifeSupport.SafetyFactor.ToString("0.0") + "x)"; }
                 }
+                // Power at the destination (0.8.222): the panels aboard, scaled to the target's distance from the sun, against the coast's draw.
+                if (agency.LifeSupportOn && !t.IsUncrewed && !t.IsAircraft && !double.IsNaN(days))
+                {
+                    double generator;
+                    double solar = Parts.KspPower.Nominal(v, out generator);
+                    KSA.Core.Design.BodyData world = agency.Requirements != null ? agency.Requirements.Map.Get(t.Body) : null;
+                    double ratio = world != null && world.SunDistance > 0 ? world.SunDistance : 1;
+                    double there = solar / (ratio * ratio) + generator, draw = agency.LifeSupport.CruisePower(Math.Max(1, v.GetCrewCount()));
+                    if (there < draw) { short_ = true; chip += " POWER " + there.ToString("0.0") + " of " + draw.ToString("0.0") + " EC/s at " + t.Body; }
+                    else if (there < draw * agency.LifeSupport.SafetyFactor) { tight = true; chip += " POWER tight: " + there.ToString("0.0") + " EC/s at " + t.Body + " for " + draw.ToString("0.0") + " used"; }
+                }
                 Color before = GUI.contentColor;
                 if (short_) GUI.contentColor = Color.red;
                 else if (chip.Length > 0) GUI.contentColor = wait != null || tight ? Color.yellow : Color.green;

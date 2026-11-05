@@ -36,6 +36,12 @@ namespace KSA.Core.Projects
         public double SafetyFactor { get; set; } = 1.5;
         /// <summary>Share of the water a Kerbalism water recycler gives back (its profile: 0.127 of 0.149 an hour).</summary>
         public double WaterRecyclerRecovery { get; set; } = 0.85;
+        /// <summary>EC/s a crewed ship draws on a coast before the crew: comms, pressure control, the idle loads (0.8.222; the Mk IIIe's three drew 0.3 to 1.2).</summary>
+        public double CruisePowerBase { get; set; } = 0.5;
+        /// <summary>EC/s more per kerbal aboard on a coast: climatization and the scrubber.</summary>
+        public double CruisePowerPerKerbal { get; set; } = 0.2;
+        /// <summary>What a ship with this many aboard draws on a coast, EC/s.</summary>
+        public double CruisePower(int crew) { return CruisePowerBase + CruisePowerPerKerbal * Math.Max(0, crew); }
         /// <summary>Days a stranded crew lasts on what their craft carries (Kerbalism kills on its own clock; this is the simulated equivalent).</summary>
         public int StrandedLostAfterDays { get; set; } = 20;
         /// <summary>While a program is supplied (not overdue), keep the food, water and air of its live vessels topped up: KSA's resupply flights stand in for the cargo.</summary>
@@ -93,6 +99,8 @@ namespace KSA.Core.Projects
             r.MarginDays = node.GetInt("marginDays", r.MarginDays);
             r.SafetyFactor = node.GetDouble("supplySafetyFactor", r.SafetyFactor);
             r.WaterRecyclerRecovery = node.GetDouble("waterRecyclerRecovery", r.WaterRecyclerRecovery);
+            r.CruisePowerBase = node.GetDouble("cruisePowerBase", r.CruisePowerBase);
+            r.CruisePowerPerKerbal = node.GetDouble("cruisePowerPerKerbal", r.CruisePowerPerKerbal);
             r.StrandedLostAfterDays = node.GetInt("strandedLostAfterDays", r.StrandedLostAfterDays);
             r.TopUpSuppliedVessels = node.GetBool("topUpSuppliedVessels", r.TopUpSuppliedVessels);
             r.ColonyGreenhouseEveryYears = node.GetInt("colonyGreenhouseEveryYears", r.ColonyGreenhouseEveryYears);

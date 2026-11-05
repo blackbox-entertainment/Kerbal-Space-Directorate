@@ -55,7 +55,7 @@ namespace KSA.KSP.Parts
                     try { d = Analyze(path); } catch (Exception e) { KsaCore.Log.Warn("Your design '" + name + "' could not be read: " + e.Message); }
                     c = new Cached { Time = time, Design = d };
                     Cache[path] = c;
-                    if (d != null) KsaCore.Log.Info("Your design '" + d.Name + "': " + Math.Round(d.DeltaV) + " m/s, liftoff TWR " + d.LiftoffTwr.ToString("0.00") + ", " + d.Seats + " seat(s)" + (d.HasParachute ? ", parachutes for " + d.ChuteCapacity.ToString("0.0") + " t (capsule " + d.LandingMass.ToString("0.0") + " t)" : ", no main parachute") + (d.ResearchBlocker != null ? ", " + d.ResearchBlocker : string.Empty));
+                    if (d != null) KsaCore.Log.Info("Your design '" + d.Name + "': " + Math.Round(d.DeltaV) + " m/s, liftoff TWR " + d.LiftoffTwr.ToString("0.00") + ", " + d.Seats + " seat(s), panels " + d.SolarNominal.ToString("0.0") + " EC/s at Kerbin" + (d.GeneratorPower > 0 ? " + " + d.GeneratorPower.ToString("0.0") + " from generators" : "") + (d.HasParachute ? ", parachutes for " + d.ChuteCapacity.ToString("0.0") + " t (capsule " + d.LandingMass.ToString("0.0") + " t)" : ", no main parachute") + (d.ResearchBlocker != null ? ", " + d.ResearchBlocker : string.Empty));
                 }
                 if (c.Design == null) continue;
                 // Research changes without the file changing: check it every time (cheap).
@@ -197,6 +197,10 @@ namespace KSA.KSP.Parts
                 if (prefab.CrewCapacity > 0) { podSize = Math.Max(podSize, StackSize(prefab)); if (ablator) selfShielded = true; }
                 else if (ablator) shieldSize = Math.Max(shieldSize, StackSize(prefab));
                 if (prefab.FindModuleImplementing<ModuleWheelBase>() != null) d.HasWheels = true;
+                // Power at distance (0.8.222): what the panels make at Kerbin's distance, and what the RTGs make anywhere.
+                double solar, generator;
+                KspPower.Rate(prefab, out solar, out generator);
+                d.SolarNominal += solar; d.GeneratorPower += generator;
                 parts[raw] = p;
                 order.Add(p);
             }

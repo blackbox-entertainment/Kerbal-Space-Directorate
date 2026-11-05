@@ -345,6 +345,31 @@ namespace KSA.Core.Tests
             Assert.That(string.Join(" | ", a.PreflightWarnings(mkIIIshort, orbit).ToArray()), Does.Contain("Food, water and oxygen for 635 days with 3 aboard").And.Contains("Short even at the nominal rate"));
         }
 
+        private static string PowerWarnings(Agency a, string mission, double panels, double rtg)
+        {
+            var d = new KSA.Core.Design.PlayerDesign { Seats = 3, PartCount = 200, LanderMass = 45, LanderThrust = 250000, HasLegs = true, HasHeatShield = true, AfterBoostersTwr = 1.2, Food = 2000, Water = 1500, Oxygen = 300000, Charge = 4000, SolarNominal = panels, GeneratorPower = rtg };
+            return string.Join(" | ", a.PreflightWarnings(d, a.Catalogs.Missions.Get(mission)).ToArray());
+        }
+
+        /// <summary>Power at the destination (0.8.222): the Mk IIIe's panels (5.4 EC/s broadside at Kerbin's distance) are plenty at Duna, short at Dres and Jool.</summary>
+        [Test]
+        public void ThePanelsAreCheckedAtTheDestinationsDistance()
+        {
+            var clock = new FakeClock();
+            Agency a = Staffed(clock);
+            a.LifeSupportMod = "Kerbalism";
+            a.RoundTripDays = body => body == "Kerbin" || body == "Mun" || body == "Minmus" ? double.NaN : 765; // the host gives no window for home's own moons
+            Assert.That(a.LifeSupport.CruisePower(3), Is.EqualTo(1.1).Within(1e-9), "0.5 for the ship and 0.2 a head");
+            Assert.That(a.Requirements.Map.Get("Dres").SunDistance, Is.EqualTo(3.0).Within(0.01));
+            Assert.That(a.Requirements.Map.Get("Ike").SunDistance, Is.EqualTo(1.524).Within(0.01), "a moon takes its planet's distance");
+            Assert.That(PowerWarnings(a, "DunaLanding", 5.4, 0), Does.Not.Contain("Power"), "2.3 EC/s at Duna against 1.1 drawn");
+            Assert.That(PowerWarnings(a, "DresLanding", 5.4, 0), Does.Contain("Power: ").And.Contains("0.6 EC/s at Dres"), "a ninth of the Kerbin figure");
+            Assert.That(PowerWarnings(a, "JoolFlyby", 5.4, 0), Does.Contain("Power: "));
+            Assert.That(PowerWarnings(a, "JoolFlyby", 5.4, 1.5), Does.Not.Contain("Power"), "two RTGs carry the coast whatever the distance");
+            Assert.That(PowerWarnings(a, "DresLanding", 11, 0), Does.Contain("Power tight"), "1.2 EC/s: enough for two, under the 1.5 x margin");
+            Assert.That(PowerWarnings(a, "MunLanding", 0, 0), Does.Not.Contain("Power"), "no window, no check");
+        }
+
         [Test]
         public void AMissionToAnotherPlanetWaitsForItsWindow()
         {

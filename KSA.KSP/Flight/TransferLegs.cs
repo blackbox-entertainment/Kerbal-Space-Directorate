@@ -745,7 +745,9 @@ namespace KSA.KSP.Flight
 
             // A long wait high up is a dose of radiation with Kerbalism: come down first (2026-11-01: 390 x 75 km, all three dead in 17 days;
             // 197 x 75 km, all three dead by day 198). A low wait is safe: 111 x 75 km for 128 days.
-            if (KsaCore.Agency != null && KsaCore.Agency.LifeSupportOn && v.orbit.ApA > MaxParkingApoapsis && bestUt - now > 2 * day)
+            // Only where Kerbalism gives the world belts (0.8.222): Eve, Duna and Dres have none, and lowering a high orbit there would spend
+            // the fuel that the loose capture saved (1,250 m/s down at Eve, then 1,400 to leave instead of 600).
+            if (KsaCore.Agency != null && KsaCore.Agency.LifeSupportOn && Parts.KspLifeSupport.HasRadiationBelts(_origin) && v.orbit.ApA > MaxParkingApoapsis && bestUt - now > 2 * day)
             {
                 double rPe = v.orbit.PeR, rWanted = _origin.Radius + LowParkingApoapsis, utPe = now + v.orbit.timeToPe;
                 double dvLower = Math.Sqrt(planetMu * (2 / rPe - 1 / v.orbit.semiMajorAxis)) - Math.Sqrt(planetMu * (2 / rPe - 2 / (rPe + rWanted)));
@@ -1508,8 +1510,11 @@ namespace KSA.KSP.Flight
 
         /// <summary>A capture for aerobraking: only enough to stay bound, into a long orbit that the air then shortens (AirbrakeLeg).</summary>
         public CaptureLeg(CelestialBody target, double orbitAltitude, double looseApoapsis) : this(target, orbitAltitude) { _loose = looseApoapsis; }
+        /// <summary>A loose capture with no air passes to follow (0.8.222: an orbit mission at another planet): the periapsis stays above the air and the panels stay out.</summary>
+        public CaptureLeg(CelestialBody target, double orbitAltitude, double looseApoapsis, bool passesInAir) : this(target, orbitAltitude, looseApoapsis) { _passes = passesInAir; }
 
         private readonly double _loose;
+        private readonly bool _passes = true;
         private const double MaxCapturePe = 1000000;
         private const double BurnAboveAir = 80000; // metres: the burn is over, and the craft turned round, before the air
 
@@ -1538,7 +1543,7 @@ namespace KSA.KSP.Flight
                 State = LegState.Done; Status = "Already in orbit.";
                 return;
             }
-            if (_loose > 0) ctx.Control.TendDeployables(false); // before the long warp to the air
+            if (_loose > 0 && _passes) ctx.Control.TendDeployables(false); // before the long warp to the air
             if (NodePlanner.Available(v) && v.patchedConicSolver.maneuverNodes.Count > 0)
             {
                 _exec = new NodeExecutor();
@@ -1691,7 +1696,7 @@ namespace KSA.KSP.Flight
             double lo, hi;
             if (body == _target)
             {
-                lo = _plannedPe > 0 ? _plannedPe : (_loose > 0 && _target.atmosphereDepth > 0 ? 0.7 * _target.atmosphereDepth : _altitude);
+                lo = _plannedPe > 0 ? _plannedPe : (_loose > 0 && _passes && _target.atmosphereDepth > 0 ? 0.7 * _target.atmosphereDepth : _altitude);
                 hi = lo + Math.Max(5000, 0.1 * lo);
             }
             else { lo = MoonSafeHeight; hi = lo + 40000; }

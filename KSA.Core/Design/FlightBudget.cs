@@ -51,6 +51,8 @@ namespace KSA.Core.Design
         public double Return { get; set; }
         /// <summary>Kerbin's own moons: a flyby comes home on a free return.</summary>
         public bool KerbinMoon { get; set; }
+        /// <summary>Distance from the sun as a multiple of the home world's (a moon takes its planet's): solar panels make 1/d² of their home figure there (0.8.222).</summary>
+        public double SunDistance { get; set; } = 1;
 
         /// <summary>Low orbit to the ground: parachutes and the air do most of it on a world with an atmosphere.</summary>
         public double Descent { get { return Atmosphere ? Math.Max(250, 0.15 * SurfaceToOrbit) : SurfaceToOrbit; } }
@@ -88,6 +90,15 @@ namespace KSA.Core.Design
             Add("Bop",     0.589, false, 3650,  900,   220, 3700, false);
             Add("Pol",     0.373, false, 2740,  820,   130, 2700, false);
             Add("Eeloo",   1.69,  false, 2790, 1370,   620, 3000, false);
+            // Distance from the sun in Kerbin's (0.8.222): the panels make 1/d² of their Kerbin figure there.
+            Sun("Moho", 0.387); Sun("Eve", 0.723); Sun("Gilly", 0.723); Sun("Duna", 1.524); Sun("Ike", 1.524); Sun("Dres", 3.003);
+            Sun("Jool", 5.057); Sun("Laythe", 5.057); Sun("Vall", 5.057); Sun("Tylo", 5.057); Sun("Bop", 5.057); Sun("Pol", 5.057); Sun("Eeloo", 6.627);
+        }
+
+        private void Sun(string name, double distance)
+        {
+            BodyData b;
+            if (_bodies.TryGetValue(name, out b)) b.SunDistance = distance;
         }
 
         private void Add(string name, double g, bool atmo, double intercept, double capture, double surface, double ret, bool moon)
@@ -114,6 +125,7 @@ namespace KSA.Core.Design
             b.SurfaceToOrbit = n.GetDouble("surface", b.SurfaceToOrbit);
             b.Return = n.GetDouble("return", b.Return);
             b.KerbinMoon = n.GetBool("kerbinMoon", b.KerbinMoon);
+            b.SunDistance = n.GetDouble("sunDistance", b.SunDistance);
             _bodies[name] = b;
         }
     }

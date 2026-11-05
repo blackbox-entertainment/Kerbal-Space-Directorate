@@ -172,7 +172,11 @@ namespace KSA.KSP.Flight
                 case MissionProfile.OrbitBody:
                     Up(prog, ctx);
                     Outbound(prog, ctx, target, interplanetary, Math.Max(20000, floor), Math.Max(80000, floor + 50000));
-                    prog.Add(new CaptureLeg(target, orbitAlt));
+                    // Another planet (0.8.222, T: Eve orbit and return with the Mk IIIe): capture into a loose orbit and round it out high, a
+                    // fraction of the cost of a low orbit and the way out of it again (Eve: about 200 + 500 + 600 m/s against 1,400 + 1,400).
+                    // A moon of home keeps its low orbit.
+                    if (interplanetary) prog.Add(new CaptureLeg(target, orbitAlt, LooseApoapsis(target), false)).Add(new RoundOutLeg(target));
+                    else prog.Add(new CaptureLeg(target, orbitAlt));
                     prog.Add(new HoldOrbitLeg(type != null ? Math.Max(1, type.Orbits) : 1)); // a full orbit of the target counts as orbit
                     if (type != null && type.IsScience) prog.Add(new ScienceSweepLeg(1800));
                     Homebound(prog, ctx, target, interplanetary, true, peLo, peHi);
@@ -358,7 +362,7 @@ namespace KSA.KSP.Flight
             {
                 if (logged("EVA:" + tb) || logged("Land:" + tb)) prog.SkipTo(l => l is ReturnLeg);
                 else if (logged("Refuel:" + tb)) prog.SkipTo(l => l is LandingLeg || l is HoldOrbitLeg);
-                else prog.SkipTo(l => l is AirbrakeLeg || l is LandingLeg || l is HoldOrbitLeg || l is ReturnLeg);
+                else prog.SkipTo(l => l is AirbrakeLeg || l is LandingLeg || l is RoundOutLeg || l is HoldOrbitLeg || l is ReturnLeg);
                 return;
             }
             if (inTargetSoi)

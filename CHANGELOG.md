@@ -2,6 +2,14 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.222 (2026-11-05), test build
+
+T's goal is the Mk IIIe to every world as far as Duna, with Eve orbit and return. By its own sums the Mk IIIe holds about 4,170 m/s in orbit after the tanker stop. A low Eve orbit costs 1,400 m/s to enter and 1,400 to leave, which with the ejection and the corrections is more than it holds.
+
+- **The power check at distance** (T: "build the power check at distance"). Solar panels make 1/d² of their Kerbin figure at d times Kerbin's distance from the sun: the Mk IIIe's 48 OX-STATs made 5.4 EC/s broadside at Kerbin's distance and 2.4 at Duna's, against 0.3 to 1.2 drawn on the coast; at Dres they would make 0.6, at Jool 0.2. Every design is now read for its panels (tracking panels at their rate, a ring of fixed ones at a third) and its RTGs; the delta-v map knows each world's distance from the sun (dv_requirements.cfg sunDistance); the coast's draw is 0.5 EC/s plus 0.2 a head (agency.cfg cruisePowerBase, cruisePowerPerKerbal). What can this fly?, the Projects window and the pad offer warn in red when the panels make less than the draw at the destination and in yellow when they make less than 1.5 times it. The engineers still fit eight panels whatever the world; RTGs and panels sized by distance are not built.
+- **Orbit missions at another planet capture into a loose orbit and round it out high.** At Eve that is about 200 m/s in, 500 to round the orbit at 13,000 km and 600 out, in place of 1,400 and 1,400; the full orbit that counts takes five days there. A moon of Kerbin keeps its low orbit.
+- **The long wait is lowered only where Kerbalism gives the world belts.** Kerbin, Jool, Moho and Bop have them; Eve, Duna and Dres do not, and lowering a high orbit there would spend the fuel the loose capture saved.
+
 ## 0.8.221 (2026-11-05)
 
 **The first complete, hands-off Duna round trip.** Verdin, Franuki and Billy-Bobmore Kerman flew the Mk IIIe on 0.8.219 from the pad to a splashdown with nobody touching the controls: a stop at the Kerbin fuel station (32.7 t taken on), the 1,111 m/s ejection, a 130 m/s deep-space correction and two trims on the thrusters, the cruise with the panels turned back to the sun every 10 degrees, the 431 m/s capture at 36 km, three aerobraking passes and a round-out to 71 x 69 km, a 5% site in full sun, a 2.8 m/s touchdown, Verdin's walk on the surface, the climb into the plane of the way home, a 463-day wait in Duna orbit for the window, the 559 m/s return burn, two trims, a 27 km entry and a 4 m/s splashdown. 1,141 days, 120 Science, five records, Long Haul medals, two promotions. Nine warp cuts by the game during the wait were each read and warped through.

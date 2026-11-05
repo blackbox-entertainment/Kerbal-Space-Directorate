@@ -66,6 +66,10 @@ namespace KSA.Core.Design
         public int SeatedCrew { get; set; }
         public double Oxygen { get; set; }
         public double Charge { get; set; }
+        /// <summary>EC/s the solar panels make at Kerbin's distance with the best side to the sun: tracking panels at their rate, a ring of fixed ones at a third (0.8.222).</summary>
+        public double SolarNominal { get; set; }
+        /// <summary>EC/s from generators that burn nothing (RTGs), whatever the distance.</summary>
+        public double GeneratorPower { get; set; }
         public double LanderMass { get; set; }
         public double LanderThrust { get; set; }
         public bool HasLegs { get; set; }

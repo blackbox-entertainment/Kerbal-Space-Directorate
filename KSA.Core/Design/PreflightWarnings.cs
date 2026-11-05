@@ -60,6 +60,18 @@ namespace KSA.Core
                 else if (supply < need) list.Add("Food, water and oxygen are tight: " + Math.Floor(nominal) + " days at the nominal rate with " + crew + " aboard (" + first + "), " + Math.Floor(supply) + " at the agency's " + LifeSupport.SafetyFactor.ToString("0.0") + " x, and the trip takes about " + days + ".");
                 if (windowed && days > RadiationDays) list.Add("About " + days + " days beyond Kerbin's field: check Radiation in Kerbalism's Planner.");
             }
+            // Power at the destination (0.8.222, T: "build the power check at distance"): panels make 1/d² of their Kerbin figure. The Mk IIIe's
+            // 48 OX-STATs made 5.4 EC/s broadside at Kerbin's distance and 2.4 at Duna's against 0.3 to 1.2 drawn on the coast; at Dres they would
+            // make 0.6, at Jool 0.2. Only for a craft read for its panels (a part count, or a panel or generator figure).
+            if (LifeSupportOn && t.CrewSize > 0 && windowed && world != null && (d.SolarNominal > 0 || d.GeneratorPower > 0 || d.PartCount > 0))
+            {
+                int crew = Math.Max(1, Math.Max(t.CrewSize, d.SeatedCrew));
+                double ratio = world.SunDistance > 0 ? world.SunDistance : 1;
+                double there = d.SolarNominal / (ratio * ratio) + d.GeneratorPower, need = LifeSupport.CruisePower(crew);
+                string made = "the panels and generators make about " + there.ToString("0.0") + " EC/s at " + t.Body + "'s distance from the sun (" + d.SolarNominal.ToString("0.0") + " at Kerbin's) against about " + need.ToString("0.0") + " drawn on the coast with " + crew + " aboard.";
+                if (there < need) list.Add("Power: " + made + " The battery runs down and the crew with it. Add panels or an RTG.");
+                else if (there < need * LifeSupport.SafetyFactor) list.Add("Power tight: " + made + " Under the agency's " + LifeSupport.SafetyFactor.ToString("0.0") + " x margin.");
+            }
             if (leavesKerbin && d.Charge < ShadowCharge && t.CrewSize > 0) list.Add("Batteries hold " + Math.Round(d.Charge) + " charge: too little for the dark side of an orbit, or for experiments running. Add batteries.");
             if (windowed && d.LanderThrust > 0 && d.LanderMass > 0)
             {
