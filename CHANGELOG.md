@@ -2,6 +2,13 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.221 (2026-11-05)
+
+**The first complete, hands-off Duna round trip.** Verdin, Franuki and Billy-Bobmore Kerman flew the Mk IIIe on 0.8.219 from the pad to a splashdown with nobody touching the controls: a stop at the Kerbin fuel station (32.7 t taken on), the 1,111 m/s ejection, a 130 m/s deep-space correction and two trims on the thrusters, the cruise with the panels turned back to the sun every 10 degrees, the 431 m/s capture at 36 km, three aerobraking passes and a round-out to 71 x 69 km, a 5% site in full sun, a 2.8 m/s touchdown, Verdin's walk on the surface, the climb into the plane of the way home, a 463-day wait in Duna orbit for the window, the 559 m/s return burn, two trims, a 27 km entry and a 4 m/s splashdown. 1,141 days, 120 Science, five records, Long Haul medals, two promotions. Nine warp cuts by the game during the wait were each read and warped through.
+
+- **The surface hose ignores flags, debris and rocks.** It had "connected" to the flag Verdin planted 13 m from the lander.
+- **The slope reported at touchdown is the ground sampled round the craft**, as the survey reads it. The game's terrain normal had said "-339%" on the 5% site.
+
 ## 0.8.220 (2026-11-05), test build
 
 - **The HUD countdown stays live through the turn to the node.** It had kept "Burn in 50 min; panels to the sun" while the navball said 18 minutes.

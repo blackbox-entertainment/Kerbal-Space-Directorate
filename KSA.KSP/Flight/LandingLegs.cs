@@ -992,7 +992,8 @@ namespace KSA.KSP.Flight
             c.ClearInputs();
             _phase = Phases.Landed;
             string body = v.mainBody != null ? v.mainBody.bodyName : "the surface";
-            double slope = LandingHelpers.LocalSlope(v);
+            // The ground sampled round the craft, as the survey reads it (0.8.221: the game's terrain normal said "-339%" on a 5% site).
+            double slope = v.mainBody != null ? FineSlope(v.mainBody, v.latitude, v.longitude) : LandingHelpers.LocalSlope(v);
             string speed = Math.Round(_lastSpeed, 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
             ctx.Say("Touchdown on " + body + " at " + speed + " m/s.", "Land:" + body);
             ctx.Say("Local slope at the site " + LandingHelpers.Pct(slope) + (slope > _maxSlope ? " (over the " + LandingHelpers.Pct(_maxSlope) + " limit)" : "") + ".");

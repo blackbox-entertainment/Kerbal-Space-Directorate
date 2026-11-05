@@ -53,6 +53,8 @@ namespace KSA.KSP.Flight
             foreach (Vessel v in FlightGlobals.VesselsLoaded)
             {
                 if (v == null || v == us || v.isEVA || !v.loaded || !v.LandedOrSplashed || v.mainBody != us.mainBody) continue;
+                // Flags, debris and rocks carry nothing worth a hose (0.8.221: the hose "connected" to the flag Verdin had just planted, 13 m away).
+                if (v.vesselType == VesselType.Flag || v.vesselType == VesselType.Debris || v.vesselType == VesselType.SpaceObject) continue;
                 double dist = Vector3d.Distance(v.GetWorldPos3D(), us.GetWorldPos3D());
                 if (dist > rules.RangeMetres) continue;
                 inRange.Add(v.persistentId);
