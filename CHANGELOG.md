@@ -2,6 +2,12 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.220 (2026-11-05), test build
+
+- **The HUD countdown stays live through the turn to the node.** It had kept "Burn in 50 min; panels to the sun" while the navball said 18 minutes.
+- **Dates read "Year 12, Day 75 at 3h 11m"** instead of the game's "Day 75 - 3h, 11m".
+- **The portrait gallery is found by its full name** after a crew move.
+
 ## 0.8.219 (2026-11-05), test build
 
 Verdin, Franuki and Billy-Bobmore Kerman died of CO2 poisoning a day short of Duna's space, the battery flat. The mid-course check nine days out trimmed the path four times; the two trims on the thrusters went straight to their warp at the attitude the last engine burn had left, the sun on the stack's axis and all 48 panels at nothing, and nothing measured it. Kerbalism stopped the warp four times with its warnings and the crew warped on each time.

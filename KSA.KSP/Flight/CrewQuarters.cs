@@ -206,7 +206,7 @@ namespace KSA.KSP.Flight
                 Type t = null;
                 foreach (Assembly a in AppDomain.CurrentDomain.GetAssemblies())
                 {
-                    try { t = a.GetType("KerbalPortraitGallery"); } catch { t = null; }
+                    try { t = a.GetType("KSP.UI.Screens.Flight.KerbalPortraitGallery") ?? a.GetType("KerbalPortraitGallery"); } catch { t = null; }
                     if (t != null) break;
                 }
                 if (t == null) { Note("no KerbalPortraitGallery type"); return; }

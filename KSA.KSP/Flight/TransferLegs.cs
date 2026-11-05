@@ -17,7 +17,8 @@ namespace KSA.KSP.Flight
 
         public static string Date(double ut)
         {
-            try { return KSPUtil.PrintDate(ut, true); }
+            // The game's own date, its time of day read as a time (0.8.220, T: "ejection year 12?" at "Year 12, Day 75 - 3h, 11m").
+            try { return KSPUtil.PrintDate(ut, true).Replace(" - ", " at ").Replace("h, ", "h "); }
             catch { return Math.Round(ut) + " s"; }
         }
 

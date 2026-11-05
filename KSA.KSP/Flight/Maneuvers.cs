@@ -389,6 +389,8 @@ namespace KSA.KSP.Flight
                     // A nudge needs no turn (0.8.219): the thrusters push from whatever hold the craft has, the sun hold included.
                     if (_nudge) { _phase = Phases.Warp; if (!c.ManualAttitude) c.Sas(VesselAutopilot.AutopilotMode.StabilityAssist, false); break; }
                     c.Sas(VesselAutopilot.AutopilotMode.Maneuver, false);
+                    // Said live (0.8.220): the HUD had kept "Burn in 50 min; panels to the sun" through the whole turn to the node.
+                    Status = "Turning to the node: burn in " + TransferSupport.Countdown(ignition - now) + ", " + Math.Round(c.AttitudeError(burn)) + " deg to go.";
                     if (c.AttitudeError(burn) < 5 || now > ignition - 5) { _phase = Phases.Warp; }
                     break;
                 case Phases.Warp:
