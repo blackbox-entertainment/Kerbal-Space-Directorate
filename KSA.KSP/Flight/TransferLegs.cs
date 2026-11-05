@@ -56,11 +56,43 @@ namespace KSA.KSP.Flight
             return null;
         }
 
-        /// <summary>Periapsis altitude at the body along the vessel's current prediction, or NaN when it never gets there.</summary>
+        /// <summary>
+        /// Periapsis altitude at the body along the vessel's current prediction, or NaN when it never gets there. When the vessel's own
+        /// patch chain shows nothing, a zero-length node at the same spot is asked instead (0.8.212, 2026-11-04: after a deep-space burn
+        /// the vessel chain said "no Kerbin encounter" while a node of 0 m/s showed one at -600 km, and the crew halted 173 days out with
+        /// 293 m/s aboard). The two readers of the same solver should agree; when they do not, the one that sees the encounter wins, and
+        /// the first disagreement of a flight is logged with both chains.
+        /// </summary>
         public static double VesselPeriapsisAt(Vessel v, CelestialBody body)
         {
             Orbit o = VesselPatchAround(v, body);
-            return o != null ? o.PeA : double.NaN;
+            if (o != null) return o.PeA;
+            if (v == null || body == null || v.mainBody == body || !NodePlanner.Available(v)) return double.NaN;
+            double probe = double.NaN;
+            try { probe = Trial(v, Planetarium.GetUniversalTime() + 60, Vector3d.zero, n => NodePlanner.PeriapsisAt(n, body)); }
+            catch (Exception e) { KsaCore.Log.Warn("VesselPeriapsisAt probe: " + e.Message); }
+            if (!double.IsNaN(probe) && _probeNoted.Add(v.persistentId))
+                KsaCore.Log.Info("Path reader: the vessel's own chain shows no " + body.bodyName + " encounter but a zero node shows periapsis " + Km(probe) + ". Vessel chain: " + DescribeChain(v.orbit));
+            return probe;
+        }
+
+        private static readonly HashSet<uint> _probeNoted = new HashSet<uint>();
+
+        /// <summary>The vessel's prediction, by either reader, reaches the body.</summary>
+        public static bool VesselReaches(Vessel v, CelestialBody body) { return !double.IsNaN(VesselPeriapsisAt(v, body)); }
+
+        /// <summary>One line per patch: body, how it ends, periapsis, length in days.</summary>
+        public static string DescribeChain(Orbit o)
+        {
+            var parts = new List<string>();
+            int guard = 0;
+            while (o != null && guard++ < 8)
+            {
+                parts.Add(BodyName(o.referenceBody) + " " + o.patchEndTransition + " Pe " + Km(o.PeA) + " " + Math.Round((o.EndUT - o.StartUT) / Day, 1) + " d" + (o.activePatch ? "" : " (inactive)"));
+                if (o.patchEndTransition == Orbit.PatchTransitionType.FINAL || o.patchEndTransition == Orbit.PatchTransitionType.INITIAL) break;
+                o = o.nextPatch;
+            }
+            return string.Join(" > ", parts.ToArray());
         }
 
         /// <summary>
@@ -792,6 +824,7 @@ namespace KSA.KSP.Flight
         private Vessel _vessel;
         private double _budget;
         private int _rounds;
+        private double _settleUntil;
         private bool _trim;
         /// <summary>Trims after a burn that left the periapsis out of band (0.8.173: one 75 m/s burn 336 days out, 12,579 km off, "complete").</summary>
         private const int MaxRounds = 3;
@@ -965,6 +998,10 @@ namespace KSA.KSP.Flight
                 case Phases.Burn:
                     if (TransferSupport.PumpExecutor(_exec, ctx, ref line))
                     {
+                        // The solver's prediction lags a burn by a frame or two (0.8.212): read it a second later, never in the frame the burn ended.
+                        if (_settleUntil <= 0) { _settleUntil = ctx.Now + 1.0; Status = "Reading the path after the burn."; break; }
+                        if (ctx.Now < _settleUntil) break;
+                        _settleUntil = 0;
                         double pe = TransferSupport.VesselPeriapsisAt(v, _target);
                         string peText = double.IsNaN(pe) ? "no " + _target.bodyName + " encounter predicted" : "predicted " + _target.bodyName + " periapsis " + TransferSupport.Km(pe);
                         // Out of band with the encounter showing: trim again while the lever arm is long (0.8.173).
@@ -1018,6 +1055,31 @@ namespace KSA.KSP.Flight
                 ctx.Say(plan == null ? "No fresh transfer to " + _target.bodyName + " found from here." : "A fresh transfer to " + _target.bodyName + " needs " + Math.Round(plan.DeltaVMagnitude) + " m/s, over the " + Math.Round(_budget) + " allowed.");
                 return false;
             }
+            // The air aboard sets the latest arrival here too (0.8.212: 161 days of oxygen, 173 days to Kerbin, 293 m/s in the tanks and the
+            // thrusters' share unspent): the cheapest path that lands before it, within everything aboard less a reserve, or the plain plan
+            // and a plain warning when nothing fits.
+            string supplyLine = null;
+            if (Homebound && ctx.SuppliesRunOutUt > 0 && !double.IsInfinity(ctx.SuppliesRunOutUt) && plan.ArrivalUt > ctx.SuppliesRunOutUt - DeepSpaceSupplyMarginDays * TransferSupport.Day)
+            {
+                double deadline = ctx.SuppliesRunOutUt - DeepSpaceSupplyMarginDays * TransferSupport.Day;
+                double everything = ctx.Control.DeltaVAvailable() + ctx.Control.RcsDeltaV() - DeepSpaceReserve;
+                string what = ctx.ShortestSupply ?? "supplies";
+                TransferPlan fast = null;
+                foreach (double weight in new[] { 0.5, 0.0 })
+                {
+                    TransferPlan f = null;
+                    try { f = TransferPlanner.Plan(OrbitAdapter.Sampler(v.orbit), OrbitAdapter.Sampler(_target.orbit), mu, now + 600, Math.Max(now + 1200, Math.Min(latest, deadline - 0.2 * flight)), 0.15 * flight, 1.6 * flight, 60, 40, weight, 0, deadline, DeepSpaceMaxArrivalExcess); }
+                    catch (Exception e) { KsaCore.Log.Error("Deep-space deadline search threw: " + e); }
+                    if (f != null && f.DeltaVMagnitude <= everything) { fast = f; break; }
+                }
+                double shortBy = Math.Max(1, Math.Round((plan.ArrivalUt - ctx.SuppliesRunOutUt) / TransferSupport.Day));
+                if (fast != null)
+                {
+                    supplyLine = " The " + what + " aboard runs out " + TransferSupport.Date(ctx.SuppliesRunOutUt) + ", " + shortBy + " days before the plain path lands: taking the faster one, " + Math.Round(fast.DeltaVMagnitude) + " of the " + Math.Round(everything + DeepSpaceReserve) + " m/s aboard, landing " + TransferSupport.Date(fast.ArrivalUt) + " at " + Math.Round(fast.ArrivalSpeed) + " m/s excess.";
+                    plan = fast;
+                }
+                else supplyLine = " The " + what + " aboard runs out " + TransferSupport.Date(ctx.SuppliesRunOutUt) + ", " + shortBy + " days before this path lands, and no faster path fits the " + Math.Round(everything + DeepSpaceReserve) + " m/s aboard. Director: the crew will not make it on this.";
+            }
             NodePlanner.ClearNodes(v);
             ManeuverNode n = NodePlanner.AddFrameDeltaV(v, plan.DepartureUt, plan.DeltaV);
             if (n == null) return false;
@@ -1027,9 +1089,11 @@ namespace KSA.KSP.Flight
             _phase = Phases.Burn;
             Status = "Correction burn of " + Math.Round(plan.DeltaVMagnitude) + " m/s.";
             double pe = NodePlanner.PeriapsisAt(n, _target);
-            line = "Deep-space correction planned: " + Math.Round(plan.DeltaVMagnitude) + " m/s in " + TransferSupport.Countdown(plan.DepartureUt - now) + ", " + TransferSupport.Countdown(plan.TimeOfFlight) + " to " + _target.bodyName + (double.IsNaN(pe) ? "; the game's preview does not show the encounter yet." : ", predicted periapsis " + TransferSupport.Km(pe) + ".");
+            line = "Deep-space correction planned: " + Math.Round(plan.DeltaVMagnitude) + " m/s in " + TransferSupport.Countdown(plan.DepartureUt - now) + ", " + TransferSupport.Countdown(plan.TimeOfFlight) + " to " + _target.bodyName + (double.IsNaN(pe) ? "; the game's preview does not show the encounter yet." : ", predicted periapsis " + TransferSupport.Km(pe) + ".") + (supplyLine ?? string.Empty);
             return true;
         }
+
+        private const double DeepSpaceSupplyMarginDays = 5, DeepSpaceReserve = 40, DeepSpaceMaxArrivalExcess = 2500;
 
         private const double FarOff = 200000; // metres past the band: a fresh transfer, not a nudge
         private const double MinCorrection = 0.3; // m/s: the finest burn worth making
@@ -1172,13 +1236,13 @@ namespace KSA.KSP.Flight
             if (power != null) ctx.Say(power);
             // A moon that the path misses: never warp on while the supplies run out (2026-10-31: five days of warp to the edge of
             // Kerbin's space, 3,381 m/s still aboard, and the crew out of oxygen). Stop here so the Director can fly it home.
-            if (_stopBefore > 0 && TransferSupport.VesselPatchAround(v, _body) == null)
+            if (_stopBefore > 0 && !TransferSupport.VesselReaches(v, _body))
             {
                 // No encounter yet: the correction after this leg gets its look; the coast after that halts if there is still none.
                 State = LegState.Done; Status = "No " + _body.bodyName + " encounter yet; checking the path.";
                 return;
             }
-            if (_body.referenceBody == v.mainBody && TransferSupport.VesselPatchAround(v, _body) == null)
+            if (_body.referenceBody == v.mainBody && !TransferSupport.VesselReaches(v, _body))
             {
                 State = LegState.Failed;
                 Status = "This path misses " + _body.bodyName + ".";

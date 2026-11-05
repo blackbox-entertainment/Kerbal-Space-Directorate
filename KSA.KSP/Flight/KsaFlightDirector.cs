@@ -898,7 +898,14 @@ namespace KSA.KSP.Flight
         {
             if (Live == null) return string.Empty;
             double t = Planetarium.GetUniversalTime() - Live.LaunchUT;
-            return "T+" + KSPUtil.PrintTimeCompact(t, false) + " ";
+            // Days, hours, minutes, seconds, always (0.8.212): the stock compact print drops the years, and a flight past its first year read
+            // "T+1:00:42" for 2 years and a day, which misled every reading of that log.
+            if (t < 0) t = 0;
+            double day = KSPUtil.dateTimeFormatter.Day > 0 ? KSPUtil.dateTimeFormatter.Day : 21600;
+            int days = (int)Math.Floor(t / day);
+            double rest = t - days * day;
+            int h = (int)Math.Floor(rest / 3600), m = (int)Math.Floor((rest % 3600) / 60), s = (int)Math.Floor(rest % 60);
+            return "T+" + days + ":" + h.ToString("00") + ":" + m.ToString("00") + ":" + s.ToString("00") + " ";
         }
 
         private void FixedUpdate()
