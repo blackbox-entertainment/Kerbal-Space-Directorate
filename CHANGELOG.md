@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.216 (2026-11-04), test build
+
+- **Supplies: short is red, tight is yellow.** The pad chip and the VAB line counted supplies at 1.5 times the nominal rate and called anything under that short. Kerbalism's rates are exact (the mk IIIe used 111.6 oxygen a day for three, to the unit, over 572 days); the crews who died of supplies died of counting errors, not of variance. Now a ship whose food, water and oxygen last the trip at the real rate but not at 1.5 x shows yellow with both figures; red means it does not last the trip at all.
+
 ## 0.8.215 (2026-11-04), test build
 
 - **A hot arrival skims the air instead of diving.** The mk IIIe took a 2,326 m/s excess path to beat its oxygen (my faster-path search allowed it and asked nothing about the capsule), dived to a 27 km periapsis at 4,187 m/s and burned up at 45 km: Verdin, Franuki and Billy-Bobmore Kerman. Now, above 3,600 m/s at the top of the air (a direct dive's limit; Mun and Minmus returns are 3,100 to 3,300, a plain Duna return about 3,400): the last corrections aim the periapsis at the height the off-game simulator says one skimming pass captures the capsule (36 to 56 km on Kerbin, the highest that does), every drop of propellant goes into a retro burn just above the air, the service section is shed once, and the capsule skims pass by pass with the chutes held until the whole orbit is inside the air; the log says what each pass did, and plainly when a pass fails to catch. The faster-path line now says what its arrival means at the top of the air. Tested in the simulator for the mk IIIe's own arrival; unflown.

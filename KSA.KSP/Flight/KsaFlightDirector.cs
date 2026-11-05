@@ -558,16 +558,23 @@ namespace KSA.KSP.Flight
                 double days = agency.DaysToWindow != null && !t.IsRescue ? agency.DaysToWindow(t.Body) : double.NaN;
                 string chip = double.IsNaN(days) ? string.Empty : wait != null ? ": wait " + Math.Ceiling(days) + " days" : ": good window, " + Math.Ceiling(days) + " days";
                 // Supplies against the whole trip, out, wait and back (0.8.193): a crew left for Duna with water for the way out and died coming home.
-                bool short_ = false;
+                // Two tiers (0.8.216): red when the supplies do not last the trip at the rate the crew really use (Kerbalism's rates are
+                // exact; the dead crews were counting errors, not variance), yellow when they only fall short of the agency's safety factor.
+                bool short_ = false, tight = false;
                 if (agency.LifeSupportOn && !t.IsUncrewed && !t.IsAircraft)
                 {
                     int trip = agency.TripDays(t), crewAboard = Math.Max(1, v.GetCrewCount());
-                    double supply = agency.LifeSupport.SupplyDays(Aboard(v, "Food"), Aboard(v, "Water"), Aboard(v, "Oxygen"), crewAboard, Aboard(v, "_WaterRecycler"));
-                    if (supply < trip + Math.Max(0, agency.LifeSupport.MarginDays)) { short_ = true; chip += " SUPPLIES " + Math.Floor(supply) + " of " + trip + " days (" + agency.LifeSupport.ShortestSupply(Aboard(v, "Food"), Aboard(v, "Water"), Aboard(v, "Oxygen"), crewAboard, Aboard(v, "_WaterRecycler")) + ")"; }
+                    double food = Aboard(v, "Food"), water = Aboard(v, "Water"), oxygen = Aboard(v, "Oxygen"), recyclers = Aboard(v, "_WaterRecycler");
+                    double supply = agency.LifeSupport.SupplyDays(food, water, oxygen, crewAboard, recyclers);
+                    double nominal = agency.LifeSupport.DaysLeft(food, water, oxygen, crewAboard, recyclers);
+                    int needDays = trip + Math.Max(0, agency.LifeSupport.MarginDays);
+                    string first = agency.LifeSupport.ShortestSupply(food, water, oxygen, crewAboard, recyclers);
+                    if (nominal < needDays) { short_ = true; chip += " SUPPLIES " + Math.Floor(nominal) + " of " + trip + " days (" + first + ")"; }
+                    else if (supply < needDays) { tight = true; chip += " SUPPLIES tight: " + Math.Floor(nominal) + " days for " + trip + " (" + first + "; " + Math.Floor(supply) + " at " + agency.LifeSupport.SafetyFactor.ToString("0.0") + "x)"; }
                 }
                 Color before = GUI.contentColor;
                 if (short_) GUI.contentColor = Color.red;
-                else if (chip.Length > 0) GUI.contentColor = wait != null ? Color.yellow : Color.green;
+                else if (chip.Length > 0) GUI.contentColor = wait != null || tight ? Color.yellow : Color.green;
                 bool picked = GUILayout.Button(t.Name + (need > 0 ? " (" + Math.Round(need) + " m/s)" : string.Empty) + (agency.MissionsCompleted(t.Id) > 0 ? ", done before" : string.Empty) + chip, GUILayout.Height(26f));
                 GUI.contentColor = before;
                 if (picked)

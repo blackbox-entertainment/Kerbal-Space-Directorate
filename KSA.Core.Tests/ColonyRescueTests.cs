@@ -340,7 +340,9 @@ namespace KSA.Core.Tests
             string two = string.Join(" | ", a.PreflightWarnings(new KSA.Core.Design.PlayerDesign { Seats = 7, LanderMass = 45, LanderThrust = 250000, HasLegs = true, HasHeatShield = true, AfterBoostersTwr = 1.2, Food = 650, Water = 700, Oxygen = 112561, Charge = 1340 }, orbit).ToArray());
             Assert.That(two, Does.Not.Contain("Food, water and oxygen"), "650 food feeds two for 765 days at 1.5x");
             string three = string.Join(" | ", a.PreflightWarnings(mkIII, orbit).ToArray());
-            Assert.That(three, Does.Contain("Food, water and oxygen for 550 days with 3 aboard"));
+            Assert.That(three, Does.Contain("tight: 825 days at the nominal rate with 3 aboard"), "650 food for three is 825 days: enough for the 765-day trip, under the 1.5 x the agency likes (0.8.216)");
+            var mkIIIshort = new KSA.Core.Design.PlayerDesign { Seats = 7, LanderMass = 45, LanderThrust = 250000, HasLegs = true, HasHeatShield = true, AfterBoostersTwr = 1.2, Food = 500, Water = 700, Oxygen = 112561, Charge = 1340, SeatedCrew = 3 };
+            Assert.That(string.Join(" | ", a.PreflightWarnings(mkIIIshort, orbit).ToArray()), Does.Contain("Food, water and oxygen for 635 days with 3 aboard").And.Contains("Short even at the nominal rate"));
         }
 
         [Test]

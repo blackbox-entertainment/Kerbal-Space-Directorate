@@ -51,8 +51,13 @@ namespace KSA.Core
                 // 2-crew mission while 3 sat aboard, and the pad flagged the same rocket red).
                 int crew = Math.Max(1, Math.Max(t.CrewSize, d.SeatedCrew)), days = TripDays(t);
                 // Oxygen counts with the food and water (0.8.202): the mk IIIe's 120,561 units were 1,080 days for three against a 1,150-day trip.
+                // Two tiers (0.8.216): short at the rate the crew really use, or only tight against the agency's safety factor.
                 double supply = LifeSupport.SupplyDays(d.Food, d.Water, d.Oxygen, crew, d.WaterRecyclers);
-                if (supply < days + Math.Max(0, LifeSupport.MarginDays)) list.Add("Food, water and oxygen for " + Math.Floor(supply) + " days with " + crew + " aboard (" + LifeSupport.ShortestSupply(d.Food, d.Water, d.Oxygen, crew, d.WaterRecyclers) + " runs out first" + (d.WaterRecyclers > 0 ? ", water recycled" : string.Empty) + "), and the trip takes about " + days + ". Counted at " + LifeSupport.SafetyFactor.ToString("0.0") + " x the nominal rate.");
+                double nominal = LifeSupport.DaysLeft(d.Food, d.Water, d.Oxygen, crew, d.WaterRecyclers);
+                int need = days + Math.Max(0, LifeSupport.MarginDays);
+                string first = LifeSupport.ShortestSupply(d.Food, d.Water, d.Oxygen, crew, d.WaterRecyclers) + " runs out first" + (d.WaterRecyclers > 0 ? ", water recycled" : string.Empty);
+                if (nominal < need) list.Add("Food, water and oxygen for " + Math.Floor(nominal) + " days with " + crew + " aboard (" + first + "), and the trip takes about " + days + ". Short even at the nominal rate.");
+                else if (supply < need) list.Add("Food, water and oxygen are tight: " + Math.Floor(nominal) + " days at the nominal rate with " + crew + " aboard (" + first + "), " + Math.Floor(supply) + " at the agency's " + LifeSupport.SafetyFactor.ToString("0.0") + " x, and the trip takes about " + days + ".");
                 if (windowed && days > RadiationDays) list.Add("About " + days + " days beyond Kerbin's field: check Radiation in Kerbalism's Planner.");
             }
             if (leavesKerbin && d.Charge < ShadowCharge && t.CrewSize > 0) list.Add("Batteries hold " + Math.Round(d.Charge) + " charge: too little for the dark side of an orbit, or for experiments running. Add batteries.");
