@@ -397,7 +397,9 @@ namespace KSA.KSP.Flight
                 if (v.situation == Vessel.Situations.ORBITING && ctx.Refuel && DepotOps.Docked(ctx)) { prog.SkipTo(l => l is UndockLeg); return; }
                 if (v.situation == Vessel.Situations.ORBITING) { prog.SkipTo(l => (l is TankerStopLeg && !logged("Refuel:" + home.bodyName)) || l is TransferLeg || l is InterplanetaryTransferLeg); return; }
                 // Still climbing or coming down from a hop: the ascent leg's Begin sorts that out.
-                if (v.altitude < home.atmosphereDepth || v.orbit == null || v.orbit.ApA < ctx.ParkingAltitude * 0.9) return;
+                // An escape path has a negative apoapsis (0.8.225: a save taken just after the Eve ejection resumed at the ascent, which
+                // opened the throttle along its pitch program; 160 m/s gone before the Director paused it). Only a closed orbit can be "still climbing".
+                if (v.altitude < home.atmosphereDepth || v.orbit == null || (v.orbit.eccentricity < 1 && v.orbit.ApA < ctx.ParkingAltitude * 0.9)) return;
                 if (v.situation == Vessel.Situations.ESCAPING) prog.SkipTo(l => l is CorrectionLeg || l is WaitForSoiLeg);
                 return;
             }

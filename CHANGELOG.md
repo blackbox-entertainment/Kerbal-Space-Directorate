@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.225 (2026-11-05), test build
+
+- **A save taken on the way out of Kerbin resumes on the way out.** A quicksave made just after the Eve ejection burn, reloaded, resumed at the ascent: the resume read the escape path's negative apoapsis as "not yet in orbit", and the ascent leg opened the throttle along its pitch program until the Director paused it, 160 m/s later. Only a closed orbit can be still climbing, and the ascent leg now stands down on any escape path.
+
 ## 0.8.224 (2026-11-05), test build
 
 The Eve flight's rendezvous with the new station came apart: the first intercept ended 7 km short, the ship raised its periapsis away from the station's orbit, then three "straight pushes" from 9, 10 and 26 km took it to 237 km, burning 32, 82 and 132 m/s, and the crew planned a 462 m/s intercept with a 331 m/s match to follow.

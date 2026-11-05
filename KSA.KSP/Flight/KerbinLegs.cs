@@ -47,6 +47,7 @@ namespace KSA.KSP.Flight
             else switch (v.situation)
             {
                 case Vessel.Situations.ORBITING: State = LegState.Done; return;
+                case Vessel.Situations.ESCAPING: State = LegState.Done; return; // 0.8.225: nothing for an ascent to do on an escape path
                 case Vessel.Situations.SUB_ORBITAL: _phase = v.orbit.ApA > _targetAp * 0.9 ? Phases.Coast : Phases.Ascent; break;
                 default: _phase = Phases.Ascent; break;
             }
@@ -88,6 +89,13 @@ namespace KSA.KSP.Flight
             string line = null;
             double alt = v.altitude;
             double atmo = v.mainBody.atmosphereDepth;
+            // Out of the air on an escape path there is no apoapsis to reach (0.8.225): the cutoff tests read a negative one as "not yet".
+            if (_phase != Phases.Prelaunch && _phase != Phases.Climb && v.orbit != null && v.orbit.eccentricity >= 1 && alt > atmo)
+            {
+                c.Throttle = 0;
+                State = LegState.Done;
+                return "On an escape path already: nothing for the ascent to do.";
+            }
             switch (_phase)
             {
                 case Phases.Prelaunch:
