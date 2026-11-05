@@ -211,7 +211,7 @@ namespace KSA.KSP.Flight
                 Fail("the nudge did not finish (" + remaining.ToString("0.00") + " m/s to go)");
                 return "The nudge on the thrusters did not finish; " + remaining.ToString("0.00") + " m/s to go.";
             }
-            Transform rt = v.ReferenceTransform;
+            UnityEngine.Transform rt = v.ReferenceTransform;
             if (rt == null) { c.ClearInputs(); return null; }
             Vector3d dir = burn.normalized;
             double push = remaining < 0.08 ? 0.3 : 1.0;
