@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.217 (2026-11-04), test build
+
+- **The pad offer's rows wrap.** The window chip and the supplies chip were cut off at the edge of the flight director window, and the supplies chip was the one that mattered. Each mission row now wraps onto as many lines as it needs.
+
 ## 0.8.216 (2026-11-04), test build
 
 - **Supplies: short is red, tight is yellow.** The pad chip and the VAB line counted supplies at 1.5 times the nominal rate and called anything under that short. Kerbalism's rates are exact (the mk IIIe used 111.6 oxygen a day for three, to the unit, over 572 days); the crews who died of supplies died of counting errors, not of variance. Now a ship whose food, water and oxygen last the trip at the real rate but not at 1.5 x shows yellow with both figures; red means it does not last the trip at all.

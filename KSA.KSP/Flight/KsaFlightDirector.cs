@@ -159,6 +159,7 @@ namespace KSA.KSP.Flight
         private ScienceRunner _science;
         private FlightContext _ctx;
         private int _supplyTick;
+        private GUIStyle _wrapButton;
         private IFlightLeg _quartersLeg;
         // Top right, clear of the stock app toolbar down the right edge. Where the Director drags it is remembered
         // for the rest of the session, so every flight opens it in the same place.
@@ -548,7 +549,9 @@ namespace KSA.KSP.Flight
             // Every mission this craft can fly (2026-10-30, T: "what if I build a rocket and launch, can I attach it to a mission?").
             List<MissionType> options = HangarMissions(agency, v, dv, plane);
             if (options.Count == 0) GUILayout.Label("Nothing the agency flies fits this craft: too little delta-v or too few seats.");
-            _offerScroll = GUILayout.BeginScrollView(_offerScroll, GUILayout.Height(Math.Min(10, options.Count) * 30f + 8f));
+            // Rows wrap (0.8.217): the window chip and the supplies chip were cut off at the window's edge, and the one that mattered was the supplies.
+            if (_wrapButton == null) _wrapButton = new GUIStyle(GUI.skin.button) { wordWrap = true, alignment = TextAnchor.MiddleLeft };
+            _offerScroll = GUILayout.BeginScrollView(_offerScroll, GUILayout.Height(Math.Min(7, options.Count) * 48f + 8f));
             for (int i = 0; i < options.Count; i++)
             {
                 MissionType t = options[i];
@@ -575,7 +578,7 @@ namespace KSA.KSP.Flight
                 Color before = GUI.contentColor;
                 if (short_) GUI.contentColor = Color.red;
                 else if (chip.Length > 0) GUI.contentColor = wait != null || tight ? Color.yellow : Color.green;
-                bool picked = GUILayout.Button(t.Name + (need > 0 ? " (" + Math.Round(need) + " m/s)" : string.Empty) + (agency.MissionsCompleted(t.Id) > 0 ? ", done before" : string.Empty) + chip, GUILayout.Height(26f));
+                bool picked = GUILayout.Button(t.Name + (need > 0 ? " (" + Math.Round(need) + " m/s)" : string.Empty) + (agency.MissionsCompleted(t.Id) > 0 ? ", done before" : string.Empty) + chip, _wrapButton);
                 GUI.contentColor = before;
                 if (picked)
                 {
