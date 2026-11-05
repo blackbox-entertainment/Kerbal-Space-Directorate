@@ -44,6 +44,7 @@ namespace KSA.Core
                 foreach (string e in p.Engineers) n.AddValue("engineer", e);
                 foreach (string note in p.Notes) n.AddValue("note", note);
                 n.AddValue("vesselId", p.VesselId);
+                n.AddValue("launchId", p.LaunchId.ToString(System.Globalization.CultureInfo.InvariantCulture));
                 n.AddValue("directorFlown", p.DirectorFlown);
                 n.AddValue("launchUT", p.LaunchUT);
                 foreach (string e in p.FlightLog) n.AddValue("flight", e);
@@ -209,6 +210,8 @@ namespace KSA.Core
                 p.Engineers.AddRange(n.GetValues("engineer"));
                 p.Notes.AddRange(n.GetValues("note"));
                 p.VesselId = n.GetValue("vesselId", string.Empty);
+                uint launchId;
+                p.LaunchId = uint.TryParse(n.GetValue("launchId", "0"), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out launchId) ? launchId : 0;
                 p.DirectorFlown = n.GetBool("directorFlown", false);
                 p.LaunchUT = n.GetDouble("launchUT", -1);
                 p.FlightLog.AddRange(n.GetValues("flight"));

@@ -388,20 +388,35 @@ namespace KSA.Core
         }
 
         /// <summary>The host tells us which vessel flies the project (so recovery and crashes can be matched).</summary>
-        public void BindVessel(string projectId, string vesselId)
+        public void BindVessel(string projectId, string vesselId) { BindVessel(projectId, vesselId, 0); }
+
+        /// <summary>With the host's per-launch id (0.8.228, 0 = unknown): two launches of the same craft file share a vessel id, never a launch id.</summary>
+        public void BindVessel(string projectId, string vesselId, uint launchId)
         {
             Project p = GetProject(projectId);
             if (p == null) return;
             p.VesselId = vesselId ?? string.Empty;
+            if (launchId != 0) p.LaunchId = launchId;
             RaiseProjectChanged(p);
         }
 
-        public Project ProjectForVessel(string vesselId)
+        public Project ProjectForVessel(string vesselId) { return ProjectForVessel(vesselId, 0); }
+
+        /// <summary>
+        /// The live project this vessel flies. With a launch id an exact match wins; a project with none recorded (an older save) matches on
+        /// the vessel id alone (0.8.228: the Mk IIIe fresh on the pad was taken for the one stranded in solar orbit, which shared its vessel id).
+        /// </summary>
+        public Project ProjectForVessel(string vesselId, uint launchId)
         {
             if (string.IsNullOrEmpty(vesselId)) return null;
+            Project loose = null;
             foreach (Project p in Projects)
-                if (p.Status == ProjectStatus.InFlight && p.Mode == MissionMode.WatchLive && string.Equals(p.VesselId, vesselId, StringComparison.OrdinalIgnoreCase)) return p;
-            return null;
+            {
+                if (p.Status != ProjectStatus.InFlight || p.Mode != MissionMode.WatchLive || !string.Equals(p.VesselId, vesselId, StringComparison.OrdinalIgnoreCase)) continue;
+                if (launchId != 0 && p.LaunchId == launchId) return p;
+                if ((launchId == 0 || p.LaunchId == 0) && loose == null) loose = p;
+            }
+            return loose;
         }
 
         /// <summary>Appends a timeline line (and optionally an achievement key such as "Orbit:Kerbin") to a live project.</summary>

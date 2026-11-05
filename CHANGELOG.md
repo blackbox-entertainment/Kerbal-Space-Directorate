@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.228 (2026-11-05), test build
+
+- **Two launches of the same craft are told apart.** The game gives a craft file the same vessel id each time it is launched, and does not check against ships that are not loaded; the Mk IIIe fresh on the pad was taken for the one stranded in solar orbit, 876 days into its flight, and resumed at its reentry with "Deploying parachutes" on the pad. Every project and flight record now carries the launch id, which is new for every launch; an exact match wins, an older record without one matches on the vessel id alone, and a ship fresh on the pad is never a flight older than ten minutes.
+
 ## 0.8.227 (2026-11-05), test build
 
 The Eve orbit flight reached Eve: capture into the loose orbit, rounded out at 13,380 km, a full orbit of Eve, the return burn on time into a solar orbit that reached Kerbin's. Then the way home came apart. Five days out of Eve's space the game's preview showed no Kerbin encounter, so the crew planned a fresh 969 m/s transfer for 145 days later and warped toward it; the ship entered Kerbin's space nine days before that burn, as the window had said it would, flew through with nobody reacting, left again, fired the 969 m/s into nothing, and the next leg asked for 690 m/s with 238 aboard. The crew are alive in a solar orbit they cannot leave; the quicksave from just after the ejection is the way back.

@@ -42,6 +42,8 @@ namespace KSA.Core.Projects
         public KSA.Core.Design.DesignRecord Design { get; set; }
         /// <summary>Live flight (M5): the host vessel id once launched, the Director-flown flag, and the flight timeline.</summary>
         public string VesselId { get; set; }
+        /// <summary>The host's per-launch id of the vessel (0.8.228), 0 when unknown: two launches of the same craft file share a vessel id, never a launch id.</summary>
+        public uint LaunchId { get; set; }
         public bool DirectorFlown { get; set; }
         public double LaunchUT { get; set; }
         public List<string> FlightLog { get; } = new List<string>();

@@ -106,7 +106,8 @@ namespace KSA.KSP.Events
                 KsaCore.SyncRoster("recovery");
                 return;
             }
-            Core.Projects.Project live = Agency.ProjectForVessel(pv.persistentId.ToString());
+            uint launchId = pv.protoPartSnapshots != null && pv.protoPartSnapshots.Count > 0 ? pv.protoPartSnapshots[0].launchID : 0;
+            Core.Projects.Project live = Agency.ProjectForVessel(pv.persistentId.ToString(), launchId);
             if (live != null)
             {
                 // Recovered from the Tracking Station after a reload: resolve from the saved flight log.

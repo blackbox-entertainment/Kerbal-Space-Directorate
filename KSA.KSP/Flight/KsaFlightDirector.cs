@@ -46,6 +46,8 @@ namespace KSA.KSP.Flight
             public double SiteLat, SiteLon;
             public string ProjectId;
             public uint VesselId;
+            /// <summary>The root part's launch id (0.8.228), 0 when unknown.</summary>
+            public uint LaunchId;
             public double LaunchUT;
             public double MaxAltitude;
             public double MaxSpeed;
@@ -268,7 +270,7 @@ namespace KSA.KSP.Flight
             // A save made with a kerbal outside loads with the kerbal active: the flight is the craft nearby (2026-10-31, T: "director did not load").
             if (v.isEVA)
                 foreach (Vessel near in FlightGlobals.Vessels) // not VesselsLoaded: straight after a load only the kerbal is in it yet
-                    if (!near.isEVA && agency.ProjectForVessel(near.persistentId.ToString()) != null) { v = near; break; }
+                    if (!near.isEVA && agency.ProjectForVessel(near.persistentId.ToString(), LaunchIdOf(near)) != null) { v = near; break; }
             _adopted = true;
 
             LaunchSpec pending = LiveFlightLauncher.Pending;
@@ -287,7 +289,7 @@ namespace KSA.KSP.Flight
             if (pending == null && Live != null)
             {
                 Project recorded = agency.GetProject(Live.ProjectId);
-                Project own = agency.ProjectForVessel(v.persistentId.ToString());
+                Project own = agency.ProjectForVessel(v.persistentId.ToString(), LaunchIdOf(v));
                 if (recorded != null && recorded.Status != KSA.Core.Projects.ProjectStatus.InFlight)
                 {
                     KsaCore.Log.Info("Flight " + Live.ProjectId + " is over in this save (" + recorded.Status + "); the record is dropped.");
@@ -299,7 +301,7 @@ namespace KSA.KSP.Flight
                     Live = null;
                 }
             }
-            if (pending == null && Live != null && Live.VesselId != v.persistentId && FindVessel(Live.VesselId) == null)
+            if (pending == null && Live != null && !OnRecord(v) && FindVessel(Live.VesselId) == null)
             {
                 // Reverted or reloaded past the live vessel: it no longer exists, so the flight is lost to the record.
                 KsaCore.Log.Warn("Live vessel " + Live.VesselId + " no longer exists; resolving " + Live.ProjectId + " as simulated");
@@ -310,9 +312,17 @@ namespace KSA.KSP.Flight
             // Another flight is on record (a station holding in orbit, visited a moment ago) and a rocket with no project stands on the pad:
             // the pad gets its offer; the other flight resumes from its project when next visited, as after a restart
             // (2026-11-04, T: "tried to launch from the vab and see no director to select a mission").
-            if (pending == null && Live != null && Live.VesselId != v.persistentId && StandingAtHome(v) && agency.ProjectForVessel(v.persistentId.ToString()) == null)
+            if (pending == null && Live != null && !OnRecord(v) && StandingAtHome(v) && agency.ProjectForVessel(v.persistentId.ToString(), LaunchIdOf(v)) == null)
             {
                 KsaCore.Log.Info("Flight " + Live.ProjectId + " stays on record; " + v.vesselName + " on the pad gets its own offer.");
+                Live = null;
+            }
+            // The same craft file launched again gets the same vessel id from the game (0.8.228: the Mk IIIe fresh on the pad was taken for the one
+            // stranded in solar orbit, 876 days into its flight, and resumed at its reentry). A ship fresh on the pad is never a flight older than
+            // ten minutes: a record with no launch id of its own is dropped here, and such a project is left to the ship that flies it below.
+            if (pending == null && Live != null && FreshOnThePad(v) && Live.LaunchId == 0 && Planetarium.GetUniversalTime() - Live.LaunchUT > 600)
+            {
+                KsaCore.Log.Info("Flight " + Live.ProjectId + " is " + Math.Round((Planetarium.GetUniversalTime() - Live.LaunchUT) / 21600, 1) + " days old and " + v.vesselName + " is fresh on the pad: the record is dropped.");
                 Live = null;
             }
             if (pending != null)
@@ -323,6 +333,7 @@ namespace KSA.KSP.Flight
                 {
                     ProjectId = pending.Project.Id,
                     VesselId = v.persistentId,
+                    LaunchId = LaunchIdOf(v),
                     LaunchUT = Planetarium.GetUniversalTime(),
                     TargetOrbit = pending.TargetOrbitAltitude,
                     BodyOrbit = pending.BodyOrbitAltitude > 0 ? pending.BodyOrbitAltitude : agency.Settings.LiveTargetOrbitAltitude,
@@ -335,14 +346,19 @@ namespace KSA.KSP.Flight
                     DockTargetVesselId = pending.DockTargetVesselId ?? string.Empty,
                     ProgramId = pending.ProgramId ?? string.Empty
                 };
-                agency.BindVessel(pending.Project.Id, v.persistentId.ToString());
+                agency.BindVessel(pending.Project.Id, v.persistentId.ToString(), LaunchIdOf(v));
                 agency.LogFlightEvent(pending.Project.Id, "On the pad: " + v.vesselName + " with " + v.GetCrewCount() + " crew.");
                 KsaCore.Log.Info("Flight director adopted " + v.vesselName + " for " + pending.Project.Name);
             }
             else if (Live == null)
             {
                 // Resuming after a scene change or reload: is this vessel a live project?
-                Project p = agency.ProjectForVessel(v.persistentId.ToString());
+                Project p = agency.ProjectForVessel(v.persistentId.ToString(), LaunchIdOf(v));
+                if (p != null && p.LaunchId == 0 && FreshOnThePad(v) && p.LaunchUT >= 0 && Planetarium.GetUniversalTime() - p.LaunchUT > 600)
+                {
+                    KsaCore.Log.Info("Project " + p.Id + " is an older flight of this craft; " + v.vesselName + " fresh on the pad gets its own offer.");
+                    p = null;
+                }
                 bool nearPad = StandingAtHome(v);
                 if (p == null && nearPad) p = AdoptFromVab(agency, v);
                 if (p == null)
@@ -380,6 +396,7 @@ namespace KSA.KSP.Flight
                 {
                     ProjectId = p.Id,
                     VesselId = v.persistentId,
+                    LaunchId = LaunchIdOf(v),
                     LaunchUT = p.LaunchUT >= 0 ? p.LaunchUT : Planetarium.GetUniversalTime(),
                     TargetOrbit = agency.Settings.LiveOrbitAltitude,
                     BodyOrbit = agency.Settings.LiveTargetOrbitAltitude,
@@ -394,9 +411,10 @@ namespace KSA.KSP.Flight
                 foreach (string a in p.FlightAchievements) Live.Logged.Add(a);
                 Live.AutopilotOn = !p.DirectorFlown;
                 KsaCore.Log.Info("Flight director resumed " + v.vesselName + " for " + p.Name);
+                if (p.LaunchId == 0 && LaunchIdOf(v) != 0) agency.BindVessel(p.Id, v.persistentId.ToString(), LaunchIdOf(v)); // an older save learns its launch id
             }
             else project = agency.GetProject(Live.ProjectId);
-            if (Live == null || Live.VesselId != v.persistentId || project == null) return;
+            if (Live == null || !OnRecord(v) || project == null) return;
             _vessel = v;
             BuildProgram(agency, project, pending == null);
             bool onPad = v.situation == Vessel.Situations.PRELAUNCH || (v.srfSpeed < 1.0 && v.altitude - v.terrainAltitude < 60 && v.mainBody == FlightGlobals.GetHomeBody());
@@ -459,6 +477,7 @@ namespace KSA.KSP.Flight
             {
                 ProjectId = p.Id,
                 VesselId = v.persistentId,
+                LaunchId = LaunchIdOf(v),
                 LaunchUT = Planetarium.GetUniversalTime(),
                 TargetOrbit = agency.Settings.LiveOrbitAltitude,
                 BodyOrbit = agency.Settings.LiveTargetOrbitAltitude,
@@ -467,6 +486,7 @@ namespace KSA.KSP.Flight
                 TargetBody = t != null ? t.Body : "Kerbin",
                 IsPlane = IsPlaneVessel(v)
             };
+            agency.BindVessel(p.Id, v.persistentId.ToString(), LaunchIdOf(v));
             _vessel = v;
             BuildProgram(agency, p, false);
             bool onPad = v.situation == Vessel.Situations.PRELAUNCH || (v.srfSpeed < 1.0 && v.altitude - v.terrainAltitude < 60 && v.mainBody == FlightGlobals.GetHomeBody());
@@ -796,8 +816,8 @@ namespace KSA.KSP.Flight
             _ctx.Undocked = (ours, left) =>
             {
                 _vessel = ours;
-                if (Live != null) Live.VesselId = ours.persistentId;
-                agency.BindVessel(pid, ours.persistentId.ToString());
+                if (Live != null) { Live.VesselId = ours.persistentId; Live.LaunchId = LaunchIdOf(ours); }
+                agency.BindVessel(pid, ours.persistentId.ToString(), LaunchIdOf(ours));
                 if (left != null) agency.BindProgramVessel(depotId, left.persistentId.ToString());
             };
             // Our parts carry our launch id. On the pad every part is ours; after a reload, the part with our crew is.
@@ -811,6 +831,20 @@ namespace KSA.KSP.Flight
                     if (names.Contains(c.name)) { _ctx.OwnLaunchId = p.launchID; return; }
             if (_vessel.rootPart != null) _ctx.OwnLaunchId = _vessel.rootPart.launchID;
         }
+
+        /// <summary>The per-launch id of the ship's root part (0.8.228): two launches of the same craft file share a vessel id, never a launch id.</summary>
+        private static uint LaunchIdOf(Vessel v) { return v != null && v.rootPart != null ? v.rootPart.launchID : 0; }
+
+        /// <summary>Whether this vessel is the one on the live record: the same vessel id, and the same launch id when both are known.</summary>
+        private static bool OnRecord(Vessel v)
+        {
+            if (Live == null || v == null || v.persistentId != Live.VesselId) return false;
+            uint lid = LaunchIdOf(v);
+            return Live.LaunchId == 0 || lid == 0 || Live.LaunchId == lid;
+        }
+
+        /// <summary>A ship on the pad that has not flown (0.8.228).</summary>
+        private static bool FreshOnThePad(Vessel v) { return v != null && v.situation == Vessel.Situations.PRELAUNCH && v.missionTime < 1; }
 
         private static Vessel FindVessel(uint persistentId)
         {
@@ -832,7 +866,7 @@ namespace KSA.KSP.Flight
             if (Instance == this) Instance = null;
         }
 
-        public bool IsLive(Vessel v) { return Live != null && v != null && v.persistentId == Live.VesselId; }
+        public bool IsLive(Vessel v) { return Live != null && v != null && OnRecord(v); }
         public static bool IsLiveVessel(uint persistentId) { return Live != null && Live.VesselId == persistentId; }
 
         private bool _netNoted;
@@ -1238,7 +1272,8 @@ namespace KSA.KSP.Flight
             _vessel = merged;
             if (_ctx != null) { _ctx.Vessel = merged; _ctx.Control.Vessel = merged; }
             Live.VesselId = merged.persistentId;
-            if (KsaCore.Agency != null) KsaCore.Agency.BindVessel(Live.ProjectId, merged.persistentId.ToString());
+            Live.LaunchId = LaunchIdOf(merged);
+            if (KsaCore.Agency != null) KsaCore.Agency.BindVessel(Live.ProjectId, merged.persistentId.ToString(), LaunchIdOf(merged));
         }
 
         private void OnCrewKilled(EventReport report)
