@@ -691,7 +691,7 @@ namespace KSA.KSP.Flight
                 foreach (double weight in new[] { 0.5, 0.0 })
                 {
                     TransferPlan f = null;
-                    try { f = TransferPlanner.Plan(OrbitAdapter.Sampler(_origin.orbit), OrbitAdapter.Sampler(_target.orbit), sunMu, now + 600, Math.Max(now + 1200, latest - 0.2 * hohmannTime), 0.2 * hohmannTime, 1.6 * hohmannTime, 80, 40, weight, 0, latest, MaxArrivalExcess); }
+                    try { f = TransferPlanner.Plan(OrbitAdapter.Sampler(_origin.orbit), OrbitAdapter.Sampler(_target.orbit), sunMu, now + 600, Math.Max(now + 1200, latest - 0.2 * hohmannTime), 0.2 * hohmannTime, 1.6 * hohmannTime, 80, 40, weight, 0, latest, HomeArrival.MaxExcess(_target, MaxArrivalExcess)); }
                     catch (Exception e) { KsaCore.Log.Error("InterplanetaryTransferLeg deadline search threw: " + e); }
                     if (f != null && Ejection.DeltaV(_origin.gravParameter, rPark, f.DeltaV.Length) <= budget) { fast = f; break; }
                 }
@@ -750,7 +750,7 @@ namespace KSA.KSP.Flight
             if (aboardNow > 0 && dv + EjectionReserve > aboardNow + onThrusters)
             {
                 TransferPlan lean = null;
-                try { lean = TransferPlanner.Plan(OrbitAdapter.Sampler(_origin.orbit), OrbitAdapter.Sampler(_target.orbit), sunMu, now + day, now + 1.1 * synodic, 0.5 * hohmannTime, 1.6 * hohmannTime, 60, 30, 0.0, 0, double.PositiveInfinity, MaxArrivalExcess); }
+                try { lean = TransferPlanner.Plan(OrbitAdapter.Sampler(_origin.orbit), OrbitAdapter.Sampler(_target.orbit), sunMu, now + day, now + 1.1 * synodic, 0.5 * hohmannTime, 1.6 * hohmannTime, 60, 30, 0.0, 0, double.PositiveInfinity, HomeArrival.MaxExcess(_target, MaxArrivalExcess)); }
                 catch (Exception e) { KsaCore.Log.Error("InterplanetaryTransferLeg lean search threw: " + e); }
                 double leanUt; Vec3 leanBurn;
                 if (lean != null && lean.DeltaV.Length >= 1 && Ejection.PlanFromOrbit(OrbitAdapter.Sampler(v.orbit), planetMu, lean.DeltaV, Math.Max(now + 60, lean.DepartureUt - 0.5 * period), period, out leanUt, out leanBurn) && leanBurn.Length < dv - 1)
@@ -804,7 +804,9 @@ namespace KSA.KSP.Flight
     {
         private enum Phases { Prepare, Search, Burn, Finished }
         private readonly CelestialBody _target;
-        private readonly double _peLo, _peHi, _maxDv;
+        private double _peLo, _peHi;
+        private readonly double _maxDv;
+        private bool _hotNoted;
         private Phases _phase;
         private NodeExecutor _exec;
         private double _ut;
@@ -931,6 +933,22 @@ namespace KSA.KSP.Flight
                     if (ctx.Control.IsWarping) { ctx.Control.StopWarp(); break; }
                     if (!NodePlanner.Available(v)) { State = LegState.Done; Status = "No solver; flying on."; line = "No patched-conic solver; correction skipped."; break; }
                     {
+                        // Arriving hot at home (0.8.215): the band moves up to the periapsis at which the simulator says one skimming pass
+                        // captures the capsule, instead of the dive that burned a KV-3 up at 4,187 m/s.
+                        if (Homebound && ctx.Home != null && _target == ctx.Home && _target.atmosphere)
+                        {
+                            double entry;
+                            if (HomeArrival.Hot(v, _target, out entry))
+                            {
+                                double passPe = HomeArrival.PassPeriapsis(_target, HomeArrival.ExcessAt(v, _target));
+                                if (!double.IsNaN(passPe))
+                                {
+                                    if (Math.Abs((_peLo + _peHi) / 2 - passPe) > 100) { _peLo = passPe - HomeArrival.PassBand; _peHi = passPe + HomeArrival.PassBand; }
+                                    if (!_hotNoted) { _hotNoted = true; ctx.Say("Arriving hot: " + Math.Round(entry) + " m/s at the top of the air, over the " + AirbrakeRules.SafeDirectEntry + " a direct entry can take. Aiming the periapsis at " + TransferSupport.Km(passPe) + " to skim the air, the capsule alone, as many passes as it takes."); }
+                                }
+                                else if (!_hotNoted) { _hotNoted = true; ctx.Say("Arriving hot: " + Math.Round(entry) + " m/s at the top of the air, and no skimming pass between " + TransferSupport.Km(HomeArrival.PassFloor) + " and " + TransferSupport.Km(HomeArrival.PassCeiling) + " captures at that speed. A direct entry is all there is."); }
+                            }
+                        }
                         double current = TransferSupport.VesselPeriapsisAt(v, _target);
                         _budget = Budget(ctx);
                         double back = _returnTo != null ? ReturnPeriapsis(v.orbit, _target, _returnTo) : double.NaN;
@@ -1068,14 +1086,14 @@ namespace KSA.KSP.Flight
                 foreach (double weight in new[] { 0.5, 0.0 })
                 {
                     TransferPlan f = null;
-                    try { f = TransferPlanner.Plan(OrbitAdapter.Sampler(v.orbit), OrbitAdapter.Sampler(_target.orbit), mu, now + 600, Math.Max(now + 1200, Math.Min(latest, deadline - 0.2 * flight)), 0.15 * flight, 1.6 * flight, 60, 40, weight, 0, deadline, DeepSpaceMaxArrivalExcess); }
+                    try { f = TransferPlanner.Plan(OrbitAdapter.Sampler(v.orbit), OrbitAdapter.Sampler(_target.orbit), mu, now + 600, Math.Max(now + 1200, Math.Min(latest, deadline - 0.2 * flight)), 0.15 * flight, 1.6 * flight, 60, 40, weight, 0, deadline, HomeArrival.MaxExcess(_target, DeepSpaceMaxArrivalExcess)); }
                     catch (Exception e) { KsaCore.Log.Error("Deep-space deadline search threw: " + e); }
                     if (f != null && f.DeltaVMagnitude <= everything) { fast = f; break; }
                 }
                 double shortBy = Math.Max(1, Math.Round((plan.ArrivalUt - ctx.SuppliesRunOutUt) / TransferSupport.Day));
                 if (fast != null)
                 {
-                    supplyLine = " The " + what + " aboard runs out " + TransferSupport.Date(ctx.SuppliesRunOutUt) + ", " + shortBy + " days before the plain path lands: taking the faster one, " + Math.Round(fast.DeltaVMagnitude) + " of the " + Math.Round(everything + DeepSpaceReserve) + " m/s aboard, landing " + TransferSupport.Date(fast.ArrivalUt) + " at " + Math.Round(fast.ArrivalSpeed) + " m/s excess.";
+                    supplyLine = " The " + what + " aboard runs out " + TransferSupport.Date(ctx.SuppliesRunOutUt) + ", " + shortBy + " days before the plain path lands: taking the faster one, " + Math.Round(fast.DeltaVMagnitude) + " of the " + Math.Round(everything + DeepSpaceReserve) + " m/s aboard, landing " + TransferSupport.Date(fast.ArrivalUt) + " at " + Math.Round(fast.ArrivalSpeed) + " m/s excess." + HomeArrival.EntryNote(_target, fast.ArrivalSpeed);
                     plan = fast;
                 }
                 else supplyLine = " The " + what + " aboard runs out " + TransferSupport.Date(ctx.SuppliesRunOutUt) + ", " + shortBy + " days before this path lands, and no faster path fits the " + Math.Round(everything + DeepSpaceReserve) + " m/s aboard. Director: the crew will not make it on this.";

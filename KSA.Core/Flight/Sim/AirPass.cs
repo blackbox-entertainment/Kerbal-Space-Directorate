@@ -64,6 +64,20 @@ namespace KSA.Core.Flight.Sim
         public static PassResult Fly(SimWorld w, double apA, double peA)
         {
             double rA = w.Radius + apA, rP = w.Radius + peA, a = (rA + rP) / 2, e = (rA - rP) / (rA + rP), p = a * (1 - e * e);
+            return FlyConic(w, p, e, apA, peA);
+        }
+
+        /// <summary>
+        /// One pass of a hyperbolic arrival (0.8.215): excess speed vInf, periapsis peA. ApA infinite afterwards means it was not captured.
+        /// </summary>
+        public static PassResult FlyIn(SimWorld w, double peA, double vInf)
+        {
+            double rP = w.Radius + peA, e = 1 + rP * vInf * vInf / w.Mu, p = rP * (1 + e);
+            return FlyConic(w, p, e, double.PositiveInfinity, peA);
+        }
+
+        private static PassResult FlyConic(SimWorld w, double p, double e, double apA, double peA)
+        {
             double rTop = w.Radius + w.AirTop;
             var result = new PassResult { ApA = apA, PeA = peA, LowestHeight = peA };
             if (peA >= w.AirTop) return result;
@@ -116,6 +130,30 @@ namespace KSA.Core.Flight.Sim
     public static class AirbrakeRules
     {
         public const int MaxPasses = 12;
+        /// <summary>Fastest a capsule dives straight in at the top of the air, m/s (0.8.215: 4,187 m/s into a 27 km periapsis burned a KV-3 up at 45 km; Mun and Minmus returns at 3,100 to 3,300 and a plain Duna return at about 3,400 come home).</summary>
+        public const double SafeDirectEntry = 3600;
+        /// <summary>A skimming pass counts as a capture when the orbit after it tops out under this share of the sphere of influence.</summary>
+        public const double CaptureApShare = 0.5;
+
+        /// <summary>Speed at the top of the air for a hyperbolic excess.</summary>
+        public static double EntrySpeed(double mu, double rTop, double vInf) { return Math.Sqrt(vInf * vInf + 2 * mu / rTop); }
+
+        /// <summary>
+        /// The highest periapsis between floor and ceiling (metres, 500 m steps) at which one pass captures an arrival with excess vInf:
+        /// the orbit after it is closed and tops out under CaptureApShare of the sphere, and the pass neither crashes nor stays in the
+        /// air. The highest such pass is the coolest. NaN when none captures.
+        /// </summary>
+        public static double CapturePeriapsis(SimWorld w, double vInf, double soi, double floor, double ceiling)
+        {
+            if (w == null || vInf <= 0 || ceiling < floor) return double.NaN;
+            for (double peA = ceiling; peA >= floor - 1; peA -= 500)
+            {
+                PassResult r = AirPass.FlyIn(w, peA, vInf);
+                if (r.Crashed || r.Trapped || double.IsInfinity(r.ApA) || double.IsNaN(r.ApA)) continue;
+                if (r.ApA < CaptureApShare * soi) return peA;
+            }
+            return double.NaN;
+        }
         public const double GoalMargin = 30000;   // metres of apoapsis over the orbit wanted: then stop
         public const double LowestShare = 0.45;   // of the air's depth: a lower periapsis is raised at apoapsis
         public const double PassShare = 0.7;      // of the air's depth: where arrivals aim

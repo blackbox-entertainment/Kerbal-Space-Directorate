@@ -481,6 +481,15 @@ namespace KSA.KSP.Flight
         private bool _waitSaid;
         private bool _handTurn;
         private double _alignSince = -1;
+        // A hot arrival (0.8.215): every drop of propellant into a retro burn just above the air, then the capsule skims the air over as
+        // many passes as it takes, chutes held until the orbit is wholly inside the air. See HomeArrival.
+        private bool _hot, _dumped, _shed, _wasInAir;
+        private double _entry, _dumpStart, _dumpStartSpeed;
+        private int _passes;
+        private const double DumpAbove = 25000;
+        /// <summary>Between passes of a hot arrival: the survival net leaves the chutes and the staging alone.</summary>
+        public bool InPass { get { return _hot && _passes >= 1 && !_committed; } }
+        private bool _committed;
 
         /// <summary>About 1 g: a deorbit is a few dozen m/s, so a strong upper stage at full throttle is over in a blink.</summary>
         private static float GentleThrottle(VesselControl c)
@@ -489,13 +498,26 @@ namespace KSA.KSP.Flight
             return accel > 0 ? (float)Math.Max(0.05, Math.Min(1.0, 10.0 / accel)) : 1f;
         }
 
-        /// <summary>When the orbit next comes down to <paramref name="altitude"/> (metres), or -1 if it does not before periapsis.</summary>
-        private static double TimeDownTo(Vessel v, double altitude, double now)
+        /// <summary>When the orbit next comes down to <paramref name="altitude"/> (metres), or -1 if it does not before periapsis. A long orbit between skimming passes (0.8.215) is scanned whole, then the crossing is bisected to the second.</summary>
+        private static double TimeDownTo(Vessel v, double altitude, double now, double horizon = 7200)
         {
             if (v.orbit == null || v.orbit.PeA > altitude) return -1;
-            double end = now + Math.Min(v.orbit.timeToPe, 7200), step = Math.Max(1, (end - now) / 400);
+            double end = now + Math.Min(v.orbit.timeToPe, horizon), step = Math.Max(1, (end - now) / 400);
+            double prev = now;
             for (double t = now; t <= end; t += step)
-                if (v.orbit.getRelativePositionAtUT(t).magnitude - v.mainBody.Radius <= altitude) return t;
+            {
+                if (v.orbit.getRelativePositionAtUT(t).magnitude - v.mainBody.Radius <= altitude)
+                {
+                    double lo = prev, hi = t;
+                    for (int i = 0; i < 24 && hi - lo > 1; i++)
+                    {
+                        double mid = (lo + hi) / 2;
+                        if (v.orbit.getRelativePositionAtUT(mid).magnitude - v.mainBody.Radius <= altitude) hi = mid; else lo = mid;
+                    }
+                    return hi;
+                }
+                prev = t;
+            }
             return -1;
         }
         private const double AlignDeg = 15, AbortDeg = 30;
@@ -514,6 +536,9 @@ namespace KSA.KSP.Flight
             // Only a path that stays out of the air needs a burn (2026-10-30: a return from the Mun with its periapsis at
             // 35.7 km, in the air but a whisker over the 35 km target, waited for an apoapsis six hours off, warping mid-reentry).
             bool needsBurn = v.orbit.PeA > Math.Max(_targetPe, atmo) && v.altitude > atmo;
+            _hot = !needsBurn && HomeArrival.Hot(v, v.mainBody, out _entry);
+            _dumped = _shed = _wasInAir = _committed = false; _passes = 0; _dumpStart = -1;
+            if (_hot) ctx.Say("Reentry at " + Math.Round(_entry) + " m/s at the top of the air, periapsis " + Math.Round(v.orbit.PeA / 1000) + " km: too hot to dive. The last of the propellant goes into a retro burn, then the capsule skims the air alone, pass by pass, chutes held until it is caught.");
             _phase = needsBurn ? Phases.Deorbit : Phases.Reentry;
             _phaseStart = ctx.Now;
             Status = needsBurn ? "Deorbit burn." : "Reentry.";
@@ -636,22 +661,58 @@ namespace KSA.KSP.Flight
                                 + (c.ManualAttitude ? ", crew steering by hand" : ", stock retrograde hold") + ", alt " + Math.Round(alt / 1000, 1) + " km" + ChargeLog.Note(v));
                         }
                     }
+                    // A hot arrival (0.8.215): the retro burn just above the air, every drop, before anything is shed.
+                    if (_hot && !_dumped && alt < atmo + DumpAbove && alt > atmo && v.verticalSpeed < 0)
+                    {
+                        if (c.IsWarping) c.StopWarp();
+                        c.Sas(VesselAutopilot.AutopilotMode.Retrograde, false);
+                        bool started = _dumpStart > 0;
+                        if ((started && ctx.Now - _dumpStart > 4 && c.NoThrustAvailable()) || alt < atmo + 1500 || (!started && ctx.Now - _phaseStart > 60 && c.NoThrustAvailable()))
+                        {
+                            c.Throttle = 0; _dumped = true;
+                            line = started ? "Retro burn before the air done: " + Math.Round(Math.Max(0, _dumpStartSpeed - v.obt_speed)) + " m/s off the entry speed." : "Nothing left to burn before the air; skimming as we are.";
+                        }
+                        else if (c.AttitudeError(-v.obt_velocity) < 20)
+                        {
+                            if (!started) { _dumpStart = ctx.Now; _dumpStartSpeed = v.obt_speed; c.EnsureEngine(ref line); }
+                            c.Throttle = 1f;
+                            Status = "Retro burn before the air: " + Math.Round(Math.Max(0, _dumpStartSpeed - v.obt_speed)) + " m/s off so far.";
+                        }
+                        else Status = "Turning retrograde for the retro burn before the air.";
+                        break;
+                    }
                     // Warp only well above the air, and leave it 15 km up: KSP drops out of warp at the edge of the atmosphere
                     // and staging in that frame tore the capsule apart (2026-10-30).
                     // Warp down to the top of the air (2026-10-30, T: "would be nice to compress time waiting for pe"). KSP drops
                     // out of warp there itself; nothing separates until a second after (VesselControl.PartsSafe).
                     if (alt > atmo + 3000 && !c.IsWarping)
                     {
-                        double edge = TimeDownTo(v, atmo + 2000, ctx.Now);
+                        double edge = TimeDownTo(v, atmo + 2000, ctx.Now, _hot ? 40 * 21600 : 7200);
                         // Attitude freezes on rails: come out with time to turn (2026-11-01: out 5 s before the air, 125 degrees off retrograde).
                         if (edge > ctx.Now + ReentryTurnSeconds + 20) c.WarpTo(edge - ReentryTurnSeconds);
                     }
-                    // Shed everything but the capsule once we are coming down, one stage every two seconds.
-                    if (v.verticalSpeed < 0 && v.currentStage > 1 && ctx.Now - _lastShed > 2 && alt < atmo) { if (c.Stage()) { _lastShed = ctx.Now; line = "Staged away the service section for reentry."; } }
+                    // Passes of a hot arrival: count them, say what each did, and call the capsule caught once the whole orbit is inside the air.
+                    if (_hot)
+                    {
+                        bool inAir = alt < atmo;
+                        if (inAir && !_wasInAir) _passes++;
+                        if (!inAir && _wasInAir && v.verticalSpeed > 0)
+                        {
+                            double next = v.orbit != null && v.orbit.eccentricity < 1 ? v.orbit.timeToPe : double.NaN;
+                            line = "Pass " + _passes + " done: now " + (v.orbit.eccentricity < 1 ? Math.Round(v.orbit.ApA / 1000) + " x " + Math.Round(v.orbit.PeA / 1000) + " km" : "still escaping") + ", " + Math.Round(v.obt_speed) + " m/s" + (double.IsNaN(next) ? "." : "; next pass in " + TransferSupport.Countdown(next) + ".");
+                            if (v.orbit.eccentricity >= 1 || v.orbit.ApA > v.mainBody.sphereOfInfluence) line += " Not caught: this path leaves " + v.mainBody.bodyName + ". Director, the crew cannot fix this.";
+                        }
+                        if (inAir && !_committed && v.orbit != null && (v.orbit.ApA < atmo + 20000 || alt < 30000)) { _committed = true; line = "Caught: the whole orbit is inside the air now; coming down for good, chutes armed."; }
+                        _wasInAir = inAir;
+                    }
+                    // Shed everything but the capsule once we are coming down, one stage every two seconds. On a hot arrival only once:
+                    // after that the stages left are the capsule's own.
+                    if (v.verticalSpeed < 0 && v.currentStage > 1 && ctx.Now - _lastShed > 2 && alt < atmo && !(_hot && _shed)) { if (c.Stage()) { _lastShed = ctx.Now; _shed = true; line = "Staged away the service section for reentry."; } }
                     // Chutes: armed as soon as we are falling inside the atmosphere, so the game opens them the moment it
                     // is safe at any height; forced open below 2.5 km if still too fast, because the ground is coming either way.
+                    // On a hot arrival not before the capsule is caught: an armed chute could open at the bottom of a pass.
                     double aboveGround = Math.Max(0, alt - Math.Max(0, v.terrainAltitude));
-                    if (v.verticalSpeed < 0 && alt < atmo) c.DeployChutes(ref line, aboveGround < 2500);
+                    if (v.verticalSpeed < 0 && alt < atmo && (!_hot || _committed)) c.DeployChutes(ref line, aboveGround < 2500);
                     if (alt < 10000 && v.srfSpeed < 350) { _phase = Phases.Descent; Status = "Deploying parachutes."; }
                     if (v.situation == Vessel.Situations.LANDED || v.situation == Vessel.Situations.SPLASHED) { _phase = Phases.Landed; Status = "Down."; State = LegState.Done; }
                     break;

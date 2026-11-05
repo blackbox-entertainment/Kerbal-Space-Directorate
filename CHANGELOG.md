@@ -2,6 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.215 (2026-11-04), test build
+
+- **A hot arrival skims the air instead of diving.** The mk IIIe took a 2,326 m/s excess path to beat its oxygen (my faster-path search allowed it and asked nothing about the capsule), dived to a 27 km periapsis at 4,187 m/s and burned up at 45 km: Verdin, Franuki and Billy-Bobmore Kerman. Now, above 3,600 m/s at the top of the air (a direct dive's limit; Mun and Minmus returns are 3,100 to 3,300, a plain Duna return about 3,400): the last corrections aim the periapsis at the height the off-game simulator says one skimming pass captures the capsule (36 to 56 km on Kerbin, the highest that does), every drop of propellant goes into a retro burn just above the air, the service section is shed once, and the capsule skims pass by pass with the chutes held until the whole orbit is inside the air; the log says what each pass did, and plainly when a pass fails to catch. The faster-path line now says what its arrival means at the top of the air. Tested in the simulator for the mk IIIe's own arrival; unflown.
+- **No path home faster than the capsule can take.** Both faster-path searches (at departure and in deep space) now cap the arrival excess at what a direct entry can survive, 1,555 m/s at Kerbin, instead of the 2,000 and 2,500 I had guessed. When the air aboard cannot be met within that, the crew say so, and the Director decides, rather than the crew choosing between suffocating and burning. The skim is the backstop for an arrival that drifts a little over the limit, not a licence for 4 km/s.
+
 ## 0.8.214 (2026-11-04), test build
 
 - The build of 0.8.213: the tag v0.8.213 points at a commit that did not compile (a missing namespace on one line). No change beyond that fix.

@@ -201,6 +201,29 @@ namespace KSA.Core.Tests
             Assert.That(r.Crashed || r.Trapped, Is.EqualTo(firstPass));
         }
 
+        /// <summary>0.8.215: an arrival too fast to dive in skims instead; the simulator finds the pass that captures the capsule.</summary>
+        [Test]
+        public void AHotArrivalSkimsTheAirInsteadOfDiving()
+        {
+            SimWorld w = SimWorld.KerbinCapsule();
+            double soi = 84159286;
+            // The mk IIIe's arrival of 2026-11-04: 2,326 m/s excess, 4,187 m/s at the top of the air, which burned it up in a 27 km dive.
+            double entry = AirbrakeRules.EntrySpeed(w.Mu, w.Radius + w.AirTop, 2326);
+            Assert.That(entry, Is.EqualTo(3994).Within(30), "at the top of the air; the log read 4,187 at 60 km, lower and faster");
+            Assert.That(entry, Is.GreaterThan(AirbrakeRules.SafeDirectEntry));
+            double pe = AirbrakeRules.CapturePeriapsis(w, 2326, soi, 36000, 56000);
+            Assert.That(pe, Is.Not.NaN, "some pass between 36 and 56 km captures");
+            Assert.That(pe, Is.GreaterThan(30000).And.LessThan(56000));
+            PassResult r = AirPass.FlyIn(w, pe, 2326);
+            TestContext.WriteLine("Skim at " + pe / 1000 + " km: lowest " + Math.Round(r.LowestHeight / 1000, 1) + " km, then " + Math.Round(r.ApA / 1000) + " x " + Math.Round(r.PeA / 1000) + " km, " + Math.Round(r.EnergyLost / 1000) + " kJ/kg shed");
+            Assert.That(r.Crashed || r.Trapped, Is.False, "the capsule comes back out");
+            Assert.That(r.ApA, Is.LessThan(AirbrakeRules.CaptureApShare * soi), "and stays");
+            PassResult higher = AirPass.FlyIn(w, pe + 2000, 2326);
+            Assert.That(double.IsInfinity(higher.ApA) || higher.ApA >= AirbrakeRules.CaptureApShare * soi, Is.True, "two kilometres higher it is not caught: the chosen pass is the coolest that is");
+            // A plain Duna return, 900 m/s excess, dives in as it always has.
+            Assert.That(AirbrakeRules.EntrySpeed(w.Mu, w.Radius + w.AirTop, 900), Is.LessThan(AirbrakeRules.SafeDirectEntry));
+        }
+
         /// <summary>Everything Mk II has to do, added up from the simulator's own legs: what a round trip really needs.</summary>
         [Test]
         public void DunaRoundTripBudget()
