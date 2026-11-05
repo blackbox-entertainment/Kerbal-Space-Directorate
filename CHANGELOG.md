@@ -2,6 +2,20 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.229 (2026-11-05), test build
+
+The first flight on the pad hold: lifted off 13 minutes after the go, inserted 51 degrees downrange with the station 16 degrees behind, and met it on a direct 59 m/s intercept. Then the match was refused as "not a meeting" because the closest point was already upon them, the push that followed put the periapsis at 61 km, the raise waited for apoapsis while the ship skimmed the air, the survival net took the skim for a fall and dropped everything but the capsule, and the retry planned an Eve departure for a capsule.
+
+- **The match burns where the ships are** when the closest point is already upon them.
+- **A push that would dip into the air is slowed, then replaced by an intercept.**
+- **A periapsis in the air that comes before the apoapsis is lifted now**, with an outward push, never coasted into.
+- **The survival net lets a skim pass**: on an orbit that comes back out, with fuel to lift the low point, nothing is shed.
+- **A capsule with nothing left to burn comes home** when the flight is restarted.
+- **0.8.227's mid-flight skip broke the net's abort to reentry** (the program halted instead); the skip is applied by the caller now.
+- The pad hold's figures are the flown ones: 51 degrees downrange, 382 seconds.
+
+Not a code fault: that Eve window was 713 days away and the food aboard ran out 204 days before it; the pad offer shows the wait in yellow and the crew said so on the pad. Launch within the window.
+
 ## 0.8.228 (2026-11-05), test build
 
 - **Two launches of the same craft are told apart.** The game gives a craft file the same vessel id each time it is launched, and does not check against ships that are not loaded; the Mk IIIe fresh on the pad was taken for the one stranded in solar orbit, 876 days into its flight, and resumed at its reentry with "Deploying parachutes" on the pad. Every project and flight record now carries the launch id, which is new for every launch; an exact match wins, an older record without one matches on the vessel id alone, and a ship fresh on the pad is never a flight older than ten minutes.

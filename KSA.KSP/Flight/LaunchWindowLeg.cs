@@ -12,7 +12,7 @@ namespace KSA.KSP.Flight
     public sealed class LaunchWindowLeg : IFlightLeg
     {
         /// <summary>The ascent as flown by the Mk IIIe (2026-11-05): liftoff to a circular orbit in about 380 s, about 40 degrees downrange. The ascent logs both at insertion for tuning.</summary>
-        public const double AscentSeconds = 380, DownrangeDeg = 40, LeadDeg = 0;
+        public const double AscentSeconds = 382, DownrangeDeg = 51, LeadDeg = 0; // flown 2026-11-05: 51 deg, 382 s, the station 16 deg behind on the 40 deg guess
         private const double GoWithin = 30, MaxWait = 4 * 3600;
         private double _liftoffUt;
         private string _station = string.Empty;

@@ -870,6 +870,7 @@ namespace KSA.KSP.Flight
         public static bool IsLiveVessel(uint persistentId) { return Live != null && Live.VesselId == persistentId; }
 
         private bool _netNoted;
+        private bool _skimNoted;
 
         /// <summary>
         /// The crew never falls without chutes (2026-10-28: an ascent ran dry at 20 km, the plan moved on to "On orbit", and
@@ -964,6 +965,14 @@ namespace KSA.KSP.Flight
             if (Live.AutopilotOn && _program != null && (_program.Current is AirbrakeLeg || _program.Current is CaptureLeg)) return;
             // Between skimming passes of a hot arrival the capsule is meant to come back out (0.8.215): no chutes, nothing shed.
             if (Live.AutopilotOn && _program != null && _program.Current is ReentryLeg skim && skim.InPass) return;
+            // A skim on an orbit that comes back out, with fuel to lift the low point (0.8.229: a rendezvous push put the periapsis at 61 km, the
+            // raise waited for apoapsis, and the net dropped everything but the capsule at 69 km on a 98 km orbit): the crew hold on.
+            if (Live.AutopilotOn && _program != null && !(_program.Current is AscentLeg) && !(_program.Current is ReentryLeg) && v.orbit != null
+                && v.orbit.ApA > atmo + 5000 && v.orbit.PeA > atmo * 0.6 && _ctx.Control.DeltaVAvailable() > 50)
+            {
+                if (!_skimNoted) { _skimNoted = true; Log("Skimming the air at " + Math.Round(v.altitude / 1000) + " km on a " + Math.Round(v.orbit.ApA / 1000) + " x " + Math.Round(v.orbit.PeA / 1000) + " km orbit: it comes back out, and the crew lift the low point; nothing is shed.", null); }
+                return;
+            }
             // Nothing is burning and the craft falls back on a path that meets the ground: everything under the capsule
             // goes, spent or not, one stage at a time (2026-10-29: a hop came down with its fuelled upper stage still on,
             // fell nose first at 837 m/s and the chutes could not save it).
@@ -1248,6 +1257,7 @@ namespace KSA.KSP.Flight
                     {
                         Log("Entered " + home.bodyName + "'s space during " + cur.Name + ": the flight plan picks up from here.", null);
                         MissionPlanner.Resume(_program, _ctx, key => Live.Logged.Contains(key));
+                        _program.ApplySkip(cur);
                     }
                 }
             }

@@ -186,17 +186,18 @@ namespace KSA.KSP.Flight
         /// <summary>Skip to the first leg of the given type (used when resuming a saved flight in a known state).</summary>
         public void SkipTo(Func<IFlightLeg, bool> match)
         {
-            for (int i = 0; i < _legs.Count; i++)
-            {
-                if (!match(_legs[i])) continue;
-                // In mid-flight (0.8.227: home's space entered under a wait for a burn planned from outside) the running leg ends and the new one begins now.
-                IFlightLeg running = _engaged && !_pendingAdvance ? Current : null;
-                bool live = running != null && running.State == LegState.Running;
-                if (live) { try { running.End(_ctx); } catch (Exception e) { KsaCore.Log.Warn("Leg " + running.Name + " end: " + e.Message); } }
-                _index = i - 1; _pendingAdvance = true;
-                if (live) Advance();
-                return;
-            }
+            for (int i = 0; i < _legs.Count; i++) if (match(_legs[i])) { _index = i - 1; _pendingAdvance = true; return; }
+        }
+
+        /// <summary>
+        /// After a SkipTo in mid-flight (0.8.229; 0.8.227 had SkipTo end and advance by itself, which made AbortTo read its own skip as a
+        /// failure and halt the program: "Meeting the tanker: falling back into the air"): the leg that was running ends, the new one begins now.
+        /// </summary>
+        public void ApplySkip(IFlightLeg running)
+        {
+            if (!_engaged || !_pendingAdvance) return;
+            if (running != null && running.State == LegState.Running) { try { running.End(_ctx); } catch (Exception e) { KsaCore.Log.Warn("Leg " + running.Name + " end: " + e.Message); } }
+            Advance();
         }
 
         private void Advance()

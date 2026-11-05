@@ -92,6 +92,8 @@ namespace KSA.KSP.Flight
         private int _closes;
         private int _raises;
         private double _raiseTo;
+        /// <summary>The last push would have dipped into the air (0.8.229): the next plan is an intercept, not another push.</summary>
+        private bool _pushDipped;
 
         public string Name { get { return "Rendezvous"; } }
         public string Status { get; private set; }
@@ -179,6 +181,29 @@ namespace KSA.KSP.Flight
                 case Phases.RaisePlan:
                     {
                         double mu = v.mainBody.gravParameter;
+                        double airNow = v.mainBody.atmosphere ? v.mainBody.atmosphereDepth : 0;
+                        if (v.orbit.PeA < airNow && v.orbit.timeToPe < v.orbit.timeToAp)
+                        {
+                            // The air comes before the apoapsis (0.8.229): lift the periapsis now with an outward push, never coast down into it.
+                            double utNow = now + 20, best = double.NaN;
+                            foreach (double radial in new[] { 5.0, 10, 20, 40, 60, 90, 130, 180, 250 })
+                            {
+                                NodePlanner.ClearNodes(v);
+                                ManeuverNode lift = NodePlanner.Add(v, utNow, new Vector3d(radial, 0, 0));
+                                if (lift != null && lift.nextPatch != null && lift.nextPatch.PeA >= _raiseTo - 2000) { best = radial; break; }
+                            }
+                            if (!double.IsNaN(best))
+                            {
+                                _burn = new NodeExecutor();
+                                _burn.Begin(ctx);
+                                if (_burn.Failed) { Fail(_burn.FailReason, ctx); break; }
+                                _phase = Phases.RaiseBurn;
+                                Status = "Lifting the periapsis now: " + Math.Round(best) + " m/s outward.";
+                                line = "Periapsis " + Math.Round(v.orbit.PeA / 1000) + " km is in the air and comes before the apoapsis: lifting it now with " + Math.Round(best) + " m/s outward.";
+                                break;
+                            }
+                            NodePlanner.ClearNodes(v);
+                        }
                         double apUt = now + Math.Max(30, v.orbit.timeToAp);
                         StateVector at = OrbitAdapter.StateAt(v.orbit, apUt);
                         double ra = at.Position.Length, rp = v.mainBody.Radius + _raiseTo;
@@ -228,7 +253,7 @@ namespace KSA.KSP.Flight
                 case Phases.InterceptPlan:
                     {
                         if (AtStation(v)) { _phase = Phases.Check; break; }
-                        if (StationOps.Distance(v, _target) < CloseRange) { _phase = Phases.ClosePlan; break; }
+                        if (!_pushDipped && StationOps.Distance(v, _target) < CloseRange) { _phase = Phases.ClosePlan; break; }
                         double period = v.orbit.period;
                         if (double.IsNaN(period) || period <= 0) { Fail("not in a closed orbit", ctx); break; }
                         double mu = v.mainBody.gravParameter;
@@ -253,6 +278,7 @@ namespace KSA.KSP.Flight
                         if (NodePlanner.AddFrameDeltaV(v, plan.DepartureUt, plan.DeltaV) == null) { Fail("maneuver nodes unavailable", ctx); break; }
                         _arrivalUt = plan.ArrivalUt;
                         _intercepts++;
+                        _pushDipped = false;
                         _burn = new NodeExecutor();
                         _burn.Begin(ctx);
                         if (_burn.Failed) { Fail(_burn.FailReason, ctx); break; }
@@ -319,12 +345,34 @@ namespace KSA.KSP.Flight
                         // motion about the station's orbit, for a transit of two minutes close in and up to a third of an orbit from far out.
                         double period = _target.orbit.period;
                         double transit = _shortClose ? Math.Max(60, Math.Min(ShortTransit, dist / 2.0)) : Math.Max(ShortTransit, Math.Min(0.35 * period, dist / 15.0));
-                        Vec3 need = KSA.Core.Flight.Hill.ApproachVelocity(them.Position, them.Velocity, us.Position - them.Position, -toThem.Normalized * CloseStandoff, transit);
-                        if (double.IsNaN(need.X)) { Fail("no push solves the approach", ctx); break; }
+                        Vec3 need = Vec3.Zero, dv = Vec3.Zero;
+                        ManeuverNode push = null;
+                        bool inAir = false;
+                        for (int attempt = 0; attempt < 3; attempt++)
+                        {
+                            need = KSA.Core.Flight.Hill.ApproachVelocity(them.Position, them.Velocity, us.Position - them.Position, -toThem.Normalized * CloseStandoff, transit);
+                            if (double.IsNaN(need.X)) break;
+                            dv = need - (us.Velocity - them.Velocity);
+                            NodePlanner.ClearNodes(v);
+                            push = NodePlanner.AddFrameDeltaV(v, nodeUt, dv);
+                            if (push == null) break;
+                            // A push that dips into the air is slowed down, then given up for an intercept (0.8.229: a 53 m/s push from 1.3 km put
+                            // the periapsis at 61 km, and the net dropped the capsule on the skim).
+                            inAir = push.nextPatch != null && push.nextPatch.PeA < PeFloor(v);
+                            if (!inAir) break;
+                            transit *= 2;
+                        }
+                        if (double.IsNaN(need.X)) { NodePlanner.ClearNodes(v); Fail("no push solves the approach", ctx); break; }
+                        if (push == null) { Fail("maneuver nodes unavailable", ctx); break; }
+                        if (inAir)
+                        {
+                            NodePlanner.ClearNodes(v);
+                            _pushDipped = true;
+                            _phase = Phases.InterceptPlan;
+                            line = "A push from here would drop the periapsis into the air; planning an intercept instead.";
+                            break;
+                        }
                         double speed = need.Length;
-                        Vec3 dv = need - (us.Velocity - them.Velocity);
-                        NodePlanner.ClearNodes(v);
-                        if (NodePlanner.AddFrameDeltaV(v, nodeUt, dv) == null) { Fail("maneuver nodes unavailable", ctx); break; }
                         _arrivalUt = nodeUt + transit;
                         _closes++;
                         _burn = new NodeExecutor();
@@ -375,13 +423,15 @@ namespace KSA.KSP.Flight
                         // station at the planned time, and a "match" there was 145 m/s that put the periapsis 596 km underground.
                         double caUt, caDist;
                         ClosestApproach(v, now, _arrivalUt + 600, out caUt, out caDist);
-                        if (caDist > CloseRange || caUt <= now + 5)
+                        if (caDist > CloseRange)
                         {
                             _phase = Phases.Check;
                             line = "Closest approach is " + Math.Round(caDist / 1000) + " km, not a meeting; replanning.";
                             break;
                         }
-                        _arrivalUt = caUt;
+                        // The closest point is upon them (0.8.229: 1 km at 33 m/s was called "not a meeting", and the push that followed dropped the
+                        // periapsis into the air): match here and now.
+                        _arrivalUt = caUt <= now + 5 ? now + 20 : caUt;
                         Vec3 dv = MatchDeltaV(v);
                         if (dv.Length < 0.5) { _phase = Phases.Check; break; }
                         NodePlanner.ClearNodes(v);
