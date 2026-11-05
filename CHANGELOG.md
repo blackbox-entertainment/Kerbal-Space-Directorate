@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.226 (2026-11-05), test build
+
+- **A flight record left over from another save is dropped on load.** In one KSP session an old save of the Duna flight was loaded, then the quicksave of the Eve flight. The director's record of the Duna project stayed: the same craft file gives the same vessel id, and the finished Duna project still exists in the save, so the Eve ship was flown with the Duna project's homebound legs and its clock read T+1226 days. A record whose project is over in the loaded save, or whose vessel belongs to another live project there, is now dropped and the vessel's own project resumes.
+
 ## 0.8.225 (2026-11-05), test build
 
 - **A save taken on the way out of Kerbin resumes on the way out.** A quicksave made just after the Eve ejection burn, reloaded, resumed at the ascent: the resume read the escape path's negative apoapsis as "not yet in orbit", and the ascent leg opened the throttle along its pitch program until the Director paused it, 160 m/s later. Only a closed orbit can be still climbing, and the ascent leg now stands down on any escape path.

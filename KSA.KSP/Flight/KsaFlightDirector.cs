@@ -280,6 +280,25 @@ namespace KSA.KSP.Flight
                 KsaCore.Log.Info("Flight " + Live.ProjectId + " is not in this save: forgotten after a revert.");
                 Live = null;
             }
+            // A record left over from another save loaded earlier in this session (0.8.226: an old save of the Duna flight was loaded first,
+            // then the quicksave of the Eve flight; the same craft file gives the same vessel id and the old project still existed, so the
+            // Eve ship was flown with the Duna project's homebound legs, 250 m/s toward a "Kerbin periapsis"). A record whose project is
+            // over in this save, or whose vessel belongs to another live project here, is dropped; the vessel's own project resumes.
+            if (pending == null && Live != null)
+            {
+                Project recorded = agency.GetProject(Live.ProjectId);
+                Project own = agency.ProjectForVessel(v.persistentId.ToString());
+                if (recorded != null && recorded.Status != KSA.Core.Projects.ProjectStatus.InFlight)
+                {
+                    KsaCore.Log.Info("Flight " + Live.ProjectId + " is over in this save (" + recorded.Status + "); the record is dropped.");
+                    Live = null;
+                }
+                else if (own != null && recorded != null && own != recorded && Live.VesselId == v.persistentId)
+                {
+                    KsaCore.Log.Info(v.vesselName + " belongs to " + own.Id + " in this save, not " + Live.ProjectId + "; the record is dropped.");
+                    Live = null;
+                }
+            }
             if (pending == null && Live != null && Live.VesselId != v.persistentId && FindVessel(Live.VesselId) == null)
             {
                 // Reverted or reloaded past the live vessel: it no longer exists, so the flight is lost to the record.
