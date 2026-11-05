@@ -186,7 +186,17 @@ namespace KSA.KSP.Flight
         /// <summary>Skip to the first leg of the given type (used when resuming a saved flight in a known state).</summary>
         public void SkipTo(Func<IFlightLeg, bool> match)
         {
-            for (int i = 0; i < _legs.Count; i++) if (match(_legs[i])) { _index = i - 1; _pendingAdvance = true; return; }
+            for (int i = 0; i < _legs.Count; i++)
+            {
+                if (!match(_legs[i])) continue;
+                // In mid-flight (0.8.227: home's space entered under a wait for a burn planned from outside) the running leg ends and the new one begins now.
+                IFlightLeg running = _engaged && !_pendingAdvance ? Current : null;
+                bool live = running != null && running.State == LegState.Running;
+                if (live) { try { running.End(_ctx); } catch (Exception e) { KsaCore.Log.Warn("Leg " + running.Name + " end: " + e.Message); } }
+                _index = i - 1; _pendingAdvance = true;
+                if (live) Advance();
+                return;
+            }
         }
 
         private void Advance()

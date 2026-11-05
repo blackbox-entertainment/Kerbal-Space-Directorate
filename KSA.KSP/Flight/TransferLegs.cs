@@ -15,6 +15,26 @@ namespace KSA.KSP.Flight
 
         public static string Km(double metres) { return Math.Round(metres / 1000) + " km"; }
 
+        /// <summary>Where two orbits round the same body come closest between two times, metres, and when (0.8.227). NaN when either is missing.</summary>
+        public static double ClosestApproach(Orbit a, Orbit b, double from, double to, out double ut)
+        {
+            ut = from;
+            if (a == null || b == null || to <= from) return double.NaN;
+            double step = Math.Max(600, (to - from) / 2000), best = double.PositiveInfinity;
+            for (double t = from; t <= to; t += step)
+            {
+                double d = (OrbitAdapter.StateAt(a, t).Position - OrbitAdapter.StateAt(b, t).Position).Length;
+                if (d < best) { best = d; ut = t; }
+            }
+            double lo = Math.Max(from, ut - step), hi = Math.Min(to, ut + step), fine = Math.Max(10, step / 60);
+            for (double t = lo; t <= hi; t += fine)
+            {
+                double d = (OrbitAdapter.StateAt(a, t).Position - OrbitAdapter.StateAt(b, t).Position).Length;
+                if (d < best) { best = d; ut = t; }
+            }
+            return best;
+        }
+
         public static string Date(double ut)
         {
             // The game's own date, its time of day read as a time (0.8.220, T: "ejection year 12?" at "Year 12, Day 75 - 3h, 11m").
@@ -848,21 +868,31 @@ namespace KSA.KSP.Flight
         private int _rounds;
         private double _settleUntil;
         private bool _trim;
+        /// <summary>The body the ship was orbiting when the plan was made (0.8.227): a plan made from outside the target's space is remade inside it.</summary>
+        private CelestialBody _planBody;
+        /// <summary>A path passing within this many spheres of influence of the target is nudged in, never replaced by a fresh transfer (0.8.227).</summary>
+        private const double NearMissSois = 4, NearMissHorizonDays = 400;
         /// <summary>Trims after a burn that left the periapsis out of band (0.8.173: one 75 m/s burn 336 days out, 12,579 km off, "complete").</summary>
         private const int MaxRounds = 3;
         /// <summary>What a crew turning for home keeps back for the trims and the reentry.</summary>
         private const double HomeReserve = 150;
         /// <summary>A correction on the way home: it may spend the fuel aboard, not a fixed allowance, and wait for a cheaper window.</summary>
         public bool Homebound { get; set; }
+        /// <summary>The world this correction aims at.</summary>
+        public CelestialBody Target { get { return _target; } }
         /// <summary>Out around the sun with no path to the target within the budget: the program turns the crew for home (0.8.173).</summary>
         public bool GaveUp { get; private set; }
 
         /// <summary>The fuel this correction may spend: the fixed allowance, or on the way home everything aboard but a reserve.</summary>
         private double Budget(FlightContext ctx)
         {
-            if (!Homebound || ctx == null || ctx.Control == null) return _maxDv;
+            if (ctx == null || ctx.Control == null) return _maxDv;
             double aboard = ctx.Control.DeltaVAvailable();
-            return aboard > 0 ? Math.Max(_maxDv, aboard - HomeReserve) : _maxDv;
+            if (aboard <= 0) return _maxDv;
+            // Never more than the tanks hold, less a little for the trims (0.8.227: a 690 m/s correction was planned with 238 aboard).
+            double canPay = Math.Max(0, aboard + ctx.Control.RcsDeltaV() - 20);
+            double allowance = Homebound ? Math.Max(_maxDv, aboard - HomeReserve) : _maxDv;
+            return Math.Min(allowance, canPay);
         }
 
         /// <summary>
@@ -971,6 +1001,7 @@ namespace KSA.KSP.Flight
                         }
                         double current = TransferSupport.VesselPeriapsisAt(v, _target);
                         _budget = Budget(ctx);
+                        _planBody = v.mainBody;
                         double back = _returnTo != null ? ReturnPeriapsis(v.orbit, _target, _returnTo) : double.NaN;
                         bool comesHome = _returnTo == null || double.IsNaN(back) || back < GoodReturnPe;
                         if (TransferSupport.InBand(current, _peLo, _peHi) && comesHome)
@@ -982,7 +1013,20 @@ namespace KSA.KSP.Flight
                         double now = ctx.Now;
                         // No encounter, or one that passes far out: small nudges do not reach (2026-11-01: 25,334 km over Duna, then 1,455 m/s to stop there).
                         // After a burn the preview shows where the path goes: nudge it in, never plan a fresh transfer again.
-                        if (!_trim && (double.IsNaN(current) || current > _peHi + FarOff) && AimFromDeepSpace(ctx, ref line)) break;
+                        // Already passing close (0.8.227): on 2026-11-05 the game's preview showed no Kerbin encounter on the way back from Eve, the crew
+                        // planned a fresh 969 m/s transfer for 145 days later, and the ship entered Kerbin's space nine days before that burn, flew
+                        // through, and fired the 969 m/s into nothing. The two orbits are scanned for their closest approach first; a near miss is nudged in.
+                        bool nearMiss = false;
+                        if (!_trim && double.IsNaN(current) && v.mainBody == _target.referenceBody && _target.orbit != null)
+                        {
+                            double caUt, caDist = TransferSupport.ClosestApproach(v.orbit, _target.orbit, now, now + NearMissHorizonDays * TransferSupport.Day, out caUt);
+                            if (!double.IsNaN(caDist) && caDist < NearMissSois * _target.sphereOfInfluence)
+                            {
+                                nearMiss = true;
+                                ctx.Say("The path passes " + TransferSupport.Km(caDist) + " from " + _target.bodyName + " in " + TransferSupport.Countdown(caUt - now) + ": nudging it in rather than a fresh transfer.");
+                            }
+                        }
+                        if (!_trim && !nearMiss && (double.IsNaN(current) || current > _peHi + FarOff) && AimFromDeepSpace(ctx, ref line)) break;
                         // A tenth of the way to the target's space (either reader, 0.8.218), so the prediction has settled when the burn comes.
                         _ut = now + 60;
                         double entryUt = TransferSupport.EntryUtAt(v, _target);
@@ -1043,6 +1087,18 @@ namespace KSA.KSP.Flight
                     }
                     break;
                 case Phases.Burn:
+                    // Inside the target's space before the burn (0.8.227): the plan was made from outside and the real path is known now; plan again from here.
+                    if (_exec != null && v.mainBody == _target && _planBody != _target && ctx.NextBurnUt > ctx.Now + 30)
+                    {
+                        _exec.End(ctx);
+                        _exec = null;
+                        NodePlanner.ClearNodes(v);
+                        ctx.NextBurnUt = 0;
+                        _phase = Phases.Prepare; _trim = false;
+                        ctx.Say("Entered " + _target.bodyName + "'s space before the planned burn: the plan was made from outside; planning again from here.");
+                        Status = "Planning the correction again from inside " + _target.bodyName + "'s space.";
+                        break;
+                    }
                     if (TransferSupport.PumpExecutor(_exec, ctx, ref line))
                     {
                         // The solver's prediction lags a burn by a frame or two (0.8.212): read it a second later, never in the frame the burn ended.

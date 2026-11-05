@@ -1198,6 +1198,26 @@ namespace KSA.KSP.Flight
             // Coming home or crossing into the star's SOI is not a flyby of anything.
             bool flyby = data.to != FlightGlobals.GetHomeBody() && data.to.referenceBody != null && data.to.referenceBody != data.to;
             Log("Entered the sphere of influence of " + data.to.bodyName + ".", flyby ? "Flyby:" + data.to.bodyName : null);
+            // Home's space entered while a leg waits on a plan made for somewhere else (0.8.227: the Eve ship flew through Kerbin's space under a
+            // wait for a burn planned nine days later, and fired it into nothing): once the mission's milestone is logged, the plan picks up from here.
+            try
+            {
+                CelestialBody home = FlightGlobals.GetHomeBody();
+                if (data.to == home && _program != null && _ctx != null && Live != null && !_program.Finished && !_program.Failed)
+                {
+                    string tb = Live.TargetBody ?? string.Empty;
+                    bool milestone = Live.Logged.Contains("Land:" + tb) || Live.Logged.Contains("EVA:" + tb) || Live.Logged.Contains("Orbit:" + tb) || Live.Logged.Contains("Flyby:" + tb);
+                    IFlightLeg cur = _program.Current;
+                    CorrectionLeg corr = cur as CorrectionLeg;
+                    bool elsewhere = cur is WaitForSoiLeg || cur is InterplanetaryTransferLeg || (corr != null && corr.Target != home);
+                    if (milestone && elsewhere)
+                    {
+                        Log("Entered " + home.bodyName + "'s space during " + cur.Name + ": the flight plan picks up from here.", null);
+                        MissionPlanner.Resume(_program, _ctx, key => Live.Logged.Contains(key));
+                    }
+                }
+            }
+            catch (Exception e) { KsaCore.Log.Warn("Re-route on entering home's space failed: " + e.Message); }
         }
 
         private void OnCrewOnEva(GameEvents.FromToAction<Part, Part> data)

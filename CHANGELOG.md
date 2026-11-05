@@ -2,6 +2,15 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.227 (2026-11-05), test build
+
+The Eve orbit flight reached Eve: capture into the loose orbit, rounded out at 13,380 km, a full orbit of Eve, the return burn on time into a solar orbit that reached Kerbin's. Then the way home came apart. Five days out of Eve's space the game's preview showed no Kerbin encounter, so the crew planned a fresh 969 m/s transfer for 145 days later and warped toward it; the ship entered Kerbin's space nine days before that burn, as the window had said it would, flew through with nobody reacting, left again, fired the 969 m/s into nothing, and the next leg asked for 690 m/s with 238 aboard. The crew are alive in a solar orbit they cannot leave; the quicksave from just after the ejection is the way back.
+
+- **A near miss is nudged in, never replaced by a fresh transfer.** Before planning a fresh transfer the crew scan the two orbits for their closest approach over the next 400 days; a path passing within four spheres of influence of the target is nudged into the band, with the line "The path passes X km from Kerbin in N days: nudging it in".
+- **Entering the target's space before a burn planned from outside plans it again from inside.** The real path is known there.
+- **Entering home's space under a wait meant for somewhere else re-routes the flight** to the home correction or the reentry, once the mission's milestone is logged. A skip in mid-flight ends the running leg properly.
+- **No correction is ever planned for more than the tanks hold**, less 20 m/s for the trims.
+
 ## 0.8.226 (2026-11-05), test build
 
 - **A flight record left over from another save is dropped on load.** In one KSP session an old save of the Duna flight was loaded, then the quicksave of the Eve flight. The director's record of the Duna project stayed: the same craft file gives the same vessel id, and the finished Duna project still exists in the save, so the Eve ship was flown with the Duna project's homebound legs and its clock read T+1226 days. A record whose project is over in the loaded save, or whose vessel belongs to another live project there, is now dropped and the vessel's own project resumes.
