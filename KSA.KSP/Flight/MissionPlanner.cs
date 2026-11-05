@@ -20,6 +20,8 @@ namespace KSA.KSP.Flight
             Status = _what + " delivered.";
             string body = ctx.Vessel != null && ctx.Vessel.mainBody != null ? ctx.Vessel.mainBody.bodyName : "Kerbin";
             ctx.Say(_what + (ctx.Vessel != null && ctx.Vessel.GetCrewCount() > 0 ? " delivered; the crew stays aboard." : " on station."), "Deliver:" + body);
+            // A station left in orbit shows its lights (0.8.224, T: "the lights on the fuel station are not on and should be").
+            try { if (ctx.Vessel != null) ctx.Vessel.ActionGroups.SetGroup(KSPActionGroup.Light, true); } catch (Exception e) { KsaCore.Log.Warn("Lights: " + e.Message); }
             State = LegState.Done;
         }
         public string Step(FlightContext ctx) { State = LegState.Done; return null; }
@@ -221,9 +223,12 @@ namespace KSA.KSP.Flight
         {
             if (!ctx.Refuel)
             {
+                bool stop = crewed && ctx.Target != null && ctx.Target != ctx.Home;
+                // Hold on the pad for the station's pass (0.8.224, T: "it should have waited to lift off ... if it needed time to align with the tanker").
+                if (stop && TankerStopLeg.FindTanker(ctx.Vessel, ctx.Home) != null) prog.Add(new LaunchWindowLeg());
                 prog.Add(new AscentLeg(ctx.ParkingAltitude, true));
                 // A fuel station above home (2026-11-01, T): a crew leaving Kerbin fills up there first.
-                if (crewed && ctx.Target != null && ctx.Target != ctx.Home) prog.Add(new TankerStopLeg());
+                if (stop) prog.Add(new TankerStopLeg());
                 return;
             }
             prog.Add(new AscentLeg(Math.Max(75000, ctx.ParkingAltitude - 15000), true)).Add(new TargetDepotLeg()).Add(new RendezvousLeg()).Add(new DockingLeg())

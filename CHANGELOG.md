@@ -2,6 +2,15 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.224 (2026-11-05), test build
+
+The Eve flight's rendezvous with the new station came apart: the first intercept ended 7 km short, the ship raised its periapsis away from the station's orbit, then three "straight pushes" from 9, 10 and 26 km took it to 237 km, burning 32, 82 and 132 m/s, and the crew planned a 462 m/s intercept with a 331 m/s match to follow.
+
+- **The closing push follows the orbit, not a straight line.** It had aimed straight at the station at a speed that gets there in about five minutes (0.8.165, built for the last few kilometres); over those minutes the orbit's curvature bends that line by kilometres. The push now comes from Hill's equations of relative motion about the station's orbit (KSA.Core/Flight/Hill.cs, checked against a two-body integration in the tests), with a transit of two minutes close in and up to a third of an orbit from far out.
+- **The leg's periapsis rule follows the station.** It demanded 5 km above the air of every arc, match and orbit, and the new station sits at 86 x 75 km, on that line itself: the first miss had the ship raise its periapsis to 85 km, away from the station, and every match near the station would have been refused as "in the air". The floor is now a kilometre under the station's own low point when that is lower.
+- **The crew hold on the pad for the station's pass** (T: "it should have waited to lift off and increase the countdown after I hit launch if it needed time to align with the tanker"). After the Director's go, with a station in orbit, the countdown runs to the moment the station comes round, so the ascent ends beside it and the meeting is a direct intercept of a few m/s instead of a phasing orbit and a chase. The ascent logs how far downrange it ended and where the station was, to tune the two figures the hold uses (380 s to orbit, 40 degrees downrange). Warp on the pad is rails warp.
+- **The fuel station's lights are on** (T): switched on when it reaches its station, and again by the crew as they come in to dock, for one parked by an older build.
+
 ## 0.8.223 (2026-11-05), test build
 
 - **The crew meet the fullest station.** With two stations above Kerbin, one holding 6 t after the Duna ship took 32.7, the stop went to whichever the game listed first. The log line now says how much the chosen station holds.

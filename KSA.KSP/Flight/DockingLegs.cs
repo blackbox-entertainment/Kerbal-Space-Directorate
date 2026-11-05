@@ -130,7 +130,7 @@ namespace KSA.KSP.Flight
                     State = LegState.Done;
                     return;
                 }
-                if (v.orbit.PeA < air + 5000)
+                if (v.orbit.PeA < PeFloor(v))
                 {
                     // A periapsis in the air (0.8.165: the Director's burn left 299 x 64 km): raise it at apoapsis first.
                     _raiseTo = air + 15000;
@@ -233,7 +233,8 @@ namespace KSA.KSP.Flight
                         if (double.IsNaN(period) || period <= 0) { Fail("not in a closed orbit", ctx); break; }
                         double mu = v.mainBody.gravParameter;
                         // Never an arc through the air (0.8.163): the cheapest intercept between two low orbits ran through Kerbin.
-                        double floor = v.mainBody.Radius + v.mainBody.atmosphereDepth + 10000;
+                        // Down to a kilometre above the station's own low point when that is lower (0.8.224).
+                        double floor = v.mainBody.Radius + Math.Min(v.mainBody.atmosphereDepth + 10000, PeFloor(v) + 1000);
                         TransferPlan plan = TransferPlanner.Plan(OrbitAdapter.Sampler(v.orbit), OrbitAdapter.Sampler(_target.orbit), mu,
                             now + 120, now + 2.5 * period, 0.3 * period, 1.5 * period, 60, 30, 1.0, floor);
                         if (plan == null || double.IsNaN(plan.DeltaVMagnitude) || plan.DepartureUt <= now)
@@ -312,11 +313,19 @@ namespace KSA.KSP.Flight
                         double dist = toAim.Length;
                         if (dist < 50 || Vec3.Dot(toAim, toThem) <= 0) { _phase = Phases.Check; break; }
                         _shortClose = dist < ShortRange;
-                        double speed = _shortClose ? Math.Max(2.0, Math.Min(10.0, dist / ShortTransit)) : Math.Max(0.5, Math.Min(20.0, dist / 300.0));
-                        Vec3 dv = toAim.Normalized * speed - (us.Velocity - them.Velocity);
+                        // Hill's equations (0.8.224): the push had aimed straight along the line at a speed that gets there in about five
+                        // minutes; over those minutes the orbit's curvature bends the line by kilometres, and on 2026-11-05 pushes from 9, 10
+                        // and 26 km took the ship from 7 km short to 237 km (32, 82 and 132 m/s burnt). The velocity now comes from the relative
+                        // motion about the station's orbit, for a transit of two minutes close in and up to a third of an orbit from far out.
+                        double period = _target.orbit.period;
+                        double transit = _shortClose ? Math.Max(60, Math.Min(ShortTransit, dist / 2.0)) : Math.Max(ShortTransit, Math.Min(0.35 * period, dist / 15.0));
+                        Vec3 need = KSA.Core.Flight.Hill.ApproachVelocity(them.Position, them.Velocity, us.Position - them.Position, -toThem.Normalized * CloseStandoff, transit);
+                        if (double.IsNaN(need.X)) { Fail("no push solves the approach", ctx); break; }
+                        double speed = need.Length;
+                        Vec3 dv = need - (us.Velocity - them.Velocity);
                         NodePlanner.ClearNodes(v);
                         if (NodePlanner.AddFrameDeltaV(v, nodeUt, dv) == null) { Fail("maneuver nodes unavailable", ctx); break; }
-                        _arrivalUt = nodeUt + dist / speed;
+                        _arrivalUt = nodeUt + transit;
                         _closes++;
                         _burn = new NodeExecutor();
                         _burn.Begin(ctx);
@@ -379,7 +388,7 @@ namespace KSA.KSP.Flight
                         ManeuverNode match = NodePlanner.AddFrameDeltaV(v, _arrivalUt, dv);
                         if (match == null) { Fail("maneuver nodes unavailable", ctx); break; }
                         double airTop = v.mainBody.atmosphere ? v.mainBody.atmosphereDepth : 0;
-                        if (match.nextPatch != null && match.nextPatch.PeA < airTop + 5000)
+                        if (match.nextPatch != null && match.nextPatch.PeA < PeFloor(v))
                         {
                             NodePlanner.ClearNodes(v);
                             _phase = Phases.Check;
@@ -410,7 +419,7 @@ namespace KSA.KSP.Flight
                             ctx.Say(line, "Rendezvous:" + StationOps.BodyOf(v));
                             State = LegState.Done;
                         }
-                        else if (v.orbit.PeA < airAbove + 5000 && v.orbit.ApA > airAbove + 5000 && _raises < 2)
+                        else if (v.orbit.PeA < PeFloor(v) && v.orbit.ApA > airAbove + 5000 && _raises < 2)
                         {
                             // A burn left the periapsis in the air (0.8.174): raise it before any other plan, or the next intercept is from a falling ship.
                             _raises++;
@@ -436,6 +445,19 @@ namespace KSA.KSP.Flight
                     break;
             }
             return line;
+        }
+
+        /// <summary>
+        /// The lowest periapsis the leg accepts (0.8.224): 5 km above the air, or a kilometre under the station's own low point when the
+        /// station sits lower. A station parked at 86 x 75 km sat on the 75 km rule itself: the first miss had the ship raise its periapsis
+        /// away from the station's orbit, and every match near the station would have been refused as "in the air".
+        /// </summary>
+        private double PeFloor(Vessel v)
+        {
+            double air = v.mainBody.atmosphere ? v.mainBody.atmosphereDepth : 0;
+            double floor = air + 5000;
+            if (_target != null && _target.orbit != null && _target.orbit.PeA < floor) floor = Math.Max(air + 300, _target.orbit.PeA - 1000);
+            return floor;
         }
 
         /// <summary>Drives the current NodeExecutor; moves to the next phase when the burn is done.</summary>
@@ -656,7 +678,9 @@ namespace KSA.KSP.Flight
                     _stationControl.ControlFrom(_targetPort);
                     ModuleDockingNode ourNode = _ourPort, theirNode = _targetPort;
                     _stationControl.PointAlong(() => (Vector3d)ourNode.nodeTransform.position - (Vector3d)theirNode.nodeTransform.position);
-                    ctx.Say(StationOps.NameOf(_target) + " is turning its port toward us.");
+                    // Its lights on for the dock (0.8.224, T): a station parked by an older build sits dark.
+                    try { _target.ActionGroups.SetGroup(KSPActionGroup.Light, true); } catch (Exception e) { KsaCore.Log.Warn("Station lights: " + e.Message); }
+                    ctx.Say(StationOps.NameOf(_target) + " is turning its port toward us, lights on.");
                 }
             }
             catch (Exception e) { KsaCore.Log.Warn("Station aim: " + e.Message); _stationControl = null; }

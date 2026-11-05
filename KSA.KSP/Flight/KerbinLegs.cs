@@ -55,6 +55,30 @@ namespace KSA.KSP.Flight
         }
 
         private double _offSince = -1;
+        private double _liftoffUt = -1, _liftoffLon;
+
+        /// <summary>How far downrange the ascent ended and where the station is (0.8.224): the figures LaunchWindowLeg holds the pad for.</summary>
+        private string InsertionNote(FlightContext ctx, Vessel v)
+        {
+            if (_liftoffUt < 0 || v == null || v.mainBody == null) return string.Empty;
+            try
+            {
+                double seconds = ctx.Now - _liftoffUt;
+                double lon = v.longitude - _liftoffLon;
+                while (lon > 180) lon -= 360;
+                while (lon < -180) lon += 360;
+                double downrange = lon + 360 * seconds / Math.Abs(v.mainBody.rotationPeriod);
+                string note = " Insertion " + Math.Round(downrange) + " deg downrange of the pad, " + Math.Round(seconds) + " s after liftoff.";
+                Vessel station = TankerStopLeg.FindTanker(v, v.mainBody);
+                if (station != null && station.orbit != null)
+                {
+                    double ahead = LaunchWindowLeg.PhaseAhead(v.mainBody, station.orbit, v.GetWorldPos3D() - v.mainBody.position, ctx.Now) * 180 / Math.PI;
+                    if (!double.IsNaN(ahead)) note += " " + station.vesselName + " is " + Math.Round(Math.Abs(ahead)) + " deg " + (ahead >= 0 ? "ahead" : "behind") + ".";
+                }
+                return note;
+            }
+            catch (Exception e) { KsaCore.Log.Warn("Insertion note failed: " + e.Message); return string.Empty; }
+        }
 
         public string Step(FlightContext ctx)
         {
@@ -71,7 +95,7 @@ namespace KSA.KSP.Flight
                     c.Throttle = 1f;
                     // Stage until an engine is lit, one stage per second, never past the engines; then climb.
                     if (ctx.Now - _phaseStart < 1.0) { Status = "Ignition sequence."; break; }
-                    if (c.EnsureEngine(ref line)) { _phase = Phases.Climb; _phaseStart = ctx.Now; Status = "Climbing."; line = "Ignition. Full throttle."; }
+                    if (c.EnsureEngine(ref line)) { _phase = Phases.Climb; _phaseStart = ctx.Now; _liftoffUt = ctx.Now; _liftoffLon = v.longitude; Status = "Climbing."; line = "Ignition. Full throttle."; }
                     else if (!c.HasStagesLeft) { Status = "No engine to light."; line = "No engine found in any stage; launch scrubbed."; State = LegState.Failed; }
                     break;
                 case Phases.Climb:
@@ -246,7 +270,7 @@ namespace KSA.KSP.Flight
                     {
                         c.Throttle = 0;
                         Status = "In orbit.";
-                        if (_cutoff < 0) { _cutoff = ctx.Now; line = "Orbit: " + Math.Round(v.orbit.ApA / 1000) + " x " + Math.Round(v.orbit.PeA / 1000) + " km."; }
+                        if (_cutoff < 0) { _cutoff = ctx.Now; line = "Orbit: " + Math.Round(v.orbit.ApA / 1000) + " x " + Math.Round(v.orbit.PeA / 1000) + " km." + InsertionNote(ctx, v); }
                         // Let the game flip the situation to ORBITING before the next leg looks at it.
                         if (v.situation == Vessel.Situations.ORBITING || ctx.Now - _cutoff > 3) State = LegState.Done;
                     }

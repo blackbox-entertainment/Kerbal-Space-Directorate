@@ -1039,7 +1039,8 @@ namespace KSA.KSP.Flight
             if (ut <= Now + 1 || Now < _noWarpUntil) return;
             _warpAskedUntil = ut;
             // Out of the air, full warp: physics warp left over from the air stops at 4x (2026-10-30, T: "would be nice to speed up faster").
-            bool inAir = _v != null && _v.mainBody != null && _v.mainBody.atmosphere && _v.altitude < _v.mainBody.atmosphereDepth;
+            // On the ground the game allows rails warp (0.8.224: the hold on the pad for the station's pass).
+            bool inAir = _v != null && _v.mainBody != null && _v.mainBody.atmosphere && _v.altitude < _v.mainBody.atmosphereDepth && !_v.LandedOrSplashed;
             if (!inAir && TimeWarp.WarpMode == TimeWarp.Modes.LOW)
             {
                 if (IsWarping) TimeWarp.SetRate(0, true);
