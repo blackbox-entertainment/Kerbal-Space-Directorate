@@ -1235,6 +1235,9 @@ namespace KSA.KSP.Flight
         private double _turnStarted;
         private bool _panelsChecked;
         private const double SettleLimit = 120; // seconds allowed for the turn before the coast goes on regardless
+        private const double SunTurnLimit = 600; // seconds the turn may take before the crew hold at 1x and say the panels cannot be brought round (0.8.219)
+        private double _lastSunRetry = -1e9;
+        private bool _powerShort, _powerHeld;
         private double _entryUt = double.NaN;
         private int _entryFrame = -1000;
 
@@ -1260,9 +1263,26 @@ namespace KSA.KSP.Flight
             if (!settled && now - _turnStarted < SettleLimit) { Status = "Turning the panels to the sun."; if (ctx.Control.IsWarping) ctx.Control.StopWarp(); return true; }
             if (!_panelsChecked)
             {
-                _panelsChecked = true;
-                double made = ctx.Control.PanelOutput();
-                line = "Panels making " + made.ToString("0.00") + " EC/s" + (settled ? "" : " (turn not settled after " + Math.Round(now - _turnStarted) + " s)") + ".";
+                // Measured before the warp (0.8.219): a poor reading out in the sun's own space keeps the turn going, up to ten minutes,
+                // then the crew hold at 1x and say so. Round a world the night side and the battery cover it, as they always did.
+                string power;
+                bool enough = ctx.Control.PanelsEnough(out power);
+                if (!enough && v.mainBody == Planetarium.fetch.Sun)
+                {
+                    if (ctx.Control.IsWarping) ctx.Control.StopWarp();
+                    if (now - _turnStarted < SunTurnLimit)
+                    {
+                        if (now - _lastSunRetry > 60) { _lastSunRetry = now; ctx.Control.FacePanelsAtSun(); }
+                        Status = "Turning the panels to the sun: " + power;
+                        return true;
+                    }
+                    if (!_powerShort) { _powerShort = true; line = "The panels cannot be brought to the sun: " + power + " Holding at 1x until they make enough."; }
+                    if (now - _lastSunRetry > 120) { _lastSunRetry = now; ctx.Control.FacePanelsAtSun(); }
+                    Status = "Holding for power: " + power;
+                    return true;
+                }
+                _panelsChecked = true; _powerShort = false;
+                line = power + (settled ? "" : " The turn had not settled after " + Math.Round(now - _turnStarted) + " s.");
             }
             return false;
         }
@@ -1291,7 +1311,7 @@ namespace KSA.KSP.Flight
             if (v == null || _body == null) { State = LegState.Failed; Status = "No vessel or body."; return; }
             if (v.mainBody == _body) { State = LegState.Done; Status = "In " + _body.bodyName + "'s sphere of influence."; return; }
             ctx.Control.FacePanelsAtSun(); // the panels' side to the sun for the long coast (0.8.176, 0.8.178)
-            _turnStarted = ctx.Now; _panelsChecked = false;
+            _turnStarted = ctx.Now; _panelsChecked = false; _lastSunRetry = ctx.Now; _powerShort = false; _powerHeld = false;
             string plan = ctx.Control.PanelPlan;
             if (plan != null) ctx.Say("Turning the panels to the sun: " + plan + ".");
             string power = Parts.KspLifeSupport.PowerReport(v);
@@ -1344,6 +1364,17 @@ namespace KSA.KSP.Flight
                 ctx.Control.FacePanelsAtSun();
                 _turnStarted = now; _panelsChecked = false;
                 return "The sun has moved " + Math.Round(moved) + " deg round the sky: turning the panels back to it.";
+            }
+            // The watchdog found the battery falling under the warp (0.8.219): turn the panels to the sun again and measure before any more.
+            if (!ctx.PowerLow) _powerHeld = false;
+            else if (_panelsChecked && !_powerHeld)
+            {
+                ctx.Control.StopWarp();
+                if (v.packed) { Status = "Stopping: the battery is falling."; return null; }
+                _powerHeld = true;
+                ctx.Control.FacePanelsAtSun();
+                _turnStarted = now; _panelsChecked = false; _lastSunRetry = now;
+                return "Battery low under the warp: turning the panels to the sun again and measuring before any more.";
             }
             string turning = null;
             if (Turning(ctx, ref turning)) return null;

@@ -105,6 +105,10 @@ namespace KSA.KSP.Flight
         public bool LiftOffRequested;
         /// <summary>Cloud cities (KSA-91): the altitude the city floats at, metres; 0 for every other flight.</summary>
         public double CloudAltitude;
+        /// <summary>The ignition time of the burn a node executor is working toward (0.8.219), 0 when none: the power watchdog leaves the attitude alone within twenty minutes of it.</summary>
+        public double NextBurnUt;
+        /// <summary>The power watchdog's alarm (0.8.219): the battery is low and falling out in the sun's space. The coasts and node waits turn the panels to the sun again and measure before any more warp.</summary>
+        public bool PowerLow;
 
         public double Now { get { return Planetarium.GetUniversalTime(); } }
         public bool IsHomeMission { get { return Target == null || Home == null || Target == Home; } }

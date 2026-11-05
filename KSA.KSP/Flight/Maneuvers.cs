@@ -274,9 +274,12 @@ namespace KSA.KSP.Flight
                     _burnTime = 5;
                     _bodyAtStart = ctx.Vessel != null ? ctx.Vessel.mainBody : null;
                     _hyperbolicAtStart = ctx.Vessel != null && ctx.Vessel.orbit != null && ctx.Vessel.orbit.eccentricity >= 1;
-                    _lateBy = 0; _sunHold = false; _frozen = false;
-                    _phase = Phases.Warp;
-                    ctx.Control.Sas(VesselAutopilot.AutopilotMode.StabilityAssist, false);
+                    _lateBy = 0; _sunHold = false; _frozen = false; _powerHeld = false; _powerShort = false;
+                    // Through the align phase like any burn (0.8.219, 2026-11-05: the nudge waits went straight to their warp at the last
+                    // burn's attitude, the sun on the stack's axis, 48 panels at nothing, three dead of CO2 poisoning a day short of Duna).
+                    // A long wait is spent panels to the sun and measured; the thrusters push from that hold, no turn needed.
+                    _phase = Phases.Align;
+                    if (!ctx.Control.ManualAttitude) ctx.Control.Sas(VesselAutopilot.AutopilotMode.StabilityAssist, false);
                     Status = "Nudging " + _startDv.ToString("0.00") + " m/s on the thrusters.";
                     return;
                 }
@@ -310,6 +313,9 @@ namespace KSA.KSP.Flight
         private bool _sunHold, _sunSettled;
         private double _sunHoldAt;
         private double _lastWarpAsk = -1e9;
+        private const double SunTurnLimit = 600; // seconds the turn to the sun may take before the crew hold at 1x and say the panels cannot be brought round (0.8.219)
+        private bool _powerHeld, _powerShort;
+        private double _lastSunRetry = -1e9;
 
         /// <summary>One physics step. Returns a log line or null.</summary>
         public string Step(FlightContext ctx)
@@ -319,9 +325,10 @@ namespace KSA.KSP.Flight
             VesselControl c = ctx.Control;
             ManeuverNode n = Node(v);
             double now = ctx.Now;
-            if (n == null) { NodeVanished = true; Fail("node vanished"); return "Maneuver node lost" + (_nodeUt > 0 ? " (it was due in " + TransferSupport.Countdown(_nodeUt - now) + ")" : string.Empty) + "; burn skipped."; }
+            if (n == null) { NodeVanished = true; ctx.NextBurnUt = 0; Fail("node vanished"); return "Maneuver node lost" + (_nodeUt > 0 ? " (it was due in " + TransferSupport.Countdown(_nodeUt - now) + ")" : string.Empty) + "; burn skipped."; }
             _nodeUt = n.UT;
             double ignition = KSA.Core.Flight.Sim.BurnRules.Ignition(n.UT, _burnTime, _lateBy);
+            ctx.NextBurnUt = ignition;
             Vector3d burn = n.GetBurnVector(v.orbit);
             string line = null;
             // The ground before the burn (0.8.199, 2026-11-04: an Ike pass two days before the Duna capture bent the path into the
@@ -341,18 +348,46 @@ namespace KSA.KSP.Flight
             switch (_phase)
             {
                 case Phases.Align:
-                    RefreshBurnTime(c);
+                    if (!_nudge) RefreshBurnTime(c);
                     if (ignition - now > LongWait)
                     {
-                        if (!_sunHold) { c.FacePanelsAtSun(); _sunHold = true; _sunHoldAt = now; _sunSettled = false; }
-                        else if (_sunSettled && c.SunDrift() > 10) { c.StopWarp(); if (!v.packed) { c.FacePanelsAtSun(); _sunHoldAt = now; _sunSettled = false; line = "The sun has moved round the sky: turning the panels back to it."; } break; }
-                        bool settled = (c.HoldSettled() && now - _sunHoldAt > 5) || now - _sunHoldAt > 120;
-                        if (settled) _sunSettled = true;
-                        Status = "Burn in " + TransferSupport.Countdown(ignition - now) + (settled ? "; panels to the sun." : "; turning the panels to the sun.");
-                        if (settled && !c.IsWarping && now - _lastWarpAsk > 2) { _lastWarpAsk = now; c.WarpTo(ignition - LongWait + 60); }
+                        if (!_sunHold) { c.FacePanelsAtSun(); _sunHold = true; _sunHoldAt = now; _sunSettled = false; _lastSunRetry = now; }
+                        else if (_sunSettled && c.SunDrift() > 10) { c.StopWarp(); if (!v.packed) { c.FacePanelsAtSun(); _sunHoldAt = now; _sunSettled = false; _lastSunRetry = now; line = "The sun has moved round the sky: turning the panels back to it."; } break; }
+                        // The watchdog found the battery falling under this hold (0.8.219): aim again and measure before any more warp.
+                        else if (ctx.PowerLow && _sunSettled && !_powerHeld) { c.StopWarp(); if (!v.packed) { _powerHeld = true; c.FacePanelsAtSun(); _sunHoldAt = now; _sunSettled = false; _lastSunRetry = now; line = "Battery low under the warp: turning the panels to the sun again and measuring before any more."; } break; }
+                        if (!ctx.PowerLow) _powerHeld = false;
+                        bool held = (c.HoldSettled() && now - _sunHoldAt > 5) || now - _sunHoldAt > 120;
+                        if (held && !_sunSettled)
+                        {
+                            // Measured before the warp (0.8.219): a wait spent with the panels off the sun used to go unnoticed until the
+                            // battery was flat. Out in the sun's own space a poor reading keeps the turn going, up to ten minutes, then the
+                            // crew hold at 1x and say so; round a world the night side and the battery cover it, as they always did.
+                            if (v.packed) { c.StopWarp(); break; }
+                            string power;
+                            bool enough = c.PanelsEnough(out power);
+                            if (!enough && v.mainBody == Planetarium.fetch.Sun)
+                            {
+                                if (now - _sunHoldAt < SunTurnLimit)
+                                {
+                                    if (now - _lastSunRetry > 60) { _lastSunRetry = now; c.FacePanelsAtSun(); }
+                                    Status = "Turning the panels to the sun: " + power;
+                                    break;
+                                }
+                                if (!_powerShort) { _powerShort = true; line = "The panels cannot be brought to the sun: " + power + " Holding at 1x until they make enough."; }
+                                if (now - _lastSunRetry > 120) { _lastSunRetry = now; c.FacePanelsAtSun(); }
+                                Status = "Holding for power: " + power;
+                                break;
+                            }
+                            _sunSettled = true; _powerShort = false;
+                            line = power + " Warping to the burn in " + TransferSupport.Countdown(ignition - now) + ".";
+                        }
+                        Status = "Burn in " + TransferSupport.Countdown(ignition - now) + (_sunSettled ? (ctx.PowerLow ? "; holding at 1x for power." : "; panels to the sun.") : "; turning the panels to the sun.");
+                        if (_sunSettled && !c.IsWarping && now - _lastWarpAsk > 2) { _lastWarpAsk = now; c.WarpTo(ignition - LongWait + 60); }
                         break;
                     }
                     if (_sunHold) { c.StopWarp(); _sunHold = false; }
+                    // A nudge needs no turn (0.8.219): the thrusters push from whatever hold the craft has, the sun hold included.
+                    if (_nudge) { _phase = Phases.Warp; if (!c.ManualAttitude) c.Sas(VesselAutopilot.AutopilotMode.StabilityAssist, false); break; }
                     c.Sas(VesselAutopilot.AutopilotMode.Maneuver, false);
                     if (c.AttitudeError(burn) < 5 || now > ignition - 5) { _phase = Phases.Warp; }
                     break;
@@ -475,6 +510,7 @@ namespace KSA.KSP.Flight
                     }
                     break;
             }
+            if (_phase == Phases.Done || _phase == Phases.Failed) ctx.NextBurnUt = 0;
             return line;
         }
 

@@ -431,6 +431,34 @@ namespace KSA.KSP.Flight
             return total;
         }
 
+        private double _bestPanelOutput, _bestPanelDistance;
+
+        /// <summary>True when the craft carries solar panels at all: an RTG or fuel-cell ship is never held for the sun's sake.</summary>
+        public bool HasSolarPanels { get { return _v != null && _v.FindPartModulesImplementing<ModuleDeployableSolarPanel>().Count > 0; } }
+
+        /// <summary>
+        /// Whether the panels, as the craft sits now, make enough to warp on (0.8.219, 2026-11-05: three dead of CO2 poisoning a day short
+        /// of Duna's space. The thruster trims of the mid-course check went straight to their warp at the last burn's attitude, the sun on
+        /// the stack's axis, all 48 panels at nothing, and no leg measured it; the battery went from full to flat over nine days of waits).
+        /// Enough = at least 70% of what the best settled hold of this flight made, scaled to the sun's distance; before any best is known,
+        /// at least what Kerbalism says the ship is using; always enough with no panels aboard. The line gives the figures either way, and
+        /// a reading that passes and beats the best becomes the new best.
+        /// </summary>
+        public bool PanelsEnough(out string line)
+        {
+            double made = PanelOutput();
+            double need = Parts.KspLifeSupport.PowerConsumption(_v);
+            bool known = !double.IsNaN(need);
+            double dist = _v != null && Planetarium.fetch != null && Planetarium.fetch.Sun != null ? (Planetarium.fetch.Sun.position - _v.GetWorldPos3D()).magnitude : 0;
+            double expect = _bestPanelOutput > 0 && _bestPanelDistance > 0 && dist > 0 ? _bestPanelOutput * (_bestPanelDistance / dist) * (_bestPanelDistance / dist) : 0;
+            line = "Panels making " + made.ToString("0.00") + " EC/s" + (known ? " against " + need.ToString("0.00") + " used" : string.Empty)
+                + (expect > 0 ? " (" + expect.ToString("0.00") + " expected here)" : string.Empty) + ".";
+            if (!HasSolarPanels) return true;
+            bool enough = expect > 0 ? made >= 0.7 * expect : (!known || made >= need);
+            if (enough && made > expect) { _bestPanelOutput = made; _bestPanelDistance = dist; }
+            return enough;
+        }
+
         /// <summary>The held attitude is reached and the craft has stopped turning: safe to go on rails (0.8.178: warp froze a turn half done).</summary>
         public bool HoldSettled(double maxDegrees = 5)
         {
@@ -1022,6 +1050,30 @@ namespace KSA.KSP.Flight
         }
 
         private double _warpAskedUntil, _noWarpUntil;
+        private bool _wasWarping;
+        private float _weStoppedReal = -100f;
+        private int _externalStops;
+
+        /// <summary>
+        /// Warps cut short by neither the crew nor the Director's keys (0.8.219): Kerbalism stops the warp on every warning it posts,
+        /// and the crew warped straight on through four of them to the deaths. Counted, and the next warp waits ten seconds.
+        /// </summary>
+        public int ExternalWarpStops { get { return _externalStops; } }
+
+        /// <summary>Every frame from the director: a warp that ended before its time with no stop from the crew or the Director.</summary>
+        public void WatchWarp()
+        {
+            bool warping = IsWarping;
+            if (_wasWarping && !warping && Time.realtimeSinceStartup - _weStoppedReal > 0.5f && Now < _warpAskedUntil - 30 && Now >= _noWarpUntil)
+            {
+                _externalStops++;
+                _noWarpUntil = Math.Max(_noWarpUntil, Now + 10);
+            }
+            _wasWarping = warping;
+        }
+
+        /// <summary>No crew warp before the given time (0.8.219): the power watchdog holds the craft at 1x while the battery falls.</summary>
+        public void RefuseWarpUntil(double ut) { if (ut > _noWarpUntil) _noWarpUntil = ut; }
 
         /// <summary>
         /// The Director's warp keys, every frame: stopping the crew's warp holds for as long as that warp was to run, so it does not
@@ -1037,6 +1089,7 @@ namespace KSA.KSP.Flight
 
         public void StopWarp()
         {
+            _weStoppedReal = Time.realtimeSinceStartup;
             if (TimeWarp.fetch != null && IsWarping) TimeWarp.fetch.CancelAutoWarp();
             if (TimeWarp.fetch != null) TimeWarp.fetch.CancelAutoWarp(); // a warp-to-time keeps running otherwise, whatever the rate is set to
             if (TimeWarp.CurrentRate > 1.01f) TimeWarp.SetRate(0, true);

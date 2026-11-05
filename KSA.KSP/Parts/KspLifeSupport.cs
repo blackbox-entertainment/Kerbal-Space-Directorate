@@ -79,8 +79,8 @@ namespace KSA.KSP.Parts
             catch (Exception e) { KsaCore.Log.Warn("Kerbalism transmit: " + e.Message); return false; }
         }
 
-        /// <summary>What Kerbalism says is making and using power aboard, EC/s, biggest first (0.8.176); null without Kerbalism.</summary>
-        public static string PowerReport(Vessel v)
+        /// <summary>Kerbalism's brokers of electric charge aboard, (name, EC/s); null without Kerbalism or with nothing to read.</summary>
+        private static List<KeyValuePair<string, double>> Brokers(Vessel v)
         {
             try
             {
@@ -91,22 +91,40 @@ namespace KSA.KSP.Parts
                 System.Collections.IEnumerable list = m != null ? m.Invoke(null, new object[] { v, "ElectricCharge" }) as System.Collections.IEnumerable : null;
                 if (list == null) return null;
                 var items = new List<KeyValuePair<string, double>>();
-                double net = 0;
                 foreach (object o in list)
                 {
                     string[] key = o.GetType().GetProperty("Key").GetValue(o, null) as string[];
                     double rate = Convert.ToDouble(o.GetType().GetProperty("Value").GetValue(o, null));
                     string name = key != null && key.Length > 0 ? key[key.Length - 1] : "?";
                     items.Add(new KeyValuePair<string, double>(name, rate));
-                    net += rate;
                 }
-                items.Sort((a, b) => Math.Abs(b.Value).CompareTo(Math.Abs(a.Value)));
-                var sb = new System.Text.StringBuilder("Power: net " + net.ToString("+0.00;-0.00") + " EC/s");
-                int n = 0;
-                foreach (KeyValuePair<string, double> kv in items) { if (n >= 6) break; sb.Append(n == 0 ? ": " : ", ").Append(kv.Key).Append(' ').Append(kv.Value.ToString("+0.00;-0.00")); n++; }
-                return sb.Append('.').ToString();
+                return items;
             }
-            catch (Exception e) { KsaCore.Log.Warn("Kerbalism power report: " + e.Message); return null; }
+            catch (Exception e) { KsaCore.Log.Warn("Kerbalism power brokers: " + e.Message); return null; }
+        }
+
+        /// <summary>What Kerbalism says is making and using power aboard, EC/s, biggest first (0.8.176); null without Kerbalism.</summary>
+        public static string PowerReport(Vessel v)
+        {
+            List<KeyValuePair<string, double>> items = Brokers(v);
+            if (items == null) return null;
+            double net = 0;
+            foreach (KeyValuePair<string, double> kv in items) net += kv.Value;
+            items.Sort((a, b) => Math.Abs(b.Value).CompareTo(Math.Abs(a.Value)));
+            var sb = new System.Text.StringBuilder("Power: net " + net.ToString("+0.00;-0.00") + " EC/s");
+            int n = 0;
+            foreach (KeyValuePair<string, double> kv in items) { if (n >= 6) break; sb.Append(n == 0 ? ": " : ", ").Append(kv.Key).Append(' ').Append(kv.Value.ToString("+0.00;-0.00")); n++; }
+            return sb.Append('.').ToString();
+        }
+
+        /// <summary>What the ship is using, EC/s, by Kerbalism's brokers (0.8.219): every drain summed, the panels left out. NaN without Kerbalism.</summary>
+        public static double PowerConsumption(Vessel v)
+        {
+            List<KeyValuePair<string, double>> items = Brokers(v);
+            if (items == null) return double.NaN;
+            double used = 0;
+            foreach (KeyValuePair<string, double> kv in items) if (kv.Value < 0) used -= kv.Value;
+            return used;
         }
 
         /// <summary>"Kerbalism" when it is installed, else empty: what the Agency's LifeSupportMod is set to.</summary>

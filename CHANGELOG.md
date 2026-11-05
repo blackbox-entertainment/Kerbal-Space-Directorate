@@ -2,6 +2,15 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.219 (2026-11-05), test build
+
+Verdin, Franuki and Billy-Bobmore Kerman died of CO2 poisoning a day short of Duna's space, the battery flat. The mid-course check nine days out trimmed the path four times; the two trims on the thrusters went straight to their warp at the attitude the last engine burn had left, the sun on the stack's axis and all 48 panels at nothing, and nothing measured it. Kerbalism stopped the warp four times with its warnings and the crew warped on each time.
+
+- **Every wait on the thrusters is spent panels to the sun**, like a wait for an engine burn. The thrusters push from that hold; no turn is needed for a nudge.
+- **Every sun hold is measured before the warp.** The panels must make at least 70% of the best a settled hold has made this flight, scaled to the sun's distance (before any best is known, at least what Kerbalism says the ship uses). Out in the sun's own space a poor reading keeps the turn going for up to ten minutes, then the crew hold at 1x and say the panels cannot be brought round. Round a world the night side and the battery cover it, as before. The log says what the panels make, what the ship uses and what was expected.
+- **The crew watch the battery.** In deep space, with no burn within twenty minutes, a battery under 30% and falling stops the warp and keeps it stopped; the coast or node wait turns the panels to the sun again and measures; the warp is allowed again once the battery charges or is back over half.
+- **A warp cut short by the game or another mod is logged**, and the next warp waits ten seconds, so Kerbalism's warnings can be read.
+
 ## 0.8.218 (2026-11-04), test build
 
 - **No more 0.0 m/s burns.** 204 days from Kerbin the trim the path needed was 0.02 m/s. The thrusters cannot push that: each nudge ended in its first frame with nothing done, the leg trimmed three rounds, then planned the same nothing again every minute, and the Director took the stick. Now a trim under the finest nudge (0.05 m/s on the thrusters, 0.3 on the engine) is left for the next correction nearer Kerbin, where the same miss is a real burn.

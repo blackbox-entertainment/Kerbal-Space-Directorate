@@ -169,6 +169,12 @@ namespace KSA.KSP.Flight
         private Vessel _vessel;
         private double _nextSample;
         private bool _haltNoted;
+        // The power watchdog (0.8.219).
+        private float _powerSampleAt = -100f;
+        private double _powerPrevCharge = -1, _powerPrevUt;
+        private bool _powerAlarm;
+        private int _externalStopsLogged;
+        private const double PowerAlarmCharge = 0.3, PowerClearCharge = 0.5;
 
         private bool _adopted;
         private int _adoptTries;
@@ -809,6 +815,55 @@ namespace KSA.KSP.Flight
         /// </summary>
         private bool _abortNoted;
 
+        /// <summary>
+        /// The crew watch the battery (0.8.219, 2026-11-05: Verdin, Franuki and Billy-Bobmore Kerman died of CO2 poisoning a day short of
+        /// Duna's space with the battery flat, nine days into the mid-course trims; Kerbalism had stopped the warp four times with its
+        /// warnings and the crew warped on each time). Out in the sun's own space, with no burn within twenty minutes, a battery under
+        /// 30% and falling stops the warp and holds it stopped: the coast or node wait turns the panels to the sun again and measures
+        /// (ctx.PowerLow), and the warp is allowed again once the battery charges or is back over half. A warp cut by anything but the
+        /// crew or the Director's keys is logged, and the next waits ten seconds. Every five real seconds.
+        /// </summary>
+        private void WatchPower()
+        {
+            if (_ctx == null || _ctx.Control == null || _vessel == null || Live == null || !Live.AutopilotOn || _program == null || _program.Finished) return;
+            _ctx.Control.WatchWarp();
+            if (_ctx.Control.ExternalWarpStops > _externalStopsLogged)
+            {
+                _externalStopsLogged = _ctx.Control.ExternalWarpStops;
+                Log("Warp cut short by the game or another mod (" + _externalStopsLogged + " so far this flight); the crew look round before warping again.", null);
+            }
+            float real = UnityEngine.Time.realtimeSinceStartup;
+            if (real - _powerSampleAt < 5f) return;
+            _powerSampleAt = real;
+            double now = Planetarium.GetUniversalTime();
+            double charge = VesselControl.ChargeFraction(_vessel);
+            double prev = _powerPrevCharge, prevUt = _powerPrevUt;
+            _powerPrevCharge = charge; _powerPrevUt = now;
+            if (charge < 0 || prev < 0 || now <= prevUt) return;
+            double rate = (charge - prev) / (now - prevUt); // fraction of the battery per second of game time
+            bool deepSpace = _vessel.mainBody != null && _vessel.mainBody == Planetarium.fetch.Sun && !_vessel.LandedOrSplashed;
+            bool burnSoon = _ctx.NextBurnUt > now - 60 && _ctx.NextBurnUt - now < 1200;
+            if (!_powerAlarm)
+            {
+                if (!deepSpace || burnSoon || charge >= PowerAlarmCharge || rate >= -1e-6) return;
+                _powerAlarm = true;
+                _ctx.PowerLow = true;
+                _ctx.Control.StopWarp();
+                _ctx.Control.RefuseWarpUntil(now + 30);
+                string power; _ctx.Control.PanelsEnough(out power);
+                Log("Battery at " + Math.Round(charge * 100) + "% and falling: no warp until it charges. The panels go back to the sun first. " + power, null);
+                return;
+            }
+            if (charge > PowerClearCharge || (rate > 0 && charge >= PowerAlarmCharge))
+            {
+                _powerAlarm = false;
+                _ctx.PowerLow = false;
+                Log("Battery at " + Math.Round(charge * 100) + "% and charging; warp allowed again.", null);
+                return;
+            }
+            if (!burnSoon) _ctx.Control.RefuseWarpUntil(now + 30);
+        }
+
         private void SurvivalNet()
         {
             Vessel v = _vessel;
@@ -952,6 +1007,7 @@ namespace KSA.KSP.Flight
                 Live.SciencePoints = _science.PointsCollected;
             }
             SurvivalNet();
+            WatchPower();
             if (Live.AutopilotOn && _program != null)
             {
                 // Antennas and panels: out in space, in before the air. Coming in from orbit they fold 20 km above it.
