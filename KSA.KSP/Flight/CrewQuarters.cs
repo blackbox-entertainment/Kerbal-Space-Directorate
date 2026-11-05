@@ -1,5 +1,7 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace KSA.KSP.Flight
 {
@@ -165,16 +167,70 @@ namespace KSA.KSP.Flight
             catch (Exception e) { KsaCore.Log.Warn("CrewQuarters.Move " + c.name + ": " + e.Message); return false; }
         }
 
+        /// <summary>
+        /// The crew list is rebuilt and the kerbals respawned a frame later (0.8.218, T: "I don't see the kerbals"): a despawn and a
+        /// spawn in the same frame left the portraits empty, since the old kerbals' destruction, deferred by Unity to the end of the frame,
+        /// unregistered the portraits the new ones had just registered. Then the portrait gallery is asked to refresh.
+        /// </summary>
         private static void Finish(Vessel v)
         {
             try
             {
                 v.CrewListSetDirty();
                 v.DespawnCrew();
-                v.SpawnCrew();
-                GameEvents.onVesselCrewWasModified.Fire(v);
+                UnityEngine.MonoBehaviour host = KsaFlightDirector.Instance;
+                if (host != null && host.isActiveAndEnabled) host.StartCoroutine(Respawn(v));
+                else { v.SpawnCrew(); GameEvents.onVesselCrewWasModified.Fire(v); RefreshPortraits(v); }
             }
             catch (Exception e) { KsaCore.Log.Warn("CrewQuarters.Finish: " + e.Message); }
+        }
+
+        private static IEnumerator Respawn(Vessel v)
+        {
+            yield return null;
+            if (v == null) yield break;
+            try { v.SpawnCrew(); GameEvents.onVesselCrewWasModified.Fire(v); }
+            catch (Exception e) { KsaCore.Log.Warn("CrewQuarters.Respawn: " + e.Message); }
+            yield return null;
+            if (v != null) RefreshPortraits(v);
+        }
+
+        private static bool _portraitNoted;
+
+        /// <summary>Asks the stock portrait gallery to redraw the active vessel's crew, by reflection: the method's name has moved between versions.</summary>
+        private static void RefreshPortraits(Vessel v)
+        {
+            try
+            {
+                if (FlightGlobals.ActiveVessel != v) return;
+                Type t = null;
+                foreach (Assembly a in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    try { t = a.GetType("KerbalPortraitGallery"); } catch { t = null; }
+                    if (t != null) break;
+                }
+                if (t == null) { Note("no KerbalPortraitGallery type"); return; }
+                PropertyInfo ip = t.GetProperty("Instance", BindingFlags.Public | BindingFlags.Static);
+                object inst = ip != null ? ip.GetValue(null, null) : null;
+                if (inst == null) { Note("no KerbalPortraitGallery instance"); return; }
+                foreach (string name in new[] { "StartReset", "StartRefresh" })
+                {
+                    MethodInfo m = t.GetMethod(name, new[] { typeof(Vessel) });
+                    if (m == null) continue;
+                    m.Invoke(inst, new object[] { v });
+                    Note("portraits refreshed by " + name);
+                    return;
+                }
+                Note("no portrait refresh method on KerbalPortraitGallery");
+            }
+            catch (Exception e) { KsaCore.Log.Warn("CrewQuarters.RefreshPortraits: " + e.Message); }
+        }
+
+        private static void Note(string what)
+        {
+            if (_portraitNoted) return;
+            _portraitNoted = true;
+            KsaCore.Log.Info("CrewQuarters: " + what);
         }
 
         private static object Field(PartModule m, string name)

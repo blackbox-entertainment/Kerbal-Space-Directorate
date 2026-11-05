@@ -1367,6 +1367,14 @@ namespace KSA.KSP.Flight
             Live.AutopilotOn = false;
             Live.DirectorFlown = true;
             if (_program != null) _program.Disengage();
+            // Everyone into the pod first (0.8.218, 2026-11-04: the Director took the stick 189 days out with two of the crew in the
+            // Hitchhiker for the coast, flew the whole stack into the air by hand, and the cabin burned with both aboard).
+            try
+            {
+                string quarters = _vessel != null && _vessel.GetCrewCount() > 0 ? CrewQuarters.ToPod(_vessel, "the Director taking the controls") : null;
+                if (quarters != null) Log(quarters, null);
+            }
+            catch (Exception e) { KsaCore.Log.Warn("TakeControl quarters: " + e.Message); }
             if (_ctx != null && _ctx.Control != null) _ctx.Control.StopWarp(); // the crew's warp is the crew's: it ends with their control
             KsaCore.Agency.SetDirectorFlown(Live.ProjectId, true);
             _status = "Director flying.";

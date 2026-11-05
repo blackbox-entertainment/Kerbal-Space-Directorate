@@ -81,6 +81,23 @@ namespace KSA.KSP.Flight
         /// <summary>The vessel's prediction, by either reader, reaches the body.</summary>
         public static bool VesselReaches(Vessel v, CelestialBody body) { return !double.IsNaN(VesselPeriapsisAt(v, body)); }
 
+        /// <summary>
+        /// When the vessel's prediction enters the body's space, by either reader (0.8.218, 2026-11-04: the cruise's own reader saw no
+        /// Kerbin patch 204 days out while a zero node did, ended the cruise at once, and the correction leg after it placed its trims a
+        /// minute ahead instead of a tenth of the way there). NaN when neither reader gets there. The probe costs a solver update.
+        /// </summary>
+        public static double EntryUtAt(Vessel v, CelestialBody body)
+        {
+            Orbit o = VesselPatchAround(v, body);
+            if (o != null) return o.StartUT;
+            if (v == null || body == null || v.mainBody == body || !NodePlanner.Available(v)) return double.NaN;
+            try
+            {
+                return Trial(v, Planetarium.GetUniversalTime() + 60, Vector3d.zero, n => { Orbit p = NodePlanner.PatchAround(n, body); return p != null ? p.StartUT : double.NaN; });
+            }
+            catch (Exception e) { KsaCore.Log.Warn("EntryUtAt probe: " + e.Message); return double.NaN; }
+        }
+
         /// <summary>One line per patch: body, how it ends, periapsis, length in days.</summary>
         public static string DescribeChain(Orbit o)
         {
@@ -963,8 +980,11 @@ namespace KSA.KSP.Flight
                         // No encounter, or one that passes far out: small nudges do not reach (2026-11-01: 25,334 km over Duna, then 1,455 m/s to stop there).
                         // After a burn the preview shows where the path goes: nudge it in, never plan a fresh transfer again.
                         if (!_trim && (double.IsNaN(current) || current > _peHi + FarOff) && AimFromDeepSpace(ctx, ref line)) break;
+                        // A tenth of the way to the target's space (either reader, 0.8.218), so the prediction has settled when the burn comes.
                         _ut = now + 60;
-                        if (TransferSupport.EndsInTransition(v.orbit) && v.orbit.EndUT > now) _ut = Math.Max(now + 60, now + 0.1 * (v.orbit.EndUT - now));
+                        double entryUt = TransferSupport.EntryUtAt(v, _target);
+                        if (!double.IsNaN(entryUt) && entryUt > now) _ut = Math.Max(now + 60, now + 0.1 * (entryUt - now));
+                        else if (TransferSupport.EndsInTransition(v.orbit) && v.orbit.EndUT > now) _ut = Math.Max(now + 60, now + 0.1 * (v.orbit.EndUT - now));
                         NodePlanner.ClearNodes(v);
                         _phase = Phases.Search; _candidate = 0;
                         Status = "Searching for a correction (" + (double.IsNaN(current) ? "no encounter" : "periapsis " + TransferSupport.Km(current)) + ").";
@@ -992,13 +1012,19 @@ namespace KSA.KSP.Flight
                                 + (double.IsNaN(cur) ? "; no " + _target.bodyName + " encounter on the current path." : "; continuing with periapsis " + TransferSupport.Km(cur) + ".");
                             break;
                         }
-                        if (_bestDv < MinCorrection && !(ctx.Control.HasRcs() && ctx.Control.RcsPropellant() > 1))
+                        bool thrusters = ctx.Control.HasRcs() && ctx.Control.RcsPropellant() > 1;
+                        double finest = thrusters ? NodeExecutor.MinNudge : MinCorrection;
+                        if (_bestDv < finest)
                         {
-                            // Below what the engine can burn cleanly (0.8.189): fly on; the correction nearer the target has a shorter lever and a real burn.
+                            // Below what the engine can burn cleanly (0.8.189) or the thrusters can push cleanly (0.8.218, 2026-11-04: 0.02 m/s
+                            // trims 204 days from Kerbin did nothing three rounds running, then the leg planned them again every minute; the
+                            // Director took the stick and two died in the cabin on a manual entry): fly on. The correction nearer the target
+                            // has a shorter lever, so the same miss there is a real burn.
                             State = LegState.Done;
                             double cur = TransferSupport.VesselPeriapsisAt(v, _target);
-                            Status = "On course within the finest burn.";
-                            line = "A correction of " + _bestDv.ToString("0.00") + " m/s is below what the engine can burn; flying on with " + _target.bodyName + " periapsis " + TransferSupport.Km(cur) + ".";
+                            Status = "On course within the finest " + (thrusters ? "nudge." : "burn.");
+                            line = "A correction of " + _bestDv.ToString("0.00") + " m/s is below what the " + (thrusters ? "thrusters can push" : "engine can burn") + " cleanly (" + finest.ToString("0.00") + "); flying on with " + _target.bodyName + " periapsis " + TransferSupport.Km(cur) + "."
+                                + (v.mainBody != _target ? " The next correction, nearer " + _target.bodyName + ", has a shorter lever." : string.Empty);
                             break;
                         }
                         ManeuverNode n = NodePlanner.Add(v, _ut, _bestComponents);
@@ -1022,6 +1048,15 @@ namespace KSA.KSP.Flight
                         _settleUntil = 0;
                         double pe = TransferSupport.VesselPeriapsisAt(v, _target);
                         string peText = double.IsNaN(pe) ? "no " + _target.bodyName + " encounter predicted" : "predicted " + _target.bodyName + " periapsis " + TransferSupport.Km(pe);
+                        // The node went missing under the warp (0.8.218: a trim's node was gone 15 days into its wait, cause unknown): plan it again.
+                        if (_exec.Failed && _exec.NodeVanished && _rounds < MaxRounds)
+                        {
+                            _rounds++;
+                            _phase = Phases.Prepare;
+                            ctx.Say("The correction node vanished before the burn; " + peText + "; planning it again (" + _rounds + " of " + MaxRounds + ").");
+                            Status = "Planning the correction again.";
+                            break;
+                        }
                         // Out of band with the encounter showing: trim again while the lever arm is long (0.8.173).
                         if (!_exec.Failed && !double.IsNaN(pe) && !TransferSupport.InBand(pe, _peLo, _peHi) && _rounds < MaxRounds)
                         {
@@ -1200,6 +1235,15 @@ namespace KSA.KSP.Flight
         private double _turnStarted;
         private bool _panelsChecked;
         private const double SettleLimit = 120; // seconds allowed for the turn before the coast goes on regardless
+        private double _entryUt = double.NaN;
+        private int _entryFrame = -1000;
+
+        /// <summary>Entry into the body's space by either reader (0.8.218), refreshed every 30 frames: the zero-node probe costs a solver update.</summary>
+        private double EntryUt(Vessel v)
+        {
+            if (UnityEngine.Time.frameCount - _entryFrame >= 30) { _entryFrame = UnityEngine.Time.frameCount; _entryUt = TransferSupport.EntryUtAt(v, _body); }
+            return _entryUt;
+        }
         private const double ReaimDegrees = 10; // the sun moves this far round the sky: stop, turn the panels back to it, warp on (0.8.186)
 
         /// <summary>
@@ -1258,6 +1302,7 @@ namespace KSA.KSP.Flight
             {
                 // No encounter yet: the correction after this leg gets its look; the coast after that halts if there is still none.
                 State = LegState.Done; Status = "No " + _body.bodyName + " encounter yet; checking the path.";
+                ctx.Say("No " + _body.bodyName + " encounter on the path by either reader; the correction gets its look.");
                 return;
             }
             if (_body.referenceBody == v.mainBody && !TransferSupport.VesselReaches(v, _body))
@@ -1305,14 +1350,15 @@ namespace KSA.KSP.Flight
             if (turning != null) return turning;
             if (_stopBefore > 0)
             {
-                Orbit around = TransferSupport.VesselPatchAround(v, _body);
-                double entry = around != null ? around.StartUT : double.NaN;
+                double entry = EntryUt(v);
                 if (double.IsNaN(entry) || entry - now <= _stopBefore + 120)
                 {
                     ctx.Control.StopWarp();
                     State = LegState.Done;
+                    double pe = TransferSupport.VesselPeriapsisAt(v, _body);
                     Status = double.IsNaN(entry) ? "No " + _body.bodyName + " encounter on this path." : TransferSupport.Countdown(entry - now) + " from " + _body.bodyName + ".";
-                    return double.IsNaN(entry) ? null : "Mid-course check: " + TransferSupport.Countdown(entry - now) + " from " + _body.bodyName + ", periapsis " + TransferSupport.Km(around.PeA) + ".";
+                    return double.IsNaN(entry) ? "No " + _body.bodyName + " encounter on the path by either reader; the correction gets its look."
+                        : "Mid-course check: " + TransferSupport.Countdown(entry - now) + " from " + _body.bodyName + ", periapsis " + TransferSupport.Km(pe) + ".";
                 }
                 Status = "Mid-course check in " + TransferSupport.Countdown(entry - now - _stopBefore) + ".";
                 if (!ctx.Control.IsWarping && now - _lastWarpRequest > 2) { _lastWarpRequest = now; ctx.Control.WarpTo(Math.Min(entry - _stopBefore, _deadline + 5)); }
@@ -1320,13 +1366,14 @@ namespace KSA.KSP.Flight
             }
             double eta = double.NaN;
             if (v.orbit != null && TransferSupport.EndsInTransition(v.orbit) && v.orbit.EndUT > now) eta = v.orbit.EndUT - now;
+            else { double entry = EntryUt(v); if (!double.IsNaN(entry) && entry > now) eta = entry - now; }
             Status = (double.IsNaN(eta) ? "Coasting toward " + _body.bodyName : "Next SOI change in " + TransferSupport.Countdown(eta))
                 + "; " + TransferSupport.Countdown(_deadline - now) + " left.";
             // Re-issue the warp request every few seconds (WarpTo is a no-op while already warping).
             if (!ctx.Control.IsWarping && now - _lastWarpRequest > 2)
             {
                 _lastWarpRequest = now;
-                double target = double.IsNaN(eta) ? now + 600 : v.orbit.EndUT + 5;
+                double target = double.IsNaN(eta) ? now + 600 : now + eta + 5;
                 if (target > _deadline + 5) target = _deadline + 5;
                 ctx.Control.WarpTo(target);
             }

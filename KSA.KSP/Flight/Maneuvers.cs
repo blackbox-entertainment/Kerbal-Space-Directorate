@@ -191,6 +191,10 @@ namespace KSA.KSP.Flight
         private const double RcsMinPropellant = 5;
         /// <summary>A burn under MinBurn done on the thrusters from the attitude held, no turn (0.8.213).</summary>
         private bool _nudge;
+        /// <summary>When the node was due, for the line that reports it gone.</summary>
+        private double _nodeUt;
+        /// <summary>The node was gone when the executor looked for it (0.8.218): the leg may plan it again.</summary>
+        public bool NodeVanished { get; private set; }
 
         private string Nudge(Vessel v, VesselControl c, ManeuverNode n, Vector3d burn, double now)
         {
@@ -254,6 +258,15 @@ namespace KSA.KSP.Flight
                 // A nudge on the thrusters instead (0.8.213): no turn at all, the thrusters push along the node from whatever attitude the
                 // craft holds, so the SAS noise of a node of no length never comes into it. A 0.10 m/s trim 185 days out had been left to
                 // "the next correction" with the path through Kerbin's centre.
+                // Under the finest nudge (0.8.218, 2026-11-04: 0.02 m/s trims 204 days from Kerbin ended in their first frame with nothing
+                // pushed, "0.00 of 0.02", three rounds, then the leg planned them again every minute until the Director took the stick).
+                if (_startDv < MinNudge)
+                {
+                    n.RemoveSelf();
+                    _phase = Phases.Done;
+                    Status = "Nothing to burn: " + _startDv.ToString("0.00") + " m/s is below the finest nudge.";
+                    return;
+                }
                 if (ctx.Control.HasRcs() && ctx.Control.RcsPropellant() > 1)
                 {
                     _nudge = true;
@@ -290,6 +303,8 @@ namespace KSA.KSP.Flight
 
         /// <summary>A wait longer than this before the burn is spent broadside to the sun, panels lit; the turn comes after (0.8.176).</summary>
         private const double MinBurn = 0.3;
+        /// <summary>The smallest push the thrusters make cleanly (0.8.218): the nudge ends within 0.02 m/s of the node, so anything under this is noise.</summary>
+        public const double MinNudge = 0.05;
         private const double LongWait = 1200; // 600 until 0.8.179: a 40 t stack on a small wheel needs more than ten minutes to come round
         private const double AlignLimit = 5;
         private bool _sunHold, _sunSettled;
@@ -303,8 +318,9 @@ namespace KSA.KSP.Flight
             Vessel v = ctx.Vessel;
             VesselControl c = ctx.Control;
             ManeuverNode n = Node(v);
-            if (n == null) { Fail("node vanished"); return "Maneuver node lost; burn skipped."; }
             double now = ctx.Now;
+            if (n == null) { NodeVanished = true; Fail("node vanished"); return "Maneuver node lost" + (_nodeUt > 0 ? " (it was due in " + TransferSupport.Countdown(_nodeUt - now) + ")" : string.Empty) + "; burn skipped."; }
+            _nodeUt = n.UT;
             double ignition = KSA.Core.Flight.Sim.BurnRules.Ignition(n.UT, _burnTime, _lateBy);
             Vector3d burn = n.GetBurnVector(v.orbit);
             string line = null;

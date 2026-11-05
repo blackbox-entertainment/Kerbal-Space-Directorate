@@ -2,6 +2,14 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.218 (2026-11-04), test build
+
+- **No more 0.0 m/s burns.** 204 days from Kerbin the trim the path needed was 0.02 m/s. The thrusters cannot push that: each nudge ended in its first frame with nothing done, the leg trimmed three rounds, then planned the same nothing again every minute, and the Director took the stick. Now a trim under the finest nudge (0.05 m/s on the thrusters, 0.3 on the engine) is left for the next correction nearer Kerbin, where the same miss is a real burn.
+- **The cruise reads the path the way the correction does.** The coast's own reader saw no Kerbin patch while a zero node did, so it ended at once and the correction placed its trims a minute ahead. Both legs now take the entry time from either reader.
+- **A node gone under the warp is planned again**, up to three times, with the line saying when it was due.
+- **Taking control moves everyone into the pod.** The Director took the stick with two of the crew in the Hitchhiker for the coast, and the cabin burned on the manual entry with both aboard. Franuki and Billy-Bobmore Kerman.
+- **Portraits come back after a crew move.** The kerbals are respawned a frame after the despawn and the portrait gallery is asked to refresh.
+
 ## 0.8.217 (2026-11-04), test build
 
 - **The pad offer's rows wrap.** The window chip and the supplies chip were cut off at the edge of the flight director window, and the supplies chip was the one that mattered. Each mission row now wraps onto as many lines as it needs.
