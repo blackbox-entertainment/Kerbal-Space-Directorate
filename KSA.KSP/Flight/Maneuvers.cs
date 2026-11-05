@@ -189,6 +189,39 @@ namespace KSA.KSP.Flight
         private bool _rcs;
         private double _rcsFrom;
         private const double RcsMinPropellant = 5;
+        /// <summary>A burn under MinBurn done on the thrusters from the attitude held, no turn (0.8.213).</summary>
+        private bool _nudge;
+
+        private string Nudge(Vessel v, VesselControl c, ManeuverNode n, Vector3d burn, double now)
+        {
+            if (!_rcs) { _rcs = true; _rcsFrom = now; c.Rcs(true); }
+            c.Throttle = 0;
+            double dt = Math.Max(0, now - _lastStep);
+            _burned += v.geeForce * 9.80665 * dt;
+            _lastStep = now;
+            double remaining = burn.magnitude;
+            bool done = remaining < _tolerance || _burned >= _startDv * 1.05 || Vector3d.Dot(burn, _lastBurnVector) < 0;
+            _lastBurnVector = burn;
+            if (done || now - _rcsFrom > 60 || c.RcsPropellant() < 0.5)
+            {
+                c.ClearInputs();
+                c.Rcs(false);
+                n.RemoveSelf();
+                if (done) { _phase = Phases.Done; Status = "Nudge complete."; return "Nudge complete (" + (_startDv - remaining).ToString("0.00") + " of " + _startDv.ToString("0.00") + " m/s on the thrusters)."; }
+                Fail("the nudge did not finish (" + remaining.ToString("0.00") + " m/s to go)");
+                return "The nudge on the thrusters did not finish; " + remaining.ToString("0.00") + " m/s to go.";
+            }
+            Transform rt = v.ReferenceTransform;
+            if (rt == null) { c.ClearInputs(); return null; }
+            Vector3d dir = burn.normalized;
+            double push = remaining < 0.08 ? 0.3 : 1.0;
+            // Stock ModuleRCS accelerates the craft along -(X*right + Z*up + Y*forward), so the inputs are negated (the docking leg's frame).
+            c.TransX = (float)(-push * Vector3d.Dot(dir, rt.right));
+            c.TransY = (float)(-push * Vector3d.Dot(dir, rt.forward));
+            c.TransZ = (float)(-push * Vector3d.Dot(dir, rt.up));
+            Status = "Nudging on the thrusters: " + remaining.ToString("0.00") + " m/s to go.";
+            return null;
+        }
 
         public bool Done { get { return _phase == Phases.Done; } }
         public bool Failed { get { return _phase == Phases.Failed; } }
@@ -218,6 +251,22 @@ namespace KSA.KSP.Flight
             // three times running at the mid-course check. The next correction, nearer the target, takes what is left.
             if (_startDv < MinBurn)
             {
+                // A nudge on the thrusters instead (0.8.213): no turn at all, the thrusters push along the node from whatever attitude the
+                // craft holds, so the SAS noise of a node of no length never comes into it. A 0.10 m/s trim 185 days out had been left to
+                // "the next correction" with the path through Kerbin's centre.
+                if (ctx.Control.HasRcs() && ctx.Control.RcsPropellant() > 1)
+                {
+                    _nudge = true;
+                    _tolerance = Math.Max(0.02, _startDv / 4);
+                    _burnTime = 5;
+                    _bodyAtStart = ctx.Vessel != null ? ctx.Vessel.mainBody : null;
+                    _hyperbolicAtStart = ctx.Vessel != null && ctx.Vessel.orbit != null && ctx.Vessel.orbit.eccentricity >= 1;
+                    _lateBy = 0; _sunHold = false; _frozen = false;
+                    _phase = Phases.Warp;
+                    ctx.Control.Sas(VesselAutopilot.AutopilotMode.StabilityAssist, false);
+                    Status = "Nudging " + _startDv.ToString("0.00") + " m/s on the thrusters.";
+                    return;
+                }
                 n.RemoveSelf();
                 _phase = Phases.Done;
                 Status = "Nothing to burn.";
@@ -292,13 +341,19 @@ namespace KSA.KSP.Flight
                     if (c.AttitudeError(burn) < 5 || now > ignition - 5) { _phase = Phases.Warp; }
                     break;
                 case Phases.Warp:
-                    RefreshBurnTime(c);
-                    c.Sas(VesselAutopilot.AutopilotMode.Maneuver, false);
+                    if (!_nudge) RefreshBurnTime(c);
+                    if (!_nudge) c.Sas(VesselAutopilot.AutopilotMode.Maneuver, false);
                     if (now >= ignition)
                     {
                         c.StopWarp();
                         // A burn lit on rails gives no thrust (0.8.174: 43 m/s "started" under warp, 32 counted, the station missed by 48 km).
                         if (v.packed || c.IsWarping) { Status = "Waiting for warp to end."; break; }
+                        if (_nudge)
+                        {
+                            _phase = Phases.Burn; _started = now; _burned = 0; _lastStep = now; _lastBurnVector = burn;
+                            line = "Nudge started: " + _startDv.ToString("0.00") + " m/s on the thrusters, no turn.";
+                            break;
+                        }
                         // Never light pointing the wrong way (0.8.179): seven 1 m/s trims at the edge of Duna's space fired before the
                         // turn was done and walked the periapsis from 36 km to 139 km, out of the air. A late burn costs little; a
                         // wrong one costs the pass. Two minutes, or the burn's own length, of grace, then it goes as it is.
@@ -321,6 +376,7 @@ namespace KSA.KSP.Flight
                     break;
                 case Phases.Burn:
                     if (v.packed) { c.StopWarp(); _lastStep = now; Status = "Waiting for warp to end."; break; }
+                    if (_nudge) { line = Nudge(v, c, n, burn, now) ?? line; break; }
                     c.AutoStage(ref line);
                     if (line != null) { _stagedAt = now; _lastBurnVector = burn; } // a stage dropped mid-burn (0.8.165): the next engine carries on
                     bool justStaged = now - _stagedAt < 3;
@@ -414,6 +470,6 @@ namespace KSA.KSP.Flight
             if (!double.IsInfinity(bt) && bt > 0) { _burnTime = bt; _burnTimed = true; }
         }
 
-        public void End(FlightContext ctx) { ctx.Control.Throttle = 0; ctx.Control.StopWarp(); if (_rcs) { ctx.Control.TransZ = 0; ctx.Control.Rcs(false); } }
+        public void End(FlightContext ctx) { ctx.Control.Throttle = 0; ctx.Control.StopWarp(); if (_rcs) { ctx.Control.ClearInputs(); ctx.Control.Rcs(false); } }
     }
 }

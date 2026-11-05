@@ -974,7 +974,7 @@ namespace KSA.KSP.Flight
                                 + (double.IsNaN(cur) ? "; no " + _target.bodyName + " encounter on the current path." : "; continuing with periapsis " + TransferSupport.Km(cur) + ".");
                             break;
                         }
-                        if (_bestDv < MinCorrection)
+                        if (_bestDv < MinCorrection && !(ctx.Control.HasRcs() && ctx.Control.RcsPropellant() > 1))
                         {
                             // Below what the engine can burn cleanly (0.8.189): fly on; the correction nearer the target has a shorter lever and a real burn.
                             State = LegState.Done;

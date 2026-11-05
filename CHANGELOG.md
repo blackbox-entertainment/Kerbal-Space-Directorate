@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.213 (2026-11-04), test build
+
+- **Tiny corrections go on the thrusters, no turn.** A 0.10 m/s trim 185 days from Kerbin was left to "the next correction" with the path through Kerbin's centre, because the engine cannot burn under 0.3 m/s cleanly and pointing SAS at a node of no length spins the craft. With thrusters and monopropellant aboard the crew now push along the node from whatever attitude they hold, measuring what they burned, and the correction leg no longer skips such trims. The log says "Nudge started" and "Nudge complete".
+
 ## 0.8.212 (2026-11-04), test build
 
 - **A hit is never called "no encounter".** After the deep-space burn toward Kerbin the vessel's own prediction chain showed no Kerbin encounter while a node of 0 m/s at the same spot showed one at -600 km, and the crew halted 173 days out with 293 m/s aboard ("This path misses Kerbin"). The path reader now asks a zero-length node whenever the vessel chain shows nothing, the coast leg's miss check uses the same reader, the first disagreement of a flight is logged with the chain, and the reading after a burn waits a second for the solver instead of running in the frame the burn ended.
