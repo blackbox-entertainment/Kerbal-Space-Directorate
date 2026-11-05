@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.214 (2026-11-04), test build
+
+- The build of 0.8.213: the tag v0.8.213 points at a commit that did not compile (a missing namespace on one line). No change beyond that fix.
+
 ## 0.8.213 (2026-11-04), test build
 
 - **Tiny corrections go on the thrusters, no turn.** A 0.10 m/s trim 185 days from Kerbin was left to "the next correction" with the path through Kerbin's centre, because the engine cannot burn under 0.3 m/s cleanly and pointing SAS at a node of no length spins the craft. With thrusters and monopropellant aboard the crew now push along the node from whatever attitude they hold, measuring what they burned, and the correction leg no longer skips such trims. The log says "Nudge started" and "Nudge complete".
