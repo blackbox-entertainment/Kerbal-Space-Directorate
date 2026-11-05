@@ -129,15 +129,22 @@ namespace KSA.KSP.Flight
         public string Status { get; private set; }
         public LegState State { get; private set; }
 
-        /// <summary>A crewless craft in orbit of the world with a docking port and fuel.</summary>
+        /// <summary>
+        /// The crewless craft in orbit of the world with a docking port and the most fuel (0.8.223: with two stations above Kerbin, one
+        /// holding 6 t after the Duna ship took 32.7, the first the game listed was the empty one).
+        /// </summary>
         public static Vessel FindTanker(Vessel us, CelestialBody body)
         {
             if (FlightGlobals.Vessels == null || body == null) return null;
+            Vessel best = null;
+            double most = 0;
             foreach (Vessel v in FlightGlobals.Vessels)
             {
-                if (v != null && v != us && v.mainBody == body && IsTanker(v)) return v;
+                if (v == null || v == us || v.mainBody != body || !IsTanker(v)) continue;
+                double t = Tonnes(v);
+                if (best == null || t > most) { best = v; most = t; }
             }
-            return null;
+            return best;
         }
 
         /// <summary>A flight with a tanker still to meet: a crewless craft with a port and fuel waiting above home, or round the world it is bound for.</summary>
@@ -214,7 +221,7 @@ namespace KSA.KSP.Flight
             ctx.DepotTargetId = tanker.persistentId;
             ctx.DockTargetId = tanker.persistentId;
             ctx.DockTarget = null;
-            ctx.Say("Tanker " + tanker.vesselName + " found in orbit: going to meet it.");
+            ctx.Say("Tanker " + tanker.vesselName + " found in orbit with " + Tonnes(tanker).ToString("0.0") + " t of propellant: going to meet it.");
             _inner.Add(new RendezvousLeg());
             _inner.Add(new DockingLeg());
             _inner.Add(new RefuelLeg());

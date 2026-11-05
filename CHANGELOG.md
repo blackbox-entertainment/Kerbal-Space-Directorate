@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.223 (2026-11-05), test build
+
+- **The crew meet the fullest station.** With two stations above Kerbin, one holding 6 t after the Duna ship took 32.7, the stop went to whichever the game listed first. The log line now says how much the chosen station holds.
+
 ## 0.8.222 (2026-11-05), test build
 
 T's goal is the Mk IIIe to every world as far as Duna, with Eve orbit and return. By its own sums the Mk IIIe holds about 4,170 m/s in orbit after the tanker stop. A low Eve orbit costs 1,400 m/s to enter and 1,400 to leave, which with the ejection and the corrections is more than it holds.
