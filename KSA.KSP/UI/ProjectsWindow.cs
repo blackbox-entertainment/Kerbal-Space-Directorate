@@ -301,6 +301,8 @@ namespace KSA.KSP.UI
             var types = new List<MissionType>();
             foreach (MissionType t in _agency.Catalogs.Missions.Types)
                 if (string.IsNullOrEmpty(t.ModuleRole)) types.Add(t);
+            // In alphabetical order (0.8.232, T): the config order put 60-odd missions in no order a Director could search.
+            types.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
             if (types.Count == 0)
             {
                 Line(items, "No mission types configured.", textWidth);

@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.232 (2026-11-05), test build
+
+- **The Projects window lists missions in alphabetical order.** The grid had followed the order of the mission configs, which put sixty-odd missions in no order a Director could search.
+
 ## 0.8.231 (2026-11-05), test build
 
 - **Launch windows from the Space Center.** The Director's Office has a Launch windows button: the next transfer window to every planet, its date, the round trip by the sums, and a Warp to it button that sets a stock alarm two days before the window and warps the clock there. The alarm stops the warp; launch from the VAB then. A window past the year's review is marked, since the review counts only the goals met by then. Until now only the pad showed the window, so a 477-day wait was warped on the pad and reverted.
