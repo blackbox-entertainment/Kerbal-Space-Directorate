@@ -15,7 +15,9 @@ namespace KSA.KSP.UI
     public sealed class DirectorOfficeWindow
     {
         private const string DialogName = "KSA_DirectorOffice";
-        private const float Width = 620f;
+        // 760 since 0.8.230: the first button row grew to 711 px when "Fuel stations" joined it (0.8.160), so a 620 px window drew
+        // its panel narrower than its content, the right edge clipped and the buttons hanging out both sides (T, 2026-11-05).
+        private const float Width = 760f;
         private static float WindowHeight { get { return Mathf.Clamp(Screen.height - 140f, 666f, 960f); } }
         private static float ListHeight { get { return WindowHeight - 266f; } }
         private const float LabelWidth = 130f;
@@ -91,11 +93,13 @@ namespace KSA.KSP.UI
 
             items.Add(new DialogGUILabel("<size=16><b>" + s.DirectorTitle + "'s Office</b></size>", textWidth, 28f));
             if (_pendingName == null) _pendingName = _agency.AgencyName;
+            const string renameHelp = "<color=#aaaaaa>Press releases, the league table and rivals use the name.</color>";
+            float renameHelpWidth = textWidth - LabelWidth - 330f;
             items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
                 new DialogGUILabel("Agency", LabelWidth, LineHeight),
                 new DialogGUITextInput(_pendingName, false, 48, v => { _pendingName = v ?? string.Empty; return _pendingName; }, LineHeight + 4f),
                 new DialogGUIButton("Rename", OnRename, 90f, 26f, false),
-                new DialogGUILabel("Your space agency's name: press releases, the league table and rivals use it.", textWidth - LabelWidth - 330f, LineHeight)));
+                new DialogGUILabel(renameHelp, renameHelpWidth, KsaUi.LabelHeight(renameHelp, renameHelpWidth, LineHeight))));
             items.Add(new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
                 new DialogGUILabel("Fiscal year", LabelWidth, LineHeight),
                 new DialogGUILabel(() => _agency.CurrentYear + ", day " + _agency.DayOfYear + " of " + _agency.Calendar.DaysPerYear + "  (" + _agency.Calendar.DaysLeftInYear(_agency.CurrentDay) + " days to the review)", textWidth - LabelWidth - 10f, LineHeight)));

@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.230 (2026-11-05), test build
+
+- **The Director's Office window fits its contents.** The first row of buttons grew wider than the window when "Fuel stations" joined it in 0.8.160, so the panel was drawn narrower than its content: the right edge of the text was clipped, the scrollbar sat outside the panel and the buttons hung out both sides. The window is 760 px wide now, and the note beside the Rename button takes the lines it needs instead of spilling over the rows below.
+
 ## 0.8.229 (2026-11-05), test build
 
 The first flight on the pad hold: lifted off 13 minutes after the go, inserted 51 degrees downrange with the station 16 degrees behind, and met it on a direct 59 m/s intercept. Then the match was refused as "not a meeting" because the closest point was already upon them, the push that followed put the periapsis at 61 km, the raise waited for apoapsis while the ship skimmed the air, the survival net took the skim for a fall and dropped everything but the capsule, and the retry planned an Eve departure for a capsule.
