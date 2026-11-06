@@ -2,6 +2,10 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Until the public release (milestone M7) the version stays below 1.0: the minor number tracks the roadmap milestone the build has reached, the patch number counts test builds within it.
 
+## 0.8.233 (2026-11-05), test build
+
+- **A tanker fills the spent stage too.** The refuel had skipped any stage under 10% full as a spent booster, a rule meant for a rationed depot. At a tanker stop the Mk IIIe took on 32.7 t and left the tanker holding 9.4 t it could have given, with its Skipper stage at 2%. A tanker now fills every stage, top of the ship first, and keeps only what it needs to deorbit (0.3 t or 5% of its dry mass). Depots keep the old rule.
+
 ## 0.8.232 (2026-11-05), test build
 
 - **The Projects window lists missions in alphabetical order.** The grid had followed the order of the mission configs, which put sixty-odd missions in no order a Director could search.

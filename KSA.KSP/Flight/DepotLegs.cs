@@ -69,7 +69,12 @@ namespace KSA.KSP.Flight
 
         /// <summary>Our tanks that went up empty (under 1% full): the ones the depot fills.</summary>
         /// <summary>Our tanks grouped by stage, top stage first, without a spent booster (under 10% full) that is still attached.</summary>
-        public static List<List<Part>> StageGroups(FlightContext ctx)
+        /// <summary>
+        /// Tanks that can take fuel, grouped by stage, top of the ship first. A depot rations its fuel, so a stage under 10% full is left
+        /// as a spent booster; a tanker sent ahead fills that stage too (0.8.233, T: the Skipper stage was left at 2% with 9.4 t still
+        /// in the tanker; its engine is aboard and every tonne burnt there is delta-v the upper stages keep).
+        /// </summary>
+        public static List<List<Part>> StageGroups(FlightContext ctx, bool keepSpent)
         {
             var byStage = new SortedDictionary<int, List<Part>>();
             foreach (Part p in OwnParts(ctx))
@@ -82,7 +87,7 @@ namespace KSA.KSP.Flight
                 list.Add(p);
             }
             var groups = new List<List<Part>>(byStage.Values);
-            if (groups.Count > 1)
+            if (groups.Count > 1 && !keepSpent)
             {
                 List<Part> lowest = groups[groups.Count - 1];
                 double cap = Tonnes(lowest, true);
@@ -328,7 +333,7 @@ namespace KSA.KSP.Flight
                 List<Part> empty = DepotOps.EmptyTanks(ctx);
                 if (empty.Count > 0) _targets.Add(empty);
                 // A tanker sent ahead fills everything; a depot's fuel is rationed to the tanks that launched empty.
-                if (ctx.ReportDepot == null || empty.Count == 0) foreach (List<Part> g in DepotOps.StageGroups(ctx)) _targets.Add(g);
+                if (ctx.ReportDepot == null || empty.Count == 0) foreach (List<Part> g in DepotOps.StageGroups(ctx, ctx.ReportDepot == null)) _targets.Add(g);
                 double dry = 0;
                 foreach (Part p in depot) dry += p.mass;
                 double reserve = ctx.ReportDepot == null ? Math.Max(0.3, 0.05 * dry) : 0; // a tanker keeps enough to deorbit itself (T)
