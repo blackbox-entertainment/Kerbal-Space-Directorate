@@ -583,7 +583,7 @@ namespace KSA.KSP.Flight
                 double days = agency.DaysToWindow != null ? agency.DaysToWindow(_windowWarning.Body) : 0;
                 GUILayout.Label("<b>" + _windowWarning.Name + "</b>");
                 GUILayout.Label("The crew will wait in orbit until " + TransferSupport.Date(Planetarium.GetUniversalTime() + days * TransferSupport.Day) + " to leave for " + _windowWarning.Body + ": about " + Math.Ceiling(days) + " days of food, water and radiation before the trip begins.");
-                GUILayout.Label("Better: Let me fly, recover, warp at the Space Center and launch within " + agency.Settings.WindowWaitDays + " days of the window.");
+                GUILayout.Label("Better: revert to the VAB, open Launch windows in the Director's Office, warp to the window, then launch.");
                 if (GUILayout.Button("Launch anyway", GUILayout.Height(30f))) { MissionType go = _windowWarning; _windowWarning = null; StartHangarFlight(go.Id); }
                 if (GUILayout.Button("Back to the list", GUILayout.Height(30f))) _windowWarning = null;
                 GUI.DragWindow();

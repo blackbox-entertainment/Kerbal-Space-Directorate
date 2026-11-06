@@ -183,6 +183,7 @@ namespace KSA.KSP.UI
             var buttons3 = new DialogGUIHorizontalLayout(false, false, 6f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft,
                 new DialogGUIButton("Analytics", OpenAnalytics, 85f, 30f, false),
                 new DialogGUIButton("Campaign", OpenCampaign, 90f, 30f, false),
+                new DialogGUIButton("Launch windows", OpenLaunchWindows, 115f, 30f, false),
                 new DialogGUIButton("Departments", OpenDepartments, 105f, 30f, false),
                 new DialogGUIButton(_agency.DirectorOn ? "AI Director (on)" : "AI Director", OpenAiDirector, 125f, 30f, false),
                 new DialogGUIButton("Help", () => HelpWindow.Show("start"), 60f, 30f, false),
@@ -289,6 +290,14 @@ namespace KSA.KSP.UI
         }
 
         private FuelStationsWindow _fuelStations;
+        private LaunchWindowsWindow _launchWindows;
+
+        private void OpenLaunchWindows()
+        {
+            if (_launchWindows != null && _launchWindows.IsOpen) return;
+            _launchWindows = new LaunchWindowsWindow(_agency, () => { _launchWindows = null; });
+            _launchWindows.Open();
+        }
         private void OpenFuelStations()
         {
             if (_fuelStations != null && _fuelStations.IsOpen) return;
@@ -334,6 +343,7 @@ namespace KSA.KSP.UI
             if (_analytics != null) { AnalyticsWindow w = _analytics; _analytics = null; w.Close(); }
             if (_records != null) { RecordsWindow w = _records; _records = null; w.Close(); }
             if (_fuelStations != null) { FuelStationsWindow w = _fuelStations; _fuelStations = null; w.Close(); }
+            if (_launchWindows != null) { LaunchWindowsWindow w = _launchWindows; _launchWindows = null; w.Close(); }
             if (_departments != null) { DepartmentsWindow w = _departments; _departments = null; w.Close(); }
             if (_aiDirector != null) { AiDirectorWindow w = _aiDirector; _aiDirector = null; w.Close(); }
             if (_campaign != null) { CampaignWindow w = _campaign; _campaign = null; w.Close(); }
